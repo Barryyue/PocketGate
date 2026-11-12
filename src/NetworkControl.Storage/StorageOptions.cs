@@ -33,4 +33,13 @@ public sealed class StorageOptions
 
     public string ResolveDataDirectory() =>
         Path.GetFullPath(string.IsNullOrWhiteSpace(DataDirectory) ? GetDefaultDataDirectory() : DataDirectory);
+
+    /// <summary>
+    /// 解析配置中的數據目錄：為空時使用平台默認位置，相對路徑相對於內容根目錄（而不是進程的當前工作目錄）。
+    /// 在依賴注入容器建立之前也可以調用（例如日誌需要提前知道日誌目錄）。
+    /// </summary>
+    public static string ResolveDataDirectory(string? configured, string contentRoot) =>
+        string.IsNullOrWhiteSpace(configured) ? Path.GetFullPath(GetDefaultDataDirectory())
+        : Path.IsPathRooted(configured) ? Path.GetFullPath(configured)
+        : Path.GetFullPath(Path.Combine(contentRoot, configured));
 }

@@ -1,0 +1,1739 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetworkControl — 按应用联网控制，跨 Windows / Linux / macOS</title>
+<meta name="description" content="NetworkControl 补上桌面系统缺失的出站防护：应用首次联网时弹窗询问，规则精确到域名、IP 与端口，三个平台一套规则模型，全程本地运行，不收集任何遥测数据。">
+<meta name="theme-color" content="#08090B">
+<script>
+(function () {
+  try {
+    var t = "light";
+    var light = window.matchMedia("(prefers-color-scheme: light)").matches;
+    document.documentElement.setAttribute("data-theme", t === "auto" ? (light ? "light" : "dark") : t);
+    var l = "zh-Hans";
+    document.documentElement.lang = l === "en" ? "en" : (l === "zh-Hant" ? "zh-Hant" : "zh-Hans");
+    if (l !== "zh-Hans") document.documentElement.classList.add("i18n-pending");
+  } catch (e) { }
+})();
+</script>
+<meta property="og:type" content="website">
+<meta property="og:title" content="NetworkControl — 每一次联网，都由你决定">
+<meta property="og:description" content="跨 Windows / Linux / macOS 的按应用联网控制。弹窗询问、域名级规则、实时连接视图，本地运行，无遥测。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0B0D'/%3E%3Cpath d='M16 6l8 4v6.5c0 5-3.4 8.3-8 9.5-4.6-1.2-8-4.5-8-9.5V10z' fill='none' stroke='%23C9F45A' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%23C9F45A'/%3E%3C/svg%3E">
+<style>
+/* ── tokens ───────────────────────────────────────────────────── */
+:root{
+  color-scheme:dark;
+  --ink-rgb:255 255 255;
+  --bg:#08090B;
+  --bg-2:#0C0E11;
+  --bg-3:#11141A;
+  --fg:#F2F3F4;
+  --fg-2:#9AA1AB;
+  --fg-3:#666D77;
+  --brand-dim:#8B9199;
+  --fg-mono:#7E858F;
+  --fg-mono-strong:#C8CDD4;
+  --icon-bg:#1D222B;
+  --icon-fg:#B9C4D2;
+  --info-rgb:143 180 232;
+  --line:rgb(var(--ink-rgb) / .085);
+  --line-2:rgb(var(--ink-rgb) / .16);
+  --acc-rgb:201 244 90;
+  --acc-solid:#C9F45A;
+  --acc-on:#0A0B0D;
+  --acc:rgb(var(--acc-rgb));
+  --glow-rgb:201 244 90;
+  --shadow-cta:0 10px 26px -12px rgb(201 244 90 / .8);
+  --deny-rgb:255 106 85;
+  --deny:rgb(var(--deny-rgb));
+  --allow:var(--acc-solid);
+  --bar-bg:rgba(8,9,11,.72);
+  --bar-bg-solid:rgba(8,9,11,.9);
+  --overlay:rgba(0,0,0,.24);
+  --prompt-bg:linear-gradient(180deg,#14171D 0%,#0B0D10 62%,#0A0C0E 100%);
+  --prompt-shadow:0 40px 80px -40px rgba(0,0,0,.95),0 0 0 1px rgba(0,0,0,.4),0 1px 0 rgb(var(--ink-rgb) / .05) inset;
+  --r:14px;
+  --wrap:1180px;
+  --pad:clamp(20px,5vw,56px);
+  --font:"Inter","Segoe UI Variable Text","Segoe UI",-apple-system,BlinkMacSystemFont,"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono","SFMono-Regular","Cascadia Mono",ui-monospace,"Consolas",monospace;
+}
+
+[data-theme="light"]{
+  color-scheme:light;
+  --ink-rgb:16 18 22;
+  --bg:#FAFAF8;
+  --bg-2:#FFFFFF;
+  --bg-3:#F1F2F0;
+  --fg:#101214;
+  --fg-2:#565C64;
+  --fg-3:#878D96;
+  --brand-dim:#6E747C;
+  --fg-mono:#5B616A;
+  --fg-mono-strong:#23262B;
+  --icon-bg:#ECEEF0;
+  --icon-fg:#4B5158;
+  --info-rgb:47 107 214;
+  --acc-rgb:74 102 0;
+  --acc-solid:#C9F45A;
+  --acc-on:#12160A;
+  --glow-rgb:150 182 34;
+  --shadow-cta:0 10px 24px -14px rgb(96 124 0 / .5);
+  --deny-rgb:197 45 30;
+  --bar-bg:rgba(250,250,248,.78);
+  --bar-bg-solid:rgba(250,250,248,.94);
+  --overlay:rgba(16,18,22,.035);
+  --prompt-bg:linear-gradient(180deg,#FFFFFF 0%,#F9FAFA 62%,#F5F6F6 100%);
+  --prompt-shadow:0 30px 60px -34px rgba(16,18,22,.28),0 0 0 1px rgba(16,18,22,.08),0 1px 0 rgba(255,255,255,.9) inset;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+html.i18n-pending body{opacity:0}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:var(--font);font-size:16px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+h1,h2,h3,h4,p,ul,ol,dl,dd{margin:0}
+ul,ol{padding:0;list-style:none}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+::selection{background:var(--acc-solid);color:var(--acc-on)}
+:focus-visible{outline:2px solid var(--allow);outline-offset:3px;border-radius:4px}
+
+.wrap{width:min(var(--wrap),100% - 2*var(--pad));margin-inline:auto}
+.mono{font-family:var(--mono);font-variant-ligatures:none}
+.dim{color:var(--fg-2)}
+
+/* ── topbar ───────────────────────────────────────────────────── */
+.topbar{
+  position:fixed;inset:0 0 auto;z-index:60;height:60px;
+  display:flex;align-items:center;
+  background:var(--bar-bg);backdrop-filter:blur(14px) saturate(140%);
+  border-bottom:1px solid transparent;transition:border-color .3s,background .3s;
+}
+.topbar.scrolled{border-bottom-color:var(--line);background:var(--bar-bg-solid)}
+.topbar .wrap{display:flex;align-items:center;gap:28px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.02em;font-size:15px}
+.logo svg{display:block}
+.logo b{font-weight:600}
+.logo span{color:var(--fg-3);font-weight:400}
+.nav{display:flex;gap:26px;margin-left:auto}
+.nav a{font-size:13.5px;color:var(--fg-2);letter-spacing:.01em;transition:color .2s;position:relative;padding:4px 0}
+.nav a:hover,.nav a.on{color:var(--fg)}
+.nav a.on::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:var(--acc)}
+
+/* 顶部工具：语言 + 主题 */
+.top-actions{display:flex;align-items:center;gap:9px}
+.lang{display:flex;align-items:center;gap:1px;padding:2px;border:1px solid var(--line);border-radius:8px}
+.lang button{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--fg-3);
+  padding:3px 7px;border-radius:6px;line-height:1.5;transition:color .18s,background .18s;
+}
+.lang button:hover{color:var(--fg)}
+.lang button[aria-pressed="true"]{background:rgb(var(--ink-rgb) / .09);color:var(--fg)}
+.icon-btn{
+  width:31px;height:31px;display:grid;place-items:center;border-radius:8px;
+  border:1px solid var(--line);color:var(--fg-2);transition:.2s;
+}
+.icon-btn:hover{color:var(--fg);border-color:var(--line-2)}
+.icon-btn svg{width:15px;height:15px;display:none}
+.icon-btn[data-mode="auto"] .i-auto,
+.icon-btn[data-mode="light"] .i-light,
+.icon-btn[data-mode="dark"] .i-dark{display:block}
+.top-cta{
+  display:inline-flex;align-items:center;gap:7px;height:33px;padding:0 15px;border-radius:99px;
+  background:var(--acc-solid);color:var(--acc-on);font-size:13px;font-weight:600;letter-spacing:.01em;
+  transition:transform .2s,box-shadow .2s;
+}
+.top-cta:hover{transform:translateY(-1px);box-shadow:var(--shadow-cta)}
+@media(max-width:880px){
+  .nav{display:none}
+  .top-actions{margin-left:auto}
+  .topbar .wrap{gap:14px}
+}
+@media(max-width:430px){
+  .top-cta{display:none}
+  .lang button{padding:3px 6px}
+}
+
+/* ── hero ─────────────────────────────────────────────────────── */
+.hero{
+  position:relative;overflow:hidden;display:flex;align-items:center;
+  min-height:min(100svh,940px);
+  padding:clamp(96px,13vh,150px) 0 clamp(44px,6vw,80px);
+}
+.hero::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(58% 46% at 80% 12%,rgb(var(--glow-rgb) / .11),transparent 68%),
+    radial-gradient(50% 42% at 6% 88%,rgb(var(--ink-rgb) / .055),transparent 72%);
+}
+.hero::after{
+  content:"";position:absolute;inset:-1px;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(to right,rgb(var(--ink-rgb) / .04) 1px,transparent 1px),
+    linear-gradient(to bottom,rgb(var(--ink-rgb) / .04) 1px,transparent 1px);
+  background-size:92px 92px;
+  -webkit-mask-image:radial-gradient(74% 58% at 52% 34%,#000 12%,transparent 76%);
+  mask-image:radial-gradient(74% 58% at 52% 34%,#000 12%,transparent 76%);
+}
+.hero .wrap{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1fr);gap:clamp(32px,5vw,72px);align-items:center;min-width:0}
+.hero-l,.hero-r{min-width:0}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--fg-3);
+}
+.eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--allow);box-shadow:0 0 12px rgb(var(--acc-rgb) / .9)}
+.brand{
+  font-size:clamp(2.9rem,6.6vw,5.4rem);line-height:.94;letter-spacing:-.045em;font-weight:600;
+  margin:20px 0 0;
+}
+.brand em{font-style:normal;color:var(--brand-dim)}
+.hero .promise{
+  font-size:clamp(1.12rem,1.85vw,1.5rem);line-height:1.45;font-weight:500;
+  letter-spacing:-.01em;margin-top:22px;max-width:13em;
+}
+.hero .promise span{color:var(--fg-2)}
+.hero .lede{margin-top:18px;color:var(--fg-2);font-size:14.5px;line-height:1.72;max-width:44ch}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.btn{
+  display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 20px;border-radius:10px;
+  font-size:14px;font-weight:600;letter-spacing:.01em;transition:.22s;
+}
+.btn-primary{background:var(--acc-solid);color:var(--acc-on)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:var(--shadow-cta)}
+.btn-ghost{border:1px solid var(--line-2);color:var(--fg)}
+.btn-ghost:hover{border-color:rgb(var(--ink-rgb) / .34);background:rgb(var(--ink-rgb) / .03)}
+.btn svg{opacity:.75}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:26px;font-family:var(--mono);font-size:11.5px;color:var(--fg-3)}
+.meta span{display:inline-flex;align-items:center;gap:7px}
+.meta span::before{content:"";width:3px;height:3px;border-radius:50%;background:var(--fg-3)}
+.meta span:first-child::before{display:none}
+
+/* ── prompt artifact ─────────────────────────────────────────── */
+.prompt{
+  position:relative;width:min(100%,522px);max-width:100%;min-width:0;margin-inline:auto;border-radius:var(--r);
+  background:var(--prompt-bg);
+  border:1px solid var(--line-2);
+  box-shadow:var(--prompt-shadow);
+  overflow:hidden;font-size:13px;
+}
+.prompt::after{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:radial-gradient(90% 60% at 50% -20%,rgb(var(--glow-rgb) / .10),transparent 70%);
+}
+.p-head{display:flex;gap:12px;padding:16px 16px 13px;border-bottom:1px solid var(--line);position:relative}
+.app-icon{
+  flex:0 0 34px;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+  background:var(--icon-bg);border:1px solid var(--line-2);font-family:var(--mono);font-size:11px;color:var(--icon-fg);letter-spacing:-.04em;
+}
+.p-id{min-width:0;flex:1}
+.p-name{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;letter-spacing:-.005em}
+.p-name .count{
+  margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--fg-2);
+  border:1px solid var(--line-2);border-radius:99px;padding:1px 7px;
+}
+.p-sign{display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--fg-2);font-size:11.5px}
+.p-sign .ok{color:var(--allow);font-size:10px}
+.p-path{
+  margin-top:7px;font-family:var(--mono);font-size:10.5px;color:var(--fg-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.p-target{padding:13px 16px;border-bottom:1px solid var(--line);position:relative}
+.p-target .k{font-size:11px;color:var(--fg-3);letter-spacing:.02em}
+.p-dest{margin-top:6px;font-size:14px;font-weight:500;letter-spacing:-.01em;word-break:break-all}
+.p-dest .ip{color:var(--fg-3);font-family:var(--mono);font-size:11.5px;font-weight:400}
+.p-tuple{margin-top:5px;font-family:var(--mono);font-size:11px;color:var(--fg-2)}
+.p-tuple .sep{color:var(--fg-3);margin:0 6px}
+.p-body{padding:13px 16px 15px;position:relative;display:grid;gap:11px}
+.field{display:grid;gap:6px}
+.field .k{font-size:11px;color:var(--fg-3)}
+.segs{display:flex;flex-wrap:wrap;gap:6px}
+.seg{
+  font-size:11.5px;padding:4px 9px;border-radius:7px;border:1px solid var(--line);
+  color:var(--fg-2);transition:.16s;line-height:1.5;
+}
+.seg:hover{border-color:var(--line-2);color:var(--fg)}
+.seg[aria-pressed="true"]{border-color:rgb(var(--acc-rgb) / .5);color:var(--allow);background:rgb(var(--acc-rgb) / .07)}
+.rule-preview{
+  font-family:var(--mono);font-size:10.5px;color:var(--fg-mono);line-height:1.75;
+  border-top:1px dashed var(--line);padding-top:10px;overflow-wrap:anywhere;
+}
+.rule-preview b{color:var(--fg-mono-strong);font-weight:400}
+.p-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line);background:var(--overlay);position:relative}
+.timer{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--fg-2);min-width:0}
+.timer .bar{width:52px;height:2px;background:rgb(var(--ink-rgb) / .12);border-radius:2px;overflow:hidden}
+.timer .bar i{display:block;height:100%;width:100%;background:var(--allow);transition:width .95s linear,background .3s}
+.timer.paused .bar i{background:var(--fg-3)}
+.verdicts{margin-left:auto;display:flex;gap:8px}
+.v{height:32px;padding:0 15px;border-radius:8px;font-size:12.5px;font-weight:600;transition:.18s}
+.v.deny{border:1px solid var(--line-2);color:var(--fg-2)}
+.v.deny:hover{border-color:rgb(var(--deny-rgb) / .5);color:var(--deny);background:rgb(var(--deny-rgb) / .07)}
+.v.allow{background:var(--acc-solid);color:var(--acc-on)}
+.v.allow:hover{box-shadow:var(--shadow-cta)}
+.p-status{
+  font-family:var(--mono);font-size:10.5px;color:var(--fg-3);padding:0 16px 11px;background:var(--overlay);
+  border-top:1px solid transparent;margin-top:-1px;
+}
+.prompt-note{
+  margin-top:12px;text-align:center;font-family:var(--mono);font-size:10px;
+  letter-spacing:.02em;color:var(--fg-3);line-height:1.7;
+}
+.p-status.ok{color:var(--allow)}
+.p-status.no{color:var(--deny)}
+@media(max-width:980px){
+  .hero .wrap{grid-template-columns:1fr;gap:44px}
+  .hero .promise,.hero .lede{max-width:none}
+  .prompt{margin-top:4px}
+}
+
+/* ── section scaffolding ─────────────────────────────────────── */
+.sect{padding:clamp(64px,9vw,118px) 0;position:relative}
+.sect + .sect{border-top:1px solid var(--line)}
+.s-head{display:grid;grid-template-columns:minmax(0,228px) minmax(0,1fr);gap:clamp(16px,4vw,56px);align-items:start}
+.s-num{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--allow);text-transform:uppercase;padding-top:12px}
+.s-head h2{
+  font-size:clamp(1.5rem,2.7vw,2.15rem);line-height:1.24;letter-spacing:-.03em;font-weight:600;
+  max-width:15em;
+}
+.s-head .s-lede{color:var(--fg-2);font-size:14.5px;line-height:1.75;max-width:34em;margin-top:16px}
+.s-head .s-lede + .s-lede{margin-top:10px}
+@media(max-width:820px){
+  .s-head{grid-template-columns:1fr;gap:10px}
+  .s-num{padding-top:0}
+  .s-head h2{max-width:none}
+}
+
+/* ── tri ─────────────────────────────────────────────────────── */
+.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:clamp(34px,5vw,58px);border-top:1px solid var(--line)}
+.tri > div{padding:26px clamp(16px,2.4vw,32px) 8px;border-left:1px solid var(--line)}
+.tri > div:first-child{border-left:0;padding-left:0}
+.tri h3{font-size:13px;letter-spacing:.02em;color:var(--fg);font-weight:600;display:flex;align-items:baseline;gap:9px}
+.tri h3 i{font-family:var(--mono);font-style:normal;font-size:10.5px;color:var(--fg-3)}
+.tri p{color:var(--fg-2);font-size:13px;line-height:1.72;margin-top:9px}
+.tri .val{font-family:var(--mono);font-size:11.5px;color:var(--allow);margin-top:12px;line-height:1.9;word-break:break-word}
+@media(max-width:780px){
+  .tri{grid-template-columns:1fr}
+  .tri > div{border-left:0;border-top:1px solid var(--line);padding:20px 0 4px}
+  .tri > div:first-child{border-top:0}
+}
+.note-line{
+  display:flex;gap:10px;align-items:flex-start;margin-top:26px;padding:14px 16px;border-radius:10px;
+  border:1px solid var(--line);background:rgb(var(--ink-rgb) / .018);color:var(--fg-2);font-size:12.5px;line-height:1.7;
+}
+.note-line b{color:var(--fg);font-weight:600}
+.note-line .tick{color:var(--allow);font-family:var(--mono);font-size:11px;flex:0 0 auto;padding-top:2px}
+
+/* ── pipeline ────────────────────────────────────────────────── */
+.pipe-grid{display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:start}
+.pipe-aside{position:sticky;top:104px}
+.pipe-aside h2{
+  font-size:clamp(1.5rem,2.7vw,2.15rem);line-height:1.24;letter-spacing:-.03em;
+  font-weight:600;margin-top:10px;max-width:11em;
+}
+.pipe-aside .s-lede{color:var(--fg-2);font-size:14.5px;line-height:1.75;margin-top:14px;max-width:22em}
+.pipe-list{position:relative;padding-left:34px}
+.rail{position:absolute;left:7px;top:6px;bottom:6px;width:1px;background:var(--line)}
+.rail i{position:absolute;inset:0 0 auto;height:0;background:linear-gradient(180deg,var(--allow),rgb(var(--acc-rgb) / .25));width:1px;transition:height .12s linear}
+.stage{position:relative;padding:0 0 26px}
+.stage:last-child{padding-bottom:0}
+.stage::before{
+  content:"";position:absolute;left:-34px;top:8px;width:7px;height:7px;border-radius:50%;
+  background:var(--bg);border:1px solid var(--line-2);transition:.3s;margin-left:4px;
+}
+.stage.on::before{background:var(--allow);border-color:var(--allow);box-shadow:0 0 0 4px rgb(var(--acc-rgb) / .12)}
+.stage h3{font-size:14.5px;font-weight:600;letter-spacing:-.005em;color:var(--fg-2);transition:color .3s;display:flex;gap:10px;align-items:baseline}
+.stage h3 em{font-family:var(--mono);font-style:normal;font-size:10.5px;color:var(--fg-3);letter-spacing:.04em}
+.stage.on h3{color:var(--fg)}
+.stage p{color:var(--fg-2);font-size:13px;line-height:1.72;margin-top:7px;max-width:56ch}
+.stage code{
+  display:inline-block;font-family:var(--mono);font-size:10.5px;color:var(--fg-3);
+  border:1px solid var(--line);border-radius:5px;padding:1px 6px;margin-top:9px;margin-right:6px;
+}
+@media(max-width:820px){.pipe-grid{grid-template-columns:1fr}.pipe-aside{position:static}}
+
+/* ── feature table ───────────────────────────────────────────── */
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;font-family:var(--mono);font-size:10.5px;color:var(--fg-3);letter-spacing:.02em}
+.mod{display:grid;grid-template-columns:minmax(0,208px) minmax(0,1fr);gap:clamp(12px,3vw,40px);padding:20px 0;border-top:1px solid var(--line)}
+.mod:last-child{border-bottom:1px solid var(--line)}
+.mod-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.mod-h h3{font-size:14px;font-weight:600;letter-spacing:-.005em}
+.mod-h .code{font-family:var(--mono);font-size:10px;color:var(--fg-3);letter-spacing:.04em}
+.caps{display:flex;flex-wrap:wrap;gap:2px 22px;align-items:center;font-size:13px;color:var(--fg-2);line-height:1.95}
+.caps li{display:inline-flex;align-items:center;gap:7px}
+.tag{
+  font-family:var(--mono);font-style:normal;font-size:9.5px;letter-spacing:.04em;
+  border-radius:4px;padding:0 4px;line-height:1.55;transform:translateY(-1px);
+}
+.tag.p1{color:rgb(var(--info-rgb));border:1px solid rgb(var(--info-rgb) / .32)}
+.tag.p2{color:var(--fg-3);border:1px solid var(--line-2)}
+@media(max-width:720px){.mod{grid-template-columns:1fr;gap:8px}}
+
+/* ── modes ───────────────────────────────────────────────────── */
+.modes{margin-top:clamp(30px,4vw,46px);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:linear-gradient(180deg,rgb(var(--ink-rgb) / .022),transparent 60%)}
+.mode-tabs{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line)}
+.mode-tabs button{
+  padding:14px 18px;font-size:12.5px;color:var(--fg-3);border-bottom:1px solid transparent;
+  margin-bottom:-1px;transition:.2s;white-space:nowrap;
+}
+.mode-tabs button:hover{color:var(--fg-2)}
+.mode-tabs button[aria-selected="true"]{color:var(--allow);border-bottom-color:var(--allow);background:rgb(var(--acc-rgb) / .05)}
+.mode-body{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.mode-cell{padding:22px clamp(16px,2.4vw,28px);border-left:1px solid var(--line)}
+.mode-cell:first-child{border-left:0}
+.mode-cell .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-3)}
+.mode-cell .mv{margin-top:9px;font-size:14.5px;letter-spacing:-.01em}
+.mode-cell .mv-allow{color:var(--allow)}
+.mode-cell .mv-deny{color:var(--deny)}
+.mode-cell .mv-mute{color:var(--fg-2)}
+@media(max-width:720px){.mode-body{grid-template-columns:1fr}.mode-cell{border-left:0;border-top:1px solid var(--line)}.mode-cell:first-child{border-top:0}}
+
+/* ── table ───────────────────────────────────────────────────── */
+.tablewrap{margin-top:clamp(30px,4vw,46px);overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px}
+th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--fg-3);font-weight:400;background:rgb(var(--ink-rgb) / .02);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+tbody th{font-weight:500;color:var(--fg);white-space:nowrap;font-size:12.5px}
+td{color:var(--fg-2)}
+td .y{color:var(--allow)}
+td .n{color:var(--fg-3)}
+td .p{color:rgb(var(--info-rgb))}
+.hint{font-family:var(--mono);font-size:10.5px;color:var(--fg-3);margin-top:12px;display:block}
+
+/* ── metrics ─────────────────────────────────────────────────── */
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:clamp(30px,4vw,50px);border-top:1px solid var(--line)}
+.metric{padding:22px clamp(14px,2vw,26px) 20px;border-left:1px solid var(--line);border-bottom:1px solid var(--line)}
+.metric:nth-child(3n+1){border-left:0;padding-left:0}
+.metric .n{font-family:var(--mono);font-size:clamp(1.5rem,2.6vw,2.1rem);letter-spacing:-.03em;line-height:1.1;color:var(--fg)}
+.metric .n small{font-size:.52em;color:var(--fg-2);margin-left:2px;letter-spacing:0}
+.metric .l{margin-top:9px;font-size:12.5px;color:var(--fg-2);line-height:1.6}
+.metric .l b{color:var(--fg);font-weight:500}
+@media(max-width:820px){.metrics{grid-template-columns:repeat(2,1fr)}.metric:nth-child(3n+1){border-left:1px solid var(--line);padding-left:clamp(14px,2vw,26px)}.metric:nth-child(2n+1){border-left:0;padding-left:0}}
+@media(max-width:520px){.metrics{grid-template-columns:1fr}.metric{border-left:0!important;padding-left:0!important}}
+
+/* ── two col list ────────────────────────────────────────────── */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,64px);margin-top:clamp(30px,4vw,48px)}
+.col-h{display:flex;align-items:baseline;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line-2)}
+.col-h h3{font-size:14px;font-weight:600}
+.col-h span{font-family:var(--mono);font-size:10px;color:var(--fg-3);letter-spacing:.08em;margin-left:auto}
+.items li{display:grid;grid-template-columns:minmax(0,132px) minmax(0,1fr);gap:14px;padding:11px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.items li b{font-weight:500;color:var(--fg)}
+.items li span{color:var(--fg-2);line-height:1.65}
+@media(max-width:720px){.cols{grid-template-columns:1fr}.items li{grid-template-columns:1fr;gap:3px}}
+
+/* ── stack ───────────────────────────────────────────────────── */
+.stack{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:clamp(30px,4vw,46px);border-top:1px solid var(--line)}
+.stack > div{padding:20px clamp(12px,2vw,24px);border-left:1px solid var(--line)}
+.stack > div:first-child{border-left:0;padding-left:0}
+.stack .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-3)}
+.stack .v{margin-top:9px;font-size:13px;line-height:1.75}
+.stack .v code{font-family:var(--mono);font-size:11.5px;color:var(--allow)}
+.stack .v code + code::before{content:"·";color:var(--fg-3);margin:0 6px 0 1px}
+.stack .v span{color:var(--fg-2);display:block;font-size:12px;margin-top:5px}
+@media(max-width:820px){.stack{grid-template-columns:1fr 1fr}.stack > div:nth-child(3){border-left:0;padding-left:0}.stack > div:nth-child(n+3){border-top:1px solid var(--line)}}
+@media(max-width:520px){.stack{grid-template-columns:1fr}.stack > div{border-left:0;padding-left:0;border-top:1px solid var(--line)}.stack > div:first-child{border-top:0}}
+
+/* ── roadmap ─────────────────────────────────────────────────── */
+.road{margin-top:clamp(34px,5vw,54px);position:relative}
+.road-line{height:1px;background:var(--line);position:relative}
+.road-line i{position:absolute;left:0;top:0;height:1px;background:linear-gradient(90deg,var(--allow),rgb(var(--acc-rgb) / .15));width:16%}
+.road-stops{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-top:0}
+.stop{padding:18px 14px 0 0;position:relative}
+.stop::before{content:"";position:absolute;top:-4px;left:0;width:7px;height:7px;border-radius:50%;background:var(--bg);border:1px solid var(--line-2)}
+.stop.done::before{background:var(--allow);border-color:var(--allow);box-shadow:0 0 0 4px rgb(var(--acc-rgb) / .1)}
+.stop .v{font-family:var(--mono);font-size:11px;color:var(--fg-3);letter-spacing:.06em}
+.stop.done .v{color:var(--allow)}
+.stop h3{font-size:13px;font-weight:600;margin-top:6px;color:var(--fg)}
+.stop p{font-size:11.5px;color:var(--fg-3);line-height:1.65;margin-top:6px;max-width:20ch}
+@media(max-width:820px){
+  .road-line{display:none}
+  .road-stops{grid-template-columns:1fr 1fr;gap:0}
+  .stop{padding:16px 12px 16px 0;border-top:1px solid var(--line)}
+  .stop::before{top:22px;left:auto;right:0}
+  .stop p{max-width:none}
+}
+@media(max-width:520px){.road-stops{grid-template-columns:1fr}.stop::before{display:none}}
+
+/* ── faq ─────────────────────────────────────────────────────── */
+.faq{margin-top:clamp(30px,4vw,46px);border-top:1px solid var(--line)}
+details{border-bottom:1px solid var(--line)}
+summary{
+  list-style:none;cursor:pointer;padding:17px 34px 17px 0;position:relative;
+  font-size:14px;font-weight:500;color:var(--fg);transition:color .2s;
+}
+summary::-webkit-details-marker{display:none}
+summary::after{
+  content:"+";position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:15px;color:var(--fg-3);transition:.25s;
+}
+details[open] summary::after{transform:translateY(-50%) rotate(45deg);color:var(--allow)}
+summary:hover{color:var(--allow)}
+details .a{padding:0 40px 20px 0;color:var(--fg-2);font-size:13px;line-height:1.8;max-width:76ch}
+details .a code{font-family:var(--mono);font-size:11.5px;color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+
+/* ── final cta ───────────────────────────────────────────────── */
+.final{position:relative;padding:clamp(72px,10vw,132px) 0;border-top:1px solid var(--line);overflow:hidden}
+.final::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(50% 70% at 50% 110%,rgb(var(--glow-rgb) / .13),transparent 70%);
+}
+.final .wrap{position:relative;text-align:center}
+.final h2{font-size:clamp(1.7rem,3.6vw,2.7rem);line-height:1.2;letter-spacing:-.035em;font-weight:600;max-width:16em;margin-inline:auto;text-wrap:balance}
+.final p{color:var(--fg-2);font-size:14px;margin-top:16px;max-width:44em;margin-inline:auto}
+.final .actions{justify-content:center}
+
+/* ── footer ──────────────────────────────────────────────────── */
+footer{border-top:1px solid var(--line);padding:34px 0 46px;font-size:12px;color:var(--fg-3)}
+.f-top{display:flex;flex-wrap:wrap;gap:18px 40px;align-items:center}
+.f-brand{display:flex;align-items:center;gap:9px;color:var(--fg-2);font-weight:500}
+.f-links{display:flex;flex-wrap:wrap;gap:22px;margin-left:auto}
+.f-links a{transition:color .2s}
+.f-links a:hover{color:var(--fg)}
+.f-bottom{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:26px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;letter-spacing:.02em}
+.f-bottom span:last-child{margin-left:auto}
+@media(max-width:640px){.f-links{margin-left:0;gap:16px}.f-bottom span:last-child{margin-left:0}}
+
+/* ── motion ──────────────────────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .75s cubic-bezier(.22,.61,.36,1),transform .75s cubic-bezier(.22,.61,.36,1)}
+.reveal.in{opacity:1;transform:none}
+.hero-l > *{opacity:0;animation:rise .85s cubic-bezier(.22,.61,.36,1) forwards}
+.hero-l > *:nth-child(1){animation-delay:.04s}
+.hero-l > *:nth-child(2){animation-delay:.10s}
+.hero-l > *:nth-child(3){animation-delay:.17s}
+.hero-l > *:nth-child(4){animation-delay:.24s}
+.hero-l > *:nth-child(5){animation-delay:.31s}
+.hero-l > *:nth-child(6){animation-delay:.38s}
+.hero-r{opacity:0;animation:rise .95s cubic-bezier(.22,.61,.36,1) .30s forwards}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reveal,.hero-l > *,.hero-r{opacity:1!important;transform:none!important;animation:none!important;transition:none!important}
+  .timer .bar i{transition:none}
+}
+.hero-l > *,.hero-r,.reveal{opacity:1!important;transform:none!important;animation:none!important}
+</style>
+</head>
+<body>
+
+<header class="topbar" id="topbar">
+  <div class="wrap">
+    <a class="logo" href="#top" aria-label="NetworkControl 首页">
+      <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 4.5l9 4.4v7.3c0 5.6-3.8 9.4-9 10.8-5.2-1.4-9-5.2-9-10.8V8.9z" fill="none" stroke="#C9F45A" stroke-width="1.5"/>
+        <circle cx="16" cy="15.6" r="2.6" fill="#C9F45A"/>
+      </svg>
+      <b>NetworkControl</b><span>/ v0.1</span>
+    </a>
+    <nav class="nav" aria-label="主导航">
+      <a href="#mechanism">机制</a>
+      <a href="#features">功能</a>
+      <a href="#modes">模式</a>
+      <a href="#platforms">平台</a>
+      <a href="#perf">性能</a>
+      <a href="#roadmap">路线图</a>
+    </nav>
+    <div class="top-actions">
+      <div class="lang" role="group" aria-label="语言 / Language">
+        <button type="button" data-lang="zh-Hans" aria-pressed="true">简</button>
+        <button type="button" data-lang="zh-Hant" aria-pressed="false">繁</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="icon-btn" id="theme-btn" data-mode="auto" aria-label="切换主题" title="跟随系统">
+        <svg class="i-auto" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M8 2a6 6 0 0 0 0 12z" fill="currentColor"/></svg>
+        <svg class="i-light" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="3.1" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.8M8 13.2V15M15 8h-1.8M2.8 8H1M12.9 3.1l-1.3 1.3M4.4 11.6l-1.3 1.3M12.9 12.9l-1.3-1.3M4.4 4.4L3.1 3.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <svg class="i-dark" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      </button>
+      <a class="top-cta" href="#download">获取预览版</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ── hero ───────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-l">
+        <div class="eyebrow">本地优先 · 跨平台 · 无遥测</div>
+        <h1 class="brand">Network<em>Control</em></h1>
+        <p class="promise">每一次联网，都由你决定。<span>而不是由应用自己决定。</span></p>
+        <p class="lede">
+          桌面系统只挡入站，从不问你出站。NetworkControl 补上这一层：应用首次联网时弹窗询问，
+          规则精确到域名、IP 与端口，Windows、Linux、macOS 共用一套规则模型。
+        </p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#download">
+            获取预览版
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 4.5L12 8l-3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="#mechanism">看看它怎么工作</a>
+        </div>
+        <div class="meta">
+          <span>Windows 10 1809+</span>
+          <span>Linux 内核 5.8+ / nftables</span>
+          <span>macOS 13 Ventura+</span>
+          <span>x64 · ARM64</span>
+        </div>
+      </div>
+
+      <div class="hero-r">
+        <!-- 产品核心交互：询问弹窗（可交互示意） -->
+        <div class="prompt" id="prompt" aria-label="询问弹窗示意">
+          <div class="p-head">
+            <div class="app-icon" aria-hidden="true">VS</div>
+            <div class="p-id">
+              <div class="p-name">Visual Studio Code <span class="count">3 个待决</span></div>
+              <div class="p-sign"><span class="ok">✔</span> 已签名 · Microsoft Corporation</div>
+              <div class="p-path">C:\Users\…\AppData\Local\Programs\Microsoft VS Code\Code.exe</div>
+            </div>
+          </div>
+
+          <div class="p-target">
+            <div class="k">想要连接到</div>
+            <div class="p-dest">marketplace.visualstudio.com <span class="ip">(13.107.42.18)</span></div>
+            <div class="p-tuple">TCP 443 HTTPS<span class="sep">·</span>出站<span class="sep">·</span>美国 / AS8075 Microsoft</div>
+          </div>
+
+          <div class="p-body">
+            <div class="field">
+              <div class="k">范围</div>
+              <div class="segs" id="scope-segs">
+                <button class="seg" data-scope="app" aria-pressed="false">此应用的任意连接</button>
+                <button class="seg" data-scope="domain" aria-pressed="true">此域名</button>
+                <button class="seg" data-scope="ip" aria-pressed="false">此 IP</button>
+                <button class="seg" data-scope="ipport" aria-pressed="false">此 IP + 端口</button>
+                <button class="seg" data-scope="port" aria-pressed="false">此端口</button>
+              </div>
+            </div>
+            <div class="field">
+              <div class="k">时效</div>
+              <div class="segs" id="ttl-segs">
+                <button class="seg" data-ttl="now" aria-pressed="false">本次</button>
+                <button class="seg" data-ttl="exit" aria-pressed="false">直到退出</button>
+                <button class="seg" data-ttl="5m" aria-pressed="false">5 分钟</button>
+                <button class="seg" data-ttl="15m" aria-pressed="false">15 分钟</button>
+                <button class="seg" data-ttl="1h" aria-pressed="false">1 小时</button>
+                <button class="seg" data-ttl="reboot" aria-pressed="false">直到重启</button>
+                <button class="seg" data-ttl="forever" aria-pressed="true">永久</button>
+              </div>
+            </div>
+            <div class="rule-preview" id="rule-preview">
+              <b>将生成规则</b> · 应用 Code.exe（签名者 Microsoft Corporation） · 条件 域名 marketplace.visualstudio.com · 动作 <b>允许</b> · 时效 <b>永久</b>
+            </div>
+          </div>
+
+          <div class="p-foot">
+            <div class="timer" id="timer">
+              <span aria-hidden="true">⏱</span>
+              <span id="timer-text">30 秒后自动拒绝</span>
+              <span class="bar" aria-hidden="true"><i id="timer-bar"></i></span>
+            </div>
+            <div class="verdicts">
+              <button class="v deny" data-v="deny">拒绝</button>
+              <button class="v allow" data-v="allow">允许</button>
+            </div>
+          </div>
+          <div class="p-status" id="p-status" aria-live="polite">等待判决 · 倒计时结束按默认动作处理</div>
+        </div>
+        <p class="prompt-note">示意图：可点选范围与时效，悬停弹窗会暂停倒计时 —— 与产品行为一致</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 01 机制 ────────────────────────────────────────────── -->
+  <section class="sect" id="mechanism">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">01 — 核心机制</div>
+        <div>
+          <h2>一次询问，三个决定</h2>
+          <p class="s-lede">
+            弹窗里没有层层选项，只有三个决定：动作、范围、时效。选完即生成一条规则，之后同类连接不再打扰你。
+          </p>
+        </div>
+      </div>
+
+      <div class="tri reveal">
+        <div>
+          <h3>动作 <i>Allow / Deny</i></h3>
+          <p>允许或拒绝。默认焦点不落在「允许」上，弹窗出现后 1 秒内不响应点击与按键，打字时按到回车也不会误放行。</p>
+          <div class="val">允许 · 拒绝</div>
+        </div>
+        <div>
+          <h3>范围 <i>Scope</i></h3>
+          <p>决定这条规则管多宽。条件越具体的规则优先级越高；具体程度相同时，「拒绝」优先。</p>
+          <div class="val">任意连接 / 域名 / IP / IP+端口 / 端口</div>
+        </div>
+        <div>
+          <h3>时效 <i>Lifetime</i></h3>
+          <p>决定这条规则活多久。到期自动失效，从生效列表移除，但历史记录仍可回溯。</p>
+          <div class="val">本次 / 直到退出 / 5 分钟 / 15 分钟 / 1 小时 / 直到重启 / 永久</div>
+        </div>
+      </div>
+
+      <div class="note-line reveal">
+        <span class="tick">▸</span>
+        <div>
+          <b>不打扰是设计目标。</b>同一应用的多个待决连接合并成一个弹窗（浏览器同时发起 20 个连接只弹一次），
+          不同应用排队依次显示，最多同时显示 1 个；等待超过设定时间（默认 30 秒）按默认动作判决并标记「超时」。
+          开启勿扰模式后不再弹窗，直接按默认策略处理，事后在日志里审查。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 02 判决管线 ────────────────────────────────────────── -->
+  <section class="sect" id="pipeline">
+    <div class="wrap pipe-grid">
+      <div class="pipe-aside">
+        <div class="s-num">02 — 判决管线</div>
+        <h2>从连接发起，到写入日志</h2>
+        <p class="s-lede">
+          判决路径不涉及 I/O 与阻塞调用。签名校验、哈希计算、日志写入全部异步，结果缓存。
+        </p>
+      </div>
+
+      <div class="pipe-list">
+        <div class="rail" aria-hidden="true"><i id="rail-fill"></i></div>
+
+        <div class="stage">
+          <h3><em>01</em> 拦截</h3>
+          <p>引擎的过滤层看到每一条新的出站 TCP 连接与 UDP 流，覆盖 IPv4 与 IPv6。回环、DHCP、系统 DNS、NTP 与自身流量走内置放行。</p>
+          <code>WFP</code><code>nftables + NFQUEUE</code><code>Network Extension</code>
+        </div>
+        <div class="stage">
+          <h3><em>02</em> 识别</h3>
+          <p>PID → 完整路径 → 友好名称与图标 → 发布者或文件哈希。已签名应用按「签名者 + 路径」匹配，未签名按「路径 + 哈希」匹配，所以升级后规则不会失效；哈希变了则暂停规则并告警。</p>
+          <code>Authenticode</code><code>Team ID</code><code>sha256</code>
+        </div>
+        <div class="stage">
+          <h3><em>03</em> 匹配</h3>
+          <p>规则以不可变快照参与匹配，读路径无锁。条件更具体的优先，同具体程度时拒绝优先，也支持手动置顶。</p>
+          <code>p99 &lt; 0.5 ms</code><code>10⁴ 条规则 p99 &lt; 2 ms</code>
+        </div>
+        <div class="stage">
+          <h3><em>04</em> 询问</h3>
+          <p>没有规则命中、且当前模式为询问时进入 PromptBroker：按应用合并、跨应用排队、倒计时可暂停、UI 不在时按默认动作处理并记录。</p>
+          <code>&lt; 300 ms 弹出</code><code>30 s 超时</code>
+        </div>
+        <div class="stage">
+          <h3><em>05</em> 判决</h3>
+          <p>结果写入判决缓存与活动数据库，同时记下依据：命中了哪条规则、哪个模式、还是超时。相同重复连接聚合计数，日志不会膨胀。</p>
+          <code>SQLite WAL</code><code>依据可回溯</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 03 功能 ────────────────────────────────────────────── -->
+  <section class="sect" id="features">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">03 — 功能清单</div>
+        <div>
+          <h2>十一个模块，一个规则模型</h2>
+          <p class="s-lede">三个平台的交互和规则模型保持一致，能力差异如实标注在界面上，不假装所有平台行为完全相同。</p>
+          <div class="legend">
+            <span>P0 · MVP 必备</span>
+            <span><i class="tag p1">P1</i> v1.0 必备</span>
+            <span><i class="tag p2">P2</i> 后续增强</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <div class="mod">
+          <div class="mod-h"><h3>拦截与判决</h3><span class="code">FR-INT</span></div>
+          <ul class="caps">
+            <li>出站 TCP / UDP，IPv4 / IPv6</li>
+            <li>连接级判决</li>
+            <li>回环默认放行</li>
+            <li>内置系统流量</li>
+            <li>待决超时</li>
+            <li>入站控制 <i class="tag p1">P1</i></li>
+            <li>ICMP 开关 <i class="tag p1">P1</i></li>
+            <li>按应用限速 <i class="tag p2">P2</i></li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>应用识别</h3><span class="code">FR-APP</span></div>
+          <ul class="caps">
+            <li>PID · 路径 · 名称 · 图标 · 运行用户</li>
+            <li>签名者与哈希 <i class="tag p1">P1</i></li>
+            <li>签名者 + 路径匹配策略 <i class="tag p1">P1</i></li>
+            <li>篡改检测与告警 <i class="tag p1">P1</i></li>
+            <li>svchost 按服务名细分 <i class="tag p1">P1</i></li>
+            <li>UWP / MSIX 按包名 <i class="tag p1">P1</i></li>
+            <li>解释器按命令行细分 <i class="tag p2">P2</i></li>
+            <li>子进程归并 · 可选继承父规则 <i class="tag p2">P2</i></li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>询问弹窗</h3><span class="code">FR-PRM</span></div>
+          <ul class="caps">
+            <li>动作 × 时效 × 范围</li>
+            <li>倒计时与超时默认动作</li>
+            <li>防误触与不抢焦点</li>
+            <li>合并 · 排队 <i class="tag p1">P1</i></li>
+            <li>记住上次选择 <i class="tag p1">P1</i></li>
+            <li>快捷键 A / D / Esc <i class="tag p1">P1</i></li>
+            <li>多用户会话隔离 <i class="tag p1">P1</i></li>
+            <li>UI 不在时按默认处理</li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>规则</h3><span class="code">FR-RUL</span></div>
+          <ul class="caps">
+            <li>应用 + 条件 + 动作 + 时效</li>
+            <li>域名通配 · CIDR · 端口范围 <i class="tag p1">P1</i></li>
+            <li>协议 · 方向 · 网络类型 <i class="tag p1">P1</i></li>
+            <li>局域网 / 互联网预设 · 一键仅局域网 <i class="tag p1">P1</i></li>
+            <li>优先级与手动置顶</li>
+            <li>五种时效语义</li>
+            <li>搜索 · 筛选 · 批量</li>
+            <li>从日志一键建规 <i class="tag p1">P1</i></li>
+            <li>来源标记 · 90 天未命中筛选 <i class="tag p1">P1</i></li>
+            <li>时间段条件 <i class="tag p2">P2</i></li>
+            <li>黑名单订阅 <i class="tag p2">P2</i></li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>模式与配置文件</h3><span class="code">FR-MOD</span></div>
+          <ul class="caps">
+            <li>5 种全局模式</li>
+            <li>配置文件 + 共享规则 <i class="tag p1">P1</i></li>
+            <li>按 SSID / 网关 MAC / 网卡类型自动切换 <i class="tag p1">P1</i></li>
+            <li>一键断网与恢复</li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>监控与日志</h3><span class="code">FR-MON</span></div>
+          <ul class="caps">
+            <li>连接日志与判决依据</li>
+            <li>筛选 · CSV 导出 <i class="tag p1">P1</i></li>
+            <li>保留 30 天或 500 MB · 重复聚合</li>
+            <li>实时连接视图 <i class="tag p1">P1</i></li>
+            <li>域名替代 IP 显示 <i class="tag p1">P1</i></li>
+            <li>离线 GeoIP / ASN <i class="tag p2">P2</i></li>
+            <li>连接世界地图 <i class="tag p2">P2</i></li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>统计</h3><span class="code">FR-STA</span></div>
+          <ul class="caps">
+            <li>按应用上下行流量 <i class="tag p1">P1</i></li>
+            <li>分钟 / 小时 / 天粒度 <i class="tag p1">P1</i></li>
+            <li>今天 / 7 天 / 30 天趋势 <i class="tag p1">P1</i></li>
+            <li>Top N 应用与目的域名 <i class="tag p1">P1</i></li>
+            <li>流量配额 <i class="tag p2">P2</i></li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>通知</h3><span class="code">FR-NTF</span></div>
+          <ul class="caps">
+            <li>阻断通知（可关闭）</li>
+            <li>从通知直接授权</li>
+            <li>勿扰：1 小时 / 直到明天 / 手动关闭 <i class="tag p1">P1</i></li>
+            <li>勿扰结束后汇总被阻断的应用 <i class="tag p1">P1</i></li>
+            <li>全屏应用自动勿扰 <i class="tag p1">P1</i></li>
+            <li>安全告警 <i class="tag p1">P1</i></li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>托盘</h3><span class="code">FR-TRY</span></div>
+          <ul class="caps">
+            <li>5 种状态图标</li>
+            <li>菜单切换模式与配置文件</li>
+            <li>菜单内勿扰模式与打开主界面</li>
+            <li>退出 UI 不影响服务</li>
+            <li>悬停显示实时速率 <i class="tag p1">P1</i></li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>设置与安全</h3><span class="code">FR-SET</span></div>
+          <ul class="caps">
+            <li>界面语言 · 主题 · 开机启动 UI</li>
+            <li>弹窗超时时间与默认动作</li>
+            <li>失效策略 fail-open / fail-closed <i class="tag p1">P1</i></li>
+            <li>JSON 导入导出与差异预览 <i class="tag p1">P1</i></li>
+            <li>每日备份保留 7 份 <i class="tag p1">P1</i></li>
+            <li>修改规则需管理员权限 <i class="tag p1">P1</i></li>
+            <li>设置密码 <i class="tag p2">P2</i></li>
+            <li>命令行 ncctl <i class="tag p2">P2</i></li>
+          </ul>
+        </div>
+
+        <div class="mod">
+          <div class="mod-h"><h3>系统集成</h3><span class="code">FR-SYS</span></div>
+          <ul class="caps">
+            <li>MSI · deb / rpm · 公证 dmg</li>
+            <li>服务早于用户登录启动</li>
+            <li>卸载不残留任何拦截</li>
+            <li>升级保留规则并迁移数据库</li>
+            <li>启动保护空窗 <i class="tag p1">P1</i></li>
+            <li>检查更新（可关闭） <i class="tag p1">P1</i></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="cols reveal" style="margin-top:clamp(28px,4vw,44px)">
+        <div>
+          <div class="col-h"><h3>内置默认放行</h3><span>BUILT-IN</span></div>
+          <ul class="items">
+            <li><b>必要流量</b><span>本地回环、DHCP（UDP 67/68、546/547）、系统 DNS 解析服务、NTP（UDP 123）默认放行</span></li>
+            <li><b>ICMPv6</b><span>邻居发现与路由通告始终放行，否则局域网无法工作</span></li>
+            <li><b>系统更新</b><span>Windows Update 与 Defender 定义更新在首次运行时询问你，不静默放行</span></li>
+            <li><b>可停用</b><span>除自身与回环外，内置规则都可以停用，但不能删除</span></li>
+          </ul>
+        </div>
+        <div>
+          <div class="col-h"><h3>可用性与国际化</h3><span>UX / I18N</span></div>
+          <ul class="items">
+            <li><b>首次运行引导</b><span>解释弹窗机制、选择初始模式、可选地预授权常用应用</span></li>
+            <li><b>三语界面</b><span>简体中文、繁体中文、英文；文本全部外置，方便扩展</span></li>
+            <li><b>主题与缩放</b><span>深色 / 浅色 / 跟随系统；支持系统缩放 100% 到 200%</span></li>
+            <li><b>键盘可用</b><span>主要功能可纯键盘操作，控件都有无障碍名称</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 04 模式 ────────────────────────────────────────────── -->
+  <section class="sect" id="modes">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">04 — 全局模式</div>
+        <div>
+          <h2>五种模式，一个开关</h2>
+          <p class="s-lede">托盘和主界面都能切换，即时生效。一键断网后托盘图标变红，恢复时回到之前的模式。</p>
+        </div>
+      </div>
+
+      <div class="modes reveal">
+        <div class="mode-tabs" role="tablist" aria-label="全局模式">
+          <button role="tab" aria-selected="true" data-mode="ask">询问模式</button>
+          <button role="tab" aria-selected="false" data-mode="allowlist">白名单模式</button>
+          <button role="tab" aria-selected="false" data-mode="blocklist">黑名单模式</button>
+          <button role="tab" aria-selected="false" data-mode="blockall">全部阻断</button>
+          <button role="tab" aria-selected="false" data-mode="off">停用过滤</button>
+        </div>
+        <div class="mode-body">
+          <div class="mode-cell">
+            <div class="k">规则命中时</div>
+            <div class="mv mv-mute" id="mode-onrule">按规则判决</div>
+          </div>
+          <div class="mode-cell">
+            <div class="k">无规则命中时</div>
+            <div class="mv mv-allow" id="mode-norule">弹窗询问</div>
+          </div>
+          <div class="mode-cell">
+            <div class="k">典型用途</div>
+            <div class="mv mv-mute" id="mode-use">日常使用</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note-line reveal">
+        <span class="tick">▸</span>
+        <div>
+          <b>配置文件。</b>每个配置文件有自己的模式与规则集，另有一份「共享规则」对所有配置文件生效。
+          按 Wi-Fi SSID、网关 MAC 或网卡类型匹配，连上指定热点后自动切换到对应配置文件——出差、热点、家用网络各有一套策略。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 05 平台 ────────────────────────────────────────────── -->
+  <section class="sect" id="platforms">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">05 — 平台与能力</div>
+        <div>
+          <h2>能力差异，如实展示</h2>
+          <p class="s-lede">
+            三个平台各有各的拦截点，能做到的事情并不完全一样。引擎会向核心与界面声明自己的能力，界面据此调整文案——不会让你以为行为完全相同。
+          </p>
+        </div>
+      </div>
+
+      <div class="tablewrap reveal">
+        <table>
+          <caption class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">平台能力差异</caption>
+          <thead>
+            <tr>
+              <th scope="col">能力</th>
+              <th scope="col">Windows（用户态 WFP）</th>
+              <th scope="col">Windows（驱动，后期）</th>
+              <th scope="col">Linux（NFQUEUE + eBPF）</th>
+              <th scope="col">macOS（NE 扩展）</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">挂起连接等待判决</th>
+              <td><span class="n">✗</span> 先阻断，允许后由应用重试</td>
+              <td><span class="y">✓</span></td>
+              <td><span class="y">✓</span></td>
+              <td><span class="y">✓</span></td>
+            </tr>
+            <tr>
+              <th scope="row">「本次允许」的语义</th>
+              <td>临时允许 60 秒（可配置）</td>
+              <td>仅当前连接</td>
+              <td>仅当前连接</td>
+              <td>仅当前连接</td>
+            </tr>
+            <tr>
+              <th scope="row">进程 PID</th>
+              <td>部分（靠连接表补全）</td>
+              <td><span class="y">✓</span></td>
+              <td><span class="y">✓</span></td>
+              <td><span class="y">✓</span></td>
+            </tr>
+            <tr>
+              <th scope="row">引擎直接提供域名</th>
+              <td><span class="n">✗</span> 靠 ETW DNS 事件</td>
+              <td><span class="n">✗</span></td>
+              <td><span class="n">✗</span> 靠 DNS 嗅探</td>
+              <td><span class="p">部分</span> remoteHostname</td>
+            </tr>
+            <tr>
+              <th scope="row">按应用限速</th>
+              <td><span class="n">✗</span></td>
+              <td><span class="y">✓</span></td>
+              <td><span class="y">✓</span> tc / nft</td>
+              <td><span class="p">有限</span></td>
+            </tr>
+            <tr>
+              <th scope="row">启动保护</th>
+              <td><span class="y">✓</span> 持久化过滤器</td>
+              <td><span class="y">✓</span></td>
+              <td><span class="y">✓</span> 早期加载 nft 规则</td>
+              <td>取决于扩展加载时机</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <span class="hint reveal">左右滑动可查看完整表格</span>
+
+      <div class="note-line reveal">
+        <span class="tick">▸</span>
+        <div>
+          <b>约束。</b>macOS 版需要 Apple Developer Program 帐号，以及 Network Extension 系统扩展的授权；
+          Windows 驱动版需要 EV 代码签名证书并走微软签名流程，因此排在后期，先用用户态 WFP 交付。
+        </div>
+      </div>
+
+      <div class="cols reveal">
+        <div>
+          <div class="col-h"><h3>系统要求</h3><span>PLATFORM</span></div>
+          <ul class="items">
+            <li><b>Windows</b><span>Windows 10 1809+ / Windows 11 · x64、ARM64 · 用户态 WFP，不需要驱动</span></li>
+            <li><b>Linux</b><span>内核 5.8+ · nftables · systemd · Ubuntu 22.04+ / Debian 12+ / Fedora 39+</span></li>
+            <li><b>macOS</b><span>macOS 13 Ventura+ · Apple Silicon / x64 · 需签名并公证的 Network Extension 系统扩展</span></li>
+          </ul>
+        </div>
+        <div>
+          <div class="col-h"><h3>明确不做</h3><span>NON-GOALS</span></div>
+          <ul class="items">
+            <li><b>不做 DPI</b><span>不解密 HTTPS，不做内容过滤</span></li>
+            <li><b>不做 VPN</b><span>不内置代理，不转发流量</span></li>
+            <li><b>不做查杀</b><span>不是杀毒软件，不扫描文件</span></li>
+            <li><b>不做 MDM</b><span>v1.x 不做企业集中管控与多终端策略下发</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 06 性能 ────────────────────────────────────────────── -->
+  <section class="sect" id="perf">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">06 — 性能与可靠性</div>
+        <div>
+          <h2>装上之后，应该感觉不到它</h2>
+          <p class="s-lede">一个安全工具如果拖慢网络、吃满 CPU，用户第一件事就是把它卸掉。所以这些数字是验收标准，不是宣传语。</p>
+        </div>
+      </div>
+
+      <div class="metrics reveal">
+        <div class="metric"><div class="n">p99 &lt; 0.5<small> ms</small></div><div class="l"><b>缓存命中的判决延迟</b><br>热路径无锁读快照</div></div>
+        <div class="metric"><div class="n">p99 &lt; 2<small> ms</small></div><div class="l"><b>未命中判决延迟</b><br>1 万条规则下，不含弹窗等待</div></div>
+        <div class="metric"><div class="n">5000<small> /s</small></div><div class="l"><b>新连接吞吐</b><br>不丢判决</div></div>
+        <div class="metric"><div class="n">&lt; 0.5<small> %</small></div><div class="l"><b>核心服务空闲 CPU</b><br>内存 &lt; 80 MB</div></div>
+        <div class="metric"><div class="n">&lt; 3<small> %</small></div><div class="l"><b>千兆网络吞吐损耗</b><br>单连接下载测速</div></div>
+        <div class="metric"><div class="n">&lt; 300<small> ms</small></div><div class="l"><b>弹窗出现延迟</b><br>从连接发起算起</div></div>
+        <div class="metric"><div class="n">3<small> s</small></div><div class="l"><b>服务崩溃自动重启</b><br>由系统服务管理器拉起</div></div>
+        <div class="metric"><div class="n">7×24<small> 小时</small></div><div class="l"><b>稳定性测试无内存泄漏</b><br>增长 &lt; 10%</div></div>
+        <div class="metric"><div class="n">&lt; 150<small> MB</small></div><div class="l"><b>UI 最小化内存</b><br>主界面打开时 &lt; 300 MB</div></div>
+      </div>
+
+      <div class="note-line reveal">
+        <span class="tick">▸</span>
+        <div>
+          <b>不会因为自己把你锁在网外。</b>服务连续崩溃时自动降级为 fail-open；UI 崩溃或退出不影响拦截；
+          数据库损坏能从最近备份恢复并告警；卸载时清理过滤器、服务与系统扩展，不残留任何网络拦截。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 07 隐私与安全 ──────────────────────────────────────── -->
+  <section class="sect" id="privacy">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">07 — 隐私与安全</div>
+        <div>
+          <h2>一个管网络的工具，不向外上报任何数据</h2>
+          <p class="s-lede">不采集遥测，不联网查 IP，更新检查不带任何用户标识。本地数据库只允许服务账户写入。</p>
+        </div>
+      </div>
+
+      <div class="cols reveal">
+        <div>
+          <div class="col-h"><h3>隐私</h3><span>PRIVACY</span></div>
+          <ul class="items">
+            <li><b>零遥测</b><span>不采集任何使用数据；崩溃报告只留在本地，由你手动导出</span></li>
+            <li><b>离线地理库</b><span>IP 国家与 ASN 信息用本地离线库，不联网查询</span></li>
+            <li><b>克制的更新检查</b><span>只请求版本清单，不携带任何用户标识，可以关闭</span></li>
+          </ul>
+        </div>
+        <div>
+          <div class="col-h"><h3>安全</h3><span>SECURITY</span></div>
+          <ul class="items">
+            <li><b>本机 IPC</b><span>命名管道 / UDS 只对本机开放，校验客户端路径、签名与 SID / UID</span></li>
+            <li><b>最小权限</b><span>服务以最小必要权限运行，能降权的组件一律降权</span></li>
+            <li><b>数据 ACL</b><span>规则库与配置只允许服务账户写入</span></li>
+            <li><b>输入校验</b><span>DNS 报文、订阅列表、导入文件全部做长度与格式校验，并有 Fuzz 测试</span></li>
+            <li><b>全量签名</b><span>发布产物全部代码签名；macOS 走公证</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 08 技术 ────────────────────────────────────────────── -->
+  <section class="sect" id="stack">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">08 — 实现</div>
+        <div>
+          <h2>核心与平台分离</h2>
+          <p class="s-lede">
+            规则引擎、判决管线、存储、IPC 全部是与平台无关的 .NET 代码，平台侧只负责拦截和采集，越薄越好。
+            服务是唯一的事实来源：界面不在，拦截照常工作。
+          </p>
+        </div>
+      </div>
+
+      <div class="stack reveal">
+        <div>
+          <div class="k">运行时 / UI</div>
+          <div class="v"><code>.NET 10 LTS</code> <code>Avalonia 11</code><span>CommunityToolkit.Mvvm 源生成器，AOT 友好</span></div>
+        </div>
+        <div>
+          <div class="k">IPC / 存储</div>
+          <div class="v"><code>gRPC</code> <code>SQLite WAL</code><span>Windows 命名管道，Linux / macOS 走 UDS</span></div>
+        </div>
+        <div>
+          <div class="k">Windows</div>
+          <div class="v"><code>WFP</code> <code>ETW</code><span>P/Invoke fwpuclnt.dll，用户态即可，无需驱动签名</span></div>
+        </div>
+        <div>
+          <div class="k">Linux / macOS</div>
+          <div class="v"><code>NFQUEUE</code> <code>eBPF</code> <code>NE</code><span>nftables 挂起判决；macOS 走 NEFilterDataProvider</span></div>
+        </div>
+      </div>
+
+      <div class="note-line reveal">
+        <span class="tick">▸</span>
+        <div>
+          <b>可测试、可观测。</b>规则引擎与平台无关，用模拟引擎即可跑通全链路；核心逻辑单元测试覆盖率目标 ≥ 80%，
+          规则引擎、匹配器、时效管理都有属性测试与基准测试。服务输出结构化日志、级别可调，并提供「导出诊断包」
+          （配置、日志、引擎状态；连接日志除非你勾选，否则不会包含）。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 09 路线图 ──────────────────────────────────────────── -->
+  <section class="sect" id="roadmap">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">09 — 路线图</div>
+        <div>
+          <h2>先跑通，再覆盖</h2>
+          <p class="s-lede">M0 在模拟引擎上跑通核心交互；M1 交付 Windows 的 P0 功能；Linux 与 macOS 依次跟上。</p>
+        </div>
+      </div>
+
+      <div class="road reveal">
+        <div class="road-line"><i></i></div>
+        <div class="road-stops">
+          <div class="stop done">
+            <div class="v">M0</div>
+            <h3>原型</h3>
+            <p>核心服务 + 模拟引擎 + 界面（弹窗、规则、日志）</p>
+          </div>
+          <div class="stop">
+            <div class="v">M1</div>
+            <h3>Windows MVP</h3>
+            <p>用户态 WFP 引擎，全部 P0 功能验收</p>
+          </div>
+          <div class="stop">
+            <div class="v">M2</div>
+            <h3>Linux</h3>
+            <p>NFQUEUE + eBPF，挂起询问可用</p>
+          </div>
+          <div class="stop">
+            <div class="v">M3</div>
+            <h3>v1.0</h3>
+            <p>Windows 与 Linux 的全部 P1 功能，性能达标</p>
+          </div>
+          <div class="stop">
+            <div class="v">M4</div>
+            <h3>macOS</h3>
+            <p>NE 系统扩展，签名与公证完成</p>
+          </div>
+          <div class="stop">
+            <div class="v">M5+</div>
+            <h3>增强</h3>
+            <p>P2 功能与 Windows 驱动引擎</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 10 FAQ ─────────────────────────────────────────────── -->
+  <section class="sect" id="faq">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">10 — 常见问题</div>
+        <div>
+          <h2>先说清楚几件事</h2>
+          <p class="s-lede">关于断网风险、域名准确性、平台差异和授权方式的直接回答。</p></div>
+      </div>
+
+      <div class="faq reveal">
+        <details open>
+          <summary>它会不会把我自己的网弄断？</summary>
+          <div class="a">
+            默认 fail-open：服务异常、崩溃或停止时放行流量。服务连续崩溃会自动降级为放行；也可以显式选择 fail-closed。
+            卸载时会清理过滤器、服务与系统扩展，不残留任何网络拦截。开机到服务启动之间的空窗期，各平台按自身能力尽量提供启动保护。
+          </div>
+        </details>
+        <details>
+          <summary>为什么域名有时不准？</summary>
+          <div class="a">
+            拦截引擎本身不提供域名，靠 DNS 映射还原：Windows 用 ETW DNS 事件，Linux 用 DNS 嗅探，macOS 由系统扩展提供。
+            DoH、共享 IP 都会让映射失真。因此界面上的域名只作参考，可以展开看真实 IP；对浏览器这类连接密集的应用，建议直接按「此应用的任意连接」授权。
+          </div>
+        </details>
+        <details>
+          <summary>Windows 上「先阻断、再允许」是什么体验？</summary>
+          <div class="a">
+            用户态 WFP 无法挂起连接等用户决定，所以首次连接会先被阻断，弹窗会明确提示「此连接已被暂时阻止，允许后应用重试即可连接」。
+            少数应用首次失败后不重试，这时可以在弹窗里直接授权或临时切到停用过滤。后期版本会提供驱动引擎，实现真正的挂起判决。
+          </div>
+        </details>
+        <details>
+          <summary>升级软件后，规则会失效吗？</summary>
+          <div class="a">
+            不会。有签名的应用按「签名者 + 路径」匹配，没签名的按「路径 + 哈希」匹配。如果未签名应用的哈希变了，或者已签名应用的签名者变了，
+            会暂停该应用的现有规则并发出「程序已变更」告警，而不是悄悄沿用旧授权。
+          </div>
+        </details>
+        <details>
+          <summary>支持多用户和远程桌面吗？</summary>
+          <div class="a">
+            询问弹窗只出现在发起连接的用户会话中；系统账户发起的连接，询问显示给管理员。没有用户登录时，询问按默认动作处理并写入日志，
+            服务照常工作。多用户场景是否进入 v1.0 范围仍在评审中。
+          </div>
+        </details>
+        <details>
+          <summary>开源吗？可以脚本化吗？</summary>
+          <div class="a">
+            协议选型（MIT / Apache-2.0 / GPL-3.0）尚在评审，它决定能否参考或复用 GPL 项目的代码，所以暂时按「只借鉴设计、不复制代码」处理。
+            命令行工具 <code>ncctl</code> 提供状态查询、模式切换、规则增删查与导入导出，属于 P2 计划。
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ────────────────────────────────────────────────── -->
+  <section class="final" id="download">
+    <div class="wrap">
+      <h2>先看清楚每一条连接，<br>再决定谁可以出去。</h2>
+      <p>M0 原型已在模拟引擎上跑通核心交互，M1 的 Windows MVP 进入内测。</p>
+      <div class="actions">
+        <!-- TODO: 替换为真实的内测申请地址（表单页或邮件列表） -->
+        <a class="btn btn-primary" href="mailto:beta@networkcontrol.app?subject=%E7%94%B3%E8%AF%B7%20NetworkControl%20%E5%86%85%E6%B5%8B">
+          申请内测名额
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 4.5L12 8l-3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="btn btn-ghost" href="../docs/requirements.md">阅读需求规格</a>
+        <a class="btn btn-ghost" href="../docs/design.md">阅读设计实现</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="f-top">
+      <div class="f-brand">
+        <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M16 4.5l9 4.4v7.3c0 5.6-3.8 9.4-9 10.8-5.2-1.4-9-5.2-9-10.8V8.9z" fill="none" stroke="#C9F45A" stroke-width="1.5"/>
+          <circle cx="16" cy="15.6" r="2.6" fill="#C9F45A"/>
+        </svg>
+        NetworkControl
+      </div>
+      <nav class="f-links" aria-label="页脚导航">
+        <a href="#mechanism">核心机制</a>
+        <a href="#features">功能清单</a>
+        <a href="#platforms">平台支持</a>
+        <a href="#roadmap">路线图</a>
+        <a href="../docs/requirements.md">需求文档</a>
+        <a href="../docs/design.md">设计文档</a>
+      </nav>
+    </div>
+    <div class="f-bottom">
+      <span>v0.1 草案 · 待评审</span>
+      <span>本地运行 · 不收集遥测</span>
+      <span>Windows · Linux · macOS</span>
+      <span>© 2026 NetworkControl</span>
+    </div>
+  </div>
+</footer>
+
+<script type="application/json" id="i18n-data">{"zh-Hant":{"NetworkControl 首页":"NetworkControl 首頁","NetworkControl":"NetworkControl","/ v0.1":"/ v0.1","主导航":"主導覽","机制":"機制","功能":"功能","模式":"模式","平台":"平台","性能":"效能","路线图":"藍圖","获取预览版":"取得預覽版","本地优先 · 跨平台 · 无遥测":"本機優先 · 跨平台 · 無遙測","Network":"Network","Control":"Control","每一次联网，都由你决定。":"每一次連網，都由你決定。","而不是由应用自己决定。":"而不是由應用自己決定。","桌面系统只挡入站，从不问你出站。NetworkControl 补上这一层：应用首次联网时弹窗询问，\n          规则精确到域名、IP 与端口，Windows、Linux、macOS 共用一套规则模型。":"桌面系統僅擋入站，從不問你出站。NetworkControl 補上這一層：應用首次連網時彈窗詢問，\n          規則精確到網域、IP 與埠，Windows、Linux、macOS 共用一套規則模型。","看看它怎么工作":"看看它怎麼運作","Windows 10 1809+":"Windows 10 1809+","Linux 内核 5.8+ / nftables":"Linux 核心 5.8+ / nftables","macOS 13 Ventura+":"macOS 13 Ventura+","x64 · ARM64":"x64 · ARM64","询问弹窗示意":"詢問彈窗示意","VS":"VS","Visual Studio Code":"Visual Studio Code","3 个待决":"3 個待決","已签名 · Microsoft Corporation":"已簽章 · Microsoft Corporation","C:\\Users\\…\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe":"C:\\Users\\…\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe","想要连接到":"想要連線到","marketplace.visualstudio.com":"marketplace.visualstudio.com","TCP 443 HTTPS":"TCP 443 HTTPS","出站":"出站","美国 / AS8075 Microsoft":"美國 / AS8075 Microsoft","范围":"範圍","此应用的任意连接":"此應用的任意連線","此域名":"此網域","此 IP":"此 IP","此 IP + 端口":"此 IP + 埠","此端口":"此埠","时效":"時效","本次":"本次","直到退出":"直到結束","5 分钟":"5 分鐘","15 分钟":"15 分鐘","1 小时":"1 小時","直到重启":"直到重新啟動","永久":"永久","将生成规则":"將產生規則","· 应用 Code.exe（签名者 Microsoft Corporation） · 条件 域名 marketplace.visualstudio.com · 动作":"· 應用 Code.exe（簽署者 Microsoft Corporation） · 條件 網域 marketplace.visualstudio.com · 動作","允许":"允許","· 时效":"· 時效","30 秒后自动拒绝":"30 秒後自動拒絕","拒绝":"拒絕","等待判决 · 倒计时结束按默认动作处理":"等待判決 · 倒數結束依預設動作處理","示意图：可点选范围与时效，悬停弹窗会暂停倒计时 —— 与产品行为一致":"示意圖：可點選範圍與時效，懸停彈窗會暫停倒數 —— 與產品行為一致","01 — 核心机制":"01 — 核心機制","一次询问，三个决定":"一次詢問，三個決定","弹窗里没有层层选项，只有三个决定：动作、范围、时效。选完即生成一条规则，之后同类连接不再打扰你。":"彈窗裡沒有層層選項，僅有三個決定：動作、範圍、時效。選完即產生一條規則，之後同類連線不再打擾你。","动作":"動作","Allow / Deny":"Allow / Deny","允许或拒绝。默认焦点不落在「允许」上，弹窗出现后 1 秒内不响应点击与按键，打字时按到回车也不会误放行。":"允許或拒絕。預設焦點不落在「允許」上，彈窗出現後 1 秒內不回應點擊與按鍵，打字時按到確認鍵也不會誤放行。","允许 · 拒绝":"允許 · 拒絕","Scope":"Scope","决定这条规则管多宽。条件越具体的规则优先级越高；具体程度相同时，「拒绝」优先。":"決定這條規則管多寬。條件越具體的規則優先順序越高；具體程度相同時，「拒絕」優先。","任意连接 / 域名 / IP / IP+端口 / 端口":"任意連線 / 網域 / IP / IP+埠 / 埠","Lifetime":"Lifetime","决定这条规则活多久。到期自动失效，从生效列表移除，但历史记录仍可回溯。":"決定這條規則存活多久。到期自動失效，從生效清單移除，但歷史記錄仍可回溯。","本次 / 直到退出 / 5 分钟 / 15 分钟 / 1 小时 / 直到重启 / 永久":"本次 / 直到結束 / 5 分鐘 / 15 分鐘 / 1 小時 / 直到重新啟動 / 永久","不打扰是设计目标。":"不打擾是設計目標。","同一应用的多个待决连接合并成一个弹窗（浏览器同时发起 20 个连接只弹一次），\n          不同应用排队依次显示，最多同时显示 1 个；等待超过设定时间（默认 30 秒）按默认动作判决并标记「超时」。\n          开启勿扰模式后不再弹窗，直接按默认策略处理，事后在日志里审查。":"同一應用的多個待決連線合併成一個彈窗（瀏覽器同時發起 20 個連線僅彈一次），\n          不同應用排隊依序顯示，最多同時顯示 1 個；等待超過設定時間（預設 30 秒）依預設動作判決並標記「逾時」。\n          開啟勿擾模式後不再彈窗，直接依預設策略處理，事後在日誌裡審查。","02 — 判决管线":"02 — 判決管線","从连接发起，到写入日志":"從連線發起，到寫入日誌","判决路径不涉及 I/O 与阻塞调用。签名校验、哈希计算、日志写入全部异步，结果缓存。":"判決路徑不涉及 I/O 與阻塞呼叫。簽章驗證、雜湊計算、日誌寫入全部非同步，結果快取。","拦截":"攔截","引擎的过滤层看到每一条新的出站 TCP 连接与 UDP 流，覆盖 IPv4 与 IPv6。回环、DHCP、系统 DNS、NTP 与自身流量走内置放行。":"引擎的過濾層看到每一條新的出站 TCP 連線與 UDP 流，涵蓋 IPv4 與 IPv6。回送、DHCP、系統 DNS、NTP 與自身流量走內建放行。","WFP":"WFP","nftables + NFQUEUE":"nftables + NFQUEUE","Network Extension":"Network Extension","识别":"識別","PID → 完整路径 → 友好名称与图标 → 发布者或文件哈希。已签名应用按「签名者 + 路径」匹配，未签名按「路径 + 哈希」匹配，所以升级后规则不会失效；哈希变了则暂停规则并告警。":"PID → 完整路徑 → 易讀名稱與圖示 → 發行者或檔案雜湊。已簽章應用依「簽署者 + 路徑」比對，未簽章依「路徑 + 雜湊」比對，所以升級後規則不會失效；雜湊變了則暫停規則並警示。","Authenticode":"Authenticode","Team ID":"Team ID","sha256":"sha256","匹配":"比對","规则以不可变快照参与匹配，读路径无锁。条件更具体的优先，同具体程度时拒绝优先，也支持手动置顶。":"規則以不可變快照參與比對，讀取路徑無鎖。條件更具體的優先，同具體程度時拒絕優先，也支援手動置頂。","p99 < 0.5 ms":"p99 < 0.5 ms","10⁴ 条规则 p99 < 2 ms":"10⁴ 條規則 p99 < 2 ms","询问":"詢問","没有规则命中、且当前模式为询问时进入 PromptBroker：按应用合并、跨应用排队、倒计时可暂停、UI 不在时按默认动作处理并记录。":"沒有規則命中、且目前模式為詢問時進入 PromptBroker：依應用合併、跨應用排隊、倒數可暫停、UI 不在時依預設動作處理並記錄。","< 300 ms 弹出":"< 300 ms 彈出","30 s 超时":"30 s 逾時","判决":"判決","结果写入判决缓存与活动数据库，同时记下依据：命中了哪条规则、哪个模式、还是超时。相同重复连接聚合计数，日志不会膨胀。":"結果寫入判決快取與活動資料庫，同時記下依據：命中了哪條規則、哪個模式、還是逾時。相同重複連線聚合計數，日誌不會膨脹。","SQLite WAL":"SQLite WAL","依据可回溯":"依據可回溯","03 — 功能清单":"03 — 功能清單","十一个模块，一个规则模型":"十一個模組，一個規則模型","三个平台的交互和规则模型保持一致，能力差异如实标注在界面上，不假装所有平台行为完全相同。":"三個平台的互動和規則模型保持一致，能力差異如實標註在介面上，不假裝所有平台行為完全相同。","P0 · MVP 必备":"P0 · MVP 必備","P1":"P1","v1.0 必备":"v1.0 必備","P2":"P2","后续增强":"後續增強","拦截与判决":"攔截與判決","FR-INT":"FR-INT","出站 TCP / UDP，IPv4 / IPv6":"出站 TCP / UDP，IPv4 / IPv6","连接级判决":"連線級判決","回环默认放行":"回送預設放行","内置系统流量":"內建系統流量","待决超时":"待決逾時","入站控制":"入站控制","ICMP 开关":"ICMP 開關","按应用限速":"依應用限速","应用识别":"應用識別","FR-APP":"FR-APP","PID · 路径 · 名称 · 图标 · 运行用户":"PID · 路徑 · 名稱 · 圖示 · 執行使用者","签名者与哈希":"簽署者與雜湊","签名者 + 路径匹配策略":"簽署者 + 路徑比對策略","篡改检测与告警":"竄改偵測與警示","svchost 按服务名细分":"svchost 依服務名細分","UWP / MSIX 按包名":"UWP / MSIX 依套件名","解释器按命令行细分":"解譯器依命令列細分","子进程归并 · 可选继承父规则":"子程序歸併 · 可選繼承父規則","询问弹窗":"詢問彈窗","FR-PRM":"FR-PRM","动作 × 时效 × 范围":"動作 × 時效 × 範圍","倒计时与超时默认动作":"倒數與逾時預設動作","防误触与不抢焦点":"防誤觸與不搶焦點","合并 · 排队":"合併 · 排隊","记住上次选择":"記住上次選擇","快捷键 A / D / Esc":"快速鍵 A / D / Esc","多用户会话隔离":"多使用者工作階段隔離","UI 不在时按默认处理":"UI 不在時依預設處理","规则":"規則","FR-RUL":"FR-RUL","应用 + 条件 + 动作 + 时效":"應用 + 條件 + 動作 + 時效","域名通配 · CIDR · 端口范围":"網域萬用字元 · CIDR · 埠範圍","协议 · 方向 · 网络类型":"協定 · 方向 · 網路類型","局域网 / 互联网预设 · 一键仅局域网":"區域網路 / 網際網路預設 · 一鍵僅區域網路","优先级与手动置顶":"優先順序與手動置頂","五种时效语义":"五種時效語意","搜索 · 筛选 · 批量":"搜尋 · 篩選 · 批次","从日志一键建规":"從日誌一鍵建立規則","来源标记 · 90 天未命中筛选":"來源標記 · 90 天未命中篩選","时间段条件":"時段條件","黑名单订阅":"黑名單訂閱","模式与配置文件":"模式與設定檔","FR-MOD":"FR-MOD","5 种全局模式":"5 種全域模式","配置文件 + 共享规则":"設定檔 + 共用規則","按 SSID / 网关 MAC / 网卡类型自动切换":"依 SSID / 閘道 MAC / 網路卡類型自動切換","一键断网与恢复":"一鍵斷網與還原","监控与日志":"監控與日誌","FR-MON":"FR-MON","连接日志与判决依据":"連線日誌與判決依據","筛选 · CSV 导出":"篩選 · CSV 匯出","保留 30 天或 500 MB · 重复聚合":"保留 30 天或 500 MB · 重複聚合","实时连接视图":"即時連線檢視","域名替代 IP 显示":"網域取代 IP 顯示","离线 GeoIP / ASN":"離線 GeoIP / ASN","连接世界地图":"連線世界地圖","统计":"統計","FR-STA":"FR-STA","按应用上下行流量":"依應用上行與下行流量","分钟 / 小时 / 天粒度":"分鐘 / 小時 / 天粒度","今天 / 7 天 / 30 天趋势":"今天 / 7 天 / 30 天趨勢","Top N 应用与目的域名":"Top N 應用與目的網域","流量配额":"流量配額","通知":"通知","FR-NTF":"FR-NTF","阻断通知（可关闭）":"阻斷通知（可關閉）","从通知直接授权":"從通知直接授權","勿扰：1 小时 / 直到明天 / 手动关闭":"勿擾：1 小時 / 直到明天 / 手動關閉","勿扰结束后汇总被阻断的应用":"勿擾結束後彙總被阻斷的應用","全屏应用自动勿扰":"全螢幕應用自動勿擾","安全告警":"安全警示","托盘":"托盤","FR-TRY":"FR-TRY","5 种状态图标":"5 種狀態圖示","菜单切换模式与配置文件":"選單切換模式與設定檔","菜单内勿扰模式与打开主界面":"選單內勿擾模式與開啟主介面","退出 UI 不影响服务":"結束 UI 不影響服務","悬停显示实时速率":"懸停顯示即時速率","设置与安全":"設定與安全","FR-SET":"FR-SET","界面语言 · 主题 · 开机启动 UI":"介面語言 · 主題 · 開機啟動 UI","弹窗超时时间与默认动作":"彈窗逾時時間與預設動作","失效策略 fail-open / fail-closed":"失效策略 fail-open / fail-closed","JSON 导入导出与差异预览":"JSON 匯入匯出與差異預覽","每日备份保留 7 份":"每日備份保留 7 份","修改规则需管理员权限":"修改規則需系統管理員權限","设置密码":"設定密碼","命令行 ncctl":"命令列 ncctl","系统集成":"系統整合","FR-SYS":"FR-SYS","MSI · deb / rpm · 公证 dmg":"MSI · deb / rpm · 公證 dmg","服务早于用户登录启动":"服務早於使用者登入啟動","卸载不残留任何拦截":"解除安裝不殘留任何攔截","升级保留规则并迁移数据库":"升級保留規則並移轉資料庫","启动保护空窗":"啟動保護空窗","检查更新（可关闭）":"檢查更新（可關閉）","内置默认放行":"內建預設放行","BUILT-IN":"BUILT-IN","必要流量":"必要流量","本地回环、DHCP（UDP 67/68、546/547）、系统 DNS 解析服务、NTP（UDP 123）默认放行":"本機回送、DHCP（UDP 67/68、546/547）、系統 DNS 解析服務、NTP（UDP 123）預設放行","ICMPv6":"ICMPv6","邻居发现与路由通告始终放行，否则局域网无法工作":"鄰居發現與路由通告始終放行，否則區域網路無法運作","系统更新":"系統更新","Windows Update 与 Defender 定义更新在首次运行时询问你，不静默放行":"Windows Update 與 Defender 定義更新在首次執行時詢問你，不靜默放行","可停用":"可停用","除自身与回环外，内置规则都可以停用，但不能删除":"除自身與回送外，內建規則都可以停用，但不可刪除","可用性与国际化":"可用性與國際化","UX / I18N":"UX / I18N","首次运行引导":"首次執行導引","解释弹窗机制、选择初始模式、可选地预授权常用应用":"說明彈窗機制、選擇初始模式、可選擇預先授權常用應用","三语界面":"三語介面","简体中文、繁体中文、英文；文本全部外置，方便扩展":"簡體中文、繁體中文、英文；文字全部外置，方便擴充","主题与缩放":"主題與縮放","深色 / 浅色 / 跟随系统；支持系统缩放 100% 到 200%":"深色 / 淺色 / 跟隨系統；支援系統縮放 100% 到 200%","键盘可用":"鍵盤可用","主要功能可纯键盘操作，控件都有无障碍名称":"主要功能可純鍵盤操作，控制項都有無障礙名稱","04 — 全局模式":"04 — 全域模式","五种模式，一个开关":"五種模式，一個開關","托盘和主界面都能切换，即时生效。一键断网后托盘图标变红，恢复时回到之前的模式。":"托盤和主介面都能切換，即時生效。一鍵斷網後托盤圖示變紅，還原時回到先前的模式。","全局模式":"全域模式","询问模式":"詢問模式","白名单模式":"白名單模式","黑名单模式":"黑名單模式","全部阻断":"全部阻斷","停用过滤":"停用過濾","规则命中时":"規則命中時","按规则判决":"依規則判決","无规则命中时":"無規則命中時","弹窗询问":"彈窗詢問","典型用途":"典型用途","日常使用":"日常使用","配置文件。":"設定檔。","每个配置文件有自己的模式与规则集，另有一份「共享规则」对所有配置文件生效。\n          按 Wi-Fi SSID、网关 MAC 或网卡类型匹配，连上指定热点后自动切换到对应配置文件——出差、热点、家用网络各有一套策略。":"每個設定檔有自己的模式與規則集，另有一份「共用規則」對所有設定檔生效。\n          依 Wi-Fi SSID、閘道 MAC 或網路卡類型比對，連上指定熱點後自動切換到對應設定檔——出差、熱點、家用網路各有一套策略。","05 — 平台与能力":"05 — 平台與能力","能力差异，如实展示":"能力差異，如實呈現","三个平台各有各的拦截点，能做到的事情并不完全一样。引擎会向核心与界面声明自己的能力，界面据此调整文案——不会让你以为行为完全相同。":"三個平台各有各的攔截點，能做到的事情並不完全相同。引擎會向核心與介面宣告自己的能力，介面據此調整文案——不會讓你以為行為完全相同。","平台能力差异":"平台能力差異","能力":"能力","Windows（用户态 WFP）":"Windows（使用者模式 WFP）","Windows（驱动，后期）":"Windows（驅動程式，後期）","Linux（NFQUEUE + eBPF）":"Linux（NFQUEUE + eBPF）","macOS（NE 扩展）":"macOS（NE 擴充功能）","挂起连接等待判决":"擱置連線等待判決","先阻断，允许后由应用重试":"先阻斷，允許後由應用重試","「本次允许」的语义":"「本次允許」的語意","临时允许 60 秒（可配置）":"暫時允許 60 秒（可設定）","仅当前连接":"僅目前連線","进程 PID":"程序 PID","部分（靠连接表补全）":"部分（靠連線表補齊）","引擎直接提供域名":"引擎直接提供網域","靠 ETW DNS 事件":"靠 ETW DNS 事件","靠 DNS 嗅探":"靠 DNS 嗅探","部分":"部分","remoteHostname":"remoteHostname","tc / nft":"tc / nft","有限":"有限","启动保护":"啟動保護","持久化过滤器":"常駐過濾器","早期加载 nft 规则":"早期載入 nft 規則","取决于扩展加载时机":"取決於擴充功能載入時機","左右滑动可查看完整表格":"左右滑動可檢視完整表格","约束。":"限制。","macOS 版需要 Apple Developer Program 帐号，以及 Network Extension 系统扩展的授权；\n          Windows 驱动版需要 EV 代码签名证书并走微软签名流程，因此排在后期，先用用户态 WFP 交付。":"macOS 版需要 Apple Developer Program 帳號，以及 Network Extension 系統擴充功能的授權；\n          Windows 驅動程式版需要 EV 程式碼簽章憑證並走微軟簽章流程，因此排在後期，先用使用者模式 WFP 交付。","系统要求":"系統需求","PLATFORM":"PLATFORM","Windows":"Windows","Windows 10 1809+ / Windows 11 · x64、ARM64 · 用户态 WFP，不需要驱动":"Windows 10 1809+ / Windows 11 · x64、ARM64 · 使用者模式 WFP，不需要驅動程式","Linux":"Linux","内核 5.8+ · nftables · systemd · Ubuntu 22.04+ / Debian 12+ / Fedora 39+":"核心 5.8+ · nftables · systemd · Ubuntu 22.04+ / Debian 12+ / Fedora 39+","macOS":"macOS","macOS 13 Ventura+ · Apple Silicon / x64 · 需签名并公证的 Network Extension 系统扩展":"macOS 13 Ventura+ · Apple Silicon / x64 · 需簽章並公證的 Network Extension 系統擴充功能","明确不做":"明確不做","NON-GOALS":"NON-GOALS","不做 DPI":"不做 DPI","不解密 HTTPS，不做内容过滤":"不解密 HTTPS，不做內容過濾","不做 VPN":"不做 VPN","不内置代理，不转发流量":"不內建代理，不轉送流量","不做查杀":"不做掃毒","不是杀毒软件，不扫描文件":"不是防毒軟體，不掃描檔案","不做 MDM":"不做 MDM","v1.x 不做企业集中管控与多终端策略下发":"v1.x 不做企業集中管控與多終端策略派送","06 — 性能与可靠性":"06 — 效能與可靠性","装上之后，应该感觉不到它":"裝上之後，應該感覺不到它","一个安全工具如果拖慢网络、吃满 CPU，用户第一件事就是把它卸掉。所以这些数字是验收标准，不是宣传语。":"一個安全工具如果拖慢網路、吃滿 CPU，使用者第一件事就是把它解除安裝。所以這些數字是驗收標準，不是宣傳語。","p99 < 0.5":"p99 < 0.5","ms":"ms","缓存命中的判决延迟":"快取命中的判決延遲","热路径无锁读快照":"熱路徑無鎖讀取快照","p99 < 2":"p99 < 2","未命中判决延迟":"未命中判決延遲","1 万条规则下，不含弹窗等待":"1 萬條規則下，不含彈窗等待","/s":"/s","新连接吞吐":"新連線吞吐量","不丢判决":"不丟失判決","核心服务空闲 CPU":"核心服務閒置 CPU","内存 < 80 MB":"記憶體 < 80 MB","千兆网络吞吐损耗":"千兆網路吞吐耗損","单连接下载测速":"單一連線下載測速","弹窗出现延迟":"彈窗出現延遲","从连接发起算起":"從連線發起算起","s":"s","服务崩溃自动重启":"服務當機自動重新啟動","由系统服务管理器拉起":"由系統服務管理程式啟動","小时":"小時","稳定性测试无内存泄漏":"穩定性測試無記憶體洩漏","增长 < 10%":"成長 < 10%","MB":"MB","UI 最小化内存":"UI 最小化記憶體","主界面打开时 < 300 MB":"主介面開啟時 < 300 MB","不会因为自己把你锁在网外。":"不會因為自己把你鎖在網路外。","服务连续崩溃时自动降级为 fail-open；UI 崩溃或退出不影响拦截；\n          数据库损坏能从最近备份恢复并告警；卸载时清理过滤器、服务与系统扩展，不残留任何网络拦截。":"服務連續當機時自動降級為 fail-open；UI 當機或結束不影響攔截；\n          資料庫損壞能從最近備份還原並警示；解除安裝時清理過濾器、服務與系統擴充功能，不殘留任何網路攔截。","07 — 隐私与安全":"07 — 隱私與安全","一个管网络的工具，不向外上报任何数据":"一個管網路的工具，不向外回報任何資料","不采集遥测，不联网查 IP，更新检查不带任何用户标识。本地数据库只允许服务账户写入。":"不收集遙測，不連網查 IP，更新檢查不帶任何使用者識別碼。本機資料庫僅允許服務帳戶寫入。","隐私":"隱私","PRIVACY":"PRIVACY","零遥测":"零遙測","不采集任何使用数据；崩溃报告只留在本地，由你手动导出":"不收集任何使用資料；當機報告僅留在本機，由你手動匯出","离线地理库":"離線地理資料庫","IP 国家与 ASN 信息用本地离线库，不联网查询":"IP 國家與 ASN 資訊用本機離線資料庫，不連網查詢","克制的更新检查":"克制的更新檢查","只请求版本清单，不携带任何用户标识，可以关闭":"僅請求版本清單，不攜帶任何使用者識別碼，可以關閉","安全":"安全","SECURITY":"SECURITY","本机 IPC":"本機 IPC","命名管道 / UDS 只对本机开放，校验客户端路径、签名与 SID / UID":"具名管道 / UDS 僅對本機開放，驗證用戶端路徑、簽章與 SID / UID","最小权限":"最小權限","服务以最小必要权限运行，能降权的组件一律降权":"服務以最小必要權限執行，能降權的元件一律降權","数据 ACL":"資料 ACL","规则库与配置只允许服务账户写入":"規則庫與設定僅允許服務帳戶寫入","输入校验":"輸入驗證","DNS 报文、订阅列表、导入文件全部做长度与格式校验，并有 Fuzz 测试":"DNS 封包、訂閱清單、匯入檔案全部做長度與格式驗證，並有 Fuzz 測試","全量签名":"全數簽章","发布产物全部代码签名；macOS 走公证":"發布產物全部程式碼簽章；macOS 走公證","08 — 实现":"08 — 實作","核心与平台分离":"核心與平台分離","规则引擎、判决管线、存储、IPC 全部是与平台无关的 .NET 代码，平台侧只负责拦截和采集，越薄越好。\n            服务是唯一的事实来源：界面不在，拦截照常工作。":"規則引擎、判決管線、儲存、IPC 全部是與平台無關的 .NET 程式碼，平台側僅負責攔截和收集，越薄越好。\n            服務是唯一的事實來源：介面不在，攔截照常運作。","运行时 / UI":"執行環境 / UI",".NET 10 LTS":".NET 10 LTS","Avalonia 11":"Avalonia 11","CommunityToolkit.Mvvm 源生成器，AOT 友好":"CommunityToolkit.Mvvm 來源產生器，對 AOT 友善","IPC / 存储":"IPC / 儲存","gRPC":"gRPC","Windows 命名管道，Linux / macOS 走 UDS":"Windows 具名管道，Linux / macOS 走 UDS","ETW":"ETW","P/Invoke fwpuclnt.dll，用户态即可，无需驱动签名":"P/Invoke fwpuclnt.dll，使用者模式即可，無需驅動程式簽章","Linux / macOS":"Linux / macOS","NFQUEUE":"NFQUEUE","eBPF":"eBPF","NE":"NE","nftables 挂起判决；macOS 走 NEFilterDataProvider":"nftables 擱置判決；macOS 走 NEFilterDataProvider","可测试、可观测。":"可測試、可觀測。","规则引擎与平台无关，用模拟引擎即可跑通全链路；核心逻辑单元测试覆盖率目标 ≥ 80%，\n          规则引擎、匹配器、时效管理都有属性测试与基准测试。服务输出结构化日志、级别可调，并提供「导出诊断包」\n          （配置、日志、引擎状态；连接日志除非你勾选，否则不会包含）。":"規則引擎與平台無關，用模擬引擎即可跑通全鏈路；核心邏輯單元測試覆蓋率目標 ≥ 80%，\n          規則引擎、比對器、時效管理都有屬性測試與基準測試。服務輸出結構化日誌、等級可調，並提供「匯出診斷包」\n          （設定、日誌、引擎狀態；連線日誌除非你勾選，否則不會包含）。","09 — 路线图":"09 — 藍圖","先跑通，再覆盖":"先跑通，再覆蓋","M0 在模拟引擎上跑通核心交互；M1 交付 Windows 的 P0 功能；Linux 与 macOS 依次跟上。":"M0 在模擬引擎上跑通核心互動；M1 交付 Windows 的 P0 功能；Linux 與 macOS 依序跟上。","M0":"M0","原型":"原型","核心服务 + 模拟引擎 + 界面（弹窗、规则、日志）":"核心服務 + 模擬引擎 + 介面（彈窗、規則、日誌）","M1":"M1","Windows MVP":"Windows MVP","用户态 WFP 引擎，全部 P0 功能验收":"使用者模式 WFP 引擎，全部 P0 功能驗收","M2":"M2","NFQUEUE + eBPF，挂起询问可用":"NFQUEUE + eBPF，擱置詢問可用","M3":"M3","v1.0":"v1.0","Windows 与 Linux 的全部 P1 功能，性能达标":"Windows 與 Linux 的全部 P1 功能，效能達標","M4":"M4","NE 系统扩展，签名与公证完成":"NE 系統擴充功能，簽章與公證完成","M5+":"M5+","增强":"增強","P2 功能与 Windows 驱动引擎":"P2 功能與 Windows 驅動程式引擎","10 — 常见问题":"10 — 常見問題","先说清楚几件事":"先說清楚幾件事","关于断网风险、域名准确性、平台差异和授权方式的直接回答。":"關於斷網風險、網域準確性、平台差異和授權方式的直接回答。","它会不会把我自己的网弄断？":"它會不會把我自己的網路弄斷？","默认 fail-open：服务异常、崩溃或停止时放行流量。服务连续崩溃会自动降级为放行；也可以显式选择 fail-closed。\n            卸载时会清理过滤器、服务与系统扩展，不残留任何网络拦截。开机到服务启动之间的空窗期，各平台按自身能力尽量提供启动保护。":"預設 fail-open：服務異常、當機或停止時放行流量。服務連續當機會自動降級為放行；也可以明確選擇 fail-closed。\n            解除安裝時會清理過濾器、服務與系統擴充功能，不殘留任何網路攔截。開機到服務啟動之間的空窗期，各平台依自身能力盡量提供啟動保護。","为什么域名有时不准？":"為什麼網域有時不準？","拦截引擎本身不提供域名，靠 DNS 映射还原：Windows 用 ETW DNS 事件，Linux 用 DNS 嗅探，macOS 由系统扩展提供。\n            DoH、共享 IP 都会让映射失真。因此界面上的域名只作参考，可以展开看真实 IP；对浏览器这类连接密集的应用，建议直接按「此应用的任意连接」授权。":"攔截引擎本身不提供網域，靠 DNS 對應還原：Windows 用 ETW DNS 事件，Linux 用 DNS 嗅探，macOS 由系統擴充功能提供。\n            DoH、共用 IP 都會讓對應失真。因此介面上的網域僅供參考，可以展開看真實 IP；對瀏覽器這類連線密集的應用，建議直接依「此應用的任意連線」授權。","Windows 上「先阻断、再允许」是什么体验？":"Windows 上「先阻斷、再允許」是什麼體驗？","用户态 WFP 无法挂起连接等用户决定，所以首次连接会先被阻断，弹窗会明确提示「此连接已被暂时阻止，允许后应用重试即可连接」。\n            少数应用首次失败后不重试，这时可以在弹窗里直接授权或临时切到停用过滤。后期版本会提供驱动引擎，实现真正的挂起判决。":"使用者模式 WFP 無法擱置連線等使用者決定，所以首次連線會先被阻斷，彈窗會明確提示「此連線已被暫時阻止，允許後應用重試即可連線」。\n            少數應用首次失敗後不重試，這時可以在彈窗裡直接授權或暫時切到停用過濾。後期版本會提供驅動程式引擎，實現真正的擱置判決。","升级软件后，规则会失效吗？":"升級軟體後，規則會失效嗎？","不会。有签名的应用按「签名者 + 路径」匹配，没签名的按「路径 + 哈希」匹配。如果未签名应用的哈希变了，或者已签名应用的签名者变了，\n            会暂停该应用的现有规则并发出「程序已变更」告警，而不是悄悄沿用旧授权。":"不會。有簽章的應用依「簽署者 + 路徑」比對，沒簽章的依「路徑 + 雜湊」比對。如果未簽章應用的雜湊變了，或者已簽章應用的簽署者變了，\n            會暫停該應用的現有規則並發出「程式已變更」警示，而不是悄悄沿用舊授權。","支持多用户和远程桌面吗？":"支援多使用者和遠端桌面嗎？","询问弹窗只出现在发起连接的用户会话中；系统账户发起的连接，询问显示给管理员。没有用户登录时，询问按默认动作处理并写入日志，\n            服务照常工作。多用户场景是否进入 v1.0 范围仍在评审中。":"詢問彈窗僅出現在發起連線的使用者工作階段中；系統帳戶發起的連線，詢問顯示給系統管理員。沒有使用者登入時，詢問依預設動作處理並寫入日誌，\n            服務照常運作。多使用者情境是否納入 v1.0 範圍仍在評審中。","开源吗？可以脚本化吗？":"開源嗎？可以腳本化嗎？","协议选型（MIT / Apache-2.0 / GPL-3.0）尚在评审，它决定能否参考或复用 GPL 项目的代码，所以暂时按「只借鉴设计、不复制代码」处理。\n            命令行工具":"授權條款選型（MIT / Apache-2.0 / GPL-3.0）尚在評審，它決定能否參考或重用 GPL 專案的程式碼，所以暫時依「僅借鏡設計、不複製程式碼」處理。\n            命令列工具","ncctl":"ncctl","提供状态查询、模式切换、规则增删查与导入导出，属于 P2 计划。":"提供狀態查詢、模式切換、規則增刪查與匯入匯出，屬於 P2 計畫。","先看清楚每一条连接，":"先看清楚每一條連線，","再决定谁可以出去。":"再決定誰可以出去。","M0 原型已在模拟引擎上跑通核心交互，M1 的 Windows MVP 进入内测。":"M0 原型已在模擬引擎上跑通核心互動，M1 的 Windows MVP 進入內測。","申请内测名额":"申請內測名額","阅读需求规格":"閱讀需求規格","阅读设计实现":"閱讀設計實作","页脚导航":"頁尾導覽","核心机制":"核心機制","功能清单":"功能清單","平台支持":"平台支援","需求文档":"需求文件","设计文档":"設計文件","v0.1 草案 · 待评审":"v0.1 草案 · 待評審","本地运行 · 不收集遥测":"本機執行 · 不收集遙測","Windows · Linux · macOS":"Windows · Linux · macOS","© 2026 NetworkControl":"© 2026 NetworkControl"},"en":{"NetworkControl 首页":"NetworkControl home","NetworkControl":"NetworkControl","/ v0.1":"/ v0.1","主导航":"Primary navigation","机制":"How it works","功能":"Features","模式":"Modes","平台":"Platforms","性能":"Performance","路线图":"Roadmap","获取预览版":"Get the preview","本地优先 · 跨平台 · 无遥测":"Local-first · Cross-platform · No telemetry","Network":"Network","Control":"Control","每一次联网，都由你决定。":"Every connection is your call.","而不是由应用自己决定。":"Not the app's.","桌面系统只挡入站，从不问你出站。NetworkControl 补上这一层：应用首次联网时弹窗询问，\n          规则精确到域名、IP 与端口，Windows、Linux、macOS 共用一套规则模型。":"Desktop systems only block inbound traffic and never ask about outbound. NetworkControl adds that layer: the first time an app goes online you get a prompt,\n          and rules are precise down to domain, IP and port, with Windows, Linux and macOS sharing one rule model.","看看它怎么工作":"See how it works","Windows 10 1809+":"Windows 10 1809+","Linux 内核 5.8+ / nftables":"Linux kernel 5.8+ / nftables","macOS 13 Ventura+":"macOS 13 Ventura+","x64 · ARM64":"x64 · ARM64","询问弹窗示意":"Prompt mockup","VS":"VS","Visual Studio Code":"Visual Studio Code","3 个待决":"3 pending","已签名 · Microsoft Corporation":"Signed · Microsoft Corporation","C:\\Users\\…\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe":"C:\\Users\\…\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe","想要连接到":"wants to connect to","marketplace.visualstudio.com":"marketplace.visualstudio.com","TCP 443 HTTPS":"TCP 443 HTTPS","出站":"Outbound","美国 / AS8075 Microsoft":"United States / AS8075 Microsoft","范围":"Scope","此应用的任意连接":"Any connection from this app","此域名":"This domain","此 IP":"This IP","此 IP + 端口":"This IP + port","此端口":"This port","时效":"Lifetime","本次":"Once","直到退出":"Until app exits","5 分钟":"5 minutes","15 分钟":"15 minutes","1 小时":"1 hour","直到重启":"Until reboot","永久":"Permanent","将生成规则":"Creates rule","· 应用 Code.exe（签名者 Microsoft Corporation） · 条件 域名 marketplace.visualstudio.com · 动作":"· App Code.exe (signer Microsoft Corporation) · Condition domain marketplace.visualstudio.com · Action","允许":"Allow","· 时效":"· Lifetime","30 秒后自动拒绝":"Auto-deny after 30 seconds","拒绝":"Deny","等待判决 · 倒计时结束按默认动作处理":"Waiting for a decision · the default action applies when the countdown ends","示意图：可点选范围与时效，悬停弹窗会暂停倒计时 —— 与产品行为一致":"Mockup: scope and lifetime are clickable, and hovering the prompt pauses the countdown — same behavior as the real product","01 — 核心机制":"01 — How it works","一次询问，三个决定":"One prompt, three decisions","弹窗里没有层层选项，只有三个决定：动作、范围、时效。选完即生成一条规则，之后同类连接不再打扰你。":"The prompt has no nested options, just three decisions: action, scope, lifetime. Choose and a rule is created, so connections of the same kind stop bothering you.","动作":"Action","Allow / Deny":"Allow / Deny","允许或拒绝。默认焦点不落在「允许」上，弹窗出现后 1 秒内不响应点击与按键，打字时按到回车也不会误放行。":"Allow or deny. Focus never lands on Allow by default, the prompt ignores clicks and key presses for 1 second after it appears, and pressing Enter while typing will not wave traffic through.","允许 · 拒绝":"Allow · Deny","Scope":"Scope","决定这条规则管多宽。条件越具体的规则优先级越高；具体程度相同时，「拒绝」优先。":"Sets how wide the rule reaches. More specific conditions win; at equal specificity, deny wins.","任意连接 / 域名 / IP / IP+端口 / 端口":"Any connection / domain / IP / IP+port / port","Lifetime":"Lifetime","决定这条规则活多久。到期自动失效，从生效列表移除，但历史记录仍可回溯。":"Sets how long the rule lives. It expires on schedule and leaves the active list, but the history stays auditable.","本次 / 直到退出 / 5 分钟 / 15 分钟 / 1 小时 / 直到重启 / 永久":"Once / until app exits / 5 minutes / 15 minutes / 1 hour / until reboot / permanent","不打扰是设计目标。":"Staying out of your way is the design goal.","同一应用的多个待决连接合并成一个弹窗（浏览器同时发起 20 个连接只弹一次），\n          不同应用排队依次显示，最多同时显示 1 个；等待超过设定时间（默认 30 秒）按默认动作判决并标记「超时」。\n          开启勿扰模式后不再弹窗，直接按默认策略处理，事后在日志里审查。":"Pending connections from the same app merge into one prompt (a browser opening 20 connections at once is asked only once),\n          prompts for different apps queue up and are shown 1 at a time; anything waiting past the limit (30 seconds by default) is decided by the default action and marked \"timed out\".\n          With do not disturb on, nothing prompts: the default policy applies directly and you review the outcome in the log.","02 — 判决管线":"02 — Decision pipeline","从连接发起，到写入日志":"From connection attempt to log entry","判决路径不涉及 I/O 与阻塞调用。签名校验、哈希计算、日志写入全部异步，结果缓存。":"The decision path involves no I/O and no blocking calls. Signature checks, hashing and log writes are all asynchronous, with results cached.","拦截":"Intercept","引擎的过滤层看到每一条新的出站 TCP 连接与 UDP 流，覆盖 IPv4 与 IPv6。回环、DHCP、系统 DNS、NTP 与自身流量走内置放行。":"The engine's filter layer sees every new outbound TCP connection and UDP flow, covering IPv4 and IPv6. Loopback, DHCP, system DNS, NTP and its own traffic take built-in allows.","WFP":"WFP","nftables + NFQUEUE":"nftables + NFQUEUE","Network Extension":"Network Extension","识别":"Identify","PID → 完整路径 → 友好名称与图标 → 发布者或文件哈希。已签名应用按「签名者 + 路径」匹配，未签名按「路径 + 哈希」匹配，所以升级后规则不会失效；哈希变了则暂停规则并告警。":"PID → full path → friendly name and icon → publisher or file hash. Signed apps match on signer + path, unsigned ones on path + hash, so rules survive upgrades; if the hash changes, rules are paused and an alert fires.","Authenticode":"Authenticode","Team ID":"Team ID","sha256":"sha256","匹配":"Match","规则以不可变快照参与匹配，读路径无锁。条件更具体的优先，同具体程度时拒绝优先，也支持手动置顶。":"Rules match against an immutable snapshot, so the read path is lock-free. More specific conditions win, deny wins at equal specificity, and any rule can be pinned to the top by hand.","p99 < 0.5 ms":"p99 < 0.5 ms","10⁴ 条规则 p99 < 2 ms":"p99 < 2 ms with 10⁴ rules","询问":"Prompt","没有规则命中、且当前模式为询问时进入 PromptBroker：按应用合并、跨应用排队、倒计时可暂停、UI 不在时按默认动作处理并记录。":"When no rule matches and the mode is ask, the connection goes to PromptBroker: merged per app, queued across apps, pausable countdown, and the default action applied and logged when no UI is present.","< 300 ms 弹出":"< 300 ms to appear","30 s 超时":"30 s timeout","判决":"Decide","结果写入判决缓存与活动数据库，同时记下依据：命中了哪条规则、哪个模式、还是超时。相同重复连接聚合计数，日志不会膨胀。":"The result is written to the decision cache and the activity database with its grounds: which rule matched, which mode, or a timeout. Repeated identical connections are aggregated, so the log does not balloon.","SQLite WAL":"SQLite WAL","依据可回溯":"Grounds are auditable","03 — 功能清单":"03 — Features","十一个模块，一个规则模型":"Eleven modules, one rule model","三个平台的交互和规则模型保持一致，能力差异如实标注在界面上，不假装所有平台行为完全相同。":"Interactions and the rule model stay the same on all three platforms, and capability gaps are labeled in the UI instead of pretending every platform behaves alike.","P0 · MVP 必备":"P0 · Required for the MVP","P1":"P1","v1.0 必备":"Required for v1.0","P2":"P2","后续增强":"Later enhancements","拦截与判决":"Interception and decisions","FR-INT":"FR-INT","出站 TCP / UDP，IPv4 / IPv6":"Outbound TCP / UDP, IPv4 / IPv6","连接级判决":"Per-connection decisions","回环默认放行":"Loopback allowed by default","内置系统流量":"Built-in system traffic","待决超时":"Pending timeout","入站控制":"Inbound control","ICMP 开关":"ICMP toggle","按应用限速":"Per-app rate limiting","应用识别":"App identification","FR-APP":"FR-APP","PID · 路径 · 名称 · 图标 · 运行用户":"PID · path · name · icon · running user","签名者与哈希":"Signer and hash","签名者 + 路径匹配策略":"Signer + path matching","篡改检测与告警":"Tamper detection and alerts","svchost 按服务名细分":"svchost split by service name","UWP / MSIX 按包名":"UWP / MSIX by package name","解释器按命令行细分":"Interpreters split by command line","子进程归并 · 可选继承父规则":"Child processes merged · optional inheritance of parent rules","询问弹窗":"Prompt dialog","FR-PRM":"FR-PRM","动作 × 时效 × 范围":"Action × lifetime × scope","倒计时与超时默认动作":"Countdown and timeout default action","防误触与不抢焦点":"Misclick guards and no focus stealing","合并 · 排队":"Merging · queuing","记住上次选择":"Remember the last choice","快捷键 A / D / Esc":"A / D / Esc shortcuts","多用户会话隔离":"Multi-user session isolation","UI 不在时按默认处理":"Default handling when no UI is running","规则":"Rules","FR-RUL":"FR-RUL","应用 + 条件 + 动作 + 时效":"App + condition + action + lifetime","域名通配 · CIDR · 端口范围":"Domain wildcards · CIDR · port ranges","协议 · 方向 · 网络类型":"Protocol · direction · network type","局域网 / 互联网预设 · 一键仅局域网":"LAN / internet presets · one-click LAN-only","优先级与手动置顶":"Priority and manual pinning","五种时效语义":"Five lifetime semantics","搜索 · 筛选 · 批量":"Search · filter · bulk actions","从日志一键建规":"Create a rule from a log entry","来源标记 · 90 天未命中筛选":"Source tags · filter rules unused for 90 days","时间段条件":"Time-of-day conditions","黑名单订阅":"Blocklist subscription","模式与配置文件":"Modes and profiles","FR-MOD":"FR-MOD","5 种全局模式":"5 global modes","配置文件 + 共享规则":"Profiles + shared rules","按 SSID / 网关 MAC / 网卡类型自动切换":"Auto-switch by SSID / gateway MAC / adapter type","一键断网与恢复":"One-click cutoff and restore","监控与日志":"Monitoring and logs","FR-MON":"FR-MON","连接日志与判决依据":"Connection log with decision grounds","筛选 · CSV 导出":"Filtering · CSV export","保留 30 天或 500 MB · 重复聚合":"30-day or 500 MB retention · duplicates aggregated","实时连接视图":"Live connection view","域名替代 IP 显示":"Domain names shown instead of IPs","离线 GeoIP / ASN":"Offline GeoIP / ASN","连接世界地图":"World map of connections","统计":"Statistics","FR-STA":"FR-STA","按应用上下行流量":"Per-app upload and download traffic","分钟 / 小时 / 天粒度":"Minute / hour / day granularity","今天 / 7 天 / 30 天趋势":"Today / 7-day / 30-day trends","Top N 应用与目的域名":"Top N apps and destination domains","流量配额":"Traffic quotas","通知":"Notifications","FR-NTF":"FR-NTF","阻断通知（可关闭）":"Block notifications (can be turned off)","从通知直接授权":"Allow straight from a notification","勿扰：1 小时 / 直到明天 / 手动关闭":"Do not disturb: 1 hour / until tomorrow / off manually","勿扰结束后汇总被阻断的应用":"Summary of blocked apps after do not disturb","全屏应用自动勿扰":"Auto do not disturb in full-screen apps","安全告警":"Security alerts","托盘":"Tray","FR-TRY":"FR-TRY","5 种状态图标":"5 status icons","菜单切换模式与配置文件":"Switch modes and profiles from the menu","菜单内勿扰模式与打开主界面":"Do not disturb and open main window from the menu","退出 UI 不影响服务":"Quitting the UI does not affect the service","悬停显示实时速率":"Live rate on hover","设置与安全":"Settings and security","FR-SET":"FR-SET","界面语言 · 主题 · 开机启动 UI":"UI language · theme · launch UI at login","弹窗超时时间与默认动作":"Prompt timeout and default action","失效策略 fail-open / fail-closed":"Failure policy fail-open / fail-closed","JSON 导入导出与差异预览":"JSON import and export with diff preview","每日备份保留 7 份":"Daily backups, 7 copies kept","修改规则需管理员权限":"Rule changes require administrator rights","设置密码":"Settings password","命令行 ncctl":"ncctl command line","系统集成":"System integration","FR-SYS":"FR-SYS","MSI · deb / rpm · 公证 dmg":"MSI · deb / rpm · notarized dmg","服务早于用户登录启动":"Service starts before user login","卸载不残留任何拦截":"Uninstall leaves no interception behind","升级保留规则并迁移数据库":"Upgrades keep rules and migrate the database","启动保护空窗":"Startup protection window","检查更新（可关闭）":"Update checks (can be turned off)","内置默认放行":"Built-in default allows","BUILT-IN":"BUILT-IN","必要流量":"Essential traffic","本地回环、DHCP（UDP 67/68、546/547）、系统 DNS 解析服务、NTP（UDP 123）默认放行":"Loopback, DHCP (UDP 67/68, 546/547), the system DNS resolver and NTP (UDP 123) are allowed by default","ICMPv6":"ICMPv6","邻居发现与路由通告始终放行，否则局域网无法工作":"Neighbor discovery and router advertisements are always allowed, otherwise local networking breaks","系统更新":"System updates","Windows Update 与 Defender 定义更新在首次运行时询问你，不静默放行":"Windows Update and Defender definition updates prompt you on first run instead of being silently allowed","可停用":"Can be disabled","除自身与回环外，内置规则都可以停用，但不能删除":"Every built-in rule except its own traffic and loopback can be disabled, but not deleted","可用性与国际化":"Usability and localization","UX / I18N":"UX / I18N","首次运行引导":"First-run setup","解释弹窗机制、选择初始模式、可选地预授权常用应用":"Explains the prompt model, lets you pick an initial mode and optionally pre-authorizes your usual apps","三语界面":"Three-language interface","简体中文、繁体中文、英文；文本全部外置，方便扩展":"Simplified Chinese, Traditional Chinese and English; all strings are externalized for easy extension","主题与缩放":"Theme and scaling","深色 / 浅色 / 跟随系统；支持系统缩放 100% 到 200%":"Dark / light / follow system; supports system scaling from 100% to 200%","键盘可用":"Keyboard accessible","主要功能可纯键盘操作，控件都有无障碍名称":"Core features work keyboard-only, and every control has an accessible name","04 — 全局模式":"04 — Global modes","五种模式，一个开关":"Five modes, one switch","托盘和主界面都能切换，即时生效。一键断网后托盘图标变红，恢复时回到之前的模式。":"Switch from the tray or the main window, effective immediately. After one-click cutoff the tray icon turns red; restoring returns you to the previous mode.","全局模式":"Global mode","询问模式":"Ask mode","白名单模式":"Allowlist mode","黑名单模式":"Blocklist mode","全部阻断":"Block everything","停用过滤":"Disable filtering","规则命中时":"When a rule matches","按规则判决":"Decide by rule","无规则命中时":"When no rule matches","弹窗询问":"Ask with a prompt","典型用途":"Typical use","日常使用":"Everyday use","配置文件。":"Profiles.","每个配置文件有自己的模式与规则集，另有一份「共享规则」对所有配置文件生效。\n          按 Wi-Fi SSID、网关 MAC 或网卡类型匹配，连上指定热点后自动切换到对应配置文件——出差、热点、家用网络各有一套策略。":"Each profile carries its own mode and rule set, plus a shared rule set that applies to all profiles.\n          Match on Wi-Fi SSID, gateway MAC or adapter type, and the matching profile activates as soon as you connect — one policy for travel, one for phone hotspots, one for home.","05 — 平台与能力":"05 — Platforms and capabilities","能力差异，如实展示":"Capability gaps, stated plainly","三个平台各有各的拦截点，能做到的事情并不完全一样。引擎会向核心与界面声明自己的能力，界面据此调整文案——不会让你以为行为完全相同。":"Each platform has a different interception point, so what it can do is not identical. The engine declares its capabilities to the core and the UI, which adapts its wording — you are never led to believe behavior is the same everywhere.","平台能力差异":"Platform capability differences","能力":"Capability","Windows（用户态 WFP）":"Windows (user-mode WFP)","Windows（驱动，后期）":"Windows (driver, later)","Linux（NFQUEUE + eBPF）":"Linux (NFQUEUE + eBPF)","macOS（NE 扩展）":"macOS (NE extension)","挂起连接等待判决":"Hold connections pending a decision","先阻断，允许后由应用重试":"Block first, app retries after allow","「本次允许」的语义":"Meaning of \"allow once\"","临时允许 60 秒（可配置）":"Temporary allow for 60 seconds (configurable)","仅当前连接":"Current connection only","进程 PID":"Process PID","部分（靠连接表补全）":"Partial (completed from the connection table)","引擎直接提供域名":"Domain provided by the engine","靠 ETW DNS 事件":"From ETW DNS events","靠 DNS 嗅探":"From DNS sniffing","部分":"Partial","remoteHostname":"remoteHostname","tc / nft":"tc / nft","有限":"Limited","启动保护":"Startup protection","持久化过滤器":"Persistent filter","早期加载 nft 规则":"Early nft rule load","取决于扩展加载时机":"Depends on extension load timing","左右滑动可查看完整表格":"Swipe sideways to see the full table","约束。":"Constraints.","macOS 版需要 Apple Developer Program 帐号，以及 Network Extension 系统扩展的授权；\n          Windows 驱动版需要 EV 代码签名证书并走微软签名流程，因此排在后期，先用用户态 WFP 交付。":"The macOS build needs an Apple Developer Program account and entitlement for the Network Extension system extension;\n          the Windows driver build needs an EV code-signing certificate and Microsoft's signing process, so it comes later and user-mode WFP ships first.","系统要求":"System requirements","PLATFORM":"PLATFORM","Windows":"Windows","Windows 10 1809+ / Windows 11 · x64、ARM64 · 用户态 WFP，不需要驱动":"Windows 10 1809+ / Windows 11 · x64, ARM64 · user-mode WFP, no driver needed","Linux":"Linux","内核 5.8+ · nftables · systemd · Ubuntu 22.04+ / Debian 12+ / Fedora 39+":"Kernel 5.8+ · nftables · systemd · Ubuntu 22.04+ / Debian 12+ / Fedora 39+","macOS":"macOS","macOS 13 Ventura+ · Apple Silicon / x64 · 需签名并公证的 Network Extension 系统扩展":"macOS 13 Ventura+ · Apple Silicon / x64 · needs a signed and notarized Network Extension system extension","明确不做":"What it does not do","NON-GOALS":"NON-GOALS","不做 DPI":"No DPI","不解密 HTTPS，不做内容过滤":"No HTTPS decryption, no content filtering","不做 VPN":"No VPN","不内置代理，不转发流量":"No built-in proxy, no traffic forwarding","不做查杀":"No malware scanning","不是杀毒软件，不扫描文件":"Not antivirus, does not scan files","不做 MDM":"No MDM","v1.x 不做企业集中管控与多终端策略下发":"No centralized enterprise management or fleet policy delivery in v1.x","06 — 性能与可靠性":"06 — Performance and reliability","装上之后，应该感觉不到它":"Once installed, you should not notice it is there","一个安全工具如果拖慢网络、吃满 CPU，用户第一件事就是把它卸掉。所以这些数字是验收标准，不是宣传语。":"If a security tool slows the network or pins the CPU, the first thing people do is uninstall it. So these numbers are acceptance criteria, not marketing.","p99 < 0.5":"p99 < 0.5","ms":"ms","缓存命中的判决延迟":"Decision latency on cache hit","热路径无锁读快照":"Lock-free snapshot reads on the hot path","p99 < 2":"p99 < 2","未命中判决延迟":"Decision latency on cache miss","1 万条规则下，不含弹窗等待":"With 10,000 rules, excluding prompt waits","/s":"/s","新连接吞吐":"New connection throughput","不丢判决":"No dropped decisions","核心服务空闲 CPU":"Core service CPU at idle","内存 < 80 MB":"Memory < 80 MB","千兆网络吞吐损耗":"Gigabit throughput loss","单连接下载测速":"Single-connection download test","弹窗出现延迟":"Prompt appearance latency","从连接发起算起":"Measured from connection start","s":"s","服务崩溃自动重启":"Automatic restart after a crash","由系统服务管理器拉起":"Started by the system service manager","小时":"hours","稳定性测试无内存泄漏":"No memory leaks in the stability test","增长 < 10%":"Growth < 10%","MB":"MB","UI 最小化内存":"UI memory when minimized","主界面打开时 < 300 MB":"< 300 MB with the main window open","不会因为自己把你锁在网外。":"It will not lock you out of the network by itself.","服务连续崩溃时自动降级为 fail-open；UI 崩溃或退出不影响拦截；\n          数据库损坏能从最近备份恢复并告警；卸载时清理过滤器、服务与系统扩展，不残留任何网络拦截。":"Repeated service crashes degrade to fail-open automatically; a UI crash or exit does not affect interception;\n          a corrupted database is restored from the latest backup with an alert; uninstall removes the filter, service and system extension, leaving no network interception behind.","07 — 隐私与安全":"07 — Privacy and security","一个管网络的工具，不向外上报任何数据":"A tool that manages your network and reports nothing outward","不采集遥测，不联网查 IP，更新检查不带任何用户标识。本地数据库只允许服务账户写入。":"No telemetry, no online IP lookups, no user identifiers in update checks. Only the service account can write to the local database.","隐私":"Privacy","PRIVACY":"PRIVACY","零遥测":"Zero telemetry","不采集任何使用数据；崩溃报告只留在本地，由你手动导出":"No usage data is collected; crash reports stay local and you export them by hand","离线地理库":"Offline geolocation database","IP 国家与 ASN 信息用本地离线库，不联网查询":"IP country and ASN come from a local offline database, with no online lookups","克制的更新检查":"Minimal update checks","只请求版本清单，不携带任何用户标识，可以关闭":"Requests only a version manifest, carries no user identifier and can be switched off","安全":"Security","SECURITY":"SECURITY","本机 IPC":"Local IPC","命名管道 / UDS 只对本机开放，校验客户端路径、签名与 SID / UID":"Named pipes / UDS are local-only and validate the client's path, signature and SID / UID","最小权限":"Least privilege","服务以最小必要权限运行，能降权的组件一律降权":"The service runs with the least privilege it needs, and anything that can drop privileges does","数据 ACL":"Data ACL","规则库与配置只允许服务账户写入":"Only the service account can write rules and configuration","输入校验":"Input validation","DNS 报文、订阅列表、导入文件全部做长度与格式校验，并有 Fuzz 测试":"DNS packets, subscription lists and imported files are all length- and format-checked, and fuzz tested","全量签名":"Everything signed","发布产物全部代码签名；macOS 走公证":"Every release artifact is code-signed; macOS builds are notarized","08 — 实现":"08 — Implementation","核心与平台分离":"Core split from platform","规则引擎、判决管线、存储、IPC 全部是与平台无关的 .NET 代码，平台侧只负责拦截和采集，越薄越好。\n            服务是唯一的事实来源：界面不在，拦截照常工作。":"The rule engine, decision pipeline, storage and IPC are all platform-independent .NET code; the platform side only intercepts and collects, and stays as thin as possible.\n            The service is the single source of truth: no UI, and interception keeps working.","运行时 / UI":"Runtime / UI",".NET 10 LTS":".NET 10 LTS","Avalonia 11":"Avalonia 11","CommunityToolkit.Mvvm 源生成器，AOT 友好":"CommunityToolkit.Mvvm source generators, AOT-friendly","IPC / 存储":"IPC / storage","gRPC":"gRPC","Windows 命名管道，Linux / macOS 走 UDS":"Named pipes on Windows, UDS on Linux / macOS","ETW":"ETW","P/Invoke fwpuclnt.dll，用户态即可，无需驱动签名":"P/Invoke into fwpuclnt.dll, user mode only, no driver signing","Linux / macOS":"Linux / macOS","NFQUEUE":"NFQUEUE","eBPF":"eBPF","NE":"NE","nftables 挂起判决；macOS 走 NEFilterDataProvider":"nftables holds the decision; macOS goes through NEFilterDataProvider","可测试、可观测。":"Testable and observable.","规则引擎与平台无关，用模拟引擎即可跑通全链路；核心逻辑单元测试覆盖率目标 ≥ 80%，\n          规则引擎、匹配器、时效管理都有属性测试与基准测试。服务输出结构化日志、级别可调，并提供「导出诊断包」\n          （配置、日志、引擎状态；连接日志除非你勾选，否则不会包含）。":"The rule engine is platform-independent, so the simulated engine exercises the whole chain; core logic targets ≥ 80% unit test coverage,\n          and the rule engine, matcher and lifetime manager all have property tests and benchmarks. The service emits structured logs with adjustable levels and offers \"export diagnostics\"\n          (configuration, logs, engine state; the connection log stays out unless you tick it).","09 — 路线图":"09 — Roadmap","先跑通，再覆盖":"Working end to end first, then coverage","M0 在模拟引擎上跑通核心交互；M1 交付 Windows 的 P0 功能；Linux 与 macOS 依次跟上。":"M0 proves the core interactions on the simulated engine; M1 delivers the Windows P0 features; Linux and macOS follow in turn.","M0":"M0","原型":"Prototype","核心服务 + 模拟引擎 + 界面（弹窗、规则、日志）":"Core service + simulated engine + UI (prompts, rules, logs)","M1":"M1","Windows MVP":"Windows MVP","用户态 WFP 引擎，全部 P0 功能验收":"User-mode WFP engine, all P0 features accepted","M2":"M2","NFQUEUE + eBPF，挂起询问可用":"NFQUEUE + eBPF, hold-and-ask available","M3":"M3","v1.0":"v1.0","Windows 与 Linux 的全部 P1 功能，性能达标":"All P1 features on Windows and Linux, performance targets met","M4":"M4","NE 系统扩展，签名与公证完成":"NE system extension, signed and notarized","M5+":"M5+","增强":"Enhancements","P2 功能与 Windows 驱动引擎":"P2 features and the Windows driver engine","10 — 常见问题":"10 — FAQ","先说清楚几件事":"A few things up front","关于断网风险、域名准确性、平台差异和授权方式的直接回答。":"Direct answers on the risk of cutting your network, domain accuracy, platform differences and how authorization works.","它会不会把我自己的网弄断？":"Could it cut off my own network?","默认 fail-open：服务异常、崩溃或停止时放行流量。服务连续崩溃会自动降级为放行；也可以显式选择 fail-closed。\n            卸载时会清理过滤器、服务与系统扩展，不残留任何网络拦截。开机到服务启动之间的空窗期，各平台按自身能力尽量提供启动保护。":"The default is fail-open: traffic is allowed if the service errors, crashes or stops. Repeated crashes degrade to allow automatically; you can also choose fail-closed explicitly.\n            Uninstall removes the filter, service and system extension, leaving no network interception behind. During the gap between boot and service start, each platform provides as much startup protection as it can.","为什么域名有时不准？":"Why are domain names sometimes wrong?","拦截引擎本身不提供域名，靠 DNS 映射还原：Windows 用 ETW DNS 事件，Linux 用 DNS 嗅探，macOS 由系统扩展提供。\n            DoH、共享 IP 都会让映射失真。因此界面上的域名只作参考，可以展开看真实 IP；对浏览器这类连接密集的应用，建议直接按「此应用的任意连接」授权。":"The interception engine does not supply domain names itself; they are reconstructed from DNS mappings — ETW DNS events on Windows, DNS sniffing on Linux, the system extension on macOS.\n            DoH and shared IPs both distort the mapping. So treat the domain in the UI as a hint, expand a row to see the real IP, and for connection-heavy apps like browsers just authorize \"any connection from this app\".","Windows 上「先阻断、再允许」是什么体验？":"On Windows, what does \"block first, allow after\" feel like?","用户态 WFP 无法挂起连接等用户决定，所以首次连接会先被阻断，弹窗会明确提示「此连接已被暂时阻止，允许后应用重试即可连接」。\n            少数应用首次失败后不重试，这时可以在弹窗里直接授权或临时切到停用过滤。后期版本会提供驱动引擎，实现真正的挂起判决。":"User-mode WFP cannot hold a connection while you decide, so the first connection is blocked and the prompt says so plainly: \"this connection was blocked for now; allow it and the app can connect on retry\".\n            A few apps do not retry after the first failure — authorize in the prompt or switch to disable filtering for a moment. A later version adds the driver engine for true hold-and-decide.","升级软件后，规则会失效吗？":"Do rules break when an app updates?","不会。有签名的应用按「签名者 + 路径」匹配，没签名的按「路径 + 哈希」匹配。如果未签名应用的哈希变了，或者已签名应用的签名者变了，\n            会暂停该应用的现有规则并发出「程序已变更」告警，而不是悄悄沿用旧授权。":"No. Signed apps match on signer + path, unsigned ones on path + hash. If an unsigned app's hash changes, or a signed app's signer changes,\n            the app's existing rules are paused and a \"program changed\" alert fires instead of quietly reusing the old authorization.","支持多用户和远程桌面吗？":"Does it support multiple users and remote desktop?","询问弹窗只出现在发起连接的用户会话中；系统账户发起的连接，询问显示给管理员。没有用户登录时，询问按默认动作处理并写入日志，\n            服务照常工作。多用户场景是否进入 v1.0 范围仍在评审中。":"Prompts appear only in the session that started the connection; connections started by system accounts prompt the administrator. With no user logged in, connections are decided by the default action and logged while\n            the service keeps running. Whether multi-user scenarios make v1.0 is still under review.","开源吗？可以脚本化吗？":"Is it open source? Can I script it?","协议选型（MIT / Apache-2.0 / GPL-3.0）尚在评审，它决定能否参考或复用 GPL 项目的代码，所以暂时按「只借鉴设计、不复制代码」处理。\n            命令行工具":"The license (MIT / Apache-2.0 / GPL-3.0) is still under review, since it decides whether GPL project code can be referenced or reused — for now we borrow design, not code.\n            The command-line tool","ncctl":"ncctl","提供状态查询、模式切换、规则增删查与导入导出，属于 P2 计划。":"covers status queries, mode switching, rule CRUD and import/export, and is planned for P2.","先看清楚每一条连接，":"See every connection clearly,","再决定谁可以出去。":"then decide what gets out.","M0 原型已在模拟引擎上跑通核心交互，M1 的 Windows MVP 进入内测。":"The M0 prototype proves the core interactions on the simulated engine, and the M1 Windows MVP is in closed beta.","申请内测名额":"Request beta access","阅读需求规格":"Read the requirements spec","阅读设计实现":"Read the design and implementation","页脚导航":"Footer navigation","核心机制":"How it works","功能清单":"Features","平台支持":"Platform support","需求文档":"Requirements","设计文档":"Design","v0.1 草案 · 待评审":"v0.1 draft · under review","本地运行 · 不收集遥测":"Runs locally · no telemetry","Windows · Linux · macOS":"Windows · Linux · macOS","© 2026 NetworkControl":"© 2026 NetworkControl"}}</script>
+
+<script>
+(function () {
+  "use strict";
+
+  var root = document.documentElement;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ═══ 0. 文案字典 ══════════════════════════════════════════════ */
+
+  var DYN = {
+    "zh-Hans": {
+      "theme.auto": "跟随系统", "theme.light": "浅色", "theme.dark": "深色",
+      "timer.wait": "{n} 秒后自动拒绝", "timer.paused": "已暂停 · {n} 秒",
+      "status.waiting": "等待判决 · 倒计时结束按默认动作处理",
+      "status.timeout": "已拒绝 · 超时（默认动作）· 已写入日志",
+      "status.allowed": "已允许 · 规则已写入（{ttl} · {cond}）",
+      "status.denied": "已拒绝 · 依据「用户判决」写入日志",
+      "rule.tpl": "<b>将生成规则</b> · 应用 Code.exe（签名者 Microsoft Corporation） · 条件 {cond} · 动作 <b>允许</b> · 时效 <b>{ttl}</b>",
+      "scope.app": "任意连接", "scope.domain": "域名 {v}", "scope.ip": "IP {v}",
+      "scope.ipport": "IP + 端口 {v}", "scope.port": "端口 {v}",
+      "ttl.now": "本次", "ttl.exit": "直到退出", "ttl.5m": "5 分钟", "ttl.15m": "15 分钟",
+      "ttl.1h": "1 小时", "ttl.reboot": "直到重启", "ttl.forever": "永久",
+      "mode.ask.on": "按规则判决", "mode.ask.no": "弹窗询问", "mode.ask.use": "日常使用",
+      "mode.allowlist.on": "按规则判决", "mode.allowlist.no": "拒绝（可选通知）", "mode.allowlist.use": "严格控制、勿扰",
+      "mode.blocklist.on": "按规则判决", "mode.blocklist.no": "允许", "mode.blocklist.use": "只想屏蔽少数应用",
+      "mode.blockall.on": "忽略规则，只放行内置必要流量", "mode.blockall.no": "拒绝", "mode.blockall.use": "紧急断网",
+      "mode.off.on": "忽略规则", "mode.off.no": "允许（仍记录日志）", "mode.off.use": "排查问题"
+    },
+    "zh-Hant": {
+      "theme.auto": "跟隨系統", "theme.light": "淺色", "theme.dark": "深色",
+      "timer.wait": "{n} 秒後自動拒絕", "timer.paused": "已暫停 · {n} 秒",
+      "status.waiting": "等待判決 · 倒數結束後依預設動作處理",
+      "status.timeout": "已拒絕 · 逾時（預設動作）· 已寫入日誌",
+      "status.allowed": "已允許 · 規則已寫入（{ttl} · {cond}）",
+      "status.denied": "已拒絕 · 依「使用者判決」寫入日誌",
+      "rule.tpl": "<b>將產生規則</b> · 應用程式 Code.exe（簽署者 Microsoft Corporation） · 條件 {cond} · 動作 <b>允許</b> · 時效 <b>{ttl}</b>",
+      "scope.app": "任意連線", "scope.domain": "網域 {v}", "scope.ip": "IP {v}",
+      "scope.ipport": "IP + 埠 {v}", "scope.port": "埠 {v}",
+      "ttl.now": "本次", "ttl.exit": "直到結束", "ttl.5m": "5 分鐘", "ttl.15m": "15 分鐘",
+      "ttl.1h": "1 小時", "ttl.reboot": "直到重新啟動", "ttl.forever": "永久",
+      "mode.ask.on": "依規則判決", "mode.ask.no": "彈窗詢問", "mode.ask.use": "日常使用",
+      "mode.allowlist.on": "依規則判決", "mode.allowlist.no": "拒絕（可選通知）", "mode.allowlist.use": "嚴格控制、勿擾",
+      "mode.blocklist.on": "依規則判決", "mode.blocklist.no": "允許", "mode.blocklist.use": "只想封鎖少數應用程式",
+      "mode.blockall.on": "忽略規則，只放行內建必要流量", "mode.blockall.no": "拒絕", "mode.blockall.use": "緊急斷網",
+      "mode.off.on": "忽略規則", "mode.off.no": "允許（仍記錄日誌）", "mode.off.use": "排查問題"
+    },
+    "en": {
+      "theme.auto": "Follow system", "theme.light": "Light", "theme.dark": "Dark",
+      "timer.wait": "Auto-deny in {n}s", "timer.paused": "Paused · {n}s",
+      "status.waiting": "Waiting for a verdict · default action applies at zero",
+      "status.timeout": "Denied · timed out (default action) · logged",
+      "status.allowed": "Allowed · rule written ({ttl} · {cond})",
+      "status.denied": "Denied · logged as a user verdict",
+      "rule.tpl": "<b>Rule to be created</b> · app Code.exe (signed by Microsoft Corporation) · condition {cond} · action <b>allow</b> · lifetime <b>{ttl}</b>",
+      "scope.app": "any connection", "scope.domain": "domain {v}", "scope.ip": "IP {v}",
+      "scope.ipport": "IP + port {v}", "scope.port": "port {v}",
+      "ttl.now": "this time", "ttl.exit": "until exit", "ttl.5m": "5 min", "ttl.15m": "15 min",
+      "ttl.1h": "1 hour", "ttl.reboot": "until reboot", "ttl.forever": "permanent",
+      "mode.ask.on": "Follow rules", "mode.ask.no": "Ask with a prompt", "mode.ask.use": "Everyday use",
+      "mode.allowlist.on": "Follow rules", "mode.allowlist.no": "Deny (optional notice)", "mode.allowlist.use": "Strict control, quiet",
+      "mode.blocklist.on": "Follow rules", "mode.blocklist.no": "Allow", "mode.blocklist.use": "Block only a few apps",
+      "mode.blockall.on": "Ignore rules, allow built-in essentials only", "mode.blockall.no": "Deny", "mode.blockall.use": "Emergency cut-off",
+      "mode.off.on": "Ignore rules", "mode.off.no": "Allow (still logged)", "mode.off.use": "Troubleshooting"
+    }
+  };
+
+  var HEAD = {
+    "zh-Hans": {
+      title: "NetworkControl — 按应用联网控制，跨 Windows / Linux / macOS",
+      desc: "NetworkControl 补上桌面系统缺失的出站防护：应用首次联网时弹窗询问，规则精确到域名、IP 与端口，三个平台一套规则模型，全程本地运行，不收集任何遥测数据。",
+      ogTitle: "NetworkControl — 每一次联网，都由你决定",
+      ogDesc: "跨 Windows / Linux / macOS 的按应用联网控制。弹窗询问、域名级规则、实时连接视图，本地运行，无遥测。"
+    },
+    "zh-Hant": {
+      title: "NetworkControl — 依應用程式控管連線，跨 Windows / Linux / macOS",
+      desc: "NetworkControl 補上桌面系統缺少的對外防護：應用程式首次連線時彈窗詢問，規則精確到網域、IP 與埠，三個平台共用一套規則模型，全程本機執行，不收集任何遙測資料。",
+      ogTitle: "NetworkControl — 每一次連線，都由你決定",
+      ogDesc: "跨 Windows / Linux / macOS 的依應用程式連線控管。彈窗詢問、網域層級規則、即時連線檢視，本機執行，無遙測。"
+    },
+    "en": {
+      title: "NetworkControl — per-app network control for Windows, Linux and macOS",
+      desc: "NetworkControl adds the outbound layer desktop systems leave out: a prompt on an app's first connection, rules down to domain, IP and port, one rule model across three platforms, fully local with zero telemetry.",
+      ogTitle: "NetworkControl — every connection, decided by you",
+      ogDesc: "Per-app network control for Windows, Linux and macOS. First-connection prompts, domain-level rules, a live connection view, all local, no telemetry."
+    }
+  };
+
+  var DATA = {};
+  try { DATA = JSON.parse(document.getElementById("i18n-data").textContent || "{}"); } catch (e) { DATA = {}; }
+
+  var LANG = (function () {
+    try {
+      var l = "zh-Hans";
+      if (l === "zh-Hant" || l === "en") return l;
+    } catch (e) { }
+    return "zh-Hans";
+  })();
+
+  function t(key, vars) {
+    var s = (DYN[LANG] && DYN[LANG][key]) || DYN["zh-Hans"][key] || key;
+    if (vars) {
+      Object.keys(vars).forEach(function (k) { s = s.split("{" + k + "}").join(vars[k]); });
+    }
+    return s;
+  }
+
+  /* ── 收集原文节点，语言切换时回填 ── */
+  var textPairs = [], attrPairs = [];
+  (function collect() {
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        var p = node.parentNode;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        var tag = p.nodeName;
+        if (tag === "SCRIPT" || tag === "STYLE" || tag === "TEXTAREA") return NodeFilter.FILTER_REJECT;
+        return /\S/.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    var n;
+    while ((n = walker.nextNode())) textPairs.push({ n: n, s: n.nodeValue });
+    ["aria-label", "title", "placeholder", "alt"].forEach(function (name) {
+      Array.prototype.forEach.call(document.body.querySelectorAll("[" + name + "]"), function (el) {
+        attrPairs.push({ el: el, name: name, s: el.getAttribute(name) });
+      });
+    });
+  })();
+
+  function tr(s) {
+    var d = LANG === "zh-Hans" ? null : DATA[LANG];
+    if (!d) return s;
+    var lead = s.match(/^\s*/)[0], trail = s.match(/\s*$/)[0], core = s.trim();
+    var out = d[core];
+    return out === undefined ? s : lead + out + trail;
+  }
+
+  function setMeta(kind, key, val) {
+    var el = document.querySelector('meta[' + kind + '="' + key + '"]');
+    if (el) el.setAttribute("content", val);
+  }
+
+  var langBtns = Array.prototype.slice.call(document.querySelectorAll(".lang button"));
+
+  function applyLang() {
+    var d = LANG === "zh-Hans" ? null : DATA[LANG];
+    textPairs.forEach(function (p) { p.n.nodeValue = d ? tr(p.s) : p.s; });
+    attrPairs.forEach(function (a) { a.el.setAttribute(a.name, d ? tr(a.s) : a.s); });
+    var h = HEAD[LANG];
+    document.title = h.title;
+    setMeta("name", "description", h.desc);
+    setMeta("property", "og:title", h.ogTitle);
+    setMeta("property", "og:description", h.ogDesc);
+    root.lang = LANG === "zh-Hant" ? "zh-Hant" : (LANG === "en" ? "en" : "zh-Hans");
+    langBtns.forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === LANG));
+    });
+    renderDynamic();
+    updateThemeLabel();
+  }
+
+  /* ═══ 1. 主题 ══════════════════════════════════════════════════ */
+  var themeBtn = document.getElementById("theme-btn");
+  var mq = window.matchMedia("(prefers-color-scheme: light)");
+  var themeMode = (function () {
+    try { return "light"; } catch (e) { return "light"; }
+  })();
+
+  function resolved(m) { return m === "auto" ? (mq.matches ? "light" : "dark") : m; }
+
+  function updateThemeLabel() {
+    if (!themeBtn) return;
+    var lbl = t("theme." + themeMode);
+    themeBtn.title = lbl;
+    themeBtn.setAttribute("aria-label", lbl);
+  }
+
+  function applyTheme() {
+    var r = resolved(themeMode);
+    root.setAttribute("data-theme", r);
+    if (themeBtn) themeBtn.setAttribute("data-mode", themeMode);
+    var tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) tc.setAttribute("content", r === "light" ? "#FAFAF8" : "#08090B");
+    updateThemeLabel();
+  }
+
+  if (themeBtn) {
+    themeBtn.addEventListener("click", function () {
+      themeMode = themeMode === "auto" ? "light" : themeMode === "light" ? "dark" : "auto";
+      try { localStorage.setItem("nc.theme", themeMode); } catch (e) { }
+      applyTheme();
+    });
+  }
+  if (mq.addEventListener) {
+    mq.addEventListener("change", function () { if (themeMode === "auto") applyTheme(); });
+  }
+  applyTheme();
+
+  langBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      LANG = b.getAttribute("data-lang");
+      try { localStorage.setItem("nc.lang", LANG); } catch (e) { }
+      applyLang();
+    });
+  });
+
+  /* ═══ 2. 顶栏 / 导航 / 滚动 ════════════════════════════════════ */
+  var bar = document.getElementById("topbar");
+  function onScrollBar() {
+    if (!bar) return;
+    bar.classList.toggle("scrolled", window.scrollY > 12);
+  }
+
+  var reveals = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window && !reduce) {
+    var rio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("in"); rio.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -12% 0px", threshold: 0.08 });
+    Array.prototype.forEach.call(reveals, function (el) { rio.observe(el); });
+  } else {
+    Array.prototype.forEach.call(reveals, function (el) { el.classList.add("in"); });
+  }
+
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll(".nav a"));
+  var sections = navLinks.map(function (a) { return document.querySelector(a.getAttribute("href")); }).filter(Boolean);
+  function onScrollNav() {
+    var y = window.scrollY + 120, current = null;
+    sections.forEach(function (s) { if (s.offsetTop <= y) current = s.id; });
+    navLinks.forEach(function (a) { a.classList.toggle("on", a.getAttribute("href") === "#" + current); });
+  }
+
+  var stages = Array.prototype.slice.call(document.querySelectorAll(".stage"));
+  var railFill = document.getElementById("rail-fill");
+  var pipeList = document.querySelector(".pipe-list");
+  function onScrollPipe() {
+    if (!pipeList) return;
+    var r = pipeList.getBoundingClientRect();
+    var p = (window.innerHeight * 0.62 - r.top) / (r.height || 1);
+    p = Math.max(0, Math.min(1, p));
+    if (railFill) railFill.style.height = (p * 100).toFixed(1) + "%";
+    var idx = Math.min(stages.length - 1, Math.floor(p * stages.length));
+    stages.forEach(function (s, i) { s.classList.toggle("on", i <= idx); });
+  }
+
+  var ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(function () {
+      onScrollBar(); onScrollNav(); onScrollPipe();
+      ticking = false;
+    });
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll);
+  onScroll();
+
+  /* ═══ 3. 弹窗示意 ══════════════════════════════════════════════ */
+  var prompt = document.getElementById("prompt");
+  var timer = document.getElementById("timer");
+  var timerText = document.getElementById("timer-text");
+  var timerBar = document.getElementById("timer-bar");
+  var statusEl = document.getElementById("p-status");
+  var preview = document.getElementById("rule-preview");
+  var LIMIT = 30;
+  var left = LIMIT;
+  var paused = false;
+  var locked = false;
+  var lockStatus = null;
+  var state = { scope: "domain", ttl: "forever" };
+  var SCOPE_VAL = {
+    app: "", domain: "marketplace.visualstudio.com", ip: "13.107.42.18",
+    ipport: "13.107.42.18:443", port: "443"
+  };
+
+  function scopeText() { return t("scope." + state.scope, { v: SCOPE_VAL[state.scope] }); }
+  function ttlText() { return t("ttl." + state.ttl); }
+
+  function renderPreview() {
+    if (preview) preview.innerHTML = t("rule.tpl", { cond: scopeText(), ttl: ttlText() });
+  }
+
+  function paintTimer() {
+    if (!timerBar) return;
+    timerBar.style.width = (left / LIMIT * 100).toFixed(1) + "%";
+    if (paused && !locked) {
+      timer.classList.add("paused");
+      timerText.textContent = t("timer.paused", { n: left });
+    } else {
+      timer.classList.remove("paused");
+      timerText.textContent = t("timer.wait", { n: left });
+    }
+  }
+
+  function setStatus(text, cls) {
+    if (!statusEl) return;
+    statusEl.textContent = text;
+    statusEl.className = "p-status" + (cls ? " " + cls : "");
+  }
+
+  function statusTextFor(lock) {
+    if (lock.kind === "timeout") return t("status.timeout");
+    if (lock.kind === "allowed") return t("status.allowed", { ttl: ttlText(), cond: scopeText() });
+    return t("status.denied");
+  }
+
+  function renderDynamic() {
+    renderPreview();
+    if (locked && lockStatus) setStatus(statusTextFor(lockStatus), lockStatus.cls);
+    else setStatus(t("status.waiting"), "");
+    paintTimer();
+    paintMode();
+  }
+
+  function tick() {
+    if (locked || paused) return;
+    left -= 1;
+    if (left <= 0) {
+      left = 0; paintTimer();
+      locked = true;
+      lockStatus = { kind: "timeout", cls: "no" };
+      setStatus(statusTextFor(lockStatus), "no");
+      window.setTimeout(function () {
+        locked = false; lockStatus = null; left = LIMIT;
+        setStatus(t("status.waiting"), "");
+        paintTimer();
+      }, 2200);
+      return;
+    }
+    paintTimer();
+  }
+
+  if (prompt) {
+    paintTimer();
+    window.setInterval(tick, 1000);
+
+    prompt.addEventListener("mouseenter", function () { paused = true; paintTimer(); });
+    prompt.addEventListener("mouseleave", function () { paused = false; paintTimer(); });
+    prompt.addEventListener("focusin", function () { paused = true; paintTimer(); });
+    prompt.addEventListener("focusout", function () { paused = false; paintTimer(); });
+
+    function wireSegs(id, key, attr) {
+      var box = document.getElementById(id);
+      if (!box) return;
+      box.addEventListener("click", function (ev) {
+        var btn = ev.target.closest("[data-" + attr + "]");
+        if (!btn) return;
+        Array.prototype.forEach.call(box.querySelectorAll(".seg"), function (b) {
+          b.setAttribute("aria-pressed", String(b === btn));
+        });
+        state[key] = btn.getAttribute("data-" + attr);
+        renderPreview();
+      });
+    }
+    wireSegs("scope-segs", "scope", "scope");
+    wireSegs("ttl-segs", "ttl", "ttl");
+
+    Array.prototype.forEach.call(prompt.querySelectorAll("[data-v]"), function (btn) {
+      btn.addEventListener("click", function () {
+        locked = true;
+        if (btn.getAttribute("data-v") === "allow") {
+          lockStatus = { kind: "allowed", cls: "ok" };
+        } else {
+          lockStatus = { kind: "denied", cls: "no" };
+        }
+        setStatus(statusTextFor(lockStatus), lockStatus.cls);
+        window.setTimeout(function () {
+          locked = false; lockStatus = null; left = LIMIT; paintTimer();
+          setStatus(t("status.waiting"), "");
+        }, 2400);
+      });
+    });
+  }
+
+  /* ═══ 4. 模式切换 ══════════════════════════════════════════════ */
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".mode-tabs button"));
+  var mOn = document.getElementById("mode-onrule");
+  var mNo = document.getElementById("mode-norule");
+  var mUse = document.getElementById("mode-use");
+  var activeMode = "ask";
+
+  function paintMode() {
+    if (!mOn) return;
+    mOn.textContent = t("mode." + activeMode + ".on");
+    mNo.textContent = t("mode." + activeMode + ".no");
+    var deny = activeMode === "allowlist" || activeMode === "blockall";
+    mNo.className = "mv mv-" + (deny ? "deny" : "allow");
+    mUse.textContent = t("mode." + activeMode + ".use");
+  }
+
+  tabs.forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      tabs.forEach(function (x) { x.setAttribute("aria-selected", String(x === tab)); });
+      activeMode = tab.getAttribute("data-mode");
+      paintMode();
+    });
+  });
+
+  /* ═══ 5. 首次应用语言 ══════════════════════════════════════════ */
+  applyLang();
+  root.classList.remove("i18n-pending");
+  window.setTimeout(function () { root.classList.remove("i18n-pending"); }, 1200);
+})();
+</script>
+</body>
+</html>

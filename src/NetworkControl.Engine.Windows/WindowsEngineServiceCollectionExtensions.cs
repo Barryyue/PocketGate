@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NetworkControl.Core.Apps;
+using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Engine;
 using NetworkControl.Engine.Windows.Platform;
 
@@ -19,6 +20,7 @@ public static class WindowsEngineServiceCollectionExtensions
 
         services.TryAddSingleton<WfpEngine>();
         services.TryAddSingleton<INetworkEngine>(sp => sp.GetRequiredService<WfpEngine>());
+        services.AddDiagnosticsContributor(sp => sp.GetRequiredService<WfpEngine>());
         return services;
     }
 }

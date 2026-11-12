@@ -6,10 +6,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NetworkControl.Core.Activity;
 using NetworkControl.Core.Apps;
+using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Hosting;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
 using NetworkControl.Storage.Activity;
+using NetworkControl.Storage.Diagnostics;
 using NetworkControl.Storage.Repositories;
 using NetworkControl.Storage.Sqlite;
 
@@ -22,13 +24,7 @@ public static class StorageServiceCollectionExtensions
         services.AddOptions<StorageOptions>()
             .Bind(configuration.GetSection($"{CoreServiceCollectionExtensions.ConfigurationSection}:Storage"))
             .PostConfigure<IHostEnvironment>((options, env) =>
-            {
-                // 相對路徑相對於內容根目錄解析，而不是進程的當前工作目錄
-                if (!string.IsNullOrWhiteSpace(options.DataDirectory) && !Path.IsPathRooted(options.DataDirectory))
-                {
-                    options.DataDirectory = Path.GetFullPath(Path.Combine(env.ContentRootPath, options.DataDirectory));
-                }
-            });
+                options.DataDirectory = StorageOptions.ResolveDataDirectory(options.DataDirectory, env.ContentRootPath));
 
         services.TryAddSingleton<ConfigDatabase>();
         services.TryAddSingleton<ActivityDatabase>();
@@ -42,6 +38,7 @@ public static class StorageServiceCollectionExtensions
         services.AddHostedService(sp => sp.GetRequiredService<ActivityLogWriter>());
 
         services.AddStartupTask<StorageStartupTask>();
+        services.AddDiagnosticsContributor<StorageDiagnosticsContributor>();
         return services;
     }
 }

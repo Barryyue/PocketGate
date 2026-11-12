@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+// 診斷：生成診斷包，供用戶導出後發給開發者分析。
+service Diagnostics {
+  // 生成服務端的診斷包（zip：狀態摘要、配置、日誌、引擎狀態，以及可選的規則和連接日誌），分塊返回。
+  // 文本內容已脫敏（用戶目錄中的用戶名、計算機名）。需要管理員權限。
+  rpc Export (ExportDiagnosticsRequest) returns (stream DiagnosticsChunk);
+}
+
+message ExportDiagnosticsRequest {
+  // 包含規則、應用列表和設置（config.db 副本；含程序路徑和域名）。
+  bool include_configuration = 1;
+  // 包含最近的連接日誌（訪問過的地址和域名）。
+  bool include_activity = 2;
+}
+
+message DiagnosticsChunk {
+  bytes data = 1;
+}

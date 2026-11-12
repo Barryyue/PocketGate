@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
+using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Dns;
 using NetworkControl.Core.Domain;
 using NetworkControl.Core.Engine;
@@ -28,8 +29,10 @@ namespace NetworkControl.Engine.Windows;
 /// </list>
 /// 所有過濾器建在動態會話中：服務退出時由系統自動刪除，網絡恢復暢通。
 /// </summary>
-internal sealed partial class WfpEngine : INetworkEngine
+internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributor
 {
+    private const int MaxRecordedFilterFailures = 50;
+
     private static readonly TimeSpan RecompileDebounce = TimeSpan.FromMilliseconds(150);
     private static readonly TimeSpan MaintenanceInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan DropDedupWindow = TimeSpan.FromSeconds(2);
@@ -61,6 +64,14 @@ internal sealed partial class WfpEngine : INetworkEngine
     private FrozenSet<ulong> _defaultBlockIds = FrozenSet<ulong>.Empty;
     private FrozenSet<ulong> _ruleBlockIds = FrozenSet<ulong>.Empty;
     private DomainPattern[] _domainPatterns = [];
+
+    // 診斷信息：後台循環寫入不可變快照，導出診斷包時在其他線程讀取
+    private (FilterSpec Spec, ulong Id)[] _installedSnapshot = [];
+    private SkippedRule[] _lastSkipped = [];
+    private readonly ConcurrentQueue<string> _filterFailures = new();
+    private DateTimeOffset? _lastAppliedAt;
+    private long _dropsSeen;
+    private long _dropsReported;
 
     public WfpEngine(SettingsService settings, DevicePathResolver paths, TimeProvider time, ILogger<WfpEngine> logger)
     {
@@ -194,6 +205,7 @@ internal sealed partial class WfpEngine : INetworkEngine
         }
 
         _installed.Clear();
+        _installedSnapshot = [];
         if (_self.IsAllocated)
         {
             _self.Free();
@@ -284,6 +296,7 @@ internal sealed partial class WfpEngine : INetworkEngine
             ExpandPath = PathExpander.Expand,
         });
 
+        _lastSkipped = [.. result.Skipped];
         foreach (var skipped in result.Skipped)
         {
             LogRuleSkipped(_logger, skipped.RuleId, skipped.Reason);
@@ -297,7 +310,7 @@ internal sealed partial class WfpEngine : INetworkEngine
             return;
         }
 
-        var added = session.Apply(remove.Select(kv => kv.Value.Id).ToArray(), add, (spec, ex) => LogFilterSkipped(_logger, ex, spec.Name, spec.AppPath));
+        var added = session.Apply(remove.Select(kv => kv.Value.Id).ToArray(), add, OnFilterFailed);
         foreach (var kv in remove)
         {
             _installed.Remove(kv.Key);
@@ -310,7 +323,18 @@ internal sealed partial class WfpEngine : INetworkEngine
 
         _defaultBlockIds = _installed.Values.Where(f => f.Spec.Role == FilterRole.DefaultBlock).Select(f => f.Id).ToFrozenSet();
         _ruleBlockIds = _installed.Values.Where(f => f.Spec is { Role: FilterRole.Rule or FilterRole.BlockAll, Permit: false }).Select(f => f.Id).ToFrozenSet();
+        _installedSnapshot = [.. _installed.Values];
+        _lastAppliedAt = _time.GetUtcNow();
         LogApplied(_logger, added.Count, remove.Count, _installed.Count);
+    }
+
+    private void OnFilterFailed(FilterSpec spec, Exception exception)
+    {
+        LogFilterSkipped(_logger, exception, spec.Name, spec.AppPath);
+        _filterFailures.Enqueue($"{_time.GetUtcNow():u} {spec.Name} ({spec.AppPath ?? "any app"}): {exception.Message}");
+        while (_filterFailures.Count > MaxRecordedFilterFailures && _filterFailures.TryDequeue(out _))
+        {
+        }
     }
 
     private void OnDnsQuery(DnsQueryResult query)
@@ -344,6 +368,7 @@ internal sealed partial class WfpEngine : INetworkEngine
 
     private unsafe void HandleDrop(FwpmNetEvent1* evt)
     {
+        Interlocked.Increment(ref _dropsSeen);
         var drop = (FwpmNetEventClassifyDrop1*)evt->Detail;
         BlockReason reason;
         if (_defaultBlockIds.Contains(drop->FilterId))
@@ -373,6 +398,7 @@ internal sealed partial class WfpEngine : INetworkEngine
         }
 
         _recentDrops[key] = now;
+        Interlocked.Increment(ref _dropsReported);
         _host?.OnFlowBlocked(flow, reason);
     }
 

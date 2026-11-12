@@ -1,7 +1,9 @@
 using System.Text;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Hosting;
 using NetworkControl.Service;
+using NetworkControl.Service.Diagnostics;
 using NetworkControl.Service.Engines;
 using NetworkControl.Service.Grpc;
 using NetworkControl.Service.Ipc;
@@ -25,8 +27,9 @@ try
     // 優雅關閉的上限：流式接口會在停止時主動結束，這裡只是兜底，避免切換引擎、退出時長時間等待
     builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(5));
 
-    builder.Services.AddSerilog((services, logger) => logger
-        .ReadFrom.Configuration(builder.Configuration)
+    var (loggingOptions, logLocation) = ServiceLogging.Resolve(builder.Configuration, builder.Environment);
+    builder.Services.AddSingleton(logLocation);
+    builder.Services.AddSerilog((services, logger) => ServiceLogging.Apply(logger, loggingOptions, logLocation)
         .ReadFrom.Services(services)
         .Enrich.FromLogContext());
 
@@ -35,6 +38,7 @@ try
 
     // IPC：只監聽本地命名管道 / Unix socket
     var endpoint = IpcServer.Configure(builder, serviceOptions);
+    builder.Services.AddSingleton(endpoint);
 
     builder.Services
         .AddAuthentication(LocalPeerAuthenticationHandler.SchemeName)
@@ -50,6 +54,11 @@ try
     builder.Services.AddNetworkControlStorage(builder.Configuration);
     builder.Services.AddConfiguredEngine(serviceOptions);
 
+    // 診斷包：服務概況和日誌；存儲、引擎各自註冊自己的收集者
+    builder.Services.AddSingleton<ServiceDiagnosticsBuilder>();
+    builder.Services.AddDiagnosticsContributor<ServiceSummaryContributor>();
+    builder.Services.AddDiagnosticsContributor<ServiceLogsContributor>();
+
     var app = builder.Build();
 
     app.UseAuthentication();
@@ -59,6 +68,7 @@ try
     app.MapGrpcService<PromptsGrpcService>();
     app.MapGrpcService<RulesGrpcService>();
     app.MapGrpcService<ActivityGrpcService>();
+    app.MapGrpcService<DiagnosticsGrpcService>();
     app.MapEngineEndpoints(serviceOptions);
 
     app.Lifetime.ApplicationStarted.Register(() =>
