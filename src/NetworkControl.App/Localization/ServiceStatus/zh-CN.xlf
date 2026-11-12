@@ -79,5 +79,11 @@
         <target state="translated">核心服务不可用</target>
       </segment>
     </unit>
+    <unit id="ExportDiagnosticsHint">
+      <segment>
+        <source>You can still export a diagnostics package to help find the cause.</source>
+        <target state="translated">仍然可以导出诊断包，帮助查找原因。</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

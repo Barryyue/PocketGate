@@ -4,13 +4,18 @@
 > 需求見 [requirements.md](requirements.md)，設計見 [design.md](design.md)（§22 記錄了實現與原設計的差異），開發方法見 [development.md](development.md)。
 
 **最後更新：2026-11-12**
-**當前階段：M1（Windows MVP）—— WFP 主鏈路已在真實環境跑通（攔截 → 彈窗 → 生成規則），剩餘問題修復後待用戶確認**
+**當前階段：M1（Windows MVP）—— 可以發給朋友試用：Native AOT 發布包 + 安裝程序 + 診斷包已完成；安裝版已在開發機上以 SYSTEM 服務跑通**
 
 ---
 
 ## 🔴 當前阻塞 / 下一步
 
-1. **用戶確認本輪修復（2026-11-12 下午）**
+0. **用戶驗證發布包（2026-11-12 晚）**——以下需要管理員權限或需要看界面，由用戶執行：
+   - 安裝程序 `artifacts\release\NetworkControl-0.1.0-win-x64-setup.exe`：安裝 / 從 zip 安裝版升級 / 卸載（是否刪除數據的詢問）各走一遍。**尚未運行過**（只驗證了編譯和版本信息）。
+   - 設定頁「診斷」卡片和服務不可用頁上的「匯出診斷包」按鈕（保存對話框、完成提示、在資源管理器中定位）。**界面效果未驗證**；導出邏輯已通過命令行模式驗證。
+   - 安裝版的 DNS 域名規則：TraceEvent 在 AOT 下有分析警告（已評估為不經過我們的調用路徑），需要建一條域名規則確認生效；若無效，診斷包 `service/engine/wfp-state.txt` 中的「DNS (ETW) monitor」和服務日誌會給出線索。
+   - 用戶 17:06 用 zip 包安裝後的實際運行：WFP 啟動、7 個彈窗回應、規則重啟後加載 —— **已從服務日誌確認正常**。
+1. **用戶確認上一輪修復（2026-11-12 下午）**
    - 規則頁、日誌頁表格現在應該能顯示內容（原因：AtomUI DataGrid 需要 `IDataGridSource`，之前綁定的是普通集合，運行時靜默失敗）。
    - WFP 引擎下不再出現「Service is unimplemented」（原因：切換引擎後模擬器卡片沒有隱藏）。
    - 之前生成的 tipray 兩條允許規則（`ldapprovalex.exe`、`ldtermdaemon.exe`）應該能下發了：`FwpmGetAppIdFromFileName0` 被安全軟件拒絕訪問，現在改用兜底的應用 ID。驗證方法：在日誌中搜索「無法下發」，應該不再出現。
@@ -50,7 +55,20 @@
 - [x] 引擎配置 Auto / Fake / Wfp；安裝 / 卸載腳本（scripts/）
 - [x] Engine.Windows.Tests（佈局、編譯器、IP 補集、DNS 解析、路徑轉換）
 
-**測試現狀：126 個全部通過；構建零警告；`dotnet format --verify-no-changes` 通過。**
+### 發布與診斷（2026-11-12）
+- [x] **Native AOT 發布**：`scripts/publish-release.ps1` 生成 zip 發布包（約 40 MB）和 Inno Setup 安裝程序（約 28 MB）；調試符號單獨存放。運行時版本在 AOT 發布時固定為 10.0.15（避開 SDK 自帶 10.0.13 的 Brotli 漏洞），已確認產物中運行時為 10.0.15。
+  - 實測：AOT 服務 + 模擬引擎跑通完整鏈路（彈窗 → 回應 → 規則入庫 → 診斷包 → 正常退出）；AOT 服務在無管理員權限時 WFP 啟動失敗但服務存活、故障進入診斷包；用戶安裝的 AOT 版以 SYSTEM 運行 WFP 正常。
+  - 修復：Serilog 改為代碼配置（原配置方式在 AOT 下啟動即崩潰）；**安裝版原來不寫日誌文件**，現在默認寫到 `%ProgramData%\NetworkControl\logs`。
+  - App / Service 日常構建啟用 AOT 分析器；第三方 AOT 警告白名單（Serilog、TraceEvent），其他新增警告讓發布失敗。
+- [x] **版本號**：只在 `Directory.Build.props` 的 `VersionPrefix` 維護；發布包、安裝程序文件名和版本信息、程序內版本（帶提交哈希，未提交時標記 `-dirty`）都從這裡取。安裝程序 `AppId` 固定，支持原地升級。
+- [x] **正式版不含模擬引擎**：Release 構建不引用 `Engine.Fake`、不映射模擬器接口（`IncludeFakeEngine`）。
+- [x] **安裝**：`install-service.ps1` 支持從發布包安裝（不需要 SDK），安裝後以普通權限啟動界面並設置登錄時啟動（「詢問」模式下沒有界面會斷網）、創建開始菜單快捷方式；發布包帶 `install.cmd` / `uninstall.cmd` / `export-diagnostics.cmd`（自動提權）和繁體中文 README。
+- [x] **診斷包**（見 development.md §9）：`IDiagnosticsContributor` 擴展點；服務端（概況、配置、日誌、數據庫一致性副本、有效規則集、WFP 過濾器清單和下發失敗記錄）+ 界面端（界面概況和日誌、`sc` 服務狀態、事件日誌崩潰記錄）；服務不可達時直接讀取服務日誌；文本脫敏；入口為設定頁、服務不可用頁、命令行 `--export-diagnostics`。
+  - 實測：命令行模式在服務在線 / 離線兩種情況下導出正確（約 6 秒）；脫敏、GBK 事件日誌解碼、讀取正被寫入的日誌均已驗證。
+- [x] **界面日誌**：`%LocalAppData%\NetworkControl\logs\app-*.log`，包括未處理異常、連接變化、Avalonia 綁定警告。
+- [x] 連接日誌寫入器停止時總是寫完隊列（之前只在 ExecuteAsync 的取消分支中寫，存在丟失已入隊事件的可能）。觸發這個修改的 `Identical_connections_in_same_minute_are_aggregated` 偶發失敗**未能復現**（單獨 60 次、並行 180 次均通過），根因未確認。
+
+**測試現狀：151 個全部通過；Debug / Release 構建零警告；`dotnet format --verify-no-changes` 通過。**
 
 ---
 
@@ -102,7 +120,9 @@
 - [ ] svchost 服務名細分、目錄簽名（catalog）校驗
 - [ ] 勿擾期間阻斷彙總通知、全屏自動勿擾
 - [ ] 權限分級落地（TreatAllClientsAsAdmin=false 時的界面提示）
-- [ ] MSI 安裝包（WiX）、代碼簽名
+- [ ] 代碼簽名（安裝程序和可執行文件；目前會出現 SmartScreen 提示）
+- [ ] 安裝程序繁體中文界面（Inno Setup 沒有官方繁體語言文件，目前提供簡體中文和英文）
+- [ ] 檢查更新（目前由用戶手動下載新版安裝程序覆蓋安裝）
 
 ### P2 / 後續里程碑
 - [ ] M2 Linux 引擎（nftables NFQUEUE + eBPF + NFLOG）
@@ -122,4 +142,4 @@
 - 正式產品名稱和圖標
 - zh-TW 用語：目前用台灣用語（網路、應用程式、設定），如需「繁體字 + 大陸用語」只需改 zh-TW.xlf
 - 遠端倉庫：本地已 `git init`（分支 main），尚未配置遠端
-- `site/` 目錄（由需求文檔生成的官網頁面 + 腳本 + 21 張截圖，非本項目代碼生成）：未跟蹤，等用戶決定是提交、忽略，還是只提交頁面不提交截圖
+- `site/` 目錄：用戶已自行提交（`2b0e59b`、`64bba9e`），工作區中有一批 `site/` 臨時文件的刪除尚未提交，由用戶處理。注意 `2b0e59b` 中同時帶入了本輪診斷功能的前一半代碼。

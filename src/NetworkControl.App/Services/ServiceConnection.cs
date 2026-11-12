@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Net.Client;
+using NetworkControl.App.Infrastructure;
 using NetworkControl.Ipc;
 using Proto = NetworkControl.Ipc.V1;
 
@@ -46,6 +47,8 @@ public sealed class IpcClients(GrpcChannel channel)
     public Proto.ActivityLog.ActivityLogClient Activity { get; } = new(channel);
 
     public Proto.Simulator.SimulatorClient Simulator { get; } = new(channel);
+
+    public Proto.Diagnostics.DiagnosticsClient Diagnostics { get; } = new(channel);
 }
 
 /// <summary>
@@ -138,6 +141,7 @@ public sealed partial class ServiceConnection : ObservableObject, IAsyncDisposab
                     }
 
                     backoff = TimeSpan.FromMilliseconds(500);
+                    AppLog.Info($"Connected to service {status.ServiceVersion} at {endpoint} (engine {status.Engine.Name}, {status.Engine.State})");
                     Post(() =>
                     {
                         Clients = clients;
@@ -167,6 +171,7 @@ public sealed partial class ServiceConnection : ObservableObject, IAsyncDisposab
                 }
             }
 
+            LogFailureIfChanged(failure);
             Post(() =>
             {
                 State = ConnectionState.Disconnected;
@@ -187,6 +192,19 @@ public sealed partial class ServiceConnection : ObservableObject, IAsyncDisposab
         {
             Post(() => Status = status);
         }
+    }
+
+    private ConnectionFailure? _loggedFailure;
+
+    /// <summary>斷線重試期間每次失敗都會走到這裡：只在原因變化時寫日誌，避免刷屏。</summary>
+    private void LogFailureIfChanged(ConnectionFailure? failure)
+    {
+        if (failure is not null && failure != _loggedFailure)
+        {
+            AppLog.Warn($"Service unavailable: {failure.Kind} at {failure.Endpoint} {failure.Detail}");
+        }
+
+        _loggedFailure = failure;
     }
 
     private static ConnectionFailure Classify(IpcEndpoint endpoint, Exception ex)

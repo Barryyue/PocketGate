@@ -2,6 +2,10 @@
   <!-- 桌面 UI：AtomUI（Ant Design）組件、托盤、詢問彈窗、規則與日誌管理。
        以普通用戶權限運行，通過本地 IPC 與核心服務通信，不引用核心庫。 -->
   <PropertyGroup>
+    <!-- 正式發布使用 Native AOT（scripts/publish-release.ps1）；日常構建也啟用分析器，及早發現不兼容的寫法 -->
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
     <OutputType>WinExe</OutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>NetworkControl</AssemblyName>

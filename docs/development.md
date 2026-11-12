@@ -17,9 +17,10 @@ dotnet run --project src/NetworkControl.App       # 再啟動 UI（可以隨時�
 | 項目 | 位置 / 值 |
 |---|---|
 | 數據目錄 | 倉庫根目錄的 `.devdata/`（已被 git 忽略），刪除即可重置 |
-| 服務日誌 | 控制台 + `.devdata/logs/service-*.log` |
+| 服務日誌 | 控制台 + `.devdata/logs/service-*.log`（配置節點 `NetworkControl:Logging`；安裝版默認寫到 `%ProgramData%\NetworkControl\logs`） |
+| 界面日誌 | `%LocalAppData%\NetworkControl\logs\app-*.log`（啟動信息、未處理異常、連接變化、Avalonia 綁定警告） |
 | IPC 端點 | Windows：`pipe:NetworkControl.v1`；Linux / macOS 以普通用戶運行時：`$XDG_RUNTIME_DIR/netcontrol/ui.sock`（或 `/tmp/netcontrol-<user>/ui.sock`） |
-| 引擎 | `Fake`（模擬引擎，不攔截真實流量） |
+| 引擎 | `Fake`（模擬引擎，不攔截真實流量；**只存在於 Debug 構建**，Release 需要 `-p:IncludeFakeEngine=true`） |
 
 可以用環境變量 `NETWORKCONTROL_IPC=pipe:<name>` 或 `unix:<path>` 同時覆蓋服務端和 UI 的 IPC 端點，例如並行運行多套實例。
 
@@ -48,7 +49,7 @@ dotnet-counters monitor -n NetworkControl.Service --counters NetworkControl.Core
 
 - **分層依賴**：`Core` 不依賴任何其他項目；`Storage`、`Engine.*` 只依賴 `Core`；`App` 只依賴 `Ipc`（UI 不引用核心，所有數據經 IPC 獲取）。
 - **持久化格式與領域模型分離**：存儲用 `Storage/Serialization` 中的 DTO，IPC 用 proto 消息。領域模型可以自由重構，持久化格式和 IPC 契約只做向後兼容的變更。
-- **AOT 友好**：不使用反射式序列化（JSON 用源生成器，配置綁定用源生成器）、不使用反射式視圖定位；`Core`、`Storage`、`Ipc`、`Engine.Fake` 標記了 `IsAotCompatible`。
+- **AOT**：正式發布是 Native AOT（§8）。不使用反射式序列化（JSON 用源生成器，配置綁定用源生成器）、不使用反射式視圖定位、不按配置反射加載程序集（Serilog 在代碼中配置）；庫項目標記了 `IsAotCompatible`，`App` 和 `Service` 在日常構建中就啟用 AOT / 裁剪分析器，不兼容的寫法直接構建失敗。
 - **時間**：一律通過注入的 `TimeProvider` 獲取，測試中用 `FakeTimeProvider` 推進時間。
 - **日誌**：一律使用 `[LoggerMessage]` 源生成器（CA1848 / CA1873 已設為錯誤）。
 - **質量門檻**：`TreatWarningsAsErrors`；代碼風格由 `.editorconfig` 約束，構建時強制檢查；包版本集中在 `Directory.Packages.props`。
@@ -63,7 +64,9 @@ dotnet test --solution NetworkControl.slnx
 | 項目 | 內容 |
 |---|---|
 | `NetworkControl.Core.Tests` | 匹配器、規則優先級、決策到規則的轉換；`Scenarios/` 中用完整的核心服務 + 模擬引擎 + `FakeTimeProvider` 跑通 M0 驗收用戶故事（US-01/02/03/07、超時、合併、篡改檢測等） |
-| `NetworkControl.Storage.Tests` | 在臨時目錄中對真實 SQLite 做遷移、倉儲往返、日誌聚合等測試 |
+| `NetworkControl.Storage.Tests` | 在臨時目錄中對真實 SQLite 做遷移、倉儲往返、日誌聚合、診斷收集（數據庫備份可打開、隱私項默認不收集）等測試 |
+| `NetworkControl.Ipc.Tests` | 診斷包：脫敏規則、截取日誌末尾、讀取正被寫入的文件、大小上限、合併、條目路徑規範化 |
+| `NetworkControl.Engine.Windows.Tests` | 互操作佈局、規則編譯、IP 補集、DNS 解析、路徑轉換、應用 ID 構造 |
 
 寫新的端到端場景時，複用 `ScenarioHost`：它模擬了一個在線的 UI 會話，`Connect()` 發起連接，`NextPromptAsync()` 等待彈窗，`AnswerAsync()` 回應，`AdvanceAsync()` 推進虛擬時間。
 
@@ -107,3 +110,49 @@ M1 已知限制：
 | svchost 服務 / MSIX 包 | 帶服務名或包名的規則暫不下發 |
 | 簽名 | 只校驗嵌入式 Authenticode 簽名；系統目錄的目錄簽名文件按哈希綁定 |
 | 域名規則 | 依賴 ETW DNS-Client 事件；應用自帶 DoH 時無法觀測 |
+
+## 8. 發布、版本與安裝包
+
+**版本號只在一個地方維護**：`Directory.Build.props` 的 `VersionPrefix`。程序集版本、發布包和安裝程序的文件名都從這裡取；程序內部的版本（`AssemblyInformationalVersion`）自動帶提交哈希（例如 `0.1.0+6785a98…`），診斷包裡會記錄，方便對應到代碼。
+
+發新版本：
+
+1. 修改 `VersionPrefix`（語義化版本：修復問題加第三位，新功能加第二位），提交；
+2. 在**沒有未提交修改**的工作區運行 `.\scripts\publish-release.ps1`（有未提交修改時版本會標記 `-dirty`）；
+3. 把 `artifacts\release\` 下的 `NetworkControl-<版本>-win-x64-setup.exe`（推薦）或 `.zip` 發給用戶，`symbols-*` 目錄自己保留（分析崩潰轉儲用）。
+
+用戶直接運行新版安裝程序即可升級：安裝程序的 `AppId` 固定（**不要修改** `installer/NetworkControl.iss` 中的 AppId），會識別舊版本、停止服務、覆蓋文件、重新啟動；規則和日誌在 `%ProgramData%\NetworkControl`，不受影響。數據庫結構的升級由遷移腳本在服務啟動時自動完成。
+
+| 產物 | 說明 |
+|---|---|
+| `*-setup.exe` | Inno Setup 6 安裝程序（需要本機安裝 Inno Setup，發布腳本自動查找 `ISCC.exe`，找不到時跳過）：安裝嚮導、「應用和功能」中的卸載入口、原地升級；卸載時詢問是否刪除規則和日誌 |
+| `*.zip` | 同樣的內容 + `install.cmd` / `uninstall.cmd` / `export-diagnostics.cmd`（自動請求管理員權限），沒有安裝程序時使用 |
+
+發布要求和注意事項：
+
+- **Native AOT**：目標機器不需要 .NET；需要 Visual Studio 的「使用 C++ 的桌面開發」工作負載（MSVC 鏈接器）。發布腳本會把 VS 安裝程序目錄加入 PATH（AOT 鏈接步驟通過 `vswhere` 定位 MSVC）。
+- **運行時版本固定**：AOT 會把運行時靜態鏈接進可執行文件，所以 `Directory.Build.props` 在 `PublishAot=true` 時把 `RuntimeFrameworkVersion` 固定為已修復安全漏洞的版本（目前 10.0.15），不依賴本機 SDK 自帶的版本。出現新的運行時安全更新時同步修改。
+- **AOT 警告白名單**：Serilog、TraceEvent 的彙總警告已評估為可接受（原因見 `NetworkControl.Service.csproj`）；其他程序集出現 AOT / 裁剪警告時發布腳本直接失敗，需要先評估。
+- **不包含模擬引擎**：Release 構建不引用 `Engine.Fake`、不映射模擬器接口；在沒有管理員權限的機器上驗證 AOT 版本時，用 `-p:IncludeFakeEngine=true` 另外發布一份。
+- **安裝後立即啟動界面**：「詢問」模式下沒有界面就沒人回應彈窗，未知連接會按默認動作被拒絕，所以安裝程序和 `install.cmd` 都會以安裝者的普通權限啟動界面並設置登錄時啟動。
+- 腳本編碼：`.ps1` 以 **UTF-8 BOM** 保存（Windows PowerShell 5.1 讀取無 BOM 文件時按系統代碼頁解析，中文會亂碼甚至破壞語法），並且不使用 PowerShell 7 專有語法；`.cmd` 只用 ASCII。
+- 安裝程序沒有代碼簽名：用戶會看到 SmartScreen 提示（README.txt 中有說明）。
+
+## 9. 診斷包
+
+用於收集用戶機器上的問題。入口：界面「設定 → 診斷」、服務不可用頁上的「匯出診斷包」、命令行 `NetworkControl.exe --export-diagnostics [路徑] [--include-activity] [--no-configuration]`（不啟動界面，界面本身無法啟動時使用；發布包和安裝目錄中的 `export-diagnostics.cmd` 調用它，保存到桌面）。
+
+| 目錄 | 內容 | 來源 |
+|---|---|---|
+| `app/` | 界面概況（版本、AOT、系統、連接狀態和最近的失敗原因、相關進程）、界面日誌 | 界面 |
+| `service/status/` | 服務概況（版本、權限、引擎狀態和故障、模式、設置）、生效的配置（只含本程序的配置節點）、可選：內存中的有效規則集 | 服務 `Diagnostics.Export` |
+| `service/logs/` | 最近 6 個服務日誌文件（每個最多保留末尾 8 MB） | 服務 |
+| `service/data/` | 數據庫大小、版本、完整性檢查；可選：`config.db` 一致性副本、最近 7 天的連接日誌（TSV） | 存儲 |
+| `service/engine/` | WFP：會話 / 事件訂閱 / DNS 監聽狀態、已下發的過濾器清單、跳過的規則、下發失敗記錄 | 引擎 |
+| `service-offline/` | 服務不可達時，界面直接讀取的服務日誌（`%ProgramData%\NetworkControl\logs` 默認普通用戶可讀；開發佈局讀 `.devdata/logs`） | 界面 |
+| `windows/` | `sc queryex/qc/qfailure`、事件日誌中最近 7 天與本程序相關的崩潰和服務控制管理器記錄 | 界面 |
+| `manifest.txt` | 條目清單、收集過程中的說明和錯誤（任何部分失敗都不會中斷導出） | 兩邊各一份 |
+
+- **隱私**：所有文本經 `DiagnosticsRedactor` 處理（用戶目錄中的用戶名、計算機名替換為 `<user>` / `<machine>`）；規則和連接日誌由用戶勾選（規則默認勾選，連接日誌默認不勾選）；不會自動上傳。
+- **擴展**：新模塊實現 `Core.Diagnostics.IDiagnosticsContributor`（寫入自己的目錄）並用 `services.AddDiagnosticsContributor<T>()` 註冊；已註冊的單例（例如引擎）用工廠重載，不會創建第二個實例。
+- 驗證時用 `NETWORKCONTROL_IPC=pipe:<其他名字>` 讓臨時服務和客戶端使用獨立的管道：本機可能裝著正式版服務（`pipe:NetworkControl.v1`），不要對它調用 `Shutdown`。

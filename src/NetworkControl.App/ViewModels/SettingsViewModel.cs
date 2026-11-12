@@ -19,6 +19,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     private readonly AppearanceService _appearance;
     private readonly AutoStartService _autoStart;
     private readonly FeedbackService _feedback;
+    private readonly DiagnosticsExportFlow _diagnostics;
     private Proto.UserSettings? _loaded;
     private bool _loading;
 
@@ -27,9 +28,11 @@ public sealed partial class SettingsViewModel : PageViewModel
         AppearanceService appearance,
         AutoStartService autoStart,
         FeedbackService feedback,
+        DiagnosticsExportFlow diagnostics,
         DisplayText text)
         : base(text)
     {
+        _diagnostics = diagnostics;
         _connection = connection;
         _appearance = appearance;
         _autoStart = autoStart;
@@ -94,6 +97,37 @@ public sealed partial class SettingsViewModel : PageViewModel
     public partial decimal? LogRetentionDays { get; set; } = 30;
 
     public bool IsConnected => _connection.IsConnected;
+
+    /// <summary>診斷包包含規則和應用列表（默認勾選：大多數問題與規則有關）。</summary>
+    [ObservableProperty]
+    public partial bool DiagnosticsIncludeConfiguration { get; set; } = true;
+
+    /// <summary>診斷包包含連接日誌（涉及瀏覽記錄，默認不勾選）。</summary>
+    [ObservableProperty]
+    public partial bool DiagnosticsIncludeActivity { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ExportDiagnosticsCommand))]
+    public partial bool IsExportingDiagnostics { get; set; }
+
+    private bool CanExportDiagnostics() => !IsExportingDiagnostics;
+
+    [RelayCommand(CanExecute = nameof(CanExportDiagnostics))]
+    private async Task ExportDiagnosticsAsync()
+    {
+        IsExportingDiagnostics = true;
+        try
+        {
+            await _diagnostics.ExportAsync(new DiagnosticsExportOptions(DiagnosticsIncludeConfiguration, DiagnosticsIncludeActivity));
+        }
+        finally
+        {
+            IsExportingDiagnostics = false;
+        }
+    }
+
+    [RelayCommand]
+    private Task OpenLogFolderAsync() => _diagnostics.OpenLogFolderAsync();
 
     public override Task OnActivatedAsync() => RunAsync(async () =>
     {

@@ -70,7 +70,7 @@ internal sealed class ServiceSummaryContributor(
     PromptBroker prompts,
     TimeProvider time) : IDiagnosticsContributor
 {
-    public string Name => "service";
+    public string Name => "status";
 
     public Task CollectAsync(IDiagnosticsSink sink, DiagnosticsCollectOptions options, CancellationToken cancellationToken)
     {

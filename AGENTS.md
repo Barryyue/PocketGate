@@ -30,7 +30,7 @@
   - 不要給 IPC 客戶端開啟系統代理。
   - 不要刪除 `App.axaml` 中的 `<FluentTheme />`。
   - 不要截屏：這是用戶的日常工作電腦。
-  - 不要執行需要管理員權限的操作：WFP 真實攔截的驗證由用戶本人執行。
+  - 不要執行需要管理員權限的操作：WFP 真實攔截的驗證、安裝程序的驗證由用戶本人執行。
 
 ## 3. 用戶偏好
 
@@ -44,13 +44,14 @@
 |---|---|
 | `src/NetworkControl.Core` | 平台無關核心：Domain、Rules、Pipeline（IVerdictStage 階段鏈）、Prompts、Engine 抽象。不依賴其他項目 |
 | `src/NetworkControl.Storage` | SQLite；遷移腳本在 `Migrations/<Config\|Activity>/NNNN_*.sql`（只追加，不修改已有腳本） |
-| `src/NetworkControl.Ipc` | `Protos/*.proto`（只新增字段）；`IpcEndpoint`、`IpcChannelFactory` |
-| `src/NetworkControl.Service` | 服務宿主；`Engines/EngineRegistration.cs` 按配置選擇引擎（Auto / Fake / Wfp） |
+| `src/NetworkControl.Ipc` | `Protos/*.proto`（只新增字段）；`IpcEndpoint`、`IpcChannelFactory`；`Diagnostics/`（診斷包寫入與脫敏，界面和服務共用） |
+| `src/NetworkControl.Service` | 服務宿主；`Engines/EngineRegistration.cs` 按配置選擇引擎（Auto / Fake / Wfp，Fake 只在 Debug 構建中）；`Diagnostics/`（日誌配置、診斷包） |
 | `src/NetworkControl.Engine.Fake` | 模擬引擎（開發和測試用） |
 | `src/NetworkControl.Engine.Windows` | WFP 引擎：`Interop/`（P/Invoke）、`Compilation/`（RuleCompiler，純函數）、`WfpEngine.cs` |
 | `src/NetworkControl.App` | AtomUI 界面；只依賴 Ipc，不引用 Core |
-| `tests/*` | Core（含場景測試 ScenarioHost）、Storage、Engine.Windows |
-| `scripts/` | Windows 服務的安裝和卸載腳本（需要管理員權限） |
+| `tests/*` | Core（含場景測試 ScenarioHost）、Storage、Ipc（診斷包）、Engine.Windows |
+| `scripts/` | `publish-release.ps1`（AOT 發布包 + 安裝程序）、安裝 / 卸載腳本（需要管理員權限）、`package/`（發布包中的 cmd 和 README） |
+| `installer/` | Inno Setup 腳本（`AppId` 不能修改） |
 
 ## 5. 常用命令
 
@@ -59,9 +60,11 @@ dotnet build NetworkControl.slnx
 dotnet test --solution NetworkControl.slnx            # Microsoft.Testing.Platform 語法，不是 dotnet test xxx.sln
 dotnet format NetworkControl.slnx --verify-no-changes
 dotnet run --project src/NetworkControl.App           # 調試構建會自動拉起開發服務（模擬引擎）
+.\scripts\publish-release.ps1                          # 發布包（Native AOT）+ 安裝程序，見 docs/development.md §8
 ```
 
-- 開發數據放在 `.devdata/`（數據庫、`logs/service-*.log`），刪除即可重置。
+- 開發數據放在 `.devdata/`（數據庫、`logs/service-*.log`），刪除即可重置。界面日誌在 `%LocalAppData%\NetworkControl\logs`。
+- **版本號只改 `Directory.Build.props` 的 `VersionPrefix`**，發版流程見 [docs/development.md §8](docs/development.md#8-發布版本與安裝包)。
 - 構建前先結束運行中的 `NetworkControl*` 進程，否則文件會被鎖住。
 - 擴展點的速查表在 [docs/development.md §3](docs/development.md#3-擴展點速查)，涵蓋判決階段、規則條件、平台引擎、IPC 接口、界面頁面、界面文本。
 
@@ -87,4 +90,15 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 - **模擬器（Simulator）gRPC 服務只在 Fake 引擎下映射**：其他引擎下調用會得到 `Unimplemented`，界面必須按當前引擎決定是否顯示模擬器。
 - **`FwpmGetAppIdFromFileName0` 需要打開文件**：終端安全或防泄密軟件（例如用戶機器上的 tipray）會在驅動層拒絕訪問自身文件，API 返回「找不到文件」。現在的兜底順序是：先用阻斷事件中觀測到的原始應用 ID，再按「小寫 NT 設備路徑 + NUL，UTF-16LE 編碼」自行構造（`AppIdTests` 驗證過與 API 輸出逐字節一致）。
 - **同一實例在 DI 中註冊為兩種類型時，`DisposeAsync` 會被調用兩次**：引擎的停止和釋放必須可以重複調用。
+- **Native AOT**：
+  - 不要用 `Serilog.Settings.Configuration`（`ReadFrom.Configuration`）：它反射加載程序集，AOT 下服務**啟動即崩潰**。日誌在 `ServiceLogging` 中用代碼配置。
+  - AOT 會把運行時鏈接進可執行文件：發布用的運行時版本由 `Directory.Build.props` 固定（本機 SDK 10.0.402 自帶的 10.0.13 有 Brotli 漏洞）。
+  - 鏈接步驟需要 `vswhere` 在 PATH 中（VS 18 默認不在），否則報 MSB3073；`publish-release.ps1` 已處理。
+  - 第三方程序集的 AOT 警告只接受白名單中的（Serilog、TraceEvent），新出現的要先評估。
+- **驗證時不要碰正式安裝的服務**：用戶機器上可能裝著正式版（`pipe:NetworkControl.v1`）。臨時服務和探針一律設置 `NETWORKCONTROL_IPC=pipe:<其他名字>`，不要對默認管道調用 `Shutdown`。
+- **Windows 腳本編碼**：`.ps1` 用 UTF-8 BOM 保存（Windows PowerShell 5.1 按系統代碼頁讀取無 BOM 文件，中文亂碼甚至破壞語法），且不用 PowerShell 7 專有語法；`.cmd` 只用 ASCII。
+- **讀取系統命令輸出的編碼**：`sc.exe` 跟隨控制台代碼頁（`chcp 65001` 後輸出 UTF-8）；`wevtutil` 不跟隨，總是按系統 ANSI 代碼頁（中文系統 GBK）輸出，要按 `CultureInfo.InstalledUICulture.TextInfo.ANSICodePage` 解碼（需註冊 `CodePagesEncodingProvider`）。通過 `cmd /c` 傳帶引號的參數時用 `/s` 並手工構造命令行，`ArgumentList` 的轉義規則與 cmd 不一致。
+- **NuGet 漏洞審計（NU1900）**：Reqable 系統代理會讓 nuget.org 的 TLS 握手失敗，審計警告在「警告即錯誤」下變成構建錯誤。本地臨時用環境變量 `NuGetAudit=false` 繞過，不要提交這個設置。
+- **`BackgroundService` 中不要釋放 `ExecuteAsync` 仍在使用的對象**：主機啟動失敗時 `Dispose` 會在 `ExecuteAsync` 的取消分支執行期間被調用（`ActivityLogWriter` 的信號量曾因此拋出 ObjectDisposedException）。
+- **PowerShell 中的 `[IO.File]` 相對路徑**按進程當前目錄解析，不是 `Set-Location` 的位置：一律用絕對路徑。
 - **proto 生成類型避開常見類型名**：已有 `VerdictAction`、`IpEndpoint`、`ActivityLog`；C# 中的別名統一用 `Proto`（全局命名空間裡已經有 `Pb`）。

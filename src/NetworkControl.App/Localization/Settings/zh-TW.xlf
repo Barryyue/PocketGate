@@ -127,5 +127,71 @@
         <target state="translated">設定</target>
       </segment>
     </unit>
+    <unit id="SectionDiagnostics">
+      <segment>
+        <source>Diagnostics</source>
+        <target state="translated">診斷</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsHint">
+      <segment>
+        <source>When something goes wrong, export a diagnostics package (zip) and send it to the developer. User names and the computer name are replaced; nothing is uploaded automatically.</source>
+        <target state="translated">出現問題時匯出診斷包（zip）傳給開發者分析。使用者名稱和電腦名稱會被替換，不會自動上傳任何內容。</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsIncludeConfiguration">
+      <segment>
+        <source>Include rules and the app list (program paths, domains)</source>
+        <target state="translated">包含規則和應用程式清單（程式路徑、網域）</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsIncludeActivity">
+      <segment>
+        <source>Include the recent connection log (visited addresses and domains, last 7 days)</source>
+        <target state="translated">包含最近的連線記錄（造訪過的位址和網域，最近 7 天）</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsExport">
+      <segment>
+        <source>Export diagnostics…</source>
+        <target state="translated">匯出診斷包…</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsOpenLogFolder">
+      <segment>
+        <source>Open log folder</source>
+        <target state="translated">開啟記錄資料夾</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsPickerTitle">
+      <segment>
+        <source>Save diagnostics package</source>
+        <target state="translated">儲存診斷包</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsExported">
+      <segment>
+        <source>Diagnostics exported: {0}</source>
+        <target state="translated">診斷包已匯出：{0}</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsExportedPartial">
+      <segment>
+        <source>Diagnostics exported without service details ({0}). UI logs and readable service logs are included.</source>
+        <target state="translated">診斷包已匯出，但未包含服務端資訊（{0}），已收集介面記錄和能讀取到的服務記錄。</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsExportFailed">
+      <segment>
+        <source>Failed to export diagnostics: {0}</source>
+        <target state="translated">匯出診斷包失敗：{0}</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsCommandLineHint">
+      <segment>
+        <source>If this window cannot open, run “Export diagnostics” in the installation folder (NetworkControl.exe --export-diagnostics); the package is saved to the desktop.</source>
+        <target state="translated">介面無法開啟時，可以執行安裝目錄中的「匯出診斷包」（NetworkControl.exe --export-diagnostics），診斷包會儲存到桌面。</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

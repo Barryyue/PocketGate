@@ -66,5 +66,10 @@
         <source>The core service is not available</source>
       </segment>
     </unit>
+    <unit id="ExportDiagnosticsHint">
+      <segment>
+        <source>You can still export a diagnostics package to help find the cause.</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

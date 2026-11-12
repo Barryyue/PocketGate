@@ -73,6 +73,21 @@
 
         <atom:Button ButtonType="Primary" HorizontalAlignment="Left" Command="{Binding SaveCommand}" Content="{loc:CommonLangResource Save}" />
       </StackPanel>
+
+      <!-- 診斷：不依賴服務連接，服務異常時也能導出 -->
+      <atom:Card Header="{loc:SettingsLangResource SectionDiagnostics}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource DiagnosticsHint}" />
+          <atom:CheckBox IsChecked="{Binding DiagnosticsIncludeConfiguration}" Content="{loc:SettingsLangResource DiagnosticsIncludeConfiguration}" />
+          <atom:CheckBox IsChecked="{Binding DiagnosticsIncludeActivity}" Content="{loc:SettingsLangResource DiagnosticsIncludeActivity}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <atom:Button ButtonType="Primary" Command="{Binding ExportDiagnosticsCommand}" IsLoading="{Binding IsExportingDiagnostics}"
+                         Content="{loc:SettingsLangResource DiagnosticsExport}" />
+            <atom:Button Command="{Binding OpenLogFolderCommand}" Content="{loc:SettingsLangResource DiagnosticsOpenLogFolder}" />
+          </StackPanel>
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource DiagnosticsCommandLineHint}" />
+        </StackPanel>
+      </atom:Card>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

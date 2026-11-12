@@ -24,5 +24,12 @@
                 IsVisible="{Binding StartError, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
     <TextBlock Classes="secondary" TextWrapping="Wrap" TextAlignment="Center" Text="{Binding Hint}" />
+
+    <!-- 服務異常時也能導出診斷包（界面日誌 + 直接讀取的服務日誌 + Windows 事件） -->
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+      <TextBlock Classes="secondary" VerticalAlignment="Center" Text="{loc:ServiceStatusLangResource ExportDiagnosticsHint}" />
+      <atom:Button ButtonType="Link" Command="{Binding ExportDiagnosticsCommand}" IsLoading="{Binding IsExportingDiagnostics}"
+                   Content="{loc:SettingsLangResource DiagnosticsExport}" />
+    </StackPanel>
   </StackPanel>
 </UserControl>

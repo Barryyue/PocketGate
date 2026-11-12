@@ -27,6 +27,16 @@
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
   </PropertyGroup>
 
+  <!--
+    Native AOT 會把運行時（包括 Brotli 解碼器等）靜態鏈接進可執行文件，發布時必須使用已修復安全漏洞的版本：
+    SDK 10.0.402 自帶的 10.0.13 受 CVE-2026-111497（GHSA-p3jp-9v83-76w9，修復於 10.0.14）影響。
+    只在 AOT 發布時生效（發布腳本以全局屬性傳入 PublishAot），不影響本機用已安裝運行時進行的日常構建和運行。
+    升級 SDK 或出現新的運行時安全更新時同步修改。
+  -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <RuntimeFrameworkVersion>10.0.15</RuntimeFrameworkVersion>
+  </PropertyGroup>
+
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>

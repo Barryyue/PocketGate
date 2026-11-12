@@ -1,18 +1,45 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <!-- 核心服務宿主：以 Windows 服務 / systemd / launchd 守護進程運行，通過本地 IPC 提供 gRPC 接口。 -->
   <PropertyGroup>
+    <!-- 正式發布使用 Native AOT（scripts/publish-release.ps1）；日常構建也啟用分析器，及早發現不兼容的寫法 -->
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
     <OutputType>Exe</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <InvariantGlobalization>false</InvariantGlobalization>
     <UserSecretsId>networkcontrol-service</UserSecretsId>
+    <!--
+      AOT 發布時兩個第三方程序集會產生彙總警告，已評估為可接受（不作為錯誤，仍會顯示）：
+      - Serilog：只在解構捕獲（{@obj}）中使用反射，本項目只通過 [LoggerMessage] 記錄日誌，不使用該功能；
+      - TraceEvent：DynamicTraceEventData 的默認值反射和 DynamicObject，DNS 監聽只用 PayloadByName，不經過這些路徑
+        （真實環境需要管理員權限驗證，見 docs/progress.md）。
+      其他程序集出現同類警告時 scripts/publish-release.ps1 會失敗，需要重新評估。
+    -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);IL2104;IL3053</WarningsNotAsErrors>
+  </PropertyGroup>
+  <!--
+    模擬引擎（Fake）和模擬器 gRPC 接口只用於開發和測試：Debug 默認包含，Release（正式發布）不包含。
+    需要在 Release 構建中使用時（例如在沒有管理員權限的機器上驗證 AOT 版本）傳入 -p:IncludeFakeEngine=true。
+  -->
+  <PropertyGroup>
+    <IncludeFakeEngine Condition="'$(IncludeFakeEngine)' == '' and '$(Configuration)' == 'Debug'">true</IncludeFakeEngine>
+    <DefineConstants Condition="'$(IncludeFakeEngine)' == 'true'">$(DefineConstants);FAKE_ENGINE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
     <ProjectReference Include="..\NetworkControl.Storage\NetworkControl.Storage.csproj" />
     <ProjectReference Include="..\NetworkControl.Ipc\NetworkControl.Ipc.csproj" />
-    <ProjectReference Include="..\NetworkControl.Engine.Fake\NetworkControl.Engine.Fake.csproj" />
     <ProjectReference Include="..\NetworkControl.Engine.Windows\NetworkControl.Engine.Windows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IncludeFakeEngine)' == 'true'">
+    <ProjectReference Include="..\NetworkControl.Engine.Fake\NetworkControl.Engine.Fake.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IncludeFakeEngine)' != 'true'">
+    <Compile Remove="Grpc\SimulatorGrpcService.cs" />
   </ItemGroup>
 
   <ItemGroup>

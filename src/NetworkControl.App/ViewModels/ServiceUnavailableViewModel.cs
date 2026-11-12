@@ -14,12 +14,14 @@ public sealed partial class ServiceUnavailableViewModel : LocalizedViewModel
 {
     private readonly ServiceConnection _connection;
     private readonly IServiceLauncher _launcher;
+    private readonly DiagnosticsExportFlow _diagnostics;
 
-    public ServiceUnavailableViewModel(ServiceConnection connection, IServiceLauncher launcher, DisplayText text)
+    public ServiceUnavailableViewModel(ServiceConnection connection, IServiceLauncher launcher, DiagnosticsExportFlow diagnostics, DisplayText text)
         : base(text)
     {
         _connection = connection;
         _launcher = launcher;
+        _diagnostics = diagnostics;
         connection.PropertyChanged += OnConnectionChanged;
     }
 
@@ -90,6 +92,27 @@ public sealed partial class ServiceUnavailableViewModel : LocalizedViewModel
 
     [RelayCommand]
     private void Retry() => _connection.RetryNow();
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ExportDiagnosticsCommand))]
+    public partial bool IsExportingDiagnostics { get; set; }
+
+    private bool CanExportDiagnostics() => !IsExportingDiagnostics;
+
+    /// <summary>服務不可用時最需要診斷包：使用默認選項（包含規則，不含連接日誌）。</summary>
+    [RelayCommand(CanExecute = nameof(CanExportDiagnostics))]
+    private async Task ExportDiagnosticsAsync()
+    {
+        IsExportingDiagnostics = true;
+        try
+        {
+            await _diagnostics.ExportAsync(new DiagnosticsExportOptions(IncludeConfiguration: true, IncludeActivity: false));
+        }
+        finally
+        {
+            IsExportingDiagnostics = false;
+        }
+    }
 
     private void OnConnectionChanged(object? sender, PropertyChangedEventArgs e)
     {

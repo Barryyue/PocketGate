@@ -106,5 +106,60 @@
         <source>Settings</source>
       </segment>
     </unit>
+    <unit id="SectionDiagnostics">
+      <segment>
+        <source>Diagnostics</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsHint">
+      <segment>
+        <source>When something goes wrong, export a diagnostics package (zip) and send it to the developer. User names and the computer name are replaced; nothing is uploaded automatically.</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsIncludeConfiguration">
+      <segment>
+        <source>Include rules and the app list (program paths, domains)</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsIncludeActivity">
+      <segment>
+        <source>Include the recent connection log (visited addresses and domains, last 7 days)</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsExport">
+      <segment>
+        <source>Export diagnostics…</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsOpenLogFolder">
+      <segment>
+        <source>Open log folder</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsPickerTitle">
+      <segment>
+        <source>Save diagnostics package</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsExported">
+      <segment>
+        <source>Diagnostics exported: {0}</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsExportedPartial">
+      <segment>
+        <source>Diagnostics exported without service details ({0}). UI logs and readable service logs are included.</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsExportFailed">
+      <segment>
+        <source>Failed to export diagnostics: {0}</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsCommandLineHint">
+      <segment>
+        <source>If this window cannot open, run “Export diagnostics” in the installation folder (NetworkControl.exe --export-diagnostics); the package is saved to the desktop.</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

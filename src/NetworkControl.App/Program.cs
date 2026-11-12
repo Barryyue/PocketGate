@@ -13,6 +13,12 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        AppLog.Initialize(args);
+        if (CommandLineExport.IsRequested(args))
+        {
+            return CommandLineExport.Run(args);
+        }
+
         using var instance = SingleInstance.TryAcquire();
         if (instance is null)
         {
@@ -43,6 +49,8 @@ internal static class Program
 #if DEBUG
         builder = builder.WithDeveloperTools();
 #endif
-        return builder.LogToTrace();
+        // 框架警告（綁定失敗等）寫入界面日誌文件，診斷包會收集
+        Avalonia.Logging.Logger.Sink = new AppLogSink(Avalonia.Logging.LogEventLevel.Warning);
+        return builder;
     }
 }

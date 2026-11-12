@@ -23,6 +23,8 @@ internal sealed partial class ActivityLogWriter : BackgroundService, IActivityCo
     private readonly StorageOptions _options;
     private readonly TimeProvider _time;
     private readonly ILogger<ActivityLogWriter> _logger;
+    // 不釋放：主機啟動失敗時 Dispose 會在 ExecuteAsync 的取消分支仍在寫入時被調用；未使用 AvailableWaitHandle 的 SemaphoreSlim 不持有非託管資源
+    private readonly SemaphoreSlim _drainGate = new(1, 1);
     private long _dropped;
 
     public ActivityLogWriter(
@@ -80,20 +82,39 @@ internal sealed partial class ActivityLogWriter : BackgroundService, IActivityCo
         }
     }
 
+    /// <summary>
+    /// 停止時無論 <see cref="ExecuteAsync"/> 是否運行過都把隊列寫完：.NET 10 起 ExecuteAsync 整體在線程池上運行，
+    /// 啟動後立即停止時它可能還沒開始執行，只靠其中的取消分支會丟失已入隊的事件。
+    /// </summary>
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await base.StopAsync(cancellationToken);
+        await DrainAsync([], CancellationToken.None);
+    }
+
     private async Task DrainAsync(List<ConnectionEvent> batch, CancellationToken cancellationToken)
     {
-        while (_queue.Reader.TryRead(out var evt))
+        // 後台循環和 StopAsync 都會寫入；隊列是單讀者的，串行化
+        await _drainGate.WaitAsync(CancellationToken.None);
+        try
         {
-            batch.Add(evt);
-            if (batch.Count >= 5000)
+            while (_queue.Reader.TryRead(out var evt))
+            {
+                batch.Add(evt);
+                if (batch.Count >= 5000)
+                {
+                    await WriteAsync(batch, cancellationToken);
+                }
+            }
+
+            if (batch.Count > 0)
             {
                 await WriteAsync(batch, cancellationToken);
             }
         }
-
-        if (batch.Count > 0)
+        finally
         {
-            await WriteAsync(batch, cancellationToken);
+            _drainGate.Release();
         }
     }
 

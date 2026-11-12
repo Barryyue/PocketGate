@@ -37,6 +37,7 @@ public sealed partial class App : Application
         {
             // 托盤應用：關閉主窗口不退出，只有托盤菜單中的「結束介面」才結束進程
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            Avalonia.Threading.Dispatcher.UIThread.UnhandledException += (_, e) => AppLog.Error("Unhandled UI exception", e.Exception);
 
             var services = _services = ConfigureServices();
             _ = services.GetRequiredService<AppearanceService>().InitializeAsync(this);
@@ -99,6 +100,8 @@ public sealed partial class App : Application
         services.AddSingleton<PromptCoordinator>();
         services.AddSingleton<BlockedNotifier>();
         services.AddSingleton<TrayService>();
+        services.AddSingleton<DiagnosticsExporter>();
+        services.AddSingleton<DiagnosticsExportFlow>();
 
         // 頁面：註冊順序即導航順序（與 ShellWindow 中的導航菜單一致）
         services.AddSingleton<PageViewModel, OverviewViewModel>();

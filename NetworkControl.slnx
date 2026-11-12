@@ -27,6 +27,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/NetworkControl.Core.Tests/NetworkControl.Core.Tests.csproj" />
     <Project Path="tests/NetworkControl.Engine.Windows.Tests/NetworkControl.Engine.Windows.Tests.csproj" />
+    <Project Path="tests/NetworkControl.Ipc.Tests/NetworkControl.Ipc.Tests.csproj" />
     <Project Path="tests/NetworkControl.Storage.Tests/NetworkControl.Storage.Tests.csproj" />
   </Folder>
 </Solution>
