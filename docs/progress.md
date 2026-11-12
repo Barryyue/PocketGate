@@ -73,7 +73,7 @@
 ### 可攜版（綠色版，2026-11-12）
 - [x] **免安裝運行**：發布包根目錄的 `portable.txt` 作為可攜標識；界面直接拉起同目錄的 `Service\NetworkControl.Service.exe`（Windows 上通過 UAC 提權），數據、日誌和界面偏好放在 `<根目錄>\data`，IPC 使用獨立管道 `NetworkControl.portable.v1`，不會連接或關閉已安裝的系統服務。
   - 安裝程序不複製標識文件，原有安裝 / 升級 / 卸載流程不變；可攜版不提供登錄自啟，退出界面時停止可攜版服務。
-  - 驗證：`PortableLayout` 單元測試；Debug 佈局 + Fake 引擎端到端已驗證（服務從 `Service` 啟動、數據寫入 `data`、端點為 `pipe:NetworkControl.portable.v1`、界面診斷包中 `Launcher=Portable` 且成功連上服務）；AOT zip 的離線診斷包已驗證（`Native AOT=True`、`Launcher=Portable`、日誌在 `data\logs`）。
+  - 驗證：`PortableLayout` 單元測試；Debug 佈局 + Fake 引擎端到端已驗證（服務從 `Service` 啟動、數據寫入 `data`、端點為 `pipe:NetworkControl.portable.v1`、界面診斷包中 `Launcher=Portable` 且成功連上服務）；AOT zip 的離線和在線診斷包均已驗證（`Native AOT=True`、`Launcher=Portable`；非管理員啟動時 WFP 按預期故障、服務存活且界面可連接）。
   - 待用戶驗證：可攜版首次啟動的 UAC 提權和真實 WFP 攔截（需要管理員權限）；從 zip 安裝 / 升級 / 卸載的回歸。
 
 **測試現狀：157 個全部通過；Debug / Release 構建零警告；`dotnet format --verify-no-changes` 通過。**
