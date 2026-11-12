@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+// 連接日誌與實時事件。
+service ActivityLog {
+  rpc QueryLog (LogQuery) returns (LogPage);
+  rpc WatchConnections (google.protobuf.Empty) returns (stream ConnectionEvent);
+}
+
+message LogQuery {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+  optional int64 app_id = 3;
+  optional VerdictAction action = 4;
+  optional string keyword = 5;
+  int32 limit = 6;
+  optional int64 before_id = 7;
+}
+
+message LogEntry {
+  int64 id = 1;
+  google.protobuf.Timestamp first_seen = 2;
+  google.protobuf.Timestamp last_seen = 3;
+  optional int64 app_id = 4;
+  optional string app_path = 5;
+  optional string app_name = 6;
+  Direction direction = 7;
+  Protocol protocol = 8;
+  IpEndpoint remote = 9;
+  optional string hostname = 10;
+  Verdict verdict = 11;
+  int32 count = 12;
+}
+
+message LogPage {
+  repeated LogEntry entries = 1;
+}
+
+message ConnectionEvent {
+  google.protobuf.Timestamp timestamp = 1;
+  optional int64 app_id = 2;
+  optional string app_path = 3;
+  optional string app_name = 4;
+  Direction direction = 5;
+  Protocol protocol = 6;
+  IpEndpoint local = 7;
+  IpEndpoint remote = 8;
+  optional string hostname = 9;
+  Verdict verdict = 10;
+}

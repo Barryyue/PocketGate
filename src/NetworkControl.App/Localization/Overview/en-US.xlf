@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.OverviewLangResourceKind">
+    <unit id="ActiveRules">
+      <segment>
+        <source>Active rules</source>
+      </segment>
+    </unit>
+    <unit id="BlockAll">
+      <segment>
+        <source>Block all traffic</source>
+      </segment>
+    </unit>
+    <unit id="BlockAllActive">
+      <segment>
+        <source>All traffic except essential system traffic is blocked.</source>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturb">
+      <segment>
+        <source>Do not disturb for 1 hour</source>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturbOff">
+      <segment>
+        <source>Turn off do not disturb</source>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturbUntil">
+      <segment>
+        <source>Do not disturb until {0:t}; unknown connections use the default action.</source>
+      </segment>
+    </unit>
+    <unit id="Engine">
+      <segment>
+        <source>Engine</source>
+      </segment>
+    </unit>
+    <unit id="EngineBlocksFirst">
+      <segment>
+        <source>Blocks first; the app retries after you allow it</source>
+      </segment>
+    </unit>
+    <unit id="EngineHoldsConnections">
+      <segment>
+        <source>Holds connections while asking</source>
+      </segment>
+    </unit>
+    <unit id="Mode">
+      <segment>
+        <source>Current mode</source>
+      </segment>
+    </unit>
+    <unit id="PendingPrompts">
+      <segment>
+        <source>Pending connections</source>
+      </segment>
+    </unit>
+    <unit id="Restore">
+      <segment>
+        <source>Restore network</source>
+      </segment>
+    </unit>
+    <unit id="SimApp">
+      <segment>
+        <source>App</source>
+      </segment>
+    </unit>
+    <unit id="SimConnect">
+      <segment>
+        <source>Connect</source>
+      </segment>
+    </unit>
+    <unit id="SimDescription">
+      <segment>
+        <source>The fake engine does not touch real traffic. Make virtual apps connect here to exercise prompts, rules and logs.</source>
+      </segment>
+    </unit>
+    <unit id="SimExitApp">
+      <segment>
+        <source>Exit process</source>
+      </segment>
+    </unit>
+    <unit id="SimHost">
+      <segment>
+        <source>Host</source>
+      </segment>
+    </unit>
+    <unit id="SimPort">
+      <segment>
+        <source>Port</source>
+      </segment>
+    </unit>
+    <unit id="SimProtocol">
+      <segment>
+        <source>Protocol</source>
+      </segment>
+    </unit>
+    <unit id="SimResults">
+      <segment>
+        <source>Recent results</source>
+      </segment>
+    </unit>
+    <unit id="SimTitle">
+      <segment>
+        <source>Simulate a connection</source>
+      </segment>
+    </unit>
+    <unit id="SwitchMode">
+      <segment>
+        <source>Filtering mode</source>
+      </segment>
+    </unit>
+    <unit id="EngineFake">
+      <segment>
+        <source>Simulated (no real filtering)</source>
+      </segment>
+    </unit>
+    <unit id="EngineWfp">
+      <segment>
+        <source>Windows WFP (real filtering, requires administrator)</source>
+      </segment>
+    </unit>
+    <unit id="EngineSwitchHint">
+      <segment>
+        <source>Development build: switching restarts the local core service with the selected engine. Real filtering asks for administrator permission.</source>
+      </segment>
+    </unit>
+    <unit id="EngineInstalledHint">
+      <segment>
+        <source>Installed service: the engine is configured in appsettings.json next to the service (Engine = Auto uses WFP on Windows).</source>
+      </segment>
+    </unit>
+    <unit id="EngineSwitching">
+      <segment>
+        <source>Restarting the core service…</source>
+      </segment>
+    </unit>
+    <unit id="EngineSwitchFailed">
+      <segment>
+        <source>Could not switch the engine: {0}</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

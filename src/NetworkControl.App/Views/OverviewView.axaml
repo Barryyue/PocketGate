@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             xmlns:proto="using:NetworkControl.Ipc.V1"
+             x:Class="NetworkControl.App.Views.OverviewView"
+             x:DataType="vm:OverviewViewModel">
+
+  <ScrollViewer>
+    <StackPanel Spacing="16">
+      <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavOverview}" />
+
+      <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
+                  IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
+      <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding EngineFault}" IsVisible="{Binding HasEngineFault}" />
+      <atom:Alert Type="Warning" IsShowIcon="True" Message="{loc:OverviewLangResource BlockAllActive}" IsVisible="{Binding IsBlockAll}" />
+
+      <!-- 狀態卡片 -->
+      <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="16">
+        <atom:Card Grid.Column="0" Header="{loc:OverviewLangResource Mode}">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="metric" Text="{Binding ModeText}" />
+            <TextBlock Classes="secondary" Text="{Binding ModeDescription}" TextWrapping="Wrap" />
+          </StackPanel>
+        </atom:Card>
+        <atom:Card Grid.Column="1" Header="{loc:OverviewLangResource Engine}">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="metric" Text="{Binding EngineName}" />
+            <TextBlock Classes="secondary" Text="{Binding EngineBehavior}" TextWrapping="Wrap" />
+          </StackPanel>
+        </atom:Card>
+        <atom:Card Grid.Column="2">
+          <atom:Statistic Header="{loc:OverviewLangResource ActiveRules}" Value="{Binding ActiveRuleCount}" />
+        </atom:Card>
+        <atom:Card Grid.Column="3">
+          <atom:Statistic Header="{loc:OverviewLangResource PendingPrompts}" Value="{Binding PendingPromptFlows}" />
+        </atom:Card>
+      </Grid>
+
+      <!-- 引擎：開發版可切換模擬 / 真實攔截；安裝版只說明配置位置 -->
+      <atom:Card Header="{loc:OverviewLangResource Engine}" IsVisible="{Binding ShowEngineCard}">
+        <StackPanel Spacing="12">
+          <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding CanSwitchEngine}">
+            <atom:Segmented SelectedIndex="{Binding SelectedEngineIndex}" IsEnabled="{Binding !IsSwitchingEngine}">
+              <atom:SegmentedItem Content="{loc:OverviewLangResource EngineFake}" />
+              <atom:SegmentedItem Content="{loc:OverviewLangResource EngineWfp}" />
+            </atom:Segmented>
+            <TextBlock Classes="secondary" VerticalAlignment="Center" IsVisible="{Binding IsSwitchingEngine}"
+                       Text="{loc:OverviewLangResource EngineSwitching}" />
+          </StackPanel>
+          <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding CanSwitchEngine}" Text="{loc:OverviewLangResource EngineSwitchHint}" />
+          <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding ShowInstalledEngineHint}" Text="{loc:OverviewLangResource EngineInstalledHint}" />
+        </StackPanel>
+      </atom:Card>
+
+      <!-- 模式切換與快捷操作 -->
+      <atom:Card Header="{loc:OverviewLangResource SwitchMode}" IsEnabled="{Binding IsConnected}">
+        <StackPanel Spacing="16">
+          <atom:Segmented SelectedIndex="{Binding SelectedModeIndex}" HorizontalAlignment="Left">
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeAsk}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeWhitelist}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeBlacklist}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeDisabled}" />
+          </atom:Segmented>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <atom:Button ButtonType="Primary" IsDanger="True" IsVisible="{Binding !IsBlockAll}"
+                         Icon="{antdicons:AntDesignIconProvider Kind=StopOutlined}"
+                         Command="{Binding ToggleBlockAllCommand}" Content="{loc:OverviewLangResource BlockAll}" />
+            <atom:Button ButtonType="Primary" IsVisible="{Binding IsBlockAll}"
+                         Icon="{antdicons:AntDesignIconProvider Kind=PoweroffOutlined}"
+                         Command="{Binding ToggleBlockAllCommand}" Content="{loc:OverviewLangResource Restore}" />
+            <atom:Button IsVisible="{Binding !IsDoNotDisturb}"
+                         Icon="{antdicons:AntDesignIconProvider Kind=BellOutlined}"
+                         Command="{Binding ToggleDoNotDisturbCommand}" Content="{loc:OverviewLangResource DoNotDisturb}" />
+            <atom:Button IsVisible="{Binding IsDoNotDisturb}"
+                         Command="{Binding ToggleDoNotDisturbCommand}" Content="{loc:OverviewLangResource DoNotDisturbOff}" />
+            <TextBlock Classes="secondary" VerticalAlignment="Center" Text="{Binding DoNotDisturbText}" />
+          </StackPanel>
+        </StackPanel>
+      </atom:Card>
+
+      <!-- 模擬器：僅在模擬引擎下顯示 -->
+      <atom:Card Header="{loc:OverviewLangResource SimTitle}" IsVisible="{Binding IsSimulatorAvailable}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" Text="{loc:OverviewLangResource SimDescription}" TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="2*,2*,120,Auto,Auto,Auto" ColumnSpacing="8" RowDefinitions="Auto,Auto" RowSpacing="4">
+            <TextBlock Grid.Column="0" Classes="caption" Text="{loc:OverviewLangResource SimApp}" />
+            <TextBlock Grid.Column="1" Classes="caption" Text="{loc:OverviewLangResource SimHost}" />
+            <TextBlock Grid.Column="2" Classes="caption" Text="{loc:OverviewLangResource SimPort}" />
+            <TextBlock Grid.Column="3" Classes="caption" Text="{loc:OverviewLangResource SimProtocol}" />
+
+            <atom:ComboBox Grid.Row="1" Grid.Column="0" HorizontalAlignment="Stretch"
+                           ItemsSource="{Binding SimulatorApps}" SelectedItem="{Binding SelectedApp}">
+              <atom:ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="proto:SimulatorApp">
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </atom:ComboBox.ItemTemplate>
+            </atom:ComboBox>
+            <atom:LineEdit Grid.Row="1" Grid.Column="1" Text="{Binding SimHost}" />
+            <atom:NumericUpDown Grid.Row="1" Grid.Column="2" Minimum="1" Maximum="65535" Increment="1" FormatString="0"
+                                Value="{Binding SimPort}" />
+            <atom:Segmented Grid.Row="1" Grid.Column="3" SelectedIndex="{Binding SimProtocolIndex}">
+              <atom:SegmentedItem Content="TCP" />
+              <atom:SegmentedItem Content="UDP" />
+            </atom:Segmented>
+            <atom:Button Grid.Row="1" Grid.Column="4" ButtonType="Primary"
+                         Icon="{antdicons:AntDesignIconProvider Kind=ThunderboltOutlined}"
+                         Command="{Binding SimulateCommand}" Content="{loc:OverviewLangResource SimConnect}" />
+            <atom:Button Grid.Row="1" Grid.Column="5" Command="{Binding ExitAppCommand}" Content="{loc:OverviewLangResource SimExitApp}" />
+          </Grid>
+          <TextBlock Classes="caption" Text="{loc:OverviewLangResource SimResults}" />
+          <ItemsControl ItemsSource="{Binding SimulationResults}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Classes="mono" Text="{Binding}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </atom:Card>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

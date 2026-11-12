@@ -1,0 +1,63 @@
+<atom:Window xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:views="using:NetworkControl.App.Views"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             x:Class="NetworkControl.App.Views.ShellWindow"
+             x:DataType="vm:ShellViewModel"
+             Title="{loc:ShellLangResource AppTitle}"
+             Width="1180" Height="760" MinWidth="900" MinHeight="560"
+             WindowStartupLocation="CenterScreen">
+
+  <Grid ColumnDefinitions="232,*" RowDefinitions="*,Auto">
+
+    <!-- 左側導航 -->
+    <Border Grid.Row="0" Grid.Column="0" Classes="sider">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="20,18,16,14">
+          <Image x:Name="LogoImage" Width="28" Height="28" />
+          <TextBlock Classes="section-title" Text="{loc:ShellLangResource AppTitle}" VerticalAlignment="Center" />
+        </StackPanel>
+        <atom:NavMenu Mode="Inline" IsMotionEnabled="False" DefaultSelectedPath="{Binding SelectedMenuPath}">
+          <atom:NavMenuNode ItemKey="overview" Header="{loc:ShellLangResource NavOverview}"
+                            Icon="{antdicons:AntDesignIconProvider Kind=DashboardOutlined}"
+                            Command="{Binding NavigateCommand}" CommandParameter="overview" />
+          <atom:NavMenuNode ItemKey="rules" Header="{loc:ShellLangResource NavRules}"
+                            Icon="{antdicons:AntDesignIconProvider Kind=SafetyCertificateOutlined}"
+                            Command="{Binding NavigateCommand}" CommandParameter="rules" />
+          <atom:NavMenuNode ItemKey="log" Header="{loc:ShellLangResource NavLog}"
+                            Icon="{antdicons:AntDesignIconProvider Kind=HistoryOutlined}"
+                            Command="{Binding NavigateCommand}" CommandParameter="log" />
+          <atom:NavMenuNode ItemKey="settings" Header="{loc:ShellLangResource NavSettings}"
+                            Icon="{antdicons:AntDesignIconProvider Kind=SettingOutlined}"
+                            Command="{Binding NavigateCommand}" CommandParameter="settings" />
+        </atom:NavMenu>
+      </DockPanel>
+    </Border>
+
+    <!-- 內容區：服務可用時顯示當前頁（ViewLocator 按視圖模型選擇視圖），不可用時顯示診斷頁 -->
+    <Border Grid.Row="0" Grid.Column="1" Classes="content">
+      <Panel Margin="28,22,28,16">
+        <ContentControl Content="{Binding CurrentPage}" IsVisible="{Binding !ShowServiceUnavailable}" />
+        <views:ServiceUnavailableView DataContext="{Binding ServiceUnavailable}" IsVisible="{Binding $parent[atom:Window].((vm:ShellViewModel)DataContext).ShowServiceUnavailable}" />
+      </Panel>
+    </Border>
+
+    <!-- 底部狀態欄 -->
+    <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="statusbar">
+      <DockPanel>
+        <atom:Button DockPanel.Dock="Right" ButtonType="Text" SizeType="Small"
+                     Icon="{antdicons:AntDesignIconProvider Kind=PoweroffOutlined}"
+                     Command="{Binding QuitCommand}" Content="{loc:ShellLangResource Quit}" />
+      <StackPanel Orientation="Horizontal" Spacing="16">
+        <atom:DotBadge Status="{Binding IsConnected, Converter={x:Static vm:Converters.ConnectionBadge}}"
+                    Text="{Binding ConnectionText}" />
+        <TextBlock Classes="secondary" Text="{Binding ModeText}" VerticalAlignment="Center" />
+        <TextBlock Classes="secondary" Text="{Binding EngineText}" VerticalAlignment="Center" />
+      </StackPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
+</atom:Window>

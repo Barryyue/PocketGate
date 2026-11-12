@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.LogLangResourceKind">
+    <unit id="ColumnApp">
+      <segment>
+        <source>App</source>
+        <target state="translated">應用程式</target>
+      </segment>
+    </unit>
+    <unit id="ColumnCount">
+      <segment>
+        <source>Count</source>
+        <target state="translated">次數</target>
+      </segment>
+    </unit>
+    <unit id="ColumnDirection">
+      <segment>
+        <source>Direction</source>
+        <target state="translated">方向</target>
+      </segment>
+    </unit>
+    <unit id="ColumnHost">
+      <segment>
+        <source>Host</source>
+        <target state="translated">網域</target>
+      </segment>
+    </unit>
+    <unit id="ColumnOperations">
+      <segment>
+        <source>Operations</source>
+        <target state="translated">操作</target>
+      </segment>
+    </unit>
+    <unit id="ColumnProtocol">
+      <segment>
+        <source>Protocol</source>
+        <target state="translated">協定</target>
+      </segment>
+    </unit>
+    <unit id="ColumnReason">
+      <segment>
+        <source>Reason</source>
+        <target state="translated">依據</target>
+      </segment>
+    </unit>
+    <unit id="ColumnRemote">
+      <segment>
+        <source>Remote</source>
+        <target state="translated">遠端</target>
+      </segment>
+    </unit>
+    <unit id="ColumnTime">
+      <segment>
+        <source>Time</source>
+        <target state="translated">時間</target>
+      </segment>
+    </unit>
+    <unit id="ColumnVerdict">
+      <segment>
+        <source>Verdict</source>
+        <target state="translated">判定</target>
+      </segment>
+    </unit>
+    <unit id="CreateRule">
+      <segment>
+        <source>Create rule</source>
+        <target state="translated">建立規則</target>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>No connections recorded yet.</source>
+        <target state="translated">尚無連線記錄。</target>
+      </segment>
+    </unit>
+    <unit id="Live">
+      <segment>
+        <source>Live</source>
+        <target state="translated">即時更新</target>
+      </segment>
+    </unit>
+    <unit id="SearchPlaceholder">
+      <segment>
+        <source>Search app, host or IP</source>
+        <target state="translated">搜尋應用程式、網域或 IP</target>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>Connection log</source>
+        <target state="translated">連線記錄</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

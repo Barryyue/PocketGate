@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.TrayLangResourceKind">
+    <unit id="Exit">
+      <segment>
+        <source>Quit interface (filtering keeps running)</source>
+      </segment>
+    </unit>
+    <unit id="Mode">
+      <segment>
+        <source>Mode</source>
+      </segment>
+    </unit>
+    <unit id="Open">
+      <segment>
+        <source>Open NetworkControl</source>
+      </segment>
+    </unit>
+    <unit id="TooltipDisconnected">
+      <segment>
+        <source>NetworkControl · service unavailable</source>
+      </segment>
+    </unit>
+    <unit id="TooltipMode">
+      <segment>
+        <source>NetworkControl · {0}</source>
+      </segment>
+    </unit>
+    <unit id="ShowRules">
+      <segment>
+        <source>Rules</source>
+      </segment>
+    </unit>
+    <unit id="ShowLog">
+      <segment>
+        <source>Connection log</source>
+      </segment>
+    </unit>
+    <unit id="ShowSettings">
+      <segment>
+        <source>Settings</source>
+      </segment>
+    </unit>
+    <unit id="BlockAll">
+      <segment>
+        <source>Block all traffic</source>
+      </segment>
+    </unit>
+    <unit id="Restore">
+      <segment>
+        <source>Restore network</source>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturb">
+      <segment>
+        <source>Do not disturb for 1 hour</source>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturbOff">
+      <segment>
+        <source>Turn off do not disturb</source>
+      </segment>
+    </unit>
+    <unit id="ExitAll">
+      <segment>
+        <source>Quit and stop filtering</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

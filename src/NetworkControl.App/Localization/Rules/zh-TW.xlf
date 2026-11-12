@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.RulesLangResourceKind">
+    <unit id="Add">
+      <segment>
+        <source>New rule</source>
+        <target state="translated">新增規則</target>
+      </segment>
+    </unit>
+    <unit id="ColumnAction">
+      <segment>
+        <source>Action</source>
+        <target state="translated">動作</target>
+      </segment>
+    </unit>
+    <unit id="ColumnApp">
+      <segment>
+        <source>App</source>
+        <target state="translated">應用程式</target>
+      </segment>
+    </unit>
+    <unit id="ColumnConditions">
+      <segment>
+        <source>Conditions</source>
+        <target state="translated">條件</target>
+      </segment>
+    </unit>
+    <unit id="ColumnEnabled">
+      <segment>
+        <source>On</source>
+        <target state="translated">啟用</target>
+      </segment>
+    </unit>
+    <unit id="ColumnHits">
+      <segment>
+        <source>Hits</source>
+        <target state="translated">命中次數</target>
+      </segment>
+    </unit>
+    <unit id="ColumnLifetime">
+      <segment>
+        <source>Lifetime</source>
+        <target state="translated">有效期限</target>
+      </segment>
+    </unit>
+    <unit id="ColumnOperations">
+      <segment>
+        <source>Operations</source>
+        <target state="translated">操作</target>
+      </segment>
+    </unit>
+    <unit id="ColumnSource">
+      <segment>
+        <source>Source</source>
+        <target state="translated">來源</target>
+      </segment>
+    </unit>
+    <unit id="ColumnUpdated">
+      <segment>
+        <source>Updated</source>
+        <target state="translated">更新時間</target>
+      </segment>
+    </unit>
+    <unit id="Created">
+      <segment>
+        <source>Rule created</source>
+        <target state="translated">已建立規則</target>
+      </segment>
+    </unit>
+    <unit id="DeleteConfirmContent">
+      <segment>
+        <source>The app will be asked again the next time it connects.</source>
+        <target state="translated">應用程式下次連線時會再次詢問。</target>
+      </segment>
+    </unit>
+    <unit id="DeleteConfirmTitle">
+      <segment>
+        <source>Delete this rule?</source>
+        <target state="translated">刪除這條規則？</target>
+      </segment>
+    </unit>
+    <unit id="Deleted">
+      <segment>
+        <source>Rule deleted</source>
+        <target state="translated">已刪除規則</target>
+      </segment>
+    </unit>
+    <unit id="EditorAction">
+      <segment>
+        <source>Action</source>
+        <target state="translated">動作</target>
+      </segment>
+    </unit>
+    <unit id="EditorAddressPlaceholder">
+      <segment>
+        <source>203.0.113.5, 10.0.0.0/8 (comma separated)</source>
+        <target state="translated">203.0.113.5, 10.0.0.0/8（以逗號分隔）</target>
+      </segment>
+    </unit>
+    <unit id="EditorAnyApp">
+      <segment>
+        <source>Apply to all apps</source>
+        <target state="translated">套用至所有應用程式</target>
+      </segment>
+    </unit>
+    <unit id="EditorApp">
+      <segment>
+        <source>App</source>
+        <target state="translated">應用程式</target>
+      </segment>
+    </unit>
+    <unit id="EditorAppPathPlaceholder">
+      <segment>
+        <source>Executable path; * matches within one folder</source>
+        <target state="translated">執行檔路徑，* 符合單層資料夾</target>
+      </segment>
+    </unit>
+    <unit id="EditorBrowse">
+      <segment>
+        <source>Browse…</source>
+        <target state="translated">瀏覽…</target>
+      </segment>
+    </unit>
+    <unit id="EditorCreateTitle">
+      <segment>
+        <source>New rule</source>
+        <target state="translated">新增規則</target>
+      </segment>
+    </unit>
+    <unit id="EditorDirection">
+      <segment>
+        <source>Direction</source>
+        <target state="translated">方向</target>
+      </segment>
+    </unit>
+    <unit id="EditorDomainPlaceholder">
+      <segment>
+        <source>example.com or *.example.com</source>
+        <target state="translated">example.com 或 *.example.com</target>
+      </segment>
+    </unit>
+    <unit id="EditorEditTitle">
+      <segment>
+        <source>Edit rule</source>
+        <target state="translated">編輯規則</target>
+      </segment>
+    </unit>
+    <unit id="EditorEnabled">
+      <segment>
+        <source>Enabled</source>
+        <target state="translated">啟用</target>
+      </segment>
+    </unit>
+    <unit id="EditorExpiresInMinutes">
+      <segment>
+        <source>Expires after (minutes)</source>
+        <target state="translated">有效時間（分鐘）</target>
+      </segment>
+    </unit>
+    <unit id="EditorLifetime">
+      <segment>
+        <source>Lifetime</source>
+        <target state="translated">有效期限</target>
+      </segment>
+    </unit>
+    <unit id="EditorNote">
+      <segment>
+        <source>Note</source>
+        <target state="translated">備註</target>
+      </segment>
+    </unit>
+    <unit id="EditorPortPlaceholder">
+      <segment>
+        <source>Empty for any, or 443, or 8000-8080</source>
+        <target state="translated">留空表示任何，或 443、8000-8080</target>
+      </segment>
+    </unit>
+    <unit id="EditorProtocol">
+      <segment>
+        <source>Protocol</source>
+        <target state="translated">協定</target>
+      </segment>
+    </unit>
+    <unit id="EditorRemote">
+      <segment>
+        <source>Remote</source>
+        <target state="translated">遠端</target>
+      </segment>
+    </unit>
+    <unit id="EditorRemoteAddress">
+      <segment>
+        <source>IP / network</source>
+        <target state="translated">IP / 網段</target>
+      </segment>
+    </unit>
+    <unit id="EditorRemoteAny">
+      <segment>
+        <source>Any</source>
+        <target state="translated">任何</target>
+      </segment>
+    </unit>
+    <unit id="EditorRemoteDomain">
+      <segment>
+        <source>Domain</source>
+        <target state="translated">網域</target>
+      </segment>
+    </unit>
+    <unit id="EditorRemotePort">
+      <segment>
+        <source>Remote port</source>
+        <target state="translated">遠端連接埠</target>
+      </segment>
+    </unit>
+    <unit id="EditorRemoteZone">
+      <segment>
+        <source>Network zone</source>
+        <target state="translated">網路區域</target>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>No rules yet. Your answers to connection prompts appear here.</source>
+        <target state="translated">尚無規則。連線詢問中的決定會顯示在這裡。</target>
+      </segment>
+    </unit>
+    <unit id="ErrorAddressInvalid">
+      <segment>
+        <source>&quot;{0}&quot; is not a valid IP address or network.</source>
+        <target state="translated">「{0}」不是有效的 IP 位址或網段。</target>
+      </segment>
+    </unit>
+    <unit id="ErrorAppPathRequired">
+      <segment>
+        <source>Enter the executable path, or apply the rule to all apps.</source>
+        <target state="translated">請填寫執行檔路徑，或選擇套用至所有應用程式。</target>
+      </segment>
+    </unit>
+    <unit id="ErrorDomainRequired">
+      <segment>
+        <source>Enter a domain.</source>
+        <target state="translated">請填寫網域。</target>
+      </segment>
+    </unit>
+    <unit id="ErrorExpiryInvalid">
+      <segment>
+        <source>The duration must be at least 1 minute.</source>
+        <target state="translated">有效時間至少需 1 分鐘。</target>
+      </segment>
+    </unit>
+    <unit id="ErrorPortInvalid">
+      <segment>
+        <source>Enter a port (1-65535) or a range such as 8000-8080.</source>
+        <target state="translated">請輸入連接埠（1-65535）或範圍，例如 8000-8080。</target>
+      </segment>
+    </unit>
+    <unit id="SearchPlaceholder">
+      <segment>
+        <source>Search app or condition</source>
+        <target state="translated">搜尋應用程式或條件</target>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>Rules</source>
+        <target state="translated">規則</target>
+      </segment>
+    </unit>
+    <unit id="Updated">
+      <segment>
+        <source>Rule updated</source>
+        <target state="translated">已更新規則</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

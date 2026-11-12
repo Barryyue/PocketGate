@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             x:Class="NetworkControl.App.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <UserControl.Resources>
+    <DataTemplate x:Key="ChoiceTemplate" x:DataType="vm:Choice">
+      <TextBlock Text="{Binding Title}" />
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <ScrollViewer>
+    <StackPanel Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
+      <TextBlock Classes="page-title" Text="{loc:SettingsLangResource Title}" />
+
+      <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
+                  IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
+
+      <!-- 界面設置：保存在本機，即時生效 -->
+      <atom:Card Header="{loc:SettingsLangResource SectionInterface}">
+        <Grid ColumnDefinitions="280,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
+          <TextBlock Grid.Row="0" VerticalAlignment="Center" Text="{loc:SettingsLangResource Language}" />
+          <atom:ComboBox Grid.Row="0" Grid.Column="1" Width="220" HorizontalAlignment="Left"
+                         ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+
+          <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="{loc:SettingsLangResource Theme}" />
+          <atom:Segmented Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" SelectedIndex="{Binding ThemeIndex}">
+            <atom:SegmentedItem Content="{loc:SettingsLangResource ThemeFollowSystem}" />
+            <atom:SegmentedItem Content="{loc:SettingsLangResource ThemeLight}" />
+            <atom:SegmentedItem Content="{loc:SettingsLangResource ThemeDark}" />
+          </atom:Segmented>
+
+          <TextBlock Grid.Row="2" VerticalAlignment="Center" IsVisible="{Binding IsAutoStartSupported}" Text="{loc:SettingsLangResource LaunchAtLogin}" />
+          <atom:ToggleSwitch Grid.Row="2" Grid.Column="1" IsVisible="{Binding IsAutoStartSupported}" HorizontalAlignment="Left" IsChecked="{Binding LaunchAtLogin}" />
+        </Grid>
+      </atom:Card>
+
+      <!-- 服務設置：保存在核心服務中，對本機所有用戶生效 -->
+      <StackPanel Spacing="16" IsEnabled="{Binding IsConnected}">
+        <TextBlock Classes="secondary" Text="{loc:SettingsLangResource ServiceSettingsHint}" TextWrapping="Wrap" />
+
+        <atom:Card Header="{loc:SettingsLangResource SectionPrompt}">
+          <Grid ColumnDefinitions="280,*" RowDefinitions="Auto,Auto" RowSpacing="14">
+            <TextBlock Grid.Row="0" VerticalAlignment="Center" Text="{loc:SettingsLangResource PromptTimeout}" />
+            <atom:NumericUpDown Grid.Row="0" Grid.Column="1" Width="160" HorizontalAlignment="Left"
+                                Minimum="5" Maximum="300" Increment="5" FormatString="0" Value="{Binding PromptTimeoutSeconds}" />
+            <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="{loc:SettingsLangResource DefaultAction}" />
+            <atom:ComboBox Grid.Row="1" Grid.Column="1" Width="160" HorizontalAlignment="Left"
+                           ItemsSource="{Binding DefaultActions}" SelectedItem="{Binding DefaultAction}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+          </Grid>
+        </atom:Card>
+
+        <atom:Card Header="{loc:SettingsLangResource SectionSafety}">
+          <Grid ColumnDefinitions="280,*" RowDefinitions="Auto,Auto" RowSpacing="14">
+            <TextBlock Grid.Row="0" VerticalAlignment="Center" Text="{loc:SettingsLangResource FailPolicy}" />
+            <atom:ComboBox Grid.Row="0" Grid.Column="1" Width="220" HorizontalAlignment="Left"
+                           ItemsSource="{Binding FailPolicies}" SelectedItem="{Binding FailPolicy}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+            <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="{loc:SettingsLangResource AllowIcmp}" />
+            <atom:ToggleSwitch Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" IsChecked="{Binding AllowIcmp}" />
+          </Grid>
+        </atom:Card>
+
+        <atom:Card Header="{loc:SettingsLangResource SectionData}">
+          <Grid ColumnDefinitions="280,*">
+            <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource LogRetention}" />
+            <atom:NumericUpDown Grid.Column="1" Width="160" HorizontalAlignment="Left"
+                                Minimum="1" Maximum="3650" Increment="1" FormatString="0" Value="{Binding LogRetentionDays}" />
+          </Grid>
+        </atom:Card>
+
+        <atom:Button ButtonType="Primary" HorizontalAlignment="Left" Command="{Binding SaveCommand}" Content="{loc:CommonLangResource Save}" />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

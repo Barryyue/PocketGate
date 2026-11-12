@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             x:Class="NetworkControl.App.Views.RuleEditorView"
+             x:DataType="vm:RuleEditorViewModel">
+
+  <UserControl.Resources>
+    <DataTemplate x:Key="ChoiceTemplate" x:DataType="vm:Choice">
+      <TextBlock Text="{Binding Title}" />
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <!-- 規則表單：左側標籤、右側輸入；內置規則只允許啟用 / 停用 -->
+  <StackPanel Spacing="14" Margin="0,8,0,0">
+    <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding ValidationError}"
+                IsVisible="{Binding ValidationError, Converter={x:Static vm:Converters.HasText}}" />
+
+    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="12"
+          IsEnabled="{Binding IsEditable}">
+      <!-- 應用 -->
+      <TextBlock Grid.Row="0" VerticalAlignment="Center" Text="{loc:RulesLangResource EditorApp}" />
+      <StackPanel Grid.Row="0" Grid.Column="1" Spacing="8">
+        <atom:CheckBox IsChecked="{Binding AnyApp}" Content="{loc:RulesLangResource EditorAnyApp}" />
+        <DockPanel IsVisible="{Binding !AnyApp}">
+          <atom:Button DockPanel.Dock="Right" Margin="8,0,0,0" Icon="{antdicons:AntDesignIconProvider Kind=FolderOpenOutlined}"
+                       Click="OnBrowseClicked" Content="{loc:RulesLangResource EditorBrowse}" />
+          <atom:LineEdit Text="{Binding AppPath}" PlaceholderText="{loc:RulesLangResource EditorAppPathPlaceholder}" />
+        </DockPanel>
+      </StackPanel>
+
+      <!-- 動作 -->
+      <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="{loc:RulesLangResource EditorAction}" />
+      <atom:ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
+                     ItemsSource="{Binding Actions}" SelectedItem="{Binding SelectedAction}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+
+      <!-- 方向 -->
+      <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="{loc:RulesLangResource EditorDirection}" />
+      <atom:ComboBox Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"
+                     ItemsSource="{Binding Directions}" SelectedItem="{Binding SelectedDirection}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+
+      <!-- 協議 -->
+      <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="{loc:RulesLangResource EditorProtocol}" />
+      <atom:ComboBox Grid.Row="3" Grid.Column="1" HorizontalAlignment="Stretch"
+                     ItemsSource="{Binding Protocols}" SelectedItem="{Binding SelectedProtocol}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+
+      <!-- 遠端 -->
+      <TextBlock Grid.Row="4" VerticalAlignment="Center" Text="{loc:RulesLangResource EditorRemote}" />
+      <StackPanel Grid.Row="4" Grid.Column="1" Spacing="8">
+        <atom:ComboBox HorizontalAlignment="Stretch"
+                       ItemsSource="{Binding RemoteKinds}" SelectedItem="{Binding SelectedRemoteKind}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+        <atom:LineEdit IsVisible="{Binding IsDomain}" Text="{Binding Domain}" PlaceholderText="{loc:RulesLangResource EditorDomainPlaceholder}" />
+        <atom:LineEdit IsVisible="{Binding IsAddress}" Text="{Binding Addresses}" PlaceholderText="{loc:RulesLangResource EditorAddressPlaceholder}" />
+        <atom:ComboBox IsVisible="{Binding IsZone}" HorizontalAlignment="Stretch"
+                       ItemsSource="{Binding Zones}" SelectedItem="{Binding SelectedZone}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+      </StackPanel>
+
+      <!-- 遠端端口 -->
+      <TextBlock Grid.Row="5" VerticalAlignment="Center" Text="{loc:RulesLangResource EditorRemotePort}" />
+      <atom:LineEdit Grid.Row="5" Grid.Column="1" Text="{Binding Port}" PlaceholderText="{loc:RulesLangResource EditorPortPlaceholder}" />
+
+      <!-- 時效 -->
+      <TextBlock Grid.Row="6" VerticalAlignment="Center" Text="{loc:RulesLangResource EditorLifetime}" />
+      <atom:ComboBox Grid.Row="6" Grid.Column="1" HorizontalAlignment="Stretch"
+                     ItemsSource="{Binding Lifetimes}" SelectedItem="{Binding SelectedLifetime}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+
+      <TextBlock Grid.Row="7" VerticalAlignment="Center" IsVisible="{Binding IsTimed}" Text="{loc:RulesLangResource EditorExpiresInMinutes}" />
+      <atom:NumericUpDown Grid.Row="7" Grid.Column="1" IsVisible="{Binding IsTimed}" HorizontalAlignment="Left" Width="160"
+                          Minimum="1" Maximum="525600" Increment="5" FormatString="0" Value="{Binding ExpiresInMinutes}" />
+
+      <!-- 備註 -->
+      <TextBlock Grid.Row="8" VerticalAlignment="Center" Text="{loc:RulesLangResource EditorNote}" />
+      <atom:LineEdit Grid.Row="8" Grid.Column="1" Text="{Binding Note}" />
+    </Grid>
+
+    <!-- 啟用狀態：內置規則也可以修改 -->
+    <Grid ColumnDefinitions="120,*">
+      <TextBlock VerticalAlignment="Center" Text="{loc:RulesLangResource EditorEnabled}" />
+      <atom:ToggleSwitch Grid.Column="1" IsChecked="{Binding Enabled}" HorizontalAlignment="Left" />
+    </Grid>
+  </StackPanel>
+</UserControl>

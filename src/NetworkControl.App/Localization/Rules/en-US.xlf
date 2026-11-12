@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.RulesLangResourceKind">
+    <unit id="Add">
+      <segment>
+        <source>New rule</source>
+      </segment>
+    </unit>
+    <unit id="ColumnAction">
+      <segment>
+        <source>Action</source>
+      </segment>
+    </unit>
+    <unit id="ColumnApp">
+      <segment>
+        <source>App</source>
+      </segment>
+    </unit>
+    <unit id="ColumnConditions">
+      <segment>
+        <source>Conditions</source>
+      </segment>
+    </unit>
+    <unit id="ColumnEnabled">
+      <segment>
+        <source>On</source>
+      </segment>
+    </unit>
+    <unit id="ColumnHits">
+      <segment>
+        <source>Hits</source>
+      </segment>
+    </unit>
+    <unit id="ColumnLifetime">
+      <segment>
+        <source>Lifetime</source>
+      </segment>
+    </unit>
+    <unit id="ColumnOperations">
+      <segment>
+        <source>Operations</source>
+      </segment>
+    </unit>
+    <unit id="ColumnSource">
+      <segment>
+        <source>Source</source>
+      </segment>
+    </unit>
+    <unit id="ColumnUpdated">
+      <segment>
+        <source>Updated</source>
+      </segment>
+    </unit>
+    <unit id="Created">
+      <segment>
+        <source>Rule created</source>
+      </segment>
+    </unit>
+    <unit id="DeleteConfirmContent">
+      <segment>
+        <source>The app will be asked again the next time it connects.</source>
+      </segment>
+    </unit>
+    <unit id="DeleteConfirmTitle">
+      <segment>
+        <source>Delete this rule?</source>
+      </segment>
+    </unit>
+    <unit id="Deleted">
+      <segment>
+        <source>Rule deleted</source>
+      </segment>
+    </unit>
+    <unit id="EditorAction">
+      <segment>
+        <source>Action</source>
+      </segment>
+    </unit>
+    <unit id="EditorAddressPlaceholder">
+      <segment>
+        <source>203.0.113.5, 10.0.0.0/8 (comma separated)</source>
+      </segment>
+    </unit>
+    <unit id="EditorAnyApp">
+      <segment>
+        <source>Apply to all apps</source>
+      </segment>
+    </unit>
+    <unit id="EditorApp">
+      <segment>
+        <source>App</source>
+      </segment>
+    </unit>
+    <unit id="EditorAppPathPlaceholder">
+      <segment>
+        <source>Executable path; * matches within one folder</source>
+      </segment>
+    </unit>
+    <unit id="EditorBrowse">
+      <segment>
+        <source>Browse…</source>
+      </segment>
+    </unit>
+    <unit id="EditorCreateTitle">
+      <segment>
+        <source>New rule</source>
+      </segment>
+    </unit>
+    <unit id="EditorDirection">
+      <segment>
+        <source>Direction</source>
+      </segment>
+    </unit>
+    <unit id="EditorDomainPlaceholder">
+      <segment>
+        <source>example.com or *.example.com</source>
+      </segment>
+    </unit>
+    <unit id="EditorEditTitle">
+      <segment>
+        <source>Edit rule</source>
+      </segment>
+    </unit>
+    <unit id="EditorEnabled">
+      <segment>
+        <source>Enabled</source>
+      </segment>
+    </unit>
+    <unit id="EditorExpiresInMinutes">
+      <segment>
+        <source>Expires after (minutes)</source>
+      </segment>
+    </unit>
+    <unit id="EditorLifetime">
+      <segment>
+        <source>Lifetime</source>
+      </segment>
+    </unit>
+    <unit id="EditorNote">
+      <segment>
+        <source>Note</source>
+      </segment>
+    </unit>
+    <unit id="EditorPortPlaceholder">
+      <segment>
+        <source>Empty for any, or 443, or 8000-8080</source>
+      </segment>
+    </unit>
+    <unit id="EditorProtocol">
+      <segment>
+        <source>Protocol</source>
+      </segment>
+    </unit>
+    <unit id="EditorRemote">
+      <segment>
+        <source>Remote</source>
+      </segment>
+    </unit>
+    <unit id="EditorRemoteAddress">
+      <segment>
+        <source>IP / network</source>
+      </segment>
+    </unit>
+    <unit id="EditorRemoteAny">
+      <segment>
+        <source>Any</source>
+      </segment>
+    </unit>
+    <unit id="EditorRemoteDomain">
+      <segment>
+        <source>Domain</source>
+      </segment>
+    </unit>
+    <unit id="EditorRemotePort">
+      <segment>
+        <source>Remote port</source>
+      </segment>
+    </unit>
+    <unit id="EditorRemoteZone">
+      <segment>
+        <source>Network zone</source>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>No rules yet. Your answers to connection prompts appear here.</source>
+      </segment>
+    </unit>
+    <unit id="ErrorAddressInvalid">
+      <segment>
+        <source>&quot;{0}&quot; is not a valid IP address or network.</source>
+      </segment>
+    </unit>
+    <unit id="ErrorAppPathRequired">
+      <segment>
+        <source>Enter the executable path, or apply the rule to all apps.</source>
+      </segment>
+    </unit>
+    <unit id="ErrorDomainRequired">
+      <segment>
+        <source>Enter a domain.</source>
+      </segment>
+    </unit>
+    <unit id="ErrorExpiryInvalid">
+      <segment>
+        <source>The duration must be at least 1 minute.</source>
+      </segment>
+    </unit>
+    <unit id="ErrorPortInvalid">
+      <segment>
+        <source>Enter a port (1-65535) or a range such as 8000-8080.</source>
+      </segment>
+    </unit>
+    <unit id="SearchPlaceholder">
+      <segment>
+        <source>Search app or condition</source>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>Rules</source>
+      </segment>
+    </unit>
+    <unit id="Updated">
+      <segment>
+        <source>Rule updated</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

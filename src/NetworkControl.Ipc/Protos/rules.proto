@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+// 規則管理。寫操作需要管理員權限（FR-SET-05）。
+service Rules {
+  rpc List (ListRulesRequest) returns (ListRulesResponse);
+  rpc Create (RuleDefinition) returns (RuleInfo);
+  rpc Update (UpdateRuleRequest) returns (RuleInfo);
+  rpc SetEnabled (SetRuleEnabledRequest) returns (RuleInfo);
+  rpc Delete (DeleteRulesRequest) returns (DeleteRulesResponse);
+  rpc Watch (google.protobuf.Empty) returns (stream RuleChangeEvent);
+}
+
+enum RuleSource {
+  RULE_SOURCE_USER = 0;
+  RULE_SOURCE_PROMPT = 1;
+  RULE_SOURCE_BUILTIN = 2;
+  RULE_SOURCE_SUBSCRIPTION = 3;
+  RULE_SOURCE_IMPORT = 4;
+}
+
+enum RuleChangeKind {
+  RULE_CHANGE_KIND_ADDED = 0;
+  RULE_CHANGE_KIND_UPDATED = 1;
+  RULE_CHANGE_KIND_REMOVED = 2;
+}
+
+message AppMatcher {
+  string path_pattern = 1;
+  optional string required_signer_id = 2;
+  optional string required_sha256 = 3;
+  optional string service_name = 4;
+  optional string package_id = 5;
+}
+
+message AddressList {
+  repeated string networks = 1;
+}
+
+message RuleConditions {
+  optional Direction direction = 1;
+  optional Protocol protocol = 2;
+  oneof remote {
+    string domain = 3;
+    AddressList addresses = 4;
+    NetworkZone zone = 5;
+  }
+  PortRange remote_port = 6;
+  PortRange local_port = 7;
+}
+
+// 規則的可編輯部分。
+message RuleDefinition {
+  optional string profile_id = 1;
+  // 為空表示任意應用（全局規則）。
+  AppMatcher app = 2;
+  RuleConditions conditions = 3;
+  VerdictAction action = 4;
+  Lifetime lifetime = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  bool enabled = 7;
+  int32 manual_priority = 8;
+  optional string note = 9;
+}
+
+message RuleInfo {
+  string id = 1;
+  RuleDefinition definition = 2;
+  RuleSource source = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  int64 hit_count = 6;
+  google.protobuf.Timestamp last_hit_at = 7;
+  optional int32 bound_pid = 8;
+}
+
+message ListRulesRequest {
+  // 為空表示所有配置文件。
+  optional string profile_id = 1;
+}
+
+message ListRulesResponse {
+  repeated RuleInfo rules = 1;
+}
+
+message UpdateRuleRequest {
+  string id = 1;
+  RuleDefinition definition = 2;
+}
+
+message SetRuleEnabledRequest {
+  string id = 1;
+  bool enabled = 2;
+}
+
+message DeleteRulesRequest {
+  repeated string ids = 1;
+}
+
+message DeleteRulesResponse {
+  int32 deleted = 1;
+}
+
+message RuleChangeEvent {
+  RuleChangeKind kind = 1;
+  RuleInfo rule = 2;
+}

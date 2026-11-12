@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.PromptLangResourceKind">
+    <unit id="ApplyToAll">
+      <segment>
+        <source>Also apply to this app&apos;s other pending connections</source>
+      </segment>
+    </unit>
+    <unit id="BlockedHint">
+      <segment>
+        <source>This connection was blocked for now. After you allow it, the app connects on its next retry.</source>
+      </segment>
+    </unit>
+    <unit id="Countdown">
+      <segment>
+        <source>{1} automatically in {0}s</source>
+      </segment>
+    </unit>
+    <unit id="Details">
+      <segment>
+        <source>Details</source>
+      </segment>
+    </unit>
+    <unit id="Lifetime">
+      <segment>
+        <source>Duration</source>
+      </segment>
+    </unit>
+    <unit id="Local">
+      <segment>
+        <source>Local endpoint</source>
+      </segment>
+    </unit>
+    <unit id="MoreConnections">
+      <segment>
+        <source>{0} more pending connection(s)</source>
+      </segment>
+    </unit>
+    <unit id="Path">
+      <segment>
+        <source>Path</source>
+      </segment>
+    </unit>
+    <unit id="Pid">
+      <segment>
+        <source>Process ID</source>
+      </segment>
+    </unit>
+    <unit id="Queue">
+      <segment>
+        <source>{0} more app(s) waiting</source>
+      </segment>
+    </unit>
+    <unit id="Scope">
+      <segment>
+        <source>Scope</source>
+      </segment>
+    </unit>
+    <unit id="ScopeAddress">
+      <segment>
+        <source>This IP address</source>
+      </segment>
+    </unit>
+    <unit id="ScopeAddressPort">
+      <segment>
+        <source>This IP and port</source>
+      </segment>
+    </unit>
+    <unit id="ScopeAny">
+      <segment>
+        <source>Any connection from this app</source>
+      </segment>
+    </unit>
+    <unit id="ScopeDomain">
+      <segment>
+        <source>This domain</source>
+      </segment>
+    </unit>
+    <unit id="ScopePort">
+      <segment>
+        <source>This port</source>
+      </segment>
+    </unit>
+    <unit id="Signed">
+      <segment>
+        <source>Signed by {0}</source>
+      </segment>
+    </unit>
+    <unit id="TamperAlert">
+      <segment>
+        <source>This program has changed (its signature or file hash no longer matches), so its existing rules are suspended.</source>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>Network connection request</source>
+      </segment>
+    </unit>
+    <unit id="Unsigned">
+      <segment>
+        <source>Unsigned</source>
+      </segment>
+    </unit>
+    <unit id="WantsToAccept">
+      <segment>
+        <source>wants to accept a connection from</source>
+      </segment>
+    </unit>
+    <unit id="WantsToConnect">
+      <segment>
+        <source>wants to connect to</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

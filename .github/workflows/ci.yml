@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore NetworkControl.slnx
+
+      - name: Verify formatting
+        if: runner.os == 'Linux'
+        run: dotnet format NetworkControl.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build NetworkControl.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --solution NetworkControl.slnx --configuration Release --no-build

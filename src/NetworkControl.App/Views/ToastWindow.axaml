@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:atom="https://atomui.net"
+        xmlns:antdicons="https://atomui.net/icons/antdesign"
+        xmlns:services="using:NetworkControl.App.Services"
+        x:Class="NetworkControl.App.Views.ToastWindow"
+        x:DataType="services:ToastViewModel"
+        Width="360" SizeToContent="Height"
+        CanResize="False" ShowInTaskbar="False" Topmost="True" ShowActivated="False"
+        WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
+        WindowStartupLocation="Manual">
+
+  <!-- 輕量通知卡片：不依賴主窗口，右下角堆疊，自動消失 -->
+  <Border Classes="toast" Margin="4">
+    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+      <ContentControl Grid.Column="0" Width="20" Height="20" VerticalAlignment="Top" Margin="0,2,0,0"
+                      Foreground="{atom:SharedTokenResource ColorWarning}"
+                      Content="{antdicons:AntDesignIconProvider Kind=WarningOutlined}" />
+      <StackPanel Grid.Column="1" Spacing="6">
+        <TextBlock Classes="section-title" Text="{Binding Title}" />
+        <TextBlock Classes="secondary" Text="{Binding Body}" TextWrapping="Wrap" />
+        <atom:Button ButtonType="Primary" SizeType="Small" HorizontalAlignment="Left" Margin="0,4,0,0"
+                     IsVisible="{Binding HasAction}" Command="{Binding ActionCommand}" Content="{Binding ActionText}" />
+      </StackPanel>
+      <atom:Button Grid.Column="2" ButtonType="Text" SizeType="Small" VerticalAlignment="Top"
+                   Icon="{antdicons:AntDesignIconProvider Kind=CloseOutlined}" Command="{Binding CloseCommand}" />
+    </Grid>
+  </Border>
+</Window>

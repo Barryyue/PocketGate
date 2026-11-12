@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+// 服務狀態、模式切換與設置。
+service Control {
+  rpc GetStatus (google.protobuf.Empty) returns (ServiceStatus);
+  // 狀態變化時推送（連接建立後先推送一次當前狀態）。
+  rpc WatchStatus (google.protobuf.Empty) returns (stream ServiceStatus);
+  rpc SetMode (SetModeRequest) returns (ServiceStatus);
+  // 從「全部阻斷」恢復到之前的模式。
+  rpc RestoreFromBlockAll (google.protobuf.Empty) returns (ServiceStatus);
+  rpc SetDoNotDisturb (SetDoNotDisturbRequest) returns (ServiceStatus);
+  rpc GetSettings (google.protobuf.Empty) returns (UserSettings);
+  rpc UpdateSettings (UserSettings) returns (UserSettings);
+  // 請求服務正常退出（開發環境切換引擎、退出界面時關閉開發服務）。以系統服務運行時由服務管理器決定是否重啟。
+  rpc Shutdown (google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+enum EngineState {
+  ENGINE_STATE_NOT_STARTED = 0;
+  ENGINE_STATE_STARTING = 1;
+  ENGINE_STATE_RUNNING = 2;
+  ENGINE_STATE_FAULTED = 3;
+  ENGINE_STATE_STOPPED = 4;
+}
+
+enum FailPolicy {
+  FAIL_POLICY_FAIL_OPEN = 0;
+  FAIL_POLICY_FAIL_CLOSED = 1;
+}
+
+message EngineInfo {
+  string name = 1;
+  EngineState state = 2;
+  repeated string capabilities = 3;
+  // 引擎能否掛起連接等待決策；為 false 時彈窗需提示「允許後應用重試即可連接」。
+  bool holds_connections = 4;
+  optional string fault_message = 5;
+}
+
+message ClientInfo {
+  optional int32 pid = 1;
+  optional string user_id = 2;
+  bool is_admin = 3;
+}
+
+message ServiceStatus {
+  uint32 protocol_version = 1;
+  string service_version = 2;
+  FilterMode mode = 3;
+  string active_profile_id = 4;
+  google.protobuf.Timestamp do_not_disturb_until = 5;
+  EngineInfo engine = 6;
+  int32 active_rule_count = 7;
+  int32 pending_prompt_flows = 8;
+  ClientInfo client = 9;
+}
+
+message SetModeRequest {
+  FilterMode mode = 1;
+}
+
+message SetDoNotDisturbRequest {
+  // 不設置表示關閉勿擾。
+  google.protobuf.Duration duration = 1;
+}
+
+message UserSettings {
+  google.protobuf.Duration prompt_timeout = 1;
+  VerdictAction prompt_default_action = 2;
+  FailPolicy fail_policy = 3;
+  bool allow_icmp_by_default = 4;
+  int32 log_retention_days = 5;
+  google.protobuf.Duration once_fallback_duration = 6;
+}

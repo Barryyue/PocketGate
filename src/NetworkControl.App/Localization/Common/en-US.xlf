@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.CommonLangResourceKind">
+    <unit id="All">
+      <segment>
+        <source>All</source>
+      </segment>
+    </unit>
+    <unit id="Allow">
+      <segment>
+        <source>Allow</source>
+      </segment>
+    </unit>
+    <unit id="AnyApp">
+      <segment>
+        <source>Any app</source>
+      </segment>
+    </unit>
+    <unit id="AnyConnection">
+      <segment>
+        <source>Any connection</source>
+      </segment>
+    </unit>
+    <unit id="AnyDirection">
+      <segment>
+        <source>Any direction</source>
+      </segment>
+    </unit>
+    <unit id="AnyProtocol">
+      <segment>
+        <source>Any protocol</source>
+      </segment>
+    </unit>
+    <unit id="Cancel">
+      <segment>
+        <source>Cancel</source>
+      </segment>
+    </unit>
+    <unit id="Delete">
+      <segment>
+        <source>Delete</source>
+      </segment>
+    </unit>
+    <unit id="Deny">
+      <segment>
+        <source>Deny</source>
+      </segment>
+    </unit>
+    <unit id="Edit">
+      <segment>
+        <source>Edit</source>
+      </segment>
+    </unit>
+    <unit id="ErrorFormat">
+      <segment>
+        <source>Operation failed: {0}</source>
+      </segment>
+    </unit>
+    <unit id="ExpiresAt">
+      <segment>
+        <source>Until {0:g}</source>
+      </segment>
+    </unit>
+    <unit id="Inbound">
+      <segment>
+        <source>Inbound</source>
+      </segment>
+    </unit>
+    <unit id="Lifetime15Minutes">
+      <segment>
+        <source>15 minutes</source>
+      </segment>
+    </unit>
+    <unit id="Lifetime1Hour">
+      <segment>
+        <source>1 hour</source>
+      </segment>
+    </unit>
+    <unit id="Lifetime5Minutes">
+      <segment>
+        <source>5 minutes</source>
+      </segment>
+    </unit>
+    <unit id="LifetimeOnce">
+      <segment>
+        <source>Just once</source>
+      </segment>
+    </unit>
+    <unit id="LifetimePermanent">
+      <segment>
+        <source>Forever</source>
+      </segment>
+    </unit>
+    <unit id="LifetimeTimed">
+      <segment>
+        <source>Timed</source>
+      </segment>
+    </unit>
+    <unit id="LifetimeUntilExit">
+      <segment>
+        <source>Until the app quits</source>
+      </segment>
+    </unit>
+    <unit id="LifetimeUntilRestart">
+      <segment>
+        <source>Until restart</source>
+      </segment>
+    </unit>
+    <unit id="ModeAsk">
+      <segment>
+        <source>Ask</source>
+      </segment>
+    </unit>
+    <unit id="ModeAskDescription">
+      <segment>
+        <source>Ask when no rule matches</source>
+      </segment>
+    </unit>
+    <unit id="ModeBlacklist">
+      <segment>
+        <source>Blocklist</source>
+      </segment>
+    </unit>
+    <unit id="ModeBlacklistDescription">
+      <segment>
+        <source>Allow when no rule matches</source>
+      </segment>
+    </unit>
+    <unit id="ModeBlockAll">
+      <segment>
+        <source>Block all</source>
+      </segment>
+    </unit>
+    <unit id="ModeBlockAllDescription">
+      <segment>
+        <source>Only essential system traffic is allowed</source>
+      </segment>
+    </unit>
+    <unit id="ModeDisabled">
+      <segment>
+        <source>Filtering off</source>
+      </segment>
+    </unit>
+    <unit id="ModeDisabledDescription">
+      <segment>
+        <source>Everything is allowed and only logged</source>
+      </segment>
+    </unit>
+    <unit id="ModeWhitelist">
+      <segment>
+        <source>Allowlist</source>
+      </segment>
+    </unit>
+    <unit id="ModeWhitelistDescription">
+      <segment>
+        <source>Deny when no rule matches</source>
+      </segment>
+    </unit>
+    <unit id="Ok">
+      <segment>
+        <source>OK</source>
+      </segment>
+    </unit>
+    <unit id="Outbound">
+      <segment>
+        <source>Outbound</source>
+      </segment>
+    </unit>
+    <unit id="ReasonBuiltin">
+      <segment>
+        <source>Built-in</source>
+      </segment>
+    </unit>
+    <unit id="ReasonCancelled">
+      <segment>
+        <source>Cancelled</source>
+      </segment>
+    </unit>
+    <unit id="ReasonDoNotDisturb">
+      <segment>
+        <source>Do not disturb</source>
+      </segment>
+    </unit>
+    <unit id="ReasonFailSafe">
+      <segment>
+        <source>Fail-safe</source>
+      </segment>
+    </unit>
+    <unit id="ReasonMode">
+      <segment>
+        <source>Mode</source>
+      </segment>
+    </unit>
+    <unit id="ReasonNoUserSession">
+      <segment>
+        <source>No user session</source>
+      </segment>
+    </unit>
+    <unit id="ReasonPrompt">
+      <segment>
+        <source>User decision</source>
+      </segment>
+    </unit>
+    <unit id="ReasonPromptTimeout">
+      <segment>
+        <source>Prompt timed out</source>
+      </segment>
+    </unit>
+    <unit id="ReasonRule">
+      <segment>
+        <source>Rule</source>
+      </segment>
+    </unit>
+    <unit id="Refresh">
+      <segment>
+        <source>Refresh</source>
+      </segment>
+    </unit>
+    <unit id="Save">
+      <segment>
+        <source>Save</source>
+      </segment>
+    </unit>
+    <unit id="SourceBuiltin">
+      <segment>
+        <source>Built-in</source>
+      </segment>
+    </unit>
+    <unit id="SourceImport">
+      <segment>
+        <source>Import</source>
+      </segment>
+    </unit>
+    <unit id="SourcePrompt">
+      <segment>
+        <source>Prompt</source>
+      </segment>
+    </unit>
+    <unit id="SourceSubscription">
+      <segment>
+        <source>Subscription</source>
+      </segment>
+    </unit>
+    <unit id="SourceUser">
+      <segment>
+        <source>Manual</source>
+      </segment>
+    </unit>
+    <unit id="UnknownApp">
+      <segment>
+        <source>Unknown app</source>
+      </segment>
+    </unit>
+    <unit id="ZoneInternet">
+      <segment>
+        <source>Internet</source>
+      </segment>
+    </unit>
+    <unit id="ZoneLocalNetwork">
+      <segment>
+        <source>Local network</source>
+      </segment>
+    </unit>
+    <unit id="ZoneLoopback">
+      <segment>
+        <source>This computer</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

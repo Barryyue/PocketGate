@@ -1,0 +1,63 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:atom="https://atomui.net">
+  <!-- 應用級樣式：只做排版層面的補充，顏色和尺寸一律引用 AtomUI 設計令牌，深淺色自動適配。 -->
+
+  <Style Selector="TextBlock.page-title">
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeHeading4}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorText}" />
+  </Style>
+
+  <Style Selector="TextBlock.section-title">
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeLG}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorText}" />
+  </Style>
+
+  <Style Selector="TextBlock.secondary">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextSecondary}" />
+  </Style>
+
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeSM}" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextTertiary}" />
+  </Style>
+
+  <Style Selector="TextBlock.metric">
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeHeading3}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorText}" />
+  </Style>
+
+  <Style Selector="TextBlock.mono">
+    <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Menlo, monospace" />
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeSM}" />
+  </Style>
+
+  <!-- 主窗口佈局 -->
+  <Style Selector="Border.sider">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgContainer}" />
+    <Setter Property="BorderBrush" Value="{atom:SharedTokenResource ColorBorderSecondary}" />
+    <Setter Property="BorderThickness" Value="0,0,1,0" />
+  </Style>
+
+  <Style Selector="Border.content">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgLayout}" />
+  </Style>
+
+  <Style Selector="Border.statusbar">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgContainer}" />
+    <Setter Property="BorderBrush" Value="{atom:SharedTokenResource ColorBorderSecondary}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="16,6" />
+  </Style>
+
+  <Style Selector="Border.toast">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgElevated}" />
+    <Setter Property="BorderBrush" Value="{atom:SharedTokenResource ColorBorderSecondary}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{atom:SharedTokenResource BorderRadiusLG}" />
+    <Setter Property="Padding" Value="16,12" />
+  </Style>
+</Styles>

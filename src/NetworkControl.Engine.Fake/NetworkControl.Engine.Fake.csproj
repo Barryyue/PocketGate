@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 模擬引擎：用於開發和測試。模擬一組虛擬應用發起連接，並提供對應的平台服務假實現。 -->
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
+  </ItemGroup>
+</Project>

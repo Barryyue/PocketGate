@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- 桌面 UI：AtomUI（Ant Design）組件、托盤、詢問彈窗、規則與日誌管理。
+       以普通用戶權限運行，通過本地 IPC 與核心服務通信，不引用核心庫。 -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>NetworkControl</AssemblyName>
+    <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- 界面文本使用 AtomUI 的 XLIFF Catalog（Localization/*），不使用 resx 衛星程序集 -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkControl.Ipc\NetworkControl.Ipc.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="AtomUI.Desktop.Controls" />
+    <PackageReference Include="AtomUI.Desktop.Controls.DataGrid" />
+    <!-- 最終應用宿主必須直接以 Analyzer 方式引用生成器：生成語言 Catalog、XAML 擴展和啟動掛接 -->
+    <PackageReference Include="AtomUI.Generator" PrivateAssets="all" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport">
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

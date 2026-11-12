@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.OverviewLangResourceKind">
+    <unit id="ActiveRules">
+      <segment>
+        <source>Active rules</source>
+        <target state="translated">生效規則</target>
+      </segment>
+    </unit>
+    <unit id="BlockAll">
+      <segment>
+        <source>Block all traffic</source>
+        <target state="translated">一鍵斷網</target>
+      </segment>
+    </unit>
+    <unit id="BlockAllActive">
+      <segment>
+        <source>All traffic except essential system traffic is blocked.</source>
+        <target state="translated">目前已封鎖系統必要流量以外的所有連線。</target>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturb">
+      <segment>
+        <source>Do not disturb for 1 hour</source>
+        <target state="translated">勿擾 1 小時</target>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturbOff">
+      <segment>
+        <source>Turn off do not disturb</source>
+        <target state="translated">關閉勿擾</target>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturbUntil">
+      <segment>
+        <source>Do not disturb until {0:t}; unknown connections use the default action.</source>
+        <target state="translated">勿擾至 {0:t}，未知連線依預設動作處理。</target>
+      </segment>
+    </unit>
+    <unit id="Engine">
+      <segment>
+        <source>Engine</source>
+        <target state="translated">引擎</target>
+      </segment>
+    </unit>
+    <unit id="EngineBlocksFirst">
+      <segment>
+        <source>Blocks first; the app retries after you allow it</source>
+        <target state="translated">先封鎖再詢問，允許後應用程式重試即可連線</target>
+      </segment>
+    </unit>
+    <unit id="EngineHoldsConnections">
+      <segment>
+        <source>Holds connections while asking</source>
+        <target state="translated">詢問時暫停連線</target>
+      </segment>
+    </unit>
+    <unit id="Mode">
+      <segment>
+        <source>Current mode</source>
+        <target state="translated">目前模式</target>
+      </segment>
+    </unit>
+    <unit id="PendingPrompts">
+      <segment>
+        <source>Pending connections</source>
+        <target state="translated">待決連線</target>
+      </segment>
+    </unit>
+    <unit id="Restore">
+      <segment>
+        <source>Restore network</source>
+        <target state="translated">恢復網路</target>
+      </segment>
+    </unit>
+    <unit id="SimApp">
+      <segment>
+        <source>App</source>
+        <target state="translated">應用程式</target>
+      </segment>
+    </unit>
+    <unit id="SimConnect">
+      <segment>
+        <source>Connect</source>
+        <target state="translated">發起連線</target>
+      </segment>
+    </unit>
+    <unit id="SimDescription">
+      <segment>
+        <source>The fake engine does not touch real traffic. Make virtual apps connect here to exercise prompts, rules and logs.</source>
+        <target state="translated">模擬引擎不攔截真實流量。在此讓虛擬應用程式發起連線，以驗證詢問視窗、規則與記錄。</target>
+      </segment>
+    </unit>
+    <unit id="SimExitApp">
+      <segment>
+        <source>Exit process</source>
+        <target state="translated">結束處理程序</target>
+      </segment>
+    </unit>
+    <unit id="SimHost">
+      <segment>
+        <source>Host</source>
+        <target state="translated">網域</target>
+      </segment>
+    </unit>
+    <unit id="SimPort">
+      <segment>
+        <source>Port</source>
+        <target state="translated">連接埠</target>
+      </segment>
+    </unit>
+    <unit id="SimProtocol">
+      <segment>
+        <source>Protocol</source>
+        <target state="translated">協定</target>
+      </segment>
+    </unit>
+    <unit id="SimResults">
+      <segment>
+        <source>Recent results</source>
+        <target state="translated">最近結果</target>
+      </segment>
+    </unit>
+    <unit id="SimTitle">
+      <segment>
+        <source>Simulate a connection</source>
+        <target state="translated">模擬連線</target>
+      </segment>
+    </unit>
+    <unit id="SwitchMode">
+      <segment>
+        <source>Filtering mode</source>
+        <target state="translated">過濾模式</target>
+      </segment>
+    </unit>
+    <unit id="EngineFake">
+      <segment>
+        <source>Simulated (no real filtering)</source>
+        <target state="translated">模擬引擎（不攔截真實流量）</target>
+      </segment>
+    </unit>
+    <unit id="EngineWfp">
+      <segment>
+        <source>Windows WFP (real filtering, requires administrator)</source>
+        <target state="translated">Windows WFP（真實攔截，需要系統管理員權限）</target>
+      </segment>
+    </unit>
+    <unit id="EngineSwitchHint">
+      <segment>
+        <source>Development build: switching restarts the local core service with the selected engine. Real filtering asks for administrator permission.</source>
+        <target state="translated">開發版本：切換時會以所選引擎重新啟動本機核心服務，真實攔截會要求系統管理員授權。</target>
+      </segment>
+    </unit>
+    <unit id="EngineInstalledHint">
+      <segment>
+        <source>Installed service: the engine is configured in appsettings.json next to the service (Engine = Auto uses WFP on Windows).</source>
+        <target state="translated">安裝版：引擎在服務目錄的 appsettings.json 中設定（Engine = Auto 時在 Windows 上使用 WFP）。</target>
+      </segment>
+    </unit>
+    <unit id="EngineSwitching">
+      <segment>
+        <source>Restarting the core service…</source>
+        <target state="translated">正在重新啟動核心服務…</target>
+      </segment>
+    </unit>
+    <unit id="EngineSwitchFailed">
+      <segment>
+        <source>Could not switch the engine: {0}</source>
+        <target state="translated">切換引擎失敗：{0}</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+import "google/protobuf/empty.proto";
+import "common.proto";
+
+// 開發用模擬器：僅在服務使用模擬引擎（Engine = Fake）時提供。
+service Simulator {
+  rpc ListApps (google.protobuf.Empty) returns (SimulatorApps);
+  // 模擬一次連接，阻塞到判決完成（可能需要等待用戶回應彈窗）。
+  rpc Simulate (SimulateRequest) returns (SimulateResponse);
+  rpc ExitApp (ExitAppRequest) returns (ExitAppResponse);
+}
+
+message SimulatorApp {
+  string key = 1;
+  string display_name = 2;
+  string path = 3;
+  optional string signer_id = 4;
+}
+
+message SimulatorApps {
+  repeated SimulatorApp apps = 1;
+}
+
+message SimulateRequest {
+  string app_key = 1;
+  optional string hostname = 2;
+  optional string address = 3;
+  uint32 port = 4;
+  Protocol protocol = 5;
+  Direction direction = 6;
+}
+
+message SimulateResponse {
+  uint64 flow_id = 1;
+  VerdictAction action = 2;
+  IpEndpoint remote = 3;
+  int32 pid = 4;
+}
+
+message ExitAppRequest {
+  string app_key = 1;
+}
+
+message ExitAppResponse {
+  bool exited = 1;
+}

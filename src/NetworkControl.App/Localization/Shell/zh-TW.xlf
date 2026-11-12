@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.ShellLangResourceKind">
+    <unit id="AppTitle">
+      <segment>
+        <source>NetworkControl</source>
+        <target state="translated">NetworkControl</target>
+      </segment>
+    </unit>
+    <unit id="NavLog">
+      <segment>
+        <source>Connection log</source>
+        <target state="translated">連線記錄</target>
+      </segment>
+    </unit>
+    <unit id="NavOverview">
+      <segment>
+        <source>Overview</source>
+        <target state="translated">總覽</target>
+      </segment>
+    </unit>
+    <unit id="NavRules">
+      <segment>
+        <source>Rules</source>
+        <target state="translated">規則</target>
+      </segment>
+    </unit>
+    <unit id="NavSettings">
+      <segment>
+        <source>Settings</source>
+        <target state="translated">設定</target>
+      </segment>
+    </unit>
+    <unit id="StatusConnected">
+      <segment>
+        <source>Connected</source>
+        <target state="translated">已連線</target>
+      </segment>
+    </unit>
+    <unit id="StatusConnecting">
+      <segment>
+        <source>Connecting to the core service…</source>
+        <target state="translated">正在連線至核心服務…</target>
+      </segment>
+    </unit>
+    <unit id="StatusDisconnected">
+      <segment>
+        <source>Core service unavailable</source>
+        <target state="translated">核心服務無法使用</target>
+      </segment>
+    </unit>
+    <unit id="StatusEngine">
+      <segment>
+        <source>Engine: {0}</source>
+        <target state="translated">引擎：{0}</target>
+      </segment>
+    </unit>
+    <unit id="Quit">
+      <segment>
+        <source>Quit</source>
+        <target state="translated">結束</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

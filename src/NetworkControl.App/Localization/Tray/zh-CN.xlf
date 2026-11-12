@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-CN" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.TrayLangResourceKind">
+    <unit id="Exit">
+      <segment>
+        <source>Quit interface (filtering keeps running)</source>
+        <target state="translated">退出界面（拦截继续生效）</target>
+      </segment>
+    </unit>
+    <unit id="Mode">
+      <segment>
+        <source>Mode</source>
+        <target state="translated">模式</target>
+      </segment>
+    </unit>
+    <unit id="Open">
+      <segment>
+        <source>Open NetworkControl</source>
+        <target state="translated">打开主界面</target>
+      </segment>
+    </unit>
+    <unit id="TooltipDisconnected">
+      <segment>
+        <source>NetworkControl · service unavailable</source>
+        <target state="translated">NetworkControl · 服务不可用</target>
+      </segment>
+    </unit>
+    <unit id="TooltipMode">
+      <segment>
+        <source>NetworkControl · {0}</source>
+        <target state="translated">NetworkControl · {0}</target>
+      </segment>
+    </unit>
+    <unit id="ShowRules">
+      <segment>
+        <source>Rules</source>
+        <target state="translated">规则</target>
+      </segment>
+    </unit>
+    <unit id="ShowLog">
+      <segment>
+        <source>Connection log</source>
+        <target state="translated">连接日志</target>
+      </segment>
+    </unit>
+    <unit id="ShowSettings">
+      <segment>
+        <source>Settings</source>
+        <target state="translated">设置</target>
+      </segment>
+    </unit>
+    <unit id="BlockAll">
+      <segment>
+        <source>Block all traffic</source>
+        <target state="translated">一键断网</target>
+      </segment>
+    </unit>
+    <unit id="Restore">
+      <segment>
+        <source>Restore network</source>
+        <target state="translated">恢复网络</target>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturb">
+      <segment>
+        <source>Do not disturb for 1 hour</source>
+        <target state="translated">勿扰 1 小时</target>
+      </segment>
+    </unit>
+    <unit id="DoNotDisturbOff">
+      <segment>
+        <source>Turn off do not disturb</source>
+        <target state="translated">关闭勿扰</target>
+      </segment>
+    </unit>
+    <unit id="ExitAll">
+      <segment>
+        <source>Quit and stop filtering</source>
+        <target state="translated">完全退出（停止拦截）</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

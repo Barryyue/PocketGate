@@ -1,0 +1,86 @@
+// 公共類型。版本策略：包名帶主版本號（v1）；只允許新增字段，不允許修改或複用字段編號。
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+enum VerdictAction {
+  VERDICT_ACTION_ALLOW = 0;
+  VERDICT_ACTION_DENY = 1;
+}
+
+enum Direction {
+  DIRECTION_OUTBOUND = 0;
+  DIRECTION_INBOUND = 1;
+}
+
+enum Protocol {
+  PROTOCOL_UNSPECIFIED = 0;
+  PROTOCOL_ICMP = 1;
+  PROTOCOL_TCP = 6;
+  PROTOCOL_UDP = 17;
+  PROTOCOL_ICMPV6 = 58;
+  PROTOCOL_OTHER = 255;
+}
+
+enum FilterMode {
+  FILTER_MODE_ASK = 0;
+  FILTER_MODE_WHITELIST = 1;
+  FILTER_MODE_BLACKLIST = 2;
+  FILTER_MODE_BLOCK_ALL = 3;
+  FILTER_MODE_DISABLED = 4;
+}
+
+enum Lifetime {
+  LIFETIME_ONCE = 0;
+  LIFETIME_UNTIL_PROCESS_EXIT = 1;
+  LIFETIME_TIMED = 2;
+  LIFETIME_UNTIL_RESTART = 3;
+  LIFETIME_PERMANENT = 4;
+}
+
+enum VerdictReason {
+  VERDICT_REASON_RULE = 0;
+  VERDICT_REASON_MODE = 1;
+  VERDICT_REASON_PROMPT = 2;
+  VERDICT_REASON_PROMPT_TIMEOUT = 3;
+  VERDICT_REASON_BUILTIN = 4;
+  VERDICT_REASON_NO_USER_SESSION = 5;
+  VERDICT_REASON_DO_NOT_DISTURB = 6;
+  VERDICT_REASON_FAIL_SAFE = 7;
+  VERDICT_REASON_CANCELLED = 8;
+}
+
+enum NetworkZone {
+  NETWORK_ZONE_LOOPBACK = 0;
+  NETWORK_ZONE_LOCAL_NETWORK = 1;
+  NETWORK_ZONE_INTERNET = 2;
+}
+
+message IpEndpoint {
+  string address = 1;
+  uint32 port = 2;
+}
+
+message PortRange {
+  uint32 from = 1;
+  uint32 to = 2;
+}
+
+message AppInfo {
+  int64 app_id = 1;
+  string path = 2;
+  string display_name = 3;
+  optional string signer_id = 4;
+  optional string sha256 = 5;
+  optional string service_name = 6;
+  optional string package_id = 7;
+  bool is_platform = 8;
+}
+
+message Verdict {
+  VerdictAction action = 1;
+  VerdictReason reason = 2;
+  optional string rule_id = 3;
+}

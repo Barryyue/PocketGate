@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.SettingsLangResourceKind">
+    <unit id="AllowIcmp">
+      <segment>
+        <source>Allow ICMP (ping) by default</source>
+      </segment>
+    </unit>
+    <unit id="DefaultAction">
+      <segment>
+        <source>Default action on timeout or do not disturb</source>
+      </segment>
+    </unit>
+    <unit id="FailClosed">
+      <segment>
+        <source>Block traffic</source>
+      </segment>
+    </unit>
+    <unit id="FailOpen">
+      <segment>
+        <source>Allow traffic (recommended)</source>
+      </segment>
+    </unit>
+    <unit id="FailPolicy">
+      <segment>
+        <source>When the core service fails</source>
+      </segment>
+    </unit>
+    <unit id="Language">
+      <segment>
+        <source>Language</source>
+      </segment>
+    </unit>
+    <unit id="LanguageFollowSystem">
+      <segment>
+        <source>Follow system</source>
+      </segment>
+    </unit>
+    <unit id="LaunchAtLogin">
+      <segment>
+        <source>Start the interface when I sign in</source>
+      </segment>
+    </unit>
+    <unit id="LogRetention">
+      <segment>
+        <source>Keep the connection log for (days)</source>
+      </segment>
+    </unit>
+    <unit id="PromptTimeout">
+      <segment>
+        <source>Prompt timeout (seconds)</source>
+      </segment>
+    </unit>
+    <unit id="Saved">
+      <segment>
+        <source>Settings saved</source>
+      </segment>
+    </unit>
+    <unit id="SectionData">
+      <segment>
+        <source>Data</source>
+      </segment>
+    </unit>
+    <unit id="SectionInterface">
+      <segment>
+        <source>Interface</source>
+      </segment>
+    </unit>
+    <unit id="SectionPrompt">
+      <segment>
+        <source>Connection prompts</source>
+      </segment>
+    </unit>
+    <unit id="SectionSafety">
+      <segment>
+        <source>Safety</source>
+      </segment>
+    </unit>
+    <unit id="ServiceSettingsHint">
+      <segment>
+        <source>These settings are stored in the core service and apply to all users of this computer.</source>
+      </segment>
+    </unit>
+    <unit id="Theme">
+      <segment>
+        <source>Theme</source>
+      </segment>
+    </unit>
+    <unit id="ThemeDark">
+      <segment>
+        <source>Dark</source>
+      </segment>
+    </unit>
+    <unit id="ThemeFollowSystem">
+      <segment>
+        <source>Follow system</source>
+      </segment>
+    </unit>
+    <unit id="ThemeLight">
+      <segment>
+        <source>Light</source>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>Settings</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             x:Class="NetworkControl.App.Views.RulesView"
+             x:DataType="vm:RulesViewModel"
+             x:Name="Root">
+
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Spacing="16" Margin="0,0,0,16">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+          <atom:Button Icon="{antdicons:AntDesignIconProvider Kind=ReloadOutlined}"
+                       Command="{Binding RefreshCommand}" Content="{loc:CommonLangResource Refresh}" />
+          <atom:Button ButtonType="Primary" Icon="{antdicons:AntDesignIconProvider Kind=PlusOutlined}"
+                       Command="{Binding AddCommand}" Content="{loc:RulesLangResource Add}" />
+        </StackPanel>
+        <TextBlock Classes="page-title" Text="{loc:RulesLangResource Title}" VerticalAlignment="Center" />
+      </DockPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <atom:SearchEdit Width="320" Text="{Binding Keyword}" PlaceholderText="{loc:RulesLangResource SearchPlaceholder}" />
+        <atom:Segmented SelectedIndex="{Binding ActionFilter}">
+          <atom:SegmentedItem Content="{loc:CommonLangResource All}" />
+          <atom:SegmentedItem Content="{loc:CommonLangResource Allow}" />
+          <atom:SegmentedItem Content="{loc:CommonLangResource Deny}" />
+        </atom:Segmented>
+      </StackPanel>
+
+      <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
+                  IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
+    </StackPanel>
+
+    <Panel>
+      <atom:Empty IsVisible="{Binding IsEmpty}" Description="{loc:RulesLangResource Empty}"
+                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <atom:DataGrid ItemsSource="{Binding Rules}" IsVisible="{Binding !IsEmpty}" IsReadOnly="True"
+                     CanUserResizeColumns="True" CanUserSortColumns="True">
+        <atom:DataGrid.Columns>
+          <atom:DataGridTemplateColumn Header="{loc:RulesLangResource ColumnEnabled}" Width="72">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:RuleItemViewModel">
+                <atom:ToggleSwitch IsChecked="{Binding IsEnabled}" HorizontalAlignment="Center" />
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+          <atom:DataGridTemplateColumn Header="{loc:RulesLangResource ColumnApp}" Width="2*">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:RuleItemViewModel">
+                <TextBlock Text="{Binding AppName}" ToolTip.Tip="{Binding AppPath}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+          <atom:DataGridTemplateColumn Header="{loc:RulesLangResource ColumnAction}" Width="96">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:RuleItemViewModel">
+                <atom:Tag Text="{Binding ActionText}" TagColor="{Binding ActionColor}" HorizontalAlignment="Left" VerticalAlignment="Center" />
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+          <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnConditions}" Binding="{Binding ConditionsText}" Width="3*" />
+          <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnLifetime}" Binding="{Binding LifetimeText}" Width="150" />
+          <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnSource}" Binding="{Binding SourceText}" Width="96" />
+          <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnHits}" Binding="{Binding HitCount}" Width="96" />
+          <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnUpdated}" Binding="{Binding UpdatedText}" Width="150" />
+          <atom:DataGridTemplateColumn Header="{loc:RulesLangResource ColumnOperations}" Width="140">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:RuleItemViewModel">
+                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                  <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:CommonLangResource Edit}"
+                               Command="{Binding #Root.((vm:RulesViewModel)DataContext).EditCommand}" CommandParameter="{Binding}" />
+                  <atom:PopupConfirm IsVisible="{Binding CanDelete}" Title="{loc:RulesLangResource DeleteConfirmTitle}"
+                                     ConfirmContent="{loc:RulesLangResource DeleteConfirmContent}"
+                                     OkButtonType="Primary" Confirmed="OnDeleteConfirmed">
+                    <atom:Button ButtonType="Link" SizeType="Small" IsDanger="True" Content="{loc:CommonLangResource Delete}" />
+                  </atom:PopupConfirm>
+                </StackPanel>
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+        </atom:DataGrid.Columns>
+      </atom:DataGrid>
+    </Panel>
+  </DockPanel>
+</UserControl>

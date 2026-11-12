@@ -1,0 +1,18 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infra="using:NetworkControl.App.Infrastructure"
+             x:Class="NetworkControl.App.App">
+  <!-- 主題（Ant Design 令牌、淺色 / 深色）由 AtomUI 在 Initialize 之前提交。
+       FluentTheme 只為 Avalonia 基礎控件提供主題：托盤右鍵菜單（MenuFlyoutPresenter / MenuItem）和普通 Window；
+       AtomUI 沒有為這些基礎類型提供主題，缺少它時托盤菜單會彈出一個空窗口。按 AtomUI「與其他框架主題集成」指南，
+       AtomUI 的框架資源優先於 FluentTheme，明暗由 AtomUI 統一同步到 RequestedThemeVariant。 -->
+
+  <Application.DataTemplates>
+    <infra:ViewLocator />
+  </Application.DataTemplates>
+
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://NetworkControl/Styles/AppStyles.axaml" />
+  </Application.Styles>
+</Application>

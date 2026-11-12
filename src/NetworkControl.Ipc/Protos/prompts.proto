@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+// 詢問彈窗。超時由服務計時；UI 斷開不影響待決連接，只會按默認動作處理。
+service Prompts {
+  // 訂閱後先收到所有已存在的彈窗（ADDED），之後是增量事件。
+  rpc Subscribe (google.protobuf.Empty) returns (stream PromptEvent);
+  rpc Answer (AnswerRequest) returns (AnswerResponse);
+  // 暫停倒計時（鼠標懸停、展開詳情時調用）。
+  rpc PauseTimer (PromptRef) returns (PauseTimerResponse);
+}
+
+enum PromptEventKind {
+  PROMPT_EVENT_KIND_ADDED = 0;
+  PROMPT_EVENT_KIND_UPDATED = 1;
+  PROMPT_EVENT_KIND_REMOVED = 2;
+}
+
+enum Scope {
+  SCOPE_ANY_CONNECTION = 0;
+  SCOPE_DOMAIN = 1;
+  SCOPE_ADDRESS = 2;
+  SCOPE_ADDRESS_AND_PORT = 3;
+  SCOPE_PORT = 4;
+}
+
+message PromptFlow {
+  uint64 flow_id = 1;
+  Direction direction = 2;
+  Protocol protocol = 3;
+  IpEndpoint local = 4;
+  IpEndpoint remote = 5;
+  repeated string domains = 6;
+  google.protobuf.Timestamp timestamp = 7;
+  NetworkZone remote_zone = 8;
+}
+
+message Prompt {
+  string id = 1;
+  // 無法識別應用時為空。
+  AppInfo app = 2;
+  string executable_path = 3;
+  optional int32 pid = 4;
+  repeated PromptFlow flows = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp deadline = 7;
+  bool is_tamper_alert = 8;
+  bool is_connection_held = 9;
+}
+
+message PromptEvent {
+  PromptEventKind kind = 1;
+  Prompt prompt = 2;
+}
+
+message AnswerRequest {
+  string prompt_id = 1;
+  VerdictAction action = 2;
+  Scope scope = 3;
+  Lifetime lifetime = 4;
+  google.protobuf.Duration duration = 5;
+  optional string selected_domain = 6;
+  bool apply_to_all_flows = 7;
+}
+
+message AnswerResponse {
+  bool found = 1;
+  optional string created_rule_id = 2;
+  int32 resolved_flows = 3;
+  int32 remaining_flows = 4;
+}
+
+message PromptRef {
+  string prompt_id = 1;
+}
+
+message PauseTimerResponse {
+  bool paused = 1;
+}

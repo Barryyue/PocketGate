@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.ServiceStatusLangResourceKind">
+    <unit id="Description">
+      <segment>
+        <source>NetworkControl filters traffic in a background service; this window only displays and controls it. The window reconnects automatically as soon as the service is running.</source>
+      </segment>
+    </unit>
+    <unit id="HintDev">
+      <segment>
+        <source>Development build: the button above starts the locally built service, or run &quot;dotnet run --project src/NetworkControl.Service&quot;.</source>
+      </segment>
+    </unit>
+    <unit id="HintInstalled">
+      <segment>
+        <source>The system service &quot;NetworkControl&quot; normally starts with the computer. Starting it manually requires administrator rights.</source>
+      </segment>
+    </unit>
+    <unit id="HintNotInstalled">
+      <segment>
+        <source>The service is not installed. Run &quot;scripts/install-service.ps1&quot; as administrator.</source>
+      </segment>
+    </unit>
+    <unit id="ReasonAccessDenied">
+      <segment>
+        <source>Access to {0} was denied.</source>
+      </segment>
+    </unit>
+    <unit id="ReasonNotRunning">
+      <segment>
+        <source>The service is not running: endpoint {0} does not exist.</source>
+      </segment>
+    </unit>
+    <unit id="ReasonOther">
+      <segment>
+        <source>Connection failed: {0}</source>
+      </segment>
+    </unit>
+    <unit id="ReasonProtocolMismatch">
+      <segment>
+        <source>The service uses IPC protocol v{0}, but this window expects v{1}. Update both to the same version.</source>
+      </segment>
+    </unit>
+    <unit id="Retry">
+      <segment>
+        <source>Retry now</source>
+      </segment>
+    </unit>
+    <unit id="StartDevService">
+      <segment>
+        <source>Start development service</source>
+      </segment>
+    </unit>
+    <unit id="StartFailed">
+      <segment>
+        <source>Could not start the service: {0}</source>
+      </segment>
+    </unit>
+    <unit id="StartService">
+      <segment>
+        <source>Start service</source>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>The core service is not available</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

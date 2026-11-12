@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             x:Class="NetworkControl.App.Views.ServiceUnavailableView"
+             x:DataType="vm:ServiceUnavailableViewModel">
+
+  <!-- 服務不可用的診斷頁：具體原因 + 可以直接執行的操作 -->
+  <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="620" Spacing="16">
+    <atom:Result Status="Warning" Header="{loc:ServiceStatusLangResource Title}"
+                 SubHeader="{loc:ServiceStatusLangResource Description}" />
+
+    <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding Reason}" />
+
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+      <atom:Button ButtonType="Primary" IsVisible="{Binding CanStartService}"
+                   Command="{Binding StartCommand}" IsLoading="{Binding IsStarting}"
+                   Content="{Binding StartButtonText}" />
+      <atom:Button Command="{Binding RetryCommand}" Content="{loc:ServiceStatusLangResource Retry}" />
+    </StackPanel>
+
+    <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding StartError}"
+                IsVisible="{Binding StartError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+    <TextBlock Classes="secondary" TextWrapping="Wrap" TextAlignment="Center" Text="{Binding Hint}" />
+  </StackPanel>
+</UserControl>

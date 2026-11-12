@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.NotificationsLangResourceKind">
+    <unit id="AllowApp">
+      <segment>
+        <source>Allow this app</source>
+      </segment>
+    </unit>
+    <unit id="BlockedBody">
+      <segment>
+        <source>{0} tried to connect to {1}.</source>
+      </segment>
+    </unit>
+    <unit id="BlockedTitle">
+      <segment>
+        <source>Connection blocked</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

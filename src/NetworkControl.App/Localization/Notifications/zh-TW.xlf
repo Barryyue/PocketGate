@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.NotificationsLangResourceKind">
+    <unit id="AllowApp">
+      <segment>
+        <source>Allow this app</source>
+        <target state="translated">允許此應用程式</target>
+      </segment>
+    </unit>
+    <unit id="BlockedBody">
+      <segment>
+        <source>{0} tried to connect to {1}.</source>
+        <target state="translated">{0} 嘗試連線至 {1}。</target>
+      </segment>
+    </unit>
+    <unit id="BlockedTitle">
+      <segment>
+        <source>Connection blocked</source>
+        <target state="translated">已封鎖連線</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-CN" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.SettingsLangResourceKind">
+    <unit id="AllowIcmp">
+      <segment>
+        <source>Allow ICMP (ping) by default</source>
+        <target state="translated">ICMP（ping）默认放行</target>
+      </segment>
+    </unit>
+    <unit id="DefaultAction">
+      <segment>
+        <source>Default action on timeout or do not disturb</source>
+        <target state="translated">超时或勿扰时的默认动作</target>
+      </segment>
+    </unit>
+    <unit id="FailClosed">
+      <segment>
+        <source>Block traffic</source>
+        <target state="translated">阻断</target>
+      </segment>
+    </unit>
+    <unit id="FailOpen">
+      <segment>
+        <source>Allow traffic (recommended)</source>
+        <target state="translated">放行（推荐）</target>
+      </segment>
+    </unit>
+    <unit id="FailPolicy">
+      <segment>
+        <source>When the core service fails</source>
+        <target state="translated">核心服务异常时</target>
+      </segment>
+    </unit>
+    <unit id="Language">
+      <segment>
+        <source>Language</source>
+        <target state="translated">语言</target>
+      </segment>
+    </unit>
+    <unit id="LanguageFollowSystem">
+      <segment>
+        <source>Follow system</source>
+        <target state="translated">跟随系统</target>
+      </segment>
+    </unit>
+    <unit id="LaunchAtLogin">
+      <segment>
+        <source>Start the interface when I sign in</source>
+        <target state="translated">登录时启动界面</target>
+      </segment>
+    </unit>
+    <unit id="LogRetention">
+      <segment>
+        <source>Keep the connection log for (days)</source>
+        <target state="translated">连接日志保留天数</target>
+      </segment>
+    </unit>
+    <unit id="PromptTimeout">
+      <segment>
+        <source>Prompt timeout (seconds)</source>
+        <target state="translated">弹窗超时（秒）</target>
+      </segment>
+    </unit>
+    <unit id="Saved">
+      <segment>
+        <source>Settings saved</source>
+        <target state="translated">设置已保存</target>
+      </segment>
+    </unit>
+    <unit id="SectionData">
+      <segment>
+        <source>Data</source>
+        <target state="translated">数据</target>
+      </segment>
+    </unit>
+    <unit id="SectionInterface">
+      <segment>
+        <source>Interface</source>
+        <target state="translated">界面</target>
+      </segment>
+    </unit>
+    <unit id="SectionPrompt">
+      <segment>
+        <source>Connection prompts</source>
+        <target state="translated">连接询问</target>
+      </segment>
+    </unit>
+    <unit id="SectionSafety">
+      <segment>
+        <source>Safety</source>
+        <target state="translated">安全</target>
+      </segment>
+    </unit>
+    <unit id="ServiceSettingsHint">
+      <segment>
+        <source>These settings are stored in the core service and apply to all users of this computer.</source>
+        <target state="translated">这些设置保存在核心服务中，对本机所有用户生效。</target>
+      </segment>
+    </unit>
+    <unit id="Theme">
+      <segment>
+        <source>Theme</source>
+        <target state="translated">主题</target>
+      </segment>
+    </unit>
+    <unit id="ThemeDark">
+      <segment>
+        <source>Dark</source>
+        <target state="translated">深色</target>
+      </segment>
+    </unit>
+    <unit id="ThemeFollowSystem">
+      <segment>
+        <source>Follow system</source>
+        <target state="translated">跟随系统</target>
+      </segment>
+    </unit>
+    <unit id="ThemeLight">
+      <segment>
+        <source>Light</source>
+        <target state="translated">浅色</target>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>Settings</source>
+        <target state="translated">设置</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

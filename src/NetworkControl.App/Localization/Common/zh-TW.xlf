@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.CommonLangResourceKind">
+    <unit id="All">
+      <segment>
+        <source>All</source>
+        <target state="translated">全部</target>
+      </segment>
+    </unit>
+    <unit id="Allow">
+      <segment>
+        <source>Allow</source>
+        <target state="translated">允許</target>
+      </segment>
+    </unit>
+    <unit id="AnyApp">
+      <segment>
+        <source>Any app</source>
+        <target state="translated">任何應用程式</target>
+      </segment>
+    </unit>
+    <unit id="AnyConnection">
+      <segment>
+        <source>Any connection</source>
+        <target state="translated">任何連線</target>
+      </segment>
+    </unit>
+    <unit id="AnyDirection">
+      <segment>
+        <source>Any direction</source>
+        <target state="translated">任何方向</target>
+      </segment>
+    </unit>
+    <unit id="AnyProtocol">
+      <segment>
+        <source>Any protocol</source>
+        <target state="translated">任何協定</target>
+      </segment>
+    </unit>
+    <unit id="Cancel">
+      <segment>
+        <source>Cancel</source>
+        <target state="translated">取消</target>
+      </segment>
+    </unit>
+    <unit id="Delete">
+      <segment>
+        <source>Delete</source>
+        <target state="translated">刪除</target>
+      </segment>
+    </unit>
+    <unit id="Deny">
+      <segment>
+        <source>Deny</source>
+        <target state="translated">拒絕</target>
+      </segment>
+    </unit>
+    <unit id="Edit">
+      <segment>
+        <source>Edit</source>
+        <target state="translated">編輯</target>
+      </segment>
+    </unit>
+    <unit id="ErrorFormat">
+      <segment>
+        <source>Operation failed: {0}</source>
+        <target state="translated">操作失敗：{0}</target>
+      </segment>
+    </unit>
+    <unit id="ExpiresAt">
+      <segment>
+        <source>Until {0:g}</source>
+        <target state="translated">至 {0:g}</target>
+      </segment>
+    </unit>
+    <unit id="Inbound">
+      <segment>
+        <source>Inbound</source>
+        <target state="translated">輸入</target>
+      </segment>
+    </unit>
+    <unit id="Lifetime15Minutes">
+      <segment>
+        <source>15 minutes</source>
+        <target state="translated">15 分鐘</target>
+      </segment>
+    </unit>
+    <unit id="Lifetime1Hour">
+      <segment>
+        <source>1 hour</source>
+        <target state="translated">1 小時</target>
+      </segment>
+    </unit>
+    <unit id="Lifetime5Minutes">
+      <segment>
+        <source>5 minutes</source>
+        <target state="translated">5 分鐘</target>
+      </segment>
+    </unit>
+    <unit id="LifetimeOnce">
+      <segment>
+        <source>Just once</source>
+        <target state="translated">僅限本次</target>
+      </segment>
+    </unit>
+    <unit id="LifetimePermanent">
+      <segment>
+        <source>Forever</source>
+        <target state="translated">永久</target>
+      </segment>
+    </unit>
+    <unit id="LifetimeTimed">
+      <segment>
+        <source>Timed</source>
+        <target state="translated">限時</target>
+      </segment>
+    </unit>
+    <unit id="LifetimeUntilExit">
+      <segment>
+        <source>Until the app quits</source>
+        <target state="translated">直到應用程式結束</target>
+      </segment>
+    </unit>
+    <unit id="LifetimeUntilRestart">
+      <segment>
+        <source>Until restart</source>
+        <target state="translated">直到重新啟動</target>
+      </segment>
+    </unit>
+    <unit id="ModeAsk">
+      <segment>
+        <source>Ask</source>
+        <target state="translated">詢問模式</target>
+      </segment>
+    </unit>
+    <unit id="ModeAskDescription">
+      <segment>
+        <source>Ask when no rule matches</source>
+        <target state="translated">沒有規則符合時跳出詢問</target>
+      </segment>
+    </unit>
+    <unit id="ModeBlacklist">
+      <segment>
+        <source>Blocklist</source>
+        <target state="translated">黑名單模式</target>
+      </segment>
+    </unit>
+    <unit id="ModeBlacklistDescription">
+      <segment>
+        <source>Allow when no rule matches</source>
+        <target state="translated">沒有規則符合時允許</target>
+      </segment>
+    </unit>
+    <unit id="ModeBlockAll">
+      <segment>
+        <source>Block all</source>
+        <target state="translated">全部封鎖</target>
+      </segment>
+    </unit>
+    <unit id="ModeBlockAllDescription">
+      <segment>
+        <source>Only essential system traffic is allowed</source>
+        <target state="translated">僅允許系統必要流量</target>
+      </segment>
+    </unit>
+    <unit id="ModeDisabled">
+      <segment>
+        <source>Filtering off</source>
+        <target state="translated">停用過濾</target>
+      </segment>
+    </unit>
+    <unit id="ModeDisabledDescription">
+      <segment>
+        <source>Everything is allowed and only logged</source>
+        <target state="translated">全部允許，僅記錄</target>
+      </segment>
+    </unit>
+    <unit id="ModeWhitelist">
+      <segment>
+        <source>Allowlist</source>
+        <target state="translated">白名單模式</target>
+      </segment>
+    </unit>
+    <unit id="ModeWhitelistDescription">
+      <segment>
+        <source>Deny when no rule matches</source>
+        <target state="translated">沒有規則符合時拒絕</target>
+      </segment>
+    </unit>
+    <unit id="Ok">
+      <segment>
+        <source>OK</source>
+        <target state="translated">確定</target>
+      </segment>
+    </unit>
+    <unit id="Outbound">
+      <segment>
+        <source>Outbound</source>
+        <target state="translated">輸出</target>
+      </segment>
+    </unit>
+    <unit id="ReasonBuiltin">
+      <segment>
+        <source>Built-in</source>
+        <target state="translated">內建放行</target>
+      </segment>
+    </unit>
+    <unit id="ReasonCancelled">
+      <segment>
+        <source>Cancelled</source>
+        <target state="translated">已取消</target>
+      </segment>
+    </unit>
+    <unit id="ReasonDoNotDisturb">
+      <segment>
+        <source>Do not disturb</source>
+        <target state="translated">勿擾</target>
+      </segment>
+    </unit>
+    <unit id="ReasonFailSafe">
+      <segment>
+        <source>Fail-safe</source>
+        <target state="translated">失效保護</target>
+      </segment>
+    </unit>
+    <unit id="ReasonMode">
+      <segment>
+        <source>Mode</source>
+        <target state="translated">模式</target>
+      </segment>
+    </unit>
+    <unit id="ReasonNoUserSession">
+      <segment>
+        <source>No user session</source>
+        <target state="translated">無使用者工作階段</target>
+      </segment>
+    </unit>
+    <unit id="ReasonPrompt">
+      <segment>
+        <source>User decision</source>
+        <target state="translated">使用者決定</target>
+      </segment>
+    </unit>
+    <unit id="ReasonPromptTimeout">
+      <segment>
+        <source>Prompt timed out</source>
+        <target state="translated">詢問逾時</target>
+      </segment>
+    </unit>
+    <unit id="ReasonRule">
+      <segment>
+        <source>Rule</source>
+        <target state="translated">規則</target>
+      </segment>
+    </unit>
+    <unit id="Refresh">
+      <segment>
+        <source>Refresh</source>
+        <target state="translated">重新整理</target>
+      </segment>
+    </unit>
+    <unit id="Save">
+      <segment>
+        <source>Save</source>
+        <target state="translated">儲存</target>
+      </segment>
+    </unit>
+    <unit id="SourceBuiltin">
+      <segment>
+        <source>Built-in</source>
+        <target state="translated">內建</target>
+      </segment>
+    </unit>
+    <unit id="SourceImport">
+      <segment>
+        <source>Import</source>
+        <target state="translated">匯入</target>
+      </segment>
+    </unit>
+    <unit id="SourcePrompt">
+      <segment>
+        <source>Prompt</source>
+        <target state="translated">詢問視窗</target>
+      </segment>
+    </unit>
+    <unit id="SourceSubscription">
+      <segment>
+        <source>Subscription</source>
+        <target state="translated">訂閱</target>
+      </segment>
+    </unit>
+    <unit id="SourceUser">
+      <segment>
+        <source>Manual</source>
+        <target state="translated">手動</target>
+      </segment>
+    </unit>
+    <unit id="UnknownApp">
+      <segment>
+        <source>Unknown app</source>
+        <target state="translated">未知的應用程式</target>
+      </segment>
+    </unit>
+    <unit id="ZoneInternet">
+      <segment>
+        <source>Internet</source>
+        <target state="translated">網際網路</target>
+      </segment>
+    </unit>
+    <unit id="ZoneLocalNetwork">
+      <segment>
+        <source>Local network</source>
+        <target state="translated">區域網路</target>
+      </segment>
+    </unit>
+    <unit id="ZoneLoopback">
+      <segment>
+        <source>This computer</source>
+        <target state="translated">本機</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

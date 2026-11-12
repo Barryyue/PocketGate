@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.LogLangResourceKind">
+    <unit id="ColumnApp">
+      <segment>
+        <source>App</source>
+      </segment>
+    </unit>
+    <unit id="ColumnCount">
+      <segment>
+        <source>Count</source>
+      </segment>
+    </unit>
+    <unit id="ColumnDirection">
+      <segment>
+        <source>Direction</source>
+      </segment>
+    </unit>
+    <unit id="ColumnHost">
+      <segment>
+        <source>Host</source>
+      </segment>
+    </unit>
+    <unit id="ColumnOperations">
+      <segment>
+        <source>Operations</source>
+      </segment>
+    </unit>
+    <unit id="ColumnProtocol">
+      <segment>
+        <source>Protocol</source>
+      </segment>
+    </unit>
+    <unit id="ColumnReason">
+      <segment>
+        <source>Reason</source>
+      </segment>
+    </unit>
+    <unit id="ColumnRemote">
+      <segment>
+        <source>Remote</source>
+      </segment>
+    </unit>
+    <unit id="ColumnTime">
+      <segment>
+        <source>Time</source>
+      </segment>
+    </unit>
+    <unit id="ColumnVerdict">
+      <segment>
+        <source>Verdict</source>
+      </segment>
+    </unit>
+    <unit id="CreateRule">
+      <segment>
+        <source>Create rule</source>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>No connections recorded yet.</source>
+      </segment>
+    </unit>
+    <unit id="Live">
+      <segment>
+        <source>Live</source>
+      </segment>
+    </unit>
+    <unit id="SearchPlaceholder">
+      <segment>
+        <source>Search app, host or IP</source>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>Connection log</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

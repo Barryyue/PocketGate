@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.PromptLangResourceKind">
+    <unit id="ApplyToAll">
+      <segment>
+        <source>Also apply to this app&apos;s other pending connections</source>
+        <target state="translated">同時套用至此應用程式的其他待決連線</target>
+      </segment>
+    </unit>
+    <unit id="BlockedHint">
+      <segment>
+        <source>This connection was blocked for now. After you allow it, the app connects on its next retry.</source>
+        <target state="translated">此連線已暫時封鎖，允許後應用程式重試即可連線。</target>
+      </segment>
+    </unit>
+    <unit id="Countdown">
+      <segment>
+        <source>{1} automatically in {0}s</source>
+        <target state="translated">{0} 秒後自動{1}</target>
+      </segment>
+    </unit>
+    <unit id="Details">
+      <segment>
+        <source>Details</source>
+        <target state="translated">詳細資料</target>
+      </segment>
+    </unit>
+    <unit id="Lifetime">
+      <segment>
+        <source>Duration</source>
+        <target state="translated">有效期限</target>
+      </segment>
+    </unit>
+    <unit id="Local">
+      <segment>
+        <source>Local endpoint</source>
+        <target state="translated">本機端點</target>
+      </segment>
+    </unit>
+    <unit id="MoreConnections">
+      <segment>
+        <source>{0} more pending connection(s)</source>
+        <target state="translated">另有 {0} 個待決連線</target>
+      </segment>
+    </unit>
+    <unit id="Path">
+      <segment>
+        <source>Path</source>
+        <target state="translated">路徑</target>
+      </segment>
+    </unit>
+    <unit id="Pid">
+      <segment>
+        <source>Process ID</source>
+        <target state="translated">處理程序 ID</target>
+      </segment>
+    </unit>
+    <unit id="Queue">
+      <segment>
+        <source>{0} more app(s) waiting</source>
+        <target state="translated">佇列中還有 {0} 個應用程式</target>
+      </segment>
+    </unit>
+    <unit id="Scope">
+      <segment>
+        <source>Scope</source>
+        <target state="translated">範圍</target>
+      </segment>
+    </unit>
+    <unit id="ScopeAddress">
+      <segment>
+        <source>This IP address</source>
+        <target state="translated">此 IP 位址</target>
+      </segment>
+    </unit>
+    <unit id="ScopeAddressPort">
+      <segment>
+        <source>This IP and port</source>
+        <target state="translated">此 IP 與連接埠</target>
+      </segment>
+    </unit>
+    <unit id="ScopeAny">
+      <segment>
+        <source>Any connection from this app</source>
+        <target state="translated">此應用程式的任何連線</target>
+      </segment>
+    </unit>
+    <unit id="ScopeDomain">
+      <segment>
+        <source>This domain</source>
+        <target state="translated">此網域</target>
+      </segment>
+    </unit>
+    <unit id="ScopePort">
+      <segment>
+        <source>This port</source>
+        <target state="translated">此連接埠</target>
+      </segment>
+    </unit>
+    <unit id="Signed">
+      <segment>
+        <source>Signed by {0}</source>
+        <target state="translated">已簽署：{0}</target>
+      </segment>
+    </unit>
+    <unit id="TamperAlert">
+      <segment>
+        <source>This program has changed (its signature or file hash no longer matches), so its existing rules are suspended.</source>
+        <target state="translated">此程式已變更（簽章或檔案雜湊與規則不符），原有規則已暫停。</target>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>Network connection request</source>
+        <target state="translated">網路連線要求</target>
+      </segment>
+    </unit>
+    <unit id="Unsigned">
+      <segment>
+        <source>Unsigned</source>
+        <target state="translated">未簽署</target>
+      </segment>
+    </unit>
+    <unit id="WantsToAccept">
+      <segment>
+        <source>wants to accept a connection from</source>
+        <target state="translated">想要接受來自以下位址的連線</target>
+      </segment>
+    </unit>
+    <unit id="WantsToConnect">
+      <segment>
+        <source>wants to connect to</source>
+        <target state="translated">想要連線至</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

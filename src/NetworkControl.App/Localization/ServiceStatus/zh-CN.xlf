@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-CN" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.ServiceStatusLangResourceKind">
+    <unit id="Description">
+      <segment>
+        <source>NetworkControl filters traffic in a background service; this window only displays and controls it. The window reconnects automatically as soon as the service is running.</source>
+        <target state="translated">NetworkControl 由后台核心服务执行拦截，界面只负责展示和操作。服务启动后界面会自动重新连接。</target>
+      </segment>
+    </unit>
+    <unit id="HintDev">
+      <segment>
+        <source>Development build: the button above starts the locally built service, or run &quot;dotnet run --project src/NetworkControl.Service&quot;.</source>
+        <target state="translated">开发版本：点击上方按钮启动本地构建的服务，或运行 “dotnet run --project src/NetworkControl.Service”。</target>
+      </segment>
+    </unit>
+    <unit id="HintInstalled">
+      <segment>
+        <source>The system service &quot;NetworkControl&quot; normally starts with the computer. Starting it manually requires administrator rights.</source>
+        <target state="translated">系统服务 “NetworkControl” 通常随系统自动启动，手动启动需要管理员权限。</target>
+      </segment>
+    </unit>
+    <unit id="HintNotInstalled">
+      <segment>
+        <source>The service is not installed. Run &quot;scripts/install-service.ps1&quot; as administrator.</source>
+        <target state="translated">服务尚未安装。请以管理员身份运行 “scripts/install-service.ps1”。</target>
+      </segment>
+    </unit>
+    <unit id="ReasonAccessDenied">
+      <segment>
+        <source>Access to {0} was denied.</source>
+        <target state="translated">无权访问 {0}。</target>
+      </segment>
+    </unit>
+    <unit id="ReasonNotRunning">
+      <segment>
+        <source>The service is not running: endpoint {0} does not exist.</source>
+        <target state="translated">服务未运行：端点 {0} 不存在。</target>
+      </segment>
+    </unit>
+    <unit id="ReasonOther">
+      <segment>
+        <source>Connection failed: {0}</source>
+        <target state="translated">连接失败：{0}</target>
+      </segment>
+    </unit>
+    <unit id="ReasonProtocolMismatch">
+      <segment>
+        <source>The service uses IPC protocol v{0}, but this window expects v{1}. Update both to the same version.</source>
+        <target state="translated">服务使用 IPC 协议 v{0}，界面需要 v{1}，请把两者更新到同一版本。</target>
+      </segment>
+    </unit>
+    <unit id="Retry">
+      <segment>
+        <source>Retry now</source>
+        <target state="translated">立即重试</target>
+      </segment>
+    </unit>
+    <unit id="StartDevService">
+      <segment>
+        <source>Start development service</source>
+        <target state="translated">启动开发服务</target>
+      </segment>
+    </unit>
+    <unit id="StartFailed">
+      <segment>
+        <source>Could not start the service: {0}</source>
+        <target state="translated">无法启动服务：{0}</target>
+      </segment>
+    </unit>
+    <unit id="StartService">
+      <segment>
+        <source>Start service</source>
+        <target state="translated">启动服务</target>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>The core service is not available</source>
+        <target state="translated">核心服务不可用</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

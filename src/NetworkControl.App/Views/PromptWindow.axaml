@@ -1,0 +1,96 @@
+<atom:Window xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             x:Class="NetworkControl.App.Views.PromptWindow"
+             x:DataType="vm:PromptViewModel"
+             Title="{loc:PromptLangResource Title}"
+             Width="480" SizeToContent="Height"
+             CanResize="False" ShowInTaskbar="False" Topmost="True" ShowActivated="False"
+             IsMinimizeCaptionButtonVisible="False" IsMaximizeCaptionButtonVisible="False"
+             WindowStartupLocation="Manual">
+
+  <Window.Resources>
+    <DataTemplate x:Key="ChoiceTemplate" x:DataType="vm:Choice">
+      <TextBlock Text="{Binding Title}" />
+    </DataTemplate>
+  </Window.Resources>
+
+  <!-- 需求文檔 §6.3.1：置頂、不搶焦點、1 秒防誤觸、倒計時、範圍 + 時效 -->
+  <StackPanel Margin="20,12,20,18" Spacing="12">
+
+    <!-- 應用 -->
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+      <Image x:Name="AppIcon" Width="40" Height="40" VerticalAlignment="Top" />
+      <StackPanel Grid.Column="1" Spacing="4">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Right" Classes="caption" VerticalAlignment="Center" IsVisible="{Binding HasQueue}" Text="{Binding QueueText}" />
+          <TextBlock Classes="section-title" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+        <atom:Tag Text="{Binding SignatureText}" TagColor="{Binding SignatureColor}" HorizontalAlignment="Left" />
+        <TextBlock Classes="caption" Text="{Binding AppPath}" TextTrimming="PathSegmentEllipsis" ToolTip.Tip="{Binding AppPath}" />
+      </StackPanel>
+    </Grid>
+
+    <atom:Alert Type="Error" IsShowIcon="True" IsVisible="{Binding IsTamperAlert}" Message="{loc:PromptLangResource TamperAlert}" />
+
+    <!-- 目標 -->
+    <atom:Card SizeType="Small">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="caption" Text="{Binding VerbText}" />
+        <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding TargetText}" TextWrapping="Wrap" />
+        <TextBlock Classes="secondary" Text="{Binding TargetDetail}" />
+        <TextBlock Classes="caption" IsVisible="{Binding HasMorePending}" Text="{Binding MorePendingText}" />
+      </StackPanel>
+    </atom:Card>
+
+    <atom:Alert Type="Info" IsShowIcon="True" IsVisible="{Binding ShowBlockedHint}" Message="{loc:PromptLangResource BlockedHint}" />
+
+    <!-- 範圍與時效 -->
+    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+      <TextBlock Grid.Row="0" VerticalAlignment="Center" Text="{loc:PromptLangResource Scope}" />
+      <atom:ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch"
+                     ItemsSource="{Binding ScopeOptions}" SelectedItem="{Binding SelectedScope}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+
+      <atom:ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" IsVisible="{Binding HasMultipleDomains}"
+                     ItemsSource="{Binding Domains}" SelectedItem="{Binding SelectedDomain}" />
+
+      <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="{loc:PromptLangResource Lifetime}" />
+      <atom:ComboBox Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"
+                     ItemsSource="{Binding LifetimeOptions}" SelectedItem="{Binding SelectedLifetime}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+    </Grid>
+
+    <atom:CheckBox IsVisible="{Binding HasMorePending}" IsChecked="{Binding ApplyToAll}" Content="{loc:PromptLangResource ApplyToAll}" />
+
+    <!-- 詳情 -->
+    <StackPanel Spacing="6">
+      <atom:Button ButtonType="Link" SizeType="Small" HorizontalAlignment="Left" Padding="0"
+                   Command="{Binding ToggleDetailsCommand}" Content="{loc:PromptLangResource Details}" />
+      <Grid IsVisible="{Binding ShowDetails}" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+        <TextBlock Grid.Row="0" Classes="caption" Text="{loc:PromptLangResource Pid}" />
+        <TextBlock Grid.Row="0" Grid.Column="1" Classes="mono" Text="{Binding PidText}" />
+        <TextBlock Grid.Row="1" Classes="caption" Text="{loc:PromptLangResource Local}" />
+        <TextBlock Grid.Row="1" Grid.Column="1" Classes="mono" Text="{Binding LocalText}" />
+        <TextBlock Grid.Row="2" Classes="caption" Text="{loc:PromptLangResource Path}" />
+        <TextBlock Grid.Row="2" Grid.Column="1" Classes="mono" Text="{Binding AppPath}" TextWrapping="Wrap" />
+      </Grid>
+      <ItemsControl IsVisible="{Binding ShowDetails}" ItemsSource="{Binding PendingTargets}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="x:String">
+            <TextBlock Classes="mono" Text="{Binding}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+
+    <!-- 操作：默認焦點不放在「允許」上（FR-PRM-07）；A / D 快捷鍵 -->
+    <DockPanel>
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+        <atom:Button MinWidth="96" IsDanger="True" Command="{Binding DenyCommand}" HotKey="D" Content="{loc:CommonLangResource Deny}" />
+        <atom:Button MinWidth="96" ButtonType="Primary" Command="{Binding AllowCommand}" HotKey="A" Content="{loc:CommonLangResource Allow}" />
+      </StackPanel>
+      <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding CountdownText}" />
+    </DockPanel>
+  </StackPanel>
+</atom:Window>
