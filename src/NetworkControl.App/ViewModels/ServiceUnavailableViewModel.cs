@@ -52,15 +52,20 @@ public sealed partial class ServiceUnavailableViewModel : LocalizedViewModel
         }
     }
 
-    public bool CanStartService => _launcher.Kind is ServiceLaunchKind.Development or ServiceLaunchKind.SystemService;
+    public bool CanStartService =>
+        _launcher.Kind is ServiceLaunchKind.Development or ServiceLaunchKind.Portable or ServiceLaunchKind.SystemService;
 
-    public string StartButtonText => Loc.Get(_launcher.Kind == ServiceLaunchKind.Development
-        ? ServiceStatusLangResourceKind.StartDevService
-        : ServiceStatusLangResourceKind.StartService);
+    public string StartButtonText => Loc.Get(_launcher.Kind switch
+    {
+        ServiceLaunchKind.Development => ServiceStatusLangResourceKind.StartDevService,
+        ServiceLaunchKind.Portable => ServiceStatusLangResourceKind.StartPortableService,
+        _ => ServiceStatusLangResourceKind.StartService,
+    });
 
     public string Hint => Loc.Get(_launcher.Kind switch
     {
         ServiceLaunchKind.Development => ServiceStatusLangResourceKind.HintDev,
+        ServiceLaunchKind.Portable => ServiceStatusLangResourceKind.HintPortable,
         ServiceLaunchKind.SystemService => ServiceStatusLangResourceKind.HintInstalled,
         _ => ServiceStatusLangResourceKind.HintNotInstalled,
     });

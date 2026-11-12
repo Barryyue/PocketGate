@@ -20,4 +20,6 @@ public enum ServiceStatusLangResourceKind
     HintInstalled,
     HintNotInstalled,
     ExportDiagnosticsHint,
+    StartPortableService,
+    HintPortable,
 }

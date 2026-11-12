@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     安裝 NetworkControl（Windows）：核心服務註冊為自動啟動的系統服務，界面安裝到同一目錄。
 
@@ -64,7 +64,7 @@ if ($existing) {
 # 界面進程會鎖住自己的文件：升級前關閉
 Get-Process -Name 'NetworkControl' -ErrorAction SilentlyContinue | Stop-Process -Force
 
-# 3. 複製文件
+# 3. 複製文件（注意：不要複製 portable.txt / start.cmd，安裝版必須使用系統服務）
 Write-Host "==> Copying files to $InstallDir" -ForegroundColor Cyan
 New-Item -ItemType Directory -Force $InstallDir | Out-Null
 foreach ($part in 'Service', 'App') {

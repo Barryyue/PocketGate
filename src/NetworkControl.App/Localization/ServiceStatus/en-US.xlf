@@ -71,5 +71,15 @@
         <source>You can still export a diagnostics package to help find the cause.</source>
       </segment>
     </unit>
+    <unit id="StartPortableService">
+      <segment>
+        <source>Start local service</source>
+      </segment>
+    </unit>
+    <unit id="HintPortable">
+      <segment>
+        <source>This portable package starts the service from the Service folder with administrator rights. Rules and logs are stored in the data folder next to it.</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

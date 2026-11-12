@@ -102,3 +102,4 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 - **`BackgroundService` 中不要釋放 `ExecuteAsync` 仍在使用的對象**：主機啟動失敗時 `Dispose` 會在 `ExecuteAsync` 的取消分支執行期間被調用（`ActivityLogWriter` 的信號量曾因此拋出 ObjectDisposedException）。
 - **PowerShell 中的 `[IO.File]` 相對路徑**按進程當前目錄解析，不是 `Set-Location` 的位置：一律用絕對路徑。
 - **proto 生成類型避開常見類型名**：已有 `VerdictAction`、`IpEndpoint`、`ActivityLog`；C# 中的別名統一用 `Proto`（全局命名空間裡已經有 `Pb`）。
+- **可攜版與安裝版目錄結構相同**：可攜模式只能靠根目錄的 `portable.txt` 判斷，不能靠 `App\` / `Service\` 目錄；安裝程序不得複製這個文件。可攜版使用獨立管道 `NetworkControl.portable.v1` 和 `<根目錄>\data`，不要和安裝版同時運行服務。

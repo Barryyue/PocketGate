@@ -85,5 +85,17 @@
         <target state="translated">仍然可以导出诊断包，帮助查找原因。</target>
       </segment>
     </unit>
+    <unit id="StartPortableService">
+      <segment>
+        <source>Start local service</source>
+        <target state="translated">启动本地服务</target>
+      </segment>
+    </unit>
+    <unit id="HintPortable">
+      <segment>
+        <source>This portable package starts the service from the Service folder with administrator rights. Rules and logs are stored in the data folder next to it.</source>
+        <target state="translated">绿色版会从旁边的 Service 文件夹以管理员权限启动服务，规则和日志保存在旁边的 data 文件夹中。</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

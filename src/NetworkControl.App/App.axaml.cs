@@ -57,7 +57,7 @@ public sealed partial class App : Application
             tray.ExitAllRequested += (_, _) => activator.QuitEverything();
             desktop.ShutdownRequested += (_, _) => _ = ShutdownAsync();
 
-            StartDevelopmentServiceIfNeeded(services);
+            StartManagedServiceIfNeeded(services);
             services.GetRequiredService<ServiceConnection>().Start();
 
             // 開機自啟時以 --minimized 啟動，只顯示托盤
@@ -146,18 +146,42 @@ public sealed partial class App : Application
     }
 
     /// <summary>
-    /// 開發構建：服務還沒有運行、且旁邊有本地構建的服務時自動拉起它，
-    /// 從 IDE 只啟動界面項目也能直接使用（發布構建不會自動啟動任何進程）。
+    /// 服務還沒有運行時自動拉起本界面管理的服務：開發構建拉起本地構建的服務，
+    /// 可攜版拉起同一發布包中的 Service（會請求管理員權限）。安裝版的系統服務由服務管理器負責，不在這裡啟動。
     /// </summary>
-    private static void StartDevelopmentServiceIfNeeded(IServiceProvider services)
+    private static void StartManagedServiceIfNeeded(IServiceProvider services)
     {
-#if DEBUG
         var launcher = services.GetRequiredService<IServiceLauncher>();
-        if (launcher.Kind == ServiceLaunchKind.Development && !IpcEndpoint.ResolveForClient().Any(e => e.MayBeAvailable))
+        if (IpcEndpoint.ResolveForClient().Any(e => e.MayBeAvailable))
         {
-            _ = launcher.StartAsync(null, CancellationToken.None);
+            return;
+        }
+
+#if DEBUG
+        if (launcher.Kind == ServiceLaunchKind.Development)
+        {
+            _ = StartAsync(launcher);
         }
 #endif
+        if (launcher.Kind == ServiceLaunchKind.Portable)
+        {
+            _ = StartAsync(launcher);
+        }
+
+        static async Task StartAsync(IServiceLauncher launcher)
+        {
+            try
+            {
+                if (await launcher.StartAsync(null, CancellationToken.None) is { } error)
+                {
+                    AppLog.Warn($"Could not start the core service automatically: {error}");
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLog.Error("Could not start the core service automatically", ex);
+            }
+        }
     }
 
     /// <summary>
@@ -174,7 +198,7 @@ public sealed partial class App : Application
             }
             else
             {
-                await lifecycle.ShutdownDevelopmentServiceAsync();
+                await lifecycle.ShutdownManagedServiceAsync();
             }
         }
 

@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     生成 Windows 發布包（Native AOT）：artifacts\release\NetworkControl-<版本>-<rid>.zip。
 
@@ -8,6 +8,8 @@
     zip 發布包結構：
       App\       界面（Native AOT）
       Service\   核心服務（Native AOT）
+      portable.txt  可攜版標識（安裝程序不會複製它）
+      start.cmd  免安裝啟動入口
       install.cmd / uninstall.cmd / export-diagnostics.cmd 及對應的 PowerShell 腳本、README.txt
     調試符號（*.pdb）單獨放在 artifacts\release\symbols-<版本>-<rid>\，不進入發布包，用於分析崩潰轉儲。
 

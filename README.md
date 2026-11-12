@@ -41,6 +41,8 @@ dotnet run --project src/NetworkControl.App
 .\scripts\install-service.ps1
 ```
 
+發布包同時支援免安裝（綠色版）：解壓後執行 `start.cmd`，服務和數據都在發布包目錄內。
+
 在 UI 的「概覽」頁，用「模擬連接」讓虛擬應用發起連接，就能看到詢問彈窗、規則生成和連接日誌。
 
 ## 文檔

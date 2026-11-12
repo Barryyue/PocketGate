@@ -20,10 +20,21 @@ public sealed record IpcEndpoint(IpcTransport Transport, string Address)
 
     private const string PipeName = "NetworkControl.v1";
 
+    private const string PortablePipeName = "NetworkControl.portable.v1";
+
     /// <summary>以系統服務身份運行時使用的端點。</summary>
     public static IpcEndpoint System { get; } = OperatingSystem.IsWindows()
         ? new(IpcTransport.NamedPipe, PipeName)
         : new(IpcTransport.UnixSocket, OperatingSystem.IsMacOS() ? "/var/run/netcontrol/ui.sock" : "/run/netcontrol/ui.sock");
+
+    /// <summary>
+    /// 可攜版使用的端點。故意與安裝版不同，避免綠色版連上（或關閉）本機已安裝的系統服務。
+    /// </summary>
+    public static IpcEndpoint Portable { get; } = OperatingSystem.IsWindows()
+        ? new(IpcTransport.NamedPipe, PortablePipeName)
+        : new(
+            IpcTransport.UnixSocket,
+            Path.Combine(PortableLayout.DataDirectory ?? Path.Combine(Path.GetTempPath(), "netcontrol-portable"), "ui.sock"));
 
     /// <summary>以普通用戶身份運行服務（開發模式）時使用的端點。</summary>
     public static IpcEndpoint User
@@ -61,7 +72,7 @@ public sealed record IpcEndpoint(IpcTransport Transport, string Address)
         };
     }
 
-    /// <summary>服務端：顯式配置 → 環境變量 → 按權限選擇默認端點。</summary>
+    /// <summary>服務端：顯式配置 → 環境變量 → 可攜版 → 按權限選擇默認端點。</summary>
     public static IpcEndpoint ResolveForServer(string? configured)
     {
         if (!string.IsNullOrWhiteSpace(configured))
@@ -74,15 +85,25 @@ public sealed record IpcEndpoint(IpcTransport Transport, string Address)
             return Parse(fromEnv);
         }
 
+        if (PortableLayout.IsActive)
+        {
+            return Portable;
+        }
+
         return Environment.IsPrivilegedProcess ? System : User;
     }
 
-    /// <summary>客戶端：環境變量優先；否則按順序嘗試系統端點和用戶端點。</summary>
+    /// <summary>客戶端：環境變量優先；可攜版只連接自己的端點；否則按順序嘗試系統端點和用戶端點。</summary>
     public static IReadOnlyList<IpcEndpoint> ResolveForClient()
     {
         if (Environment.GetEnvironmentVariable(EnvironmentVariable) is { Length: > 0 } fromEnv)
         {
             return [Parse(fromEnv)];
+        }
+
+        if (PortableLayout.IsActive)
+        {
+            return [Portable];
         }
 
         return System == User ? [System] : [System, User];

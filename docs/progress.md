@@ -22,6 +22,7 @@
    - 服務停止時的崩潰（同一實例被 Dispose 兩次）已修復。
 2. **WFP 驗收結果**：已確認 WFP 引擎啟動、下發 12 個內置過濾器、阻斷事件觸發彈窗、允許後生成規則。尚待確認：允許後應用重試能否連上、域名規則（ETW DNS）是否生效。
 3. 托盤右鍵菜單：加回 FluentTheme 後**尚未經用戶確認**（若仍不顯示，改用 Win32 原生托盤菜單）。
+4. **可攜版（2026-11-12 新增）**：`start.cmd` 首次啟動的 UAC 提權、真實 WFP 攔截、退出界面後服務停止需要用戶驗證；另需回歸一次安裝版的安裝 / 升級 / 卸載（安裝程序不會複製 `portable.txt`）。
 
 ---
 
@@ -68,7 +69,13 @@
 - [x] **界面日誌**：`%LocalAppData%\NetworkControl\logs\app-*.log`，包括未處理異常、連接變化、Avalonia 綁定警告。
 - [x] 連接日誌寫入器停止時總是寫完隊列（之前只在 ExecuteAsync 的取消分支中寫，存在丟失已入隊事件的可能）。觸發這個修改的 `Identical_connections_in_same_minute_are_aggregated` 偶發失敗**未能復現**（單獨 60 次、並行 180 次均通過），根因未確認。
 
-**測試現狀：151 個全部通過；Debug / Release 構建零警告；`dotnet format --verify-no-changes` 通過。**
+### 可攜版（綠色版，2026-11-12）
+- [x] **免安裝運行**：發布包根目錄的 `portable.txt` 作為可攜標識；界面直接拉起同目錄的 `Service\NetworkControl.Service.exe`（Windows 上通過 UAC 提權），數據、日誌和界面偏好放在 `<根目錄>\data`，IPC 使用獨立管道 `NetworkControl.portable.v1`，不會連接或關閉已安裝的系統服務。
+  - 安裝程序不複製標識文件，原有安裝 / 升級 / 卸載流程不變；可攜版不提供登錄自啟，退出界面時停止可攜版服務。
+  - 驗證：`PortableLayout` 單元測試；Debug 佈局 + Fake 引擎端到端已驗證（服務從 `Service` 啟動、數據寫入 `data`、端點為 `pipe:NetworkControl.portable.v1`、界面診斷包中 `Launcher=Portable` 且成功連上服務）。
+  - 待用戶驗證：可攜版首次啟動的 UAC 提權和真實 WFP 攔截（需要管理員權限）；從 zip 安裝 / 升級 / 卸載的回歸。
+
+**測試現狀：157 個全部通過；Debug / Release 構建零警告；`dotnet format --verify-no-changes` 通過。**
 
 ---
 

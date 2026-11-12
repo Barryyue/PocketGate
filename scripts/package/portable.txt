@@ -1,0 +1,8 @@
+NetworkControl portable build.
+
+This marker file enables portable mode:
+- the interface starts Service\NetworkControl.Service.exe from this folder;
+- rules, logs and UI preferences are stored in the data folder.
+
+Do not delete this file while using the portable build.
+The installer does not copy it, so installed builds keep using the system service.

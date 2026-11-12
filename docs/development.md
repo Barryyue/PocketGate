@@ -156,3 +156,22 @@ M1 已知限制：
 - **隱私**：所有文本經 `DiagnosticsRedactor` 處理（用戶目錄中的用戶名、計算機名替換為 `<user>` / `<machine>`）；規則和連接日誌由用戶勾選（規則默認勾選，連接日誌默認不勾選）；不會自動上傳。
 - **擴展**：新模塊實現 `Core.Diagnostics.IDiagnosticsContributor`（寫入自己的目錄）並用 `services.AddDiagnosticsContributor<T>()` 註冊；已註冊的單例（例如引擎）用工廠重載，不會創建第二個實例。
 - 驗證時用 `NETWORKCONTROL_IPC=pipe:<其他名字>` 讓臨時服務和客戶端使用獨立的管道：本機可能裝著正式版服務（`pipe:NetworkControl.v1`），不要對它調用 `Shutdown`。
+
+---
+
+## 10. 可攜版（綠色版）
+
+發布包（zip）同時是免安裝版：解壓到任意可寫入的資料夾後執行 `start.cmd`（或 `App\NetworkControl.exe`）即可。
+
+| 項目 | 行為 |
+|---|---|
+| 識別方式 | 根目錄的 `portable.txt` 標識文件；安裝版的 `App\`、`Service\` 目錄結構與可攜版完全相同，**不能按目錄結構判斷**。安裝程序不會複製 `portable.txt`。 |
+| 服務啟動 | 界面點「啟動服務」或首次啟動時，直接拉起同目錄的 `Service\NetworkControl.Service.exe`；Windows 上通過 UAC 提權（WFP 需要管理員權限）。 |
+| 數據目錄 | `<發布包根目錄>\data`：`config.db`、`activity.db`、`logs\`、`ui-preferences.json`。界面會先以普通權限創建目錄，保證日誌可寫。 |
+| IPC 端點 | `pipe:NetworkControl.portable.v1`（Unix 為 `<data>/ui.sock`），與安裝版的 `pipe:NetworkControl.v1` 隔離，避免綠色版連上或關閉已安裝的系統服務。 |
+| 界面生命週期 | 退出界面（托盤「結束界面」）時會請求可攜版服務退出；「完全結束」也會停止服務。界面異常退出時可攜版服務可能殘留，必要時在任務管理器結束 `NetworkControl.Service.exe`。 |
+| 登錄自啟 | 可攜版不提供（文件夾可能被移動，且會與安裝版共用 Run 鍵）。 |
+| 單實例 | 可攜版使用獨立的互斥體，可與安裝版界面同時運行，但**不要同時運行兩個服務**：兩者都會下發 WFP 過濾器。 |
+| 安裝 | `install.cmd` / `install-service.ps1` 仍然可用：它會把 `App\`、`Service\` 複製到安裝目錄並註冊系統服務，不會複製 `portable.txt`，因此安裝後回到原來的系統服務模式。 |
+
+驗證可攜版佈局（不需要管理員權限）：用 Debug 構建把 `App`、`Service` 的輸出複製到臨時目錄，創建 `portable.txt`，以 `--NetworkControl:Service:Engine=Fake` 啟動服務，再用 `NetworkControl.exe --export-diagnostics <路徑>` 檢查連接端點和 `data` 目錄。

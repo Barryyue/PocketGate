@@ -4,13 +4,14 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Avalonia.Logging;
+using NetworkControl.Ipc;
 
 namespace NetworkControl.App.Infrastructure;
 
 /// <summary>
-/// 界面進程的日誌文件：%LocalAppData%\NetworkControl\logs\app-yyyyMMdd.log，按天一個文件，保留 7 天。
-/// 記錄啟動信息、未處理異常、與服務的連接變化，以及 Avalonia 的警告（例如綁定失敗），供診斷包收集。
-/// 刻意保持簡單、不引入日誌框架：寫入失敗時靜默忽略，任何情況下都不能影響界面本身。
+/// 界面進程的日誌文件：安裝版寫到 %LocalAppData%\NetworkControl\logs，可攜版寫到 &lt;程序目錄&gt;\data\logs，
+/// 文件按天一個、保留 7 天。記錄啟動信息、未處理異常、與服務的連接變化，以及 Avalonia 的警告（例如綁定失敗），
+/// 供診斷包收集。刻意保持簡單、不引入日誌框架：寫入失敗時靜默忽略，任何情況下都不能影響界面本身。
 /// </summary>
 public static class AppLog
 {
@@ -22,8 +23,9 @@ public static class AppLog
 
     private static readonly Lock Gate = new();
 
-    public static string Directory { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NetworkControl", "logs");
+    public static string Directory { get; } = PortableLayout.IsActive
+        ? Path.Combine(PortableLayout.DataDirectory!, "logs")
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NetworkControl", "logs");
 
     public static string Version { get; } =
         typeof(AppLog).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";

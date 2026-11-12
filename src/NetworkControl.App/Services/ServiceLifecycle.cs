@@ -16,7 +16,7 @@ public static class EngineKinds
 }
 
 /// <summary>
-/// 開發環境下的服務生命週期：讓服務正常退出、用指定引擎重新啟動、退出界面時關閉開發服務。
+/// 界面管理的服務生命週期：讓服務正常退出、用指定引擎重新啟動、退出界面時關閉開發 / 可攜版服務。
 /// 安裝版的系統服務由服務管理器負責，界面不會停止它。
 /// </summary>
 public sealed class ServiceLifecycle(ServiceConnection connection, IServiceLauncher launcher)
@@ -55,10 +55,10 @@ public sealed class ServiceLifecycle(ServiceConnection connection, IServiceLaunc
         return error;
     }
 
-    /// <summary>退出界面前調用：開發佈局下一併關閉開發服務，避免殘留後台進程。</summary>
-    public async Task ShutdownDevelopmentServiceAsync()
+    /// <summary>退出界面前調用：開發佈局和可攜版下一併關閉服務，避免殘留後台進程。</summary>
+    public async Task ShutdownManagedServiceAsync()
     {
-        if (CanSwitchEngine)
+        if (launcher.Kind is ServiceLaunchKind.Development or ServiceLaunchKind.Portable)
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             try

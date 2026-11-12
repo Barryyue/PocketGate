@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using NetworkControl.Ipc;
 
 namespace NetworkControl.App.Infrastructure;
 
@@ -33,7 +34,9 @@ public sealed class PreferencesStore
     private UiPreferences _current;
 
     public PreferencesStore()
-        : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NetworkControl", "ui-preferences.json"))
+        : this(PortableLayout.IsActive
+            ? Path.Combine(PortableLayout.DataDirectory!, "ui-preferences.json")
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "NetworkControl", "ui-preferences.json"))
     {
     }
 

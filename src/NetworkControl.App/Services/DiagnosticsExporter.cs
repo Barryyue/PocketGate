@@ -130,6 +130,10 @@ public sealed class DiagnosticsExporter(IServiceLauncher launcher, PreferencesSt
         Line("Native AOT", !RuntimeFeature.IsDynamicCodeSupported);
         Line("Working set", $"{process.WorkingSet64 / 1024 / 1024} MB");
         Line("Launcher", launcher.Kind);
+        if (PortableLayout.RootDirectory is { } portableRoot)
+        {
+            Line("Portable root", portableRoot);
+        }
         Line("Language preference", preferences.Current.Language ?? "(system)");
         Line("Theme preference", preferences.Current.Theme);
         Line("Log directory", AppLog.Directory);
@@ -270,6 +274,12 @@ public sealed class DiagnosticsExporter(IServiceLauncher launcher, PreferencesSt
 
     private static IEnumerable<string> CandidateServiceLogDirectories()
     {
+        // 可攜版：<程序目錄>/data/logs
+        if (PortableLayout.IsActive && PortableLayout.DataDirectory is { } data)
+        {
+            yield return Path.Combine(data, "logs");
+        }
+
         if (OperatingSystem.IsWindows())
         {
             yield return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "NetworkControl", "logs");
@@ -292,6 +302,11 @@ public sealed class DiagnosticsExporter(IServiceLauncher launcher, PreferencesSt
 
     private static async Task<string> CollectWindowsServiceAsync(CancellationToken cancellationToken)
     {
+        if (PortableLayout.IsActive)
+        {
+            return "Portable mode: the core service runs as a normal process, not as a Windows service.\n";
+        }
+
         string[] commands = ["queryex", "qc", "qfailure"];
         var outputs = await Task.WhenAll(commands.Select(c => RunAsync($"sc.exe {c} {ServiceLauncher.WindowsServiceName}", cancellationToken)));
         var text = new StringBuilder();

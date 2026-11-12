@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Hosting;
+using NetworkControl.Ipc;
 using NetworkControl.Service;
 using NetworkControl.Service.Diagnostics;
 using NetworkControl.Service.Engines;
@@ -20,6 +21,16 @@ Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger()
 try
 {
     var builder = WebApplication.CreateSlimBuilder(args);
+
+    // 可攜版：未顯式指定數據目錄時，默認使用程序目錄的 data（規則、日誌都在其中）。
+    // 命令行 / 環境變量中的配置優先；界面啟動服務時會顯式傳入相同的值。
+    if (PortableLayout.IsActive && string.IsNullOrWhiteSpace(builder.Configuration["NetworkControl:Storage:DataDirectory"]))
+    {
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["NetworkControl:Storage:DataDirectory"] = PortableLayout.DataDirectory,
+        });
+    }
 
     // 以 Windows 服務 / systemd 單元運行時自動集成生命週期和日誌；以控制台運行時不生效
     builder.Services.AddWindowsService(o => o.ServiceName = "NetworkControl");

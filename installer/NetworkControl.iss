@@ -1,4 +1,4 @@
-﻿; NetworkControl 安裝程序（Inno Setup 6）。由 scripts\publish-release.ps1 調用 ISCC 編譯，所有參數通過 /D 傳入：
+; NetworkControl 安裝程序（Inno Setup 6）。由 scripts\publish-release.ps1 調用 ISCC 編譯，所有參數通過 /D 傳入：
 ;   AppVersion      顯示版本，例如 0.1.0
 ;   NumericVersion  四段數字版本（文件版本信息），例如 0.1.0.0
 ;   BuildLabel      構建標記（提交哈希，未提交時帶 -dirty）
@@ -86,6 +86,7 @@ english.RemoveDataPrompt=Also delete rules and logs (%1)?%n%nChoose No to keep y
 Name: "autostart"; Description: "{cm:AutoStartTask}"
 
 [Files]
+; 注意：不要加入 portable.txt / start.cmd。安裝版必須走系統服務，不能進入可攜模式。
 Source: "{#SourceDir}\App\*"; DestDir: "{app}\App"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceDir}\Service\*"; DestDir: "{app}\Service"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SourceDir}\export-diagnostics.cmd"; DestDir: "{app}"; Flags: ignoreversion
