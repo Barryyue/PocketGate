@@ -186,7 +186,7 @@ public sealed partial class App : Application
 
     /// <summary>
     /// 退出界面。<paramref name="stopService"/> 為 true 時完全退出：先讓核心服務退出（攔截停止）。
-    /// 否則只退出界面：開發佈局下仍會關閉由界面拉起的開發服務，避免殘留後台進程；安裝版的系統服務繼續攔截。
+    /// 否則只退出界面：開發佈局和可攜版下仍會關閉由界面拉起的服務，避免殘留後台進程；安裝版的系統服務繼續攔截。
     /// </summary>
     private async Task QuitAsync(IClassicDesktopStyleApplicationLifetime desktop, bool stopService)
     {

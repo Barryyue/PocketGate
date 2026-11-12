@@ -10,8 +10,9 @@
 
 ## 🔴 當前阻塞 / 下一步
 
-0. **用戶驗證發布包（2026-11-12 晚）**——發布包已從提交 `0f8ab32` 重新生成並核對（README / 程序版本均為 `0.1.0+0f8ab32`，運行時 .NET 10.0.15，Native AOT，包內無模擬引擎）：`artifacts\release\NetworkControl-0.1.0-win-x64-setup.exe`（27.9 MB）和 `.zip`（39.7 MB）可以發給朋友。以下需要管理員權限或需要看界面，由用戶執行：
-   - 安裝程序 `artifacts\release\NetworkControl-0.1.0-win-x64-setup.exe`：安裝 / 從 zip 安裝版升級 / 卸載（是否刪除數據的詢問）各走一遍。**尚未運行過**（只驗證了編譯和版本信息）。
+0. **用戶驗證發布包（2026-11-12 晚）**——`0.2.0` 發布包已從提交 `8141f6f` 生成並核對（程序版本 `0.2.0+8141f6f`，Native AOT；zip 同時支援綠色版和安裝版）：`artifacts\release\NetworkControl-0.2.0-win-x64-setup.exe`（27.9 MB）和 `.zip`（39.7 MB）。已用解壓後的 AOT zip 驗證：界面識別為 `Portable`、使用 `pipe:NetworkControl.portable.v1`、日誌寫入 `<根目錄>\data\logs`、命令行診斷包可正常導出。以下需要管理員權限或需要看界面，由用戶執行：
+   - 可攜版：解壓到可寫入的資料夾，雙擊 `start.cmd`，確認 UAC、WFP 攔截、退出界面後服務停止（見第 4 項）。
+   - 安裝程序 `artifacts\release\NetworkControl-0.2.0-win-x64-setup.exe`：安裝 / 從 zip 安裝版升級 / 卸載（是否刪除數據的詢問）各走一遍。**尚未運行過**（只驗證了編譯和版本信息；安裝程序不會複製 `portable.txt` / `start.cmd`）。
    - 設定頁「診斷」卡片和服務不可用頁上的「匯出診斷包」按鈕（保存對話框、完成提示、在資源管理器中定位）。**界面效果未驗證**；導出邏輯已通過命令行模式驗證。
    - 安裝版的 DNS 域名規則：TraceEvent 在 AOT 下有分析警告（已評估為不經過我們的調用路徑），需要建一條域名規則確認生效；若無效，診斷包 `service/engine/wfp-state.txt` 中的「DNS (ETW) monitor」和服務日誌會給出線索。
    - 用戶 17:06 用 zip 包安裝後的實際運行：WFP 啟動、7 個彈窗回應、規則重啟後加載 —— **已從服務日誌確認正常**。
@@ -72,7 +73,7 @@
 ### 可攜版（綠色版，2026-11-12）
 - [x] **免安裝運行**：發布包根目錄的 `portable.txt` 作為可攜標識；界面直接拉起同目錄的 `Service\NetworkControl.Service.exe`（Windows 上通過 UAC 提權），數據、日誌和界面偏好放在 `<根目錄>\data`，IPC 使用獨立管道 `NetworkControl.portable.v1`，不會連接或關閉已安裝的系統服務。
   - 安裝程序不複製標識文件，原有安裝 / 升級 / 卸載流程不變；可攜版不提供登錄自啟，退出界面時停止可攜版服務。
-  - 驗證：`PortableLayout` 單元測試；Debug 佈局 + Fake 引擎端到端已驗證（服務從 `Service` 啟動、數據寫入 `data`、端點為 `pipe:NetworkControl.portable.v1`、界面診斷包中 `Launcher=Portable` 且成功連上服務）。
+  - 驗證：`PortableLayout` 單元測試；Debug 佈局 + Fake 引擎端到端已驗證（服務從 `Service` 啟動、數據寫入 `data`、端點為 `pipe:NetworkControl.portable.v1`、界面診斷包中 `Launcher=Portable` 且成功連上服務）；AOT zip 的離線診斷包已驗證（`Native AOT=True`、`Launcher=Portable`、日誌在 `data\logs`）。
   - 待用戶驗證：可攜版首次啟動的 UAC 提權和真實 WFP 攔截（需要管理員權限）；從 zip 安裝 / 升級 / 卸載的回歸。
 
 **測試現狀：157 個全部通過；Debug / Release 構建零警告；`dotnet format --verify-no-changes` 通過。**
