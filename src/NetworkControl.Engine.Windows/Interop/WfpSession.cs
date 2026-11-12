@@ -30,6 +30,12 @@ internal sealed unsafe class WfpSession : IDisposable
 
     public nint Handle => _engine;
 
+    /// <summary>
+    /// FwpmGetAppIdFromFileName0 失敗時的應用 ID 來源。它需要打開文件，而部分安全 / 防泄密軟件會在驅動層
+    /// 拒絕訪問自身文件（返回「找不到文件」），導致允許規則無法下發、應用被靜默阻斷。
+    /// </summary>
+    public Func<string, byte[]?>? AppIdFallback { get; set; }
+
     public static WfpSession Open(string displayName)
     {
         using var name = new NativeString(displayName);
@@ -335,6 +341,14 @@ internal sealed unsafe class WfpSession : IDisposable
         var code = FwpNative.FwpmGetAppIdFromFileName0(path, out var blob);
         if (code != FwpConstants.ErrorSuccess)
         {
+            if (AppIdFallback?.Invoke(path) is { Length: > 0 } fallback)
+            {
+                appId = fallback;
+                _appIdCache[path] = fallback;
+                error = null;
+                return true;
+            }
+
             appId = null;
             error = new WfpException($"FwpmGetAppIdFromFileName0({path})", code);
             return false;

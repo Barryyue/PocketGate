@@ -47,6 +47,35 @@ internal sealed partial class DevicePathResolver
         return devicePath;
     }
 
+    /// <summary>把 DOS 路徑轉成設備路徑；盤符沒有映射時返回 null。</summary>
+    public string? ToDevicePath(string dosPath)
+    {
+        if (dosPath.Length < 2 || dosPath[1] != ':')
+        {
+            return null;
+        }
+
+        var drive = dosPath[..2];
+        foreach (var (device, mappedDrive) in _deviceToDrive)
+        {
+            if (string.Equals(mappedDrive, drive, StringComparison.OrdinalIgnoreCase))
+            {
+                return device + dosPath[2..];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 按 WFP 應用 ID 的格式構造：小寫 NT 設備路徑 + 結尾 NUL，UTF-16LE 編碼
+    /// （與 FwpmGetAppIdFromFileName0 的輸出一致，但不需要打開文件）。
+    /// </summary>
+    public byte[]? BuildAppId(string dosPath) =>
+        ToDevicePath(dosPath) is { } device
+            ? System.Text.Encoding.Unicode.GetBytes(device.ToLowerInvariant() + "\0")
+            : null;
+
     private static IReadOnlyDictionary<string, string> LoadMappings()
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

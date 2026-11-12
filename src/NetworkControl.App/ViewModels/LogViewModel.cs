@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using AtomUI.Desktop.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Google.Protobuf.WellKnownTypes;
@@ -12,6 +13,8 @@ namespace NetworkControl.App.ViewModels;
 /// <summary>日誌中的一行（實時事件和歷史查詢共用）。保存原始字段，顯示文本按當前語言計算。</summary>
 public sealed class LogItemViewModel : ViewModelBase
 {
+    private static long _nextKey;
+
     private readonly DisplayText _text;
 
     private LogItemViewModel(
@@ -28,7 +31,11 @@ public sealed class LogItemViewModel : ViewModelBase
         Host = host ?? "";
         Verdict = verdict;
         Count = count;
+        Key = Interlocked.Increment(ref _nextKey).ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
+
+    /// <summary>表格行鍵：實時事件沒有持久化 ID，按創建順序生成。</summary>
+    public string Key { get; }
 
     public Timestamp? Time { get; }
 
@@ -112,7 +119,15 @@ public sealed partial class LogViewModel : PageViewModel
 
     public override string Key => "log";
 
+    private static readonly DataGridLocalSourceDescriptor<LogItemViewModel> RowDescriptor =
+        DataGridLocalSourceDescriptor.For<LogItemViewModel>(static row => DataGridRowKey.FromString(row.Key));
+
+    private DataGridLocalSource<LogItemViewModel>? _itemsSource;
+
     public ObservableCollection<LogItemViewModel> Items { get; } = [];
+
+    /// <summary>表格數據源（AtomUI DataGrid 需要 IDataGridSource，見 RulesViewModel.RulesSource）。</summary>
+    public IDataGridSource ItemsSource => _itemsSource ??= DataGridLocalSource.Create(Items, RowDescriptor);
 
     [ObservableProperty]
     public partial string Keyword { get; set; } = "";
@@ -182,7 +197,7 @@ public sealed partial class LogViewModel : PageViewModel
         _watch = new CancellationTokenSource();
         try
         {
-            using var call = clients.Activity.WatchConnections(new Empty(), cancellationToken: _watch.Token);
+            using var call = clients.Activity.WatchConnections(new Google.Protobuf.WellKnownTypes.Empty(), cancellationToken: _watch.Token);
             await foreach (var evt in call.ResponseStream.ReadAllAsync(_watch.Token))
             {
                 var item = LogItemViewModel.From(evt, Text);

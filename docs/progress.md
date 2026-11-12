@@ -4,18 +4,19 @@
 > 需求見 [requirements.md](requirements.md)，設計見 [design.md](design.md)（§22 記錄了實現與原設計的差異），開發方法見 [development.md](development.md)。
 
 **最後更新：2026-11-12**
-**當前階段：M1（Windows MVP）—— 代碼完成，等待 WFP 真實攔截的端到端驗收**
+**當前階段：M1（Windows MVP）—— WFP 主鏈路已在真實環境跑通（攔截 → 彈窗 → 生成規則），剩餘問題修復後待用戶確認**
 
 ---
 
 ## 🔴 當前阻塞 / 下一步
 
-1. **WFP 引擎端到端驗收（需要用戶在管理員權限下操作）**
-   - 方法：界面「總覽 → 引擎」選「Windows WFP」，UAC 點「是」；然後 `curl https://example.com`。
-   - 期望：首次連接失敗並彈窗 → 允許 → 重試成功；規則頁出現新規則；連線記錄出現阻斷記錄。
-   - 歷史：第一次管理員運行報 `FwpmEngineSetOption0 failed: 0x8032000B`（動態會話內不允許設置全局選項），已改為臨時非動態句柄讀寫全局選項，**修復後尚未驗證**。
-   - 若再報錯：讀 `.devdata/logs/service-*.log`，錯誤也會顯示在總覽頁。
-2. 托盤右鍵菜單：加回 FluentTheme 後**尚未經用戶確認能正常顯示**（若仍不顯示，改用 Win32 原生托盤菜單實現）。
+1. **用戶確認本輪修復（2026-11-12 下午）**
+   - 規則頁、日誌頁表格現在應該能顯示內容（原因：AtomUI DataGrid 需要 `IDataGridSource`，之前綁定的是普通集合，運行時靜默失敗）。
+   - WFP 引擎下不再出現「Service is unimplemented」（原因：切換引擎後模擬器卡片沒有隱藏）。
+   - 之前生成的 tipray 兩條允許規則（`ldapprovalex.exe`、`ldtermdaemon.exe`）應該能下發了：`FwpmGetAppIdFromFileName0` 被安全軟件拒絕訪問，現在改用兜底的應用 ID。驗證方法：在日誌中搜索「無法下發」，應該不再出現。
+   - 服務停止時的崩潰（同一實例被 Dispose 兩次）已修復。
+2. **WFP 驗收結果**：已確認 WFP 引擎啟動、下發 12 個內置過濾器、阻斷事件觸發彈窗、允許後生成規則。尚待確認：允許後應用重試能否連上、域名規則（ETW DNS）是否生效。
+3. 托盤右鍵菜單：加回 FluentTheme 後**尚未經用戶確認**（若仍不顯示，改用 Win32 原生托盤菜單）。
 
 ---
 
@@ -49,7 +50,7 @@
 - [x] 引擎配置 Auto / Fake / Wfp；安裝 / 卸載腳本（scripts/）
 - [x] Engine.Windows.Tests（佈局、編譯器、IP 補集、DNS 解析、路徑轉換）
 
-**測試現狀：124 個全部通過；Release 構建零警告；`dotnet format --verify-no-changes` 通過。**
+**測試現狀：126 個全部通過；構建零警告；`dotnet format --verify-no-changes` 通過。**
 
 ---
 

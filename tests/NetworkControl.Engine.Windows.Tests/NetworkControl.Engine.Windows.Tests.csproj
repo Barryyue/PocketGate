@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- 引擎程序集標記為僅 Windows；測試中的平台相關斷言自行判斷 -->
     <NoWarn>$(NoWarn);CA1416</NoWarn>
   </PropertyGroup>

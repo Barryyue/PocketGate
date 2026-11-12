@@ -44,6 +44,9 @@ internal sealed partial class WfpEngine : INetworkEngine
     private readonly Dictionary<string, (FilterSpec Spec, ulong Id)> _installed = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<(string App, IPAddress Remote, int Port, byte Protocol), DateTimeOffset> _recentDrops = new();
 
+    /// <summary>阻斷事件中觀測到的原始應用 ID（DOS 路徑 → 字節），與 WFP 匹配時使用的值完全一致。</summary>
+    private readonly ConcurrentDictionary<string, byte[]> _observedAppIds = new(StringComparer.OrdinalIgnoreCase);
+
     private IEngineHost? _host;
     private WfpSession? _session;
     private DnsClientMonitor? _dns;
@@ -93,6 +96,7 @@ internal sealed partial class WfpEngine : INetworkEngine
     private void StartCore(IEngineHost host)
     {
         _session = WfpSession.Open("NetworkControl");
+        _session.AppIdFallback = path => _observedAppIds.GetValueOrDefault(path) ?? _paths.BuildAppId(path);
         _self = GCHandle.Alloc(this);
 
         // 1. 先開啟並訂閱網絡事件，再下發過濾器：保證默認阻斷生效後的每條連接都能觸發詢問。
@@ -137,22 +141,28 @@ internal sealed partial class WfpEngine : INetworkEngine
         }
 
         _settings.Changed -= OnSettingsChanged;
-        if (_cts is not null)
+
+        // 可重複調用：DI 容器會對同一實例（具體類型 + INetworkEngine 兩種註冊）多次調用 DisposeAsync
+        var cts = Interlocked.Exchange(ref _cts, null);
+        if (cts is not null)
         {
-            await _cts.CancelAsync();
+            await cts.CancelAsync();
         }
 
-        if (_loop is not null)
+        var loop = Interlocked.Exchange(ref _loop, null);
+        if (loop is not null)
         {
             try
             {
-                await _loop;
+                await loop;
             }
             catch (OperationCanceledException)
             {
                 // 正常停止
             }
         }
+
+        cts?.Dispose();
 
         _dns?.Dispose();
         _dns = null;
@@ -190,11 +200,7 @@ internal sealed partial class WfpEngine : INetworkEngine
         }
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await StopAsync(CancellationToken.None);
-        _cts?.Dispose();
-    }
+    public async ValueTask DisposeAsync() => await StopAsync(CancellationToken.None);
 
     private unsafe void SubscribeNetEvents(WfpSession session)
     {
@@ -396,6 +402,10 @@ internal sealed partial class WfpEngine : INetworkEngine
         {
             var devicePath = new string((char*)header->AppId.Data, 0, (int)(header->AppId.Size / 2)).TrimEnd('\0');
             path = _paths.ToDosPath(devicePath);
+            if (!_observedAppIds.ContainsKey(path) && _observedAppIds.Count < 4096)
+            {
+                _observedAppIds[path] = new ReadOnlySpan<byte>((void*)header->AppId.Data, (int)header->AppId.Size).ToArray();
+            }
         }
 
         string? user = null;

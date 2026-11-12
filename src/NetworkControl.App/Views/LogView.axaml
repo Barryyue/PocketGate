@@ -37,8 +37,8 @@
     <Panel>
       <atom:Empty IsVisible="{Binding IsEmpty}" Description="{loc:LogLangResource Empty}"
                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-      <atom:DataGrid ItemsSource="{Binding Items}" IsVisible="{Binding !IsEmpty}" IsReadOnly="True"
-                     CanUserResizeColumns="True" CanUserSortColumns="True">
+      <atom:DataGrid ItemsSource="{Binding ItemsSource}" IsVisible="{Binding !IsEmpty}" IsReadOnly="True"
+                     CanUserResizeColumns="True">
         <atom:DataGrid.Columns>
           <atom:DataGridTextColumn x:DataType="vm:LogItemViewModel" Header="{loc:LogLangResource ColumnTime}" Binding="{Binding TimeText}" Width="170" />
           <atom:DataGridTemplateColumn Header="{loc:LogLangResource ColumnApp}" Width="2*">

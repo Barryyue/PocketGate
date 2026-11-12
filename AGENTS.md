@@ -82,4 +82,9 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 - **PowerShell 的 `-replace` 不區分大小寫**：批量替換時會誤傷同名的小寫變量，改用 `.Replace()`。
 - **判決緩存鍵必須包含完整的 `AppIdentity`**，否則程序被替換後可以繞過篡改檢測。
 - **Avalonia 12 的改名**：`SystemDecorations` 改為 `WindowDecorations`，`Watermark` 改為 `PlaceholderText`；DataGrid 的文本列需要聲明 `x:DataType`。
+- **AtomUI DataGrid 的 `ItemsSource` 類型是 `IDataGridSource`**：直接綁定 `ObservableCollection` 能編譯通過，但運行時會靜默失敗，表格為空。必須用 `DataGridLocalSource.Create(collection, DataGridLocalSourceDescriptor.For<T>(row => DataGridRowKey.FromString(key)))` 包裝。排序和篩選需要在描述符中聲明字段（`.Field(...)`），目前沒有聲明，所以關閉了 `CanUserSortColumns`。
+- **AtomUI 的 `Empty` 控件**與 protobuf 的 `Empty` 同名：同時引用 `AtomUI.Desktop.Controls` 時，protobuf 的要寫完整類型名。
+- **模擬器（Simulator）gRPC 服務只在 Fake 引擎下映射**：其他引擎下調用會得到 `Unimplemented`，界面必須按當前引擎決定是否顯示模擬器。
+- **`FwpmGetAppIdFromFileName0` 需要打開文件**：終端安全或防泄密軟件（例如用戶機器上的 tipray）會在驅動層拒絕訪問自身文件，API 返回「找不到文件」。現在的兜底順序是：先用阻斷事件中觀測到的原始應用 ID，再按「小寫 NT 設備路徑 + NUL，UTF-16LE 編碼」自行構造（`AppIdTests` 驗證過與 API 輸出逐字節一致）。
+- **同一實例在 DI 中註冊為兩種類型時，`DisposeAsync` 會被調用兩次**：引擎的停止和釋放必須可以重複調用。
 - **proto 生成類型避開常見類型名**：已有 `VerdictAction`、`IpEndpoint`、`ActivityLog`；C# 中的別名統一用 `Proto`（全局命名空間裡已經有 `Pb`）。

@@ -27,7 +27,8 @@ public sealed partial class OverviewViewModel : PageViewModel
         _connection = connection;
         _lifecycle = lifecycle;
         connection.PropertyChanged += OnConnectionChanged;
-        connection.Connected += (_, _) => _ = LoadSimulatorAppsAsync();
+        // 每次重新連接都重新判斷：引擎可能已經從模擬切換為 WFP，模擬器接口只在模擬引擎下存在
+        connection.Connected += (_, _) => _ = LoadSimulatorAppsAsync(reload: true);
     }
 
     public override string Key => "overview";
@@ -103,7 +104,7 @@ public sealed partial class OverviewViewModel : PageViewModel
         ? Loc.Format(OverviewLangResourceKind.DoNotDisturbUntil, until.ToDateTimeOffset().ToLocalTime().DateTime)
         : "";
 
-    public override Task OnActivatedAsync() => LoadSimulatorAppsAsync();
+    public override Task OnActivatedAsync() => LoadSimulatorAppsAsync(reload: false);
 
     partial void OnSelectedModeIndexChanged(int value)
     {
@@ -240,9 +241,17 @@ public sealed partial class OverviewViewModel : PageViewModel
     private Task ExitAppAsync() => RunAsync(async () =>
         await _connection.RequireClients().Simulator.ExitAppAsync(new Proto.ExitAppRequest { AppKey = SelectedApp!.Key }));
 
-    private async Task LoadSimulatorAppsAsync()
+    private async Task LoadSimulatorAppsAsync(bool reload)
     {
-        if (_connection.Clients is not { } clients || SimulatorApps.Count > 0)
+        if (reload)
+        {
+            SimulatorApps.Clear();
+            SelectedApp = null;
+            IsSimulatorAvailable = false;
+        }
+
+        // 只有模擬引擎提供模擬器；其他引擎下調用會得到 Unimplemented
+        if (_connection.Clients is not { } clients || SimulatorApps.Count > 0 || CurrentEngine != EngineKinds.Fake)
         {
             return;
         }

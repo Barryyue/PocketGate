@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using AtomUI.Desktop.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Google.Protobuf.WellKnownTypes;
@@ -100,8 +101,20 @@ public sealed partial class RulesViewModel : PageViewModel
 
     public override string Key => "rules";
 
+    /// <summary>AtomUI 表格的行描述：規則 ID 作為穩定的行鍵（選中、增量更新依賴它）。</summary>
+    private static readonly DataGridLocalSourceDescriptor<RuleItemViewModel> RowDescriptor =
+        DataGridLocalSourceDescriptor.For<RuleItemViewModel>(static row => DataGridRowKey.FromString(row.Id));
+
     /// <summary>經過搜索和篩選後顯示的規則。</summary>
     public ObservableCollection<RuleItemViewModel> Rules { get; } = [];
+
+    /// <summary>
+    /// 表格數據源。AtomUI 6.2 的 DataGrid.ItemsSource 類型是 IDataGridSource，不能直接綁定普通集合
+    /// （綁定會在運行時靜默失敗，表格為空）；本地數據源會跟蹤 <see cref="Rules"/> 的變化。
+    /// </summary>
+    public IDataGridSource RulesSource => _rulesSource ??= DataGridLocalSource.Create(Rules, RowDescriptor);
+
+    private DataGridLocalSource<RuleItemViewModel>? _rulesSource;
 
     [ObservableProperty]
     public partial string Keyword { get; set; } = "";
@@ -189,7 +202,7 @@ public sealed partial class RulesViewModel : PageViewModel
 
         try
         {
-            using var call = clients.Rules.Watch(new Empty(), cancellationToken: _watch.Token);
+            using var call = clients.Rules.Watch(new Google.Protobuf.WellKnownTypes.Empty(), cancellationToken: _watch.Token);
             await foreach (var change in call.ResponseStream.ReadAllAsync(_watch.Token))
             {
                 Apply(change);
