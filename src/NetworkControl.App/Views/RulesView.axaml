@@ -23,14 +23,25 @@
         </StackPanel>
       </DockPanel>
 
-      <StackPanel Orientation="Horizontal" Spacing="12">
-        <atom:SearchEdit Width="320" Text="{Binding Keyword}" PlaceholderText="{loc:RulesLangResource SearchPlaceholder}" />
-        <atom:Segmented SelectedIndex="{Binding ActionFilter}">
-          <atom:SegmentedItem Content="{loc:CommonLangResource All}" />
-          <atom:SegmentedItem Content="{loc:CommonLangResource Allow}" />
-          <atom:SegmentedItem Content="{loc:CommonLangResource Deny}" />
-        </atom:Segmented>
-      </StackPanel>
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Right" Classes="secondary" VerticalAlignment="Center" Text="{Binding CountSummary}" />
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <atom:SearchEdit Width="320" Text="{Binding Keyword}" PlaceholderText="{loc:RulesLangResource SearchPlaceholder}" />
+          <atom:Segmented SelectedIndex="{Binding ActionFilter}">
+            <atom:SegmentedItem Content="{loc:CommonLangResource All}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource Allow}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource Deny}" />
+          </atom:Segmented>
+          <atom:ComboBox Width="150" ItemsSource="{Binding Sources}" SelectedItem="{Binding SourceFilter}"
+                         PlaceholderText="{loc:RulesLangResource SourceAll}">
+            <atom:ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:Choice">
+                <TextBlock Text="{Binding Title}" />
+              </DataTemplate>
+            </atom:ComboBox.ItemTemplate>
+          </atom:ComboBox>
+        </StackPanel>
+      </DockPanel>
 
       <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
                   IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />

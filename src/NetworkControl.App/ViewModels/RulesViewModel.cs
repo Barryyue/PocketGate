@@ -125,6 +125,21 @@ public sealed partial class RulesViewModel : PageViewModel
 
     public bool IsEmpty => Rules.Count == 0;
 
+    /// <summary>來源篩選選項（null 表示全部來源）。</summary>
+    public IReadOnlyList<Choice<Proto.RuleSource?>> Sources => _sources ??=
+    [
+        new Choice<Proto.RuleSource?>(null, () => Loc.Get(RulesLangResourceKind.SourceAll)),
+        .. new[] { Proto.RuleSource.User, Proto.RuleSource.Prompt, Proto.RuleSource.Import, Proto.RuleSource.Builtin }
+            .Select(s => new Choice<Proto.RuleSource?>(s, () => Text.Source(s))),
+    ];
+
+    private IReadOnlyList<Choice<Proto.RuleSource?>>? _sources;
+
+    [ObservableProperty]
+    public partial Choice<Proto.RuleSource?>? SourceFilter { get; set; }
+
+    public string CountSummary => Loc.Format(RulesLangResourceKind.CountSummary, Rules.Count);
+
     public string CountText => Rules.Count.ToString(CultureInfo.CurrentCulture);
 
     public override Task OnActivatedAsync() => RefreshAsync();
@@ -137,6 +152,7 @@ public sealed partial class RulesViewModel : PageViewModel
         }
 
         ActionFilter = 0;
+        SourceFilter = null;
         Keyword = navigation.Keyword;
         return false; // 仍由主窗口調用 OnActivatedAsync 刷新規則列表，刷新後按關鍵字篩選
     }
@@ -170,6 +186,11 @@ public sealed partial class RulesViewModel : PageViewModel
             item.Refresh();
         }
 
+        foreach (var source in Sources)
+        {
+            source.Refresh();
+        }
+
         base.OnLanguageChanged();
     }
 
@@ -186,6 +207,7 @@ public sealed partial class RulesViewModel : PageViewModel
                 2 => r.Info.Definition.Action == Proto.VerdictAction.Deny,
                 _ => true,
             })
+            .Where(r => SourceFilter?.Value is not { } source || r.Info.Source == source)
             .Where(r => keyword.Length == 0 || r.Matches(keyword))
             .OrderBy(r => r.IsBuiltin)
             .ThenByDescending(r => r.Info.UpdatedAt?.ToDateTimeOffset() ?? DateTimeOffset.MinValue)
@@ -199,7 +221,10 @@ public sealed partial class RulesViewModel : PageViewModel
 
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(CountText));
+        OnPropertyChanged(nameof(CountSummary));
     }
+
+    partial void OnSourceFilterChanged(Choice<Proto.RuleSource?>? value) => ApplyFilter();
 
     private async Task WatchAsync(IpcClients clients)
     {

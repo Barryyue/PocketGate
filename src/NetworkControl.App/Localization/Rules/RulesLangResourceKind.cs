@@ -52,4 +52,6 @@ public enum RulesLangResourceKind
     Updated,
     Deleted,
     Subtitle,
+    SourceAll,
+    CountSummary,
 }

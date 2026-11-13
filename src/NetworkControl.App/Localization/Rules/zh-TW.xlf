@@ -277,5 +277,17 @@
         <target state="translated">規則決定哪些連線被允許或拒絕；越具體的規則優先順序越高。</target>
       </segment>
     </unit>
+    <unit id="SourceAll">
+      <segment>
+        <source>All sources</source>
+        <target state="translated">全部來源</target>
+      </segment>
+    </unit>
+    <unit id="CountSummary">
+      <segment>
+        <source>{0} rules</source>
+        <target state="translated">共 {0} 條規則</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

@@ -231,5 +231,15 @@
         <source>Rules decide which connections are allowed or denied; the most specific rule wins.</source>
       </segment>
     </unit>
+    <unit id="SourceAll">
+      <segment>
+        <source>All sources</source>
+      </segment>
+    </unit>
+    <unit id="CountSummary">
+      <segment>
+        <source>{0} rules</source>
+      </segment>
+    </unit>
   </file>
 </xliff>
