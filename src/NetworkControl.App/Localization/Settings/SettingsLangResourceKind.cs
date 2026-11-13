@@ -64,4 +64,5 @@ public enum SettingsLangResourceKind
     BackupDaily,
     BackupSnapshot,
     NothingToChange,
+    Subtitle,
 }

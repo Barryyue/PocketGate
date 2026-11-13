@@ -59,6 +59,7 @@
                     Text="{Binding ConnectionText}" />
         <TextBlock Classes="secondary" Text="{Binding ModeText}" VerticalAlignment="Center" />
         <TextBlock Classes="secondary" Text="{Binding EngineText}" VerticalAlignment="Center" />
+        <atom:Tag TagColor="warning" Text="{Binding PendingPromptsText}" IsVisible="{Binding HasPendingPrompts}" VerticalAlignment="Center" />
       </StackPanel>
       </DockPanel>
     </Border>

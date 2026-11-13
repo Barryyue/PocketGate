@@ -79,5 +79,11 @@
         <target state="translated">完全退出（停止拦截）</target>
       </segment>
     </unit>
+    <unit id="ShowApps">
+      <segment>
+        <source>Apps</source>
+        <target state="translated">应用</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

@@ -17,7 +17,10 @@
           <atom:Button ButtonType="Primary" Icon="{antdicons:AntDesignIconProvider Kind=PlusOutlined}"
                        Command="{Binding AddCommand}" Content="{loc:RulesLangResource Add}" />
         </StackPanel>
-        <TextBlock Classes="page-title" Text="{loc:RulesLangResource Title}" VerticalAlignment="Center" />
+        <StackPanel Spacing="2">
+          <TextBlock Classes="page-title" Text="{loc:RulesLangResource Title}" />
+          <TextBlock Classes="secondary" Text="{loc:RulesLangResource Subtitle}" />
+        </StackPanel>
       </DockPanel>
 
       <StackPanel Orientation="Horizontal" Spacing="12">

@@ -19,4 +19,5 @@ public enum TrayLangResourceKind
     DoNotDisturb,
     DoNotDisturbOff,
     ExitAll,
+    ShowApps,
 }

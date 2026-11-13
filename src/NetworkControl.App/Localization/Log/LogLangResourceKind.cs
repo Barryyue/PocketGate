@@ -21,4 +21,5 @@ public enum LogLangResourceKind
     ColumnCount,
     ColumnOperations,
     CreateRule,
+    Subtitle,
 }

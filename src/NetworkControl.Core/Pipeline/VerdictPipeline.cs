@@ -66,8 +66,32 @@ public sealed partial class VerdictPipeline
         }
 
         _metrics.RecordVerdict(verdict, Stopwatch.GetElapsedTime(started));
-        Publish(context, verdict);
+        if (context.App is null && verdict.Reason != VerdictReason.Cancelled && (flow.Process is not null || flow.ExecutablePath is not null))
+        {
+            // 停用模式、內置放行、全部阻斷等階段在解析應用之前就給出了判決：
+            // 為了日誌、統計和應用頁能看到是哪個程序，在判決返回之後再補充解析（不影響判決延遲）
+            _ = PublishWithIdentityAsync(context, verdict);
+        }
+        else
+        {
+            Publish(context, verdict);
+        }
+
         return verdict;
+    }
+
+    private async Task PublishWithIdentityAsync(FlowContext context, Verdict verdict)
+    {
+        try
+        {
+            await context.GetAppAsync();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // 解析失敗時照常記錄（只是沒有應用信息）
+        }
+
+        Publish(context, verdict);
     }
 
     private async ValueTask<Verdict> RunStagesAsync(FlowContext context)

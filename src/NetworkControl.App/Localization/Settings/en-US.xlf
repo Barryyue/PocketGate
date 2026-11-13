@@ -291,5 +291,10 @@
         <source>The rules are already up to date.</source>
       </segment>
     </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Interface preferences apply to you; service settings apply to everyone on this computer.</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

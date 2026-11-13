@@ -91,5 +91,11 @@
         <target state="translated">連線記錄</target>
       </segment>
     </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Every connection decision, merged per minute. Create a rule directly from any entry.</source>
+        <target state="translated">每一次連線判決（按分鐘合併）。可以直接從記錄新增規則。</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

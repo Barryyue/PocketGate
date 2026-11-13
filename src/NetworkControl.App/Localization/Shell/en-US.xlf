@@ -56,5 +56,10 @@
         <source>Apps</source>
       </segment>
     </unit>
+    <unit id="StatusPendingPrompts">
+      <segment>
+        <source>{0} awaiting answer</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

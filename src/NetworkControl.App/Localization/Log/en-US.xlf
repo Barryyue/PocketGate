@@ -76,5 +76,10 @@
         <source>Connection log</source>
       </segment>
     </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Every connection decision, merged per minute. Create a rule directly from any entry.</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

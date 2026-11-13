@@ -51,4 +51,5 @@ public enum RulesLangResourceKind
     Created,
     Updated,
     Deleted,
+    Subtitle,
 }

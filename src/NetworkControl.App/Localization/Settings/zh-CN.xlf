@@ -349,5 +349,11 @@
         <target state="translated">规则已是最新，无需更改。</target>
       </segment>
     </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Interface preferences apply to you; service settings apply to everyone on this computer.</source>
+        <target state="translated">界面偏好只影响你自己；服务设置对本机所有用户生效。</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

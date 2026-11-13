@@ -10,7 +10,10 @@
 
   <DockPanel>
     <StackPanel DockPanel.Dock="Top" Spacing="16" Margin="0,0,0,16">
-      <TextBlock Classes="page-title" Text="{loc:LogLangResource Title}" />
+      <StackPanel Spacing="2">
+        <TextBlock Classes="page-title" Text="{loc:LogLangResource Title}" />
+        <TextBlock Classes="secondary" Text="{loc:LogLangResource Subtitle}" />
+      </StackPanel>
       <DockPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="12">
           <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">

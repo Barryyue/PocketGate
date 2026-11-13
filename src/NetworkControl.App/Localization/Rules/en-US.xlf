@@ -226,5 +226,10 @@
         <source>Rule updated</source>
       </segment>
     </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Rules decide which connections are allowed or denied; the most specific rule wins.</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

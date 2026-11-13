@@ -271,5 +271,11 @@
         <target state="translated">规则已更新</target>
       </segment>
     </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Rules decide which connections are allowed or denied; the most specific rule wins.</source>
+        <target state="translated">规则决定哪些连接被允许或拒绝；越具体的规则优先级越高。</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

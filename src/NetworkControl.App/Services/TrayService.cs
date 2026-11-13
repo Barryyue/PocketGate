@@ -100,6 +100,7 @@ public sealed class TrayService : IDisposable
         var menu = new NativeMenu();
 
         menu.Items.Add(Item(loc.Get(TrayLangResourceKind.Open), () => NavigateRequested?.Invoke(this, "overview")));
+        menu.Items.Add(Item(loc.Get(TrayLangResourceKind.ShowApps), () => NavigateRequested?.Invoke(this, "apps")));
         menu.Items.Add(Item(loc.Get(TrayLangResourceKind.ShowRules), () => NavigateRequested?.Invoke(this, "rules")));
         menu.Items.Add(Item(loc.Get(TrayLangResourceKind.ShowLog), () => NavigateRequested?.Invoke(this, "log")));
         menu.Items.Add(Item(loc.Get(TrayLangResourceKind.ShowSettings), () => NavigateRequested?.Invoke(this, "settings")));

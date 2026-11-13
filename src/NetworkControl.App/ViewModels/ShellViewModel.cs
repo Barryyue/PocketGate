@@ -62,6 +62,12 @@ public sealed partial class ShellViewModel : LocalizedViewModel
 
     public string ModeText => Connection.Status is { } status ? Text.Mode(status.Mode) : "";
 
+    public bool HasPendingPrompts => Connection.Status?.PendingPromptFlows > 0;
+
+    public string PendingPromptsText => HasPendingPrompts
+        ? Loc.Format(ShellLangResourceKind.StatusPendingPrompts, Connection.Status!.PendingPromptFlows)
+        : "";
+
     public string EngineText => Connection.Status?.Engine is { } engine ? Loc.Format(ShellLangResourceKind.StatusEngine, engine.Name) : "";
 
     /// <summary>按導航鍵切換頁面（導航菜單、托盤、通知都通過它跳轉）。</summary>
@@ -128,5 +134,7 @@ public sealed partial class ShellViewModel : LocalizedViewModel
         OnPropertyChanged(nameof(ConnectionText));
         OnPropertyChanged(nameof(ModeText));
         OnPropertyChanged(nameof(EngineText));
+        OnPropertyChanged(nameof(HasPendingPrompts));
+        OnPropertyChanged(nameof(PendingPromptsText));
     }
 }

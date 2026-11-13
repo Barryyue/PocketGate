@@ -66,5 +66,10 @@
         <source>Quit and stop filtering</source>
       </segment>
     </unit>
+    <unit id="ShowApps">
+      <segment>
+        <source>Apps</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

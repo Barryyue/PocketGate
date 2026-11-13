@@ -15,7 +15,10 @@
 
   <ScrollViewer>
     <StackPanel Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
-      <TextBlock Classes="page-title" Text="{loc:SettingsLangResource Title}" />
+      <StackPanel Spacing="2">
+        <TextBlock Classes="page-title" Text="{loc:SettingsLangResource Title}" />
+        <TextBlock Classes="secondary" Text="{loc:SettingsLangResource Subtitle}" TextWrapping="Wrap" />
+      </StackPanel>
 
       <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
                   IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />

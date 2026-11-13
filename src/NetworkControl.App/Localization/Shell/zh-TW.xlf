@@ -67,5 +67,11 @@
         <target state="translated">應用程式</target>
       </segment>
     </unit>
+    <unit id="StatusPendingPrompts">
+      <segment>
+        <source>{0} awaiting answer</source>
+        <target state="translated">{0} 個連線等待回應</target>
+      </segment>
+    </unit>
   </file>
 </xliff>
