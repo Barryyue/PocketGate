@@ -193,5 +193,161 @@
         <target state="translated">界面无法打开时，可以运行安装目录中的“导出诊断包”（NetworkControl.exe --export-diagnostics），诊断包会保存到桌面。</target>
       </segment>
     </unit>
+    <unit id="SectionTransfer">
+      <segment>
+        <source>Rules backup &amp; transfer</source>
+        <target state="translated">规则备份与迁移</target>
+      </segment>
+    </unit>
+    <unit id="TransferHint">
+      <segment>
+        <source>Export your rules to move them to another computer. Rules are also backed up automatically every day; the last 7 days are kept.</source>
+        <target state="translated">导出规则即可迁移到另一台电脑。规则每天自动备份，保留最近 7 天。</target>
+      </segment>
+    </unit>
+    <unit id="ExportRules">
+      <segment>
+        <source>Export rules…</source>
+        <target state="translated">导出规则…</target>
+      </segment>
+    </unit>
+    <unit id="ImportRules">
+      <segment>
+        <source>Import rules…</source>
+        <target state="translated">导入规则…</target>
+      </segment>
+    </unit>
+    <unit id="ExportPickerTitle">
+      <segment>
+        <source>Export rules</source>
+        <target state="translated">导出规则</target>
+      </segment>
+    </unit>
+    <unit id="ImportPickerTitle">
+      <segment>
+        <source>Import rules</source>
+        <target state="translated">导入规则</target>
+      </segment>
+    </unit>
+    <unit id="Exported">
+      <segment>
+        <source>Exported {0} rules to {1}</source>
+        <target state="translated">已导出 {0} 条规则到 {1}</target>
+      </segment>
+    </unit>
+    <unit id="ExportSkippedNote">
+      <segment>
+        <source>{0} built-in or temporary rules were not exported.</source>
+        <target state="translated">内置规则和临时规则不会导出（{0} 条）。</target>
+      </segment>
+    </unit>
+    <unit id="ImportTitle">
+      <segment>
+        <source>Import rules</source>
+        <target state="translated">导入规则</target>
+      </segment>
+    </unit>
+    <unit id="ImportModeMerge">
+      <segment>
+        <source>Merge</source>
+        <target state="translated">合并</target>
+      </segment>
+    </unit>
+    <unit id="ImportModeReplace">
+      <segment>
+        <source>Replace</source>
+        <target state="translated">覆盖</target>
+      </segment>
+    </unit>
+    <unit id="ImportModeMergeHint">
+      <segment>
+        <source>Add new rules and update changed ones. Your existing rules are kept.</source>
+        <target state="translated">新增规则并更新有变化的规则，保留现有规则。</target>
+      </segment>
+    </unit>
+    <unit id="ImportModeReplaceHint">
+      <segment>
+        <source>Make your rules match the file: rules that are not in the file are deleted. Built-in and temporary rules are kept.</source>
+        <target state="translated">使规则与文件一致：文件中没有的规则会被删除。内置规则和临时规则不受影响。</target>
+      </segment>
+    </unit>
+    <unit id="ImportSummary">
+      <segment>
+        <source>{0} to add · {1} to update · {2} to delete · {3} unchanged</source>
+        <target state="translated">新增 {0} · 更新 {1} · 删除 {2} · 不变 {3}</target>
+      </segment>
+    </unit>
+    <unit id="Imported">
+      <segment>
+        <source>Rules imported: {0}</source>
+        <target state="translated">已导入规则：{0}</target>
+      </segment>
+    </unit>
+    <unit id="ImportFailed">
+      <segment>
+        <source>Could not import the file: {0}</source>
+        <target state="translated">无法导入文件：{0}</target>
+      </segment>
+    </unit>
+    <unit id="ImportFileName">
+      <segment>
+        <source>File: {0}</source>
+        <target state="translated">文件：{0}</target>
+      </segment>
+    </unit>
+    <unit id="Backups">
+      <segment>
+        <source>Automatic backups</source>
+        <target state="translated">自动备份</target>
+      </segment>
+    </unit>
+    <unit id="NoBackups">
+      <segment>
+        <source>No backups yet</source>
+        <target state="translated">暂无备份</target>
+      </segment>
+    </unit>
+    <unit id="RestoreBackup">
+      <segment>
+        <source>Restore…</source>
+        <target state="translated">恢复…</target>
+      </segment>
+    </unit>
+    <unit id="RestoreTitle">
+      <segment>
+        <source>Restore rules from backup</source>
+        <target state="translated">从备份恢复规则</target>
+      </segment>
+    </unit>
+    <unit id="RestoreHint">
+      <segment>
+        <source>Your rules will be replaced with the ones in the backup from {0}. A snapshot of the current rules is saved first, so you can undo this.</source>
+        <target state="translated">规则将被替换为 {0} 的备份内容。恢复前会自动保存当前规则的快照，可以随时恢复回来。</target>
+      </segment>
+    </unit>
+    <unit id="Restored">
+      <segment>
+        <source>Rules restored: {0}</source>
+        <target state="translated">已恢复规则：{0}</target>
+      </segment>
+    </unit>
+    <unit id="BackupDaily">
+      <segment>
+        <source>{0} · daily backup</source>
+        <target state="translated">{0} · 每日备份</target>
+      </segment>
+    </unit>
+    <unit id="BackupSnapshot">
+      <segment>
+        <source>{0} · before restore</source>
+        <target state="translated">{0} · 恢复前快照</target>
+      </segment>
+    </unit>
+    <unit id="NothingToChange">
+      <segment>
+        <source>The rules are already up to date.</source>
+        <target state="translated">规则已是最新，无需更改。</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

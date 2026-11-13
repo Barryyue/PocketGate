@@ -16,6 +16,63 @@ service Rules {
   rpc SetEnabled (SetRuleEnabledRequest) returns (RuleInfo);
   rpc Delete (DeleteRulesRequest) returns (DeleteRulesResponse);
   rpc Watch (google.protobuf.Empty) returns (stream RuleChangeEvent);
+  // 導出為 netcontrol-rules 文件（FR-SET-03）。路徑按請求方用戶的目錄替換為佔位符。
+  rpc Export (ExportRulesRequest) returns (ExportRulesResponse);
+  // 導入：preview_only 為 true 時只計算差異，不修改規則。
+  rpc Import (ImportRulesRequest) returns (ImportResult);
+  // 每日備份和恢復前快照（FR-SET-04）。
+  rpc ListBackups (google.protobuf.Empty) returns (ListBackupsResponse);
+  // 用備份中的規則覆蓋當前規則（先自動建立恢復前快照）；preview_only 為 true 時只計算差異。
+  rpc RestoreBackup (RestoreBackupRequest) returns (ImportResult);
+}
+
+enum ImportMode {
+  IMPORT_MODE_MERGE = 0;
+  IMPORT_MODE_REPLACE = 1;
+}
+
+message ExportRulesRequest {
+  // 佔位符 → 請求方用戶的目錄，例如 "%USERPROFILE%" → "C:\Users\alice"。
+  map<string, string> path_roots = 1;
+}
+
+message ExportRulesResponse {
+  string content = 1;
+  int32 exported = 2;
+  // 內置規則和臨時規則不會導出。
+  int32 skipped = 3;
+}
+
+message ImportRulesRequest {
+  string content = 1;
+  ImportMode mode = 2;
+  map<string, string> path_roots = 3;
+  bool preview_only = 4;
+}
+
+message ImportResult {
+  int32 added = 1;
+  int32 updated = 2;
+  int32 removed = 3;
+  int32 unchanged = 4;
+  // 恢復備份時建立的恢復前快照名稱。
+  optional string snapshot = 5;
+}
+
+message BackupInfo {
+  string name = 1;
+  google.protobuf.Timestamp created_at = 2;
+  int64 size = 3;
+  bool is_restore_snapshot = 4;
+}
+
+message ListBackupsResponse {
+  repeated BackupInfo backups = 1;
+}
+
+message RestoreBackupRequest {
+  string name = 1;
+  bool preview_only = 2;
 }
 
 enum RuleSource {

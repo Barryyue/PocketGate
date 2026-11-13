@@ -103,6 +103,7 @@ public sealed partial class App : Application
         services.AddSingleton<TrayService>();
         services.AddSingleton<DiagnosticsExporter>();
         services.AddSingleton<DiagnosticsExportFlow>();
+        services.AddSingleton<RuleTransferFlow>();
 
         // 頁面：註冊順序即導航順序（與 ShellWindow 中的導航菜單一致）
         services.AddSingleton<ActivityDashboardViewModel>();

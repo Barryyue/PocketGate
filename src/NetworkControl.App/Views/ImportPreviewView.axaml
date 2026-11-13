@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             x:Class="NetworkControl.App.Views.ImportPreviewView"
+             x:DataType="vm:ImportPreviewViewModel">
+  <StackPanel Spacing="14" Margin="0,4,0,8">
+    <TextBlock Classes="secondary" Text="{Binding FileText}" TextTrimming="PrefixCharacterEllipsis" />
+    <atom:Segmented SelectedIndex="{Binding ModeIndex}" HorizontalAlignment="Left">
+      <atom:SegmentedItem Content="{loc:SettingsLangResource ImportModeMerge}" />
+      <atom:SegmentedItem Content="{loc:SettingsLangResource ImportModeReplace}" />
+    </atom:Segmented>
+    <TextBlock Text="{Binding ModeHint}" TextWrapping="Wrap" />
+    <atom:Alert Type="Info" IsShowIcon="True" Message="{Binding Summary}" IsVisible="{Binding !HasRemovals}" />
+    <atom:Alert Type="Warning" IsShowIcon="True" Message="{Binding Summary}" IsVisible="{Binding HasRemovals}" />
+  </StackPanel>
+</UserControl>

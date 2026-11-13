@@ -161,5 +161,135 @@
         <source>If this window cannot open, run “Export diagnostics” in the installation folder (NetworkControl.exe --export-diagnostics); the package is saved to the desktop.</source>
       </segment>
     </unit>
+    <unit id="SectionTransfer">
+      <segment>
+        <source>Rules backup &amp; transfer</source>
+      </segment>
+    </unit>
+    <unit id="TransferHint">
+      <segment>
+        <source>Export your rules to move them to another computer. Rules are also backed up automatically every day; the last 7 days are kept.</source>
+      </segment>
+    </unit>
+    <unit id="ExportRules">
+      <segment>
+        <source>Export rules…</source>
+      </segment>
+    </unit>
+    <unit id="ImportRules">
+      <segment>
+        <source>Import rules…</source>
+      </segment>
+    </unit>
+    <unit id="ExportPickerTitle">
+      <segment>
+        <source>Export rules</source>
+      </segment>
+    </unit>
+    <unit id="ImportPickerTitle">
+      <segment>
+        <source>Import rules</source>
+      </segment>
+    </unit>
+    <unit id="Exported">
+      <segment>
+        <source>Exported {0} rules to {1}</source>
+      </segment>
+    </unit>
+    <unit id="ExportSkippedNote">
+      <segment>
+        <source>{0} built-in or temporary rules were not exported.</source>
+      </segment>
+    </unit>
+    <unit id="ImportTitle">
+      <segment>
+        <source>Import rules</source>
+      </segment>
+    </unit>
+    <unit id="ImportModeMerge">
+      <segment>
+        <source>Merge</source>
+      </segment>
+    </unit>
+    <unit id="ImportModeReplace">
+      <segment>
+        <source>Replace</source>
+      </segment>
+    </unit>
+    <unit id="ImportModeMergeHint">
+      <segment>
+        <source>Add new rules and update changed ones. Your existing rules are kept.</source>
+      </segment>
+    </unit>
+    <unit id="ImportModeReplaceHint">
+      <segment>
+        <source>Make your rules match the file: rules that are not in the file are deleted. Built-in and temporary rules are kept.</source>
+      </segment>
+    </unit>
+    <unit id="ImportSummary">
+      <segment>
+        <source>{0} to add · {1} to update · {2} to delete · {3} unchanged</source>
+      </segment>
+    </unit>
+    <unit id="Imported">
+      <segment>
+        <source>Rules imported: {0}</source>
+      </segment>
+    </unit>
+    <unit id="ImportFailed">
+      <segment>
+        <source>Could not import the file: {0}</source>
+      </segment>
+    </unit>
+    <unit id="ImportFileName">
+      <segment>
+        <source>File: {0}</source>
+      </segment>
+    </unit>
+    <unit id="Backups">
+      <segment>
+        <source>Automatic backups</source>
+      </segment>
+    </unit>
+    <unit id="NoBackups">
+      <segment>
+        <source>No backups yet</source>
+      </segment>
+    </unit>
+    <unit id="RestoreBackup">
+      <segment>
+        <source>Restore…</source>
+      </segment>
+    </unit>
+    <unit id="RestoreTitle">
+      <segment>
+        <source>Restore rules from backup</source>
+      </segment>
+    </unit>
+    <unit id="RestoreHint">
+      <segment>
+        <source>Your rules will be replaced with the ones in the backup from {0}. A snapshot of the current rules is saved first, so you can undo this.</source>
+      </segment>
+    </unit>
+    <unit id="Restored">
+      <segment>
+        <source>Rules restored: {0}</source>
+      </segment>
+    </unit>
+    <unit id="BackupDaily">
+      <segment>
+        <source>{0} · daily backup</source>
+      </segment>
+    </unit>
+    <unit id="BackupSnapshot">
+      <segment>
+        <source>{0} · before restore</source>
+      </segment>
+    </unit>
+    <unit id="NothingToChange">
+      <segment>
+        <source>The rules are already up to date.</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

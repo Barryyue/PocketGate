@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using AtomUI.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,6 +21,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     private readonly AutoStartService _autoStart;
     private readonly FeedbackService _feedback;
     private readonly DiagnosticsExportFlow _diagnostics;
+    private readonly RuleTransferFlow _transfer;
     private Proto.UserSettings? _loaded;
     private bool _loading;
 
@@ -29,9 +31,11 @@ public sealed partial class SettingsViewModel : PageViewModel
         AutoStartService autoStart,
         FeedbackService feedback,
         DiagnosticsExportFlow diagnostics,
+        RuleTransferFlow transfer,
         DisplayText text)
         : base(text)
     {
+        _transfer = transfer;
         _diagnostics = diagnostics;
         _connection = connection;
         _appearance = appearance;
@@ -129,8 +133,55 @@ public sealed partial class SettingsViewModel : PageViewModel
     [RelayCommand]
     private Task OpenLogFolderAsync() => _diagnostics.OpenLogFolderAsync();
 
+    /// <summary>每日備份和恢復前快照，最新的在前。</summary>
+    public ObservableCollection<Choice<Proto.BackupInfo>> Backups { get; } = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RestoreBackupCommand))]
+    public partial Choice<Proto.BackupInfo>? SelectedBackup { get; set; }
+
+    public bool HasBackups => Backups.Count > 0;
+
+    [RelayCommand]
+    private Task ExportRulesAsync() => _transfer.ExportAsync();
+
+    [RelayCommand]
+    private Task ImportRulesAsync() => _transfer.ImportAsync();
+
+    private bool CanRestoreBackup() => SelectedBackup is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRestoreBackup))]
+    private async Task RestoreBackupAsync()
+    {
+        if (SelectedBackup is { } backup && await _transfer.RestoreAsync(backup.Value.Name, backup.Title))
+        {
+            await LoadBackupsAsync(); // 恢復會新增一份恢復前快照
+        }
+    }
+
+    private async Task LoadBackupsAsync()
+    {
+        var response = await _connection.RequireClients().Rules.ListBackupsAsync(new Empty());
+        var selected = SelectedBackup?.Value.Name;
+        Backups.Clear();
+        foreach (var backup in response.Backups)
+        {
+            Backups.Add(new Choice<Proto.BackupInfo>(backup, () => BackupTitle(backup)));
+        }
+
+        SelectedBackup = Backups.FirstOrDefault(b => b.Value.Name == selected) ?? Backups.FirstOrDefault();
+        OnPropertyChanged(nameof(HasBackups));
+    }
+
+    private string BackupTitle(Proto.BackupInfo backup)
+    {
+        var time = backup.CreatedAt.ToDateTimeOffset().ToLocalTime().ToString("g", Loc.Culture);
+        return Loc.Format(backup.IsRestoreSnapshot ? SettingsLangResourceKind.BackupSnapshot : SettingsLangResourceKind.BackupDaily, time);
+    }
+
     public override Task OnActivatedAsync() => RunAsync(async () =>
     {
+        await LoadBackupsAsync();
         _loaded = await _connection.RequireClients().Control.GetSettingsAsync(new Empty());
         PromptTimeoutSeconds = (decimal)_loaded.PromptTimeout.ToTimeSpan().TotalSeconds;
         DefaultAction = DefaultActions.FirstOrDefault(a => a.Value == _loaded.PromptDefaultAction) ?? DefaultActions[0];
@@ -180,7 +231,7 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     protected override void OnLanguageChanged()
     {
-        foreach (var choice in Languages.Concat<Choice>(DefaultActions).Concat(FailPolicies))
+        foreach (var choice in Languages.Concat<Choice>(DefaultActions).Concat(FailPolicies).Concat(Backups))
         {
             choice.Refresh();
         }

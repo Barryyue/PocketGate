@@ -193,5 +193,161 @@
         <target state="translated">介面無法開啟時，可以執行安裝目錄中的「匯出診斷包」（NetworkControl.exe --export-diagnostics），診斷包會儲存到桌面。</target>
       </segment>
     </unit>
+    <unit id="SectionTransfer">
+      <segment>
+        <source>Rules backup &amp; transfer</source>
+        <target state="translated">規則備份與移轉</target>
+      </segment>
+    </unit>
+    <unit id="TransferHint">
+      <segment>
+        <source>Export your rules to move them to another computer. Rules are also backed up automatically every day; the last 7 days are kept.</source>
+        <target state="translated">匯出規則即可移轉到另一台電腦。規則每天自動備份，保留最近 7 天。</target>
+      </segment>
+    </unit>
+    <unit id="ExportRules">
+      <segment>
+        <source>Export rules…</source>
+        <target state="translated">匯出規則…</target>
+      </segment>
+    </unit>
+    <unit id="ImportRules">
+      <segment>
+        <source>Import rules…</source>
+        <target state="translated">匯入規則…</target>
+      </segment>
+    </unit>
+    <unit id="ExportPickerTitle">
+      <segment>
+        <source>Export rules</source>
+        <target state="translated">匯出規則</target>
+      </segment>
+    </unit>
+    <unit id="ImportPickerTitle">
+      <segment>
+        <source>Import rules</source>
+        <target state="translated">匯入規則</target>
+      </segment>
+    </unit>
+    <unit id="Exported">
+      <segment>
+        <source>Exported {0} rules to {1}</source>
+        <target state="translated">已匯出 {0} 條規則到 {1}</target>
+      </segment>
+    </unit>
+    <unit id="ExportSkippedNote">
+      <segment>
+        <source>{0} built-in or temporary rules were not exported.</source>
+        <target state="translated">內建規則和暫時規則不會匯出（{0} 條）。</target>
+      </segment>
+    </unit>
+    <unit id="ImportTitle">
+      <segment>
+        <source>Import rules</source>
+        <target state="translated">匯入規則</target>
+      </segment>
+    </unit>
+    <unit id="ImportModeMerge">
+      <segment>
+        <source>Merge</source>
+        <target state="translated">合併</target>
+      </segment>
+    </unit>
+    <unit id="ImportModeReplace">
+      <segment>
+        <source>Replace</source>
+        <target state="translated">覆寫</target>
+      </segment>
+    </unit>
+    <unit id="ImportModeMergeHint">
+      <segment>
+        <source>Add new rules and update changed ones. Your existing rules are kept.</source>
+        <target state="translated">新增規則並更新有變更的規則，保留現有規則。</target>
+      </segment>
+    </unit>
+    <unit id="ImportModeReplaceHint">
+      <segment>
+        <source>Make your rules match the file: rules that are not in the file are deleted. Built-in and temporary rules are kept.</source>
+        <target state="translated">使規則與檔案一致：檔案中沒有的規則會被刪除。內建規則和暫時規則不受影響。</target>
+      </segment>
+    </unit>
+    <unit id="ImportSummary">
+      <segment>
+        <source>{0} to add · {1} to update · {2} to delete · {3} unchanged</source>
+        <target state="translated">新增 {0} · 更新 {1} · 刪除 {2} · 不變 {3}</target>
+      </segment>
+    </unit>
+    <unit id="Imported">
+      <segment>
+        <source>Rules imported: {0}</source>
+        <target state="translated">已匯入規則：{0}</target>
+      </segment>
+    </unit>
+    <unit id="ImportFailed">
+      <segment>
+        <source>Could not import the file: {0}</source>
+        <target state="translated">無法匯入檔案：{0}</target>
+      </segment>
+    </unit>
+    <unit id="ImportFileName">
+      <segment>
+        <source>File: {0}</source>
+        <target state="translated">檔案：{0}</target>
+      </segment>
+    </unit>
+    <unit id="Backups">
+      <segment>
+        <source>Automatic backups</source>
+        <target state="translated">自動備份</target>
+      </segment>
+    </unit>
+    <unit id="NoBackups">
+      <segment>
+        <source>No backups yet</source>
+        <target state="translated">尚無備份</target>
+      </segment>
+    </unit>
+    <unit id="RestoreBackup">
+      <segment>
+        <source>Restore…</source>
+        <target state="translated">還原…</target>
+      </segment>
+    </unit>
+    <unit id="RestoreTitle">
+      <segment>
+        <source>Restore rules from backup</source>
+        <target state="translated">從備份還原規則</target>
+      </segment>
+    </unit>
+    <unit id="RestoreHint">
+      <segment>
+        <source>Your rules will be replaced with the ones in the backup from {0}. A snapshot of the current rules is saved first, so you can undo this.</source>
+        <target state="translated">規則將被取代為 {0} 的備份內容。還原前會自動儲存目前規則的快照，可隨時還原回來。</target>
+      </segment>
+    </unit>
+    <unit id="Restored">
+      <segment>
+        <source>Rules restored: {0}</source>
+        <target state="translated">已還原規則：{0}</target>
+      </segment>
+    </unit>
+    <unit id="BackupDaily">
+      <segment>
+        <source>{0} · daily backup</source>
+        <target state="translated">{0} · 每日備份</target>
+      </segment>
+    </unit>
+    <unit id="BackupSnapshot">
+      <segment>
+        <source>{0} · before restore</source>
+        <target state="translated">{0} · 還原前快照</target>
+      </segment>
+    </unit>
+    <unit id="NothingToChange">
+      <segment>
+        <source>The rules are already up to date.</source>
+        <target state="translated">規則已是最新，無須變更。</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

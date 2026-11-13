@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
              xmlns:vm="using:NetworkControl.App.ViewModels"
              xmlns:loc="using:NetworkControl.App.Localization"
              x:Class="NetworkControl.App.Views.SettingsView"
@@ -73,6 +74,29 @@
 
         <atom:Button ButtonType="Primary" HorizontalAlignment="Left" Command="{Binding SaveCommand}" Content="{loc:CommonLangResource Save}" />
       </StackPanel>
+
+      <!-- 規則導出 / 導入 / 從備份恢復（FR-SET-03 / 04） -->
+      <atom:Card Header="{loc:SettingsLangResource SectionTransfer}" IsEnabled="{Binding IsConnected}">
+        <StackPanel Spacing="14">
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource TransferHint}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <atom:Button Icon="{antdicons:AntDesignIconProvider Kind=ExportOutlined}"
+                         Command="{Binding ExportRulesCommand}" Content="{loc:SettingsLangResource ExportRules}" />
+            <atom:Button Icon="{antdicons:AntDesignIconProvider Kind=ImportOutlined}"
+                         Command="{Binding ImportRulesCommand}" Content="{loc:SettingsLangResource ImportRules}" />
+          </StackPanel>
+          <Grid ColumnDefinitions="280,*">
+            <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource Backups}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+              <atom:ComboBox Width="300" IsVisible="{Binding HasBackups}" ItemsSource="{Binding Backups}"
+                             SelectedItem="{Binding SelectedBackup}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+              <atom:Button IsVisible="{Binding HasBackups}" Icon="{antdicons:AntDesignIconProvider Kind=HistoryOutlined}"
+                           Command="{Binding RestoreBackupCommand}" Content="{loc:SettingsLangResource RestoreBackup}" />
+              <TextBlock Classes="secondary" VerticalAlignment="Center" IsVisible="{Binding !HasBackups}" Text="{loc:SettingsLangResource NoBackups}" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+      </atom:Card>
 
       <!-- 診斷：不依賴服務連接，服務異常時也能導出 -->
       <atom:Card Header="{loc:SettingsLangResource SectionDiagnostics}">

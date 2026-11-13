@@ -70,6 +70,13 @@ public static class RuleExportSerializer
         return rules;
     }
 
+    /// <summary>
+    /// 規則內容的指紋（導出格式的 JSON，不做路徑替換）：用於判斷導入的規則與本機規則是否相同。
+    /// 不能用記錄的相等比較：<see cref="AddressTarget"/> 的網段列表按引用比較。
+    /// </summary>
+    internal static string Fingerprint(Rule rule) =>
+        JsonSerializer.Serialize(ToExport(rule, PathPlaceholderMapper.None), RuleExportJsonContext.Default.RuleExportDto);
+
     private static T Parse<T>(string json, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo)
     {
         try

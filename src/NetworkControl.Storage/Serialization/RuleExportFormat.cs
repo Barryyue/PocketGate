@@ -54,4 +54,5 @@ internal sealed record RuleExportDto
     WriteIndented = true)]
 [JsonSerializable(typeof(RuleExportHeader))]
 [JsonSerializable(typeof(RuleExportDocument))]
+[JsonSerializable(typeof(RuleExportDto))]
 internal sealed partial class RuleExportJsonContext : JsonSerializerContext;
