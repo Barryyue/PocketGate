@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">NetworkControl</string>
+  <string name="channel_prompts">連線詢問</string>
+  <string name="channel_prompts_description">詢問應用程式是否可以連線網路</string>
+  <string name="channel_service">保護狀態</string>
+  <string name="channel_service_description">保護開啟時顯示</string>
+  <string name="channel_alerts">提醒</string>
+  <string name="service_title">保護已開啟</string>
+  <string name="service_text">未獲允許的應用程式無法連線網路</string>
+  <string name="unknown_app">未知的應用程式</string>
+  <string name="prompt_title">{0} 想要連線網路</string>
+  <string name="prompt_title_tampered">{0} 已被變更，想要連線網路</string>
+  <string name="prompt_text_multiple">{0}，共 {1} 個連線</string>
+  <string name="prompt_hint">此連線已被暫時阻止，允許後應用程式重新連線即可上網。</string>
+  <string name="action_allow">允許</string>
+  <string name="action_block">拒絕</string>
+</resources>

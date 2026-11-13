@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.LogLangResourceKind">
+    <unit id="AllowApp">
+      <segment>
+        <source>Allow this app</source>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>Nothing has been blocked yet</source>
+      </segment>
+    </unit>
+    <unit id="ReasonMode">
+      <segment>
+        <source>Mode</source>
+      </segment>
+    </unit>
+    <unit id="ReasonOther">
+      <segment>
+        <source>Default</source>
+      </segment>
+    </unit>
+    <unit id="ReasonPrompt">
+      <segment>
+        <source>Your choice</source>
+      </segment>
+    </unit>
+    <unit id="ReasonRule">
+      <segment>
+        <source>Rule</source>
+      </segment>
+    </unit>
+    <unit id="ReasonTimeout">
+      <segment>
+        <source>No answer</source>
+      </segment>
+    </unit>
+    <unit id="Times">
+      <segment>
+        <source>×{0}</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- 啟動期間的系統窗口主題；Avalonia 接管後由 AtomUI 繪製全部內容 -->
+  <style name="NetworkControl.Theme" parent="@style/Theme.AppCompat.DayNight.NoActionBar">
+    <item name="android:windowActionBar">false</item>
+    <item name="android:windowNoTitle">true</item>
+    <item name="android:windowBackground">@color/nc_window_background</item>
+  </style>
+</resources>

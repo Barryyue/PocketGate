@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.ShellLangResourceKind">
+    <unit id="AppTitle">
+      <segment>
+        <source>NetworkControl</source>
+        <target state="translated">NetworkControl</target>
+      </segment>
+    </unit>
+    <unit id="NavApps">
+      <segment>
+        <source>Apps</source>
+        <target state="translated">應用程式</target>
+      </segment>
+    </unit>
+    <unit id="NavLog">
+      <segment>
+        <source>Blocked</source>
+        <target state="translated">阻擋記錄</target>
+      </segment>
+    </unit>
+    <unit id="NavOverview">
+      <segment>
+        <source>Overview</source>
+        <target state="translated">總覽</target>
+      </segment>
+    </unit>
+    <unit id="NavSettings">
+      <segment>
+        <source>Settings</source>
+        <target state="translated">設定</target>
+      </segment>
+    </unit>
+    <unit id="StartFailed">
+      <segment>
+        <source>Failed to start: {0}</source>
+        <target state="translated">啟動失敗：{0}</target>
+      </segment>
+    </unit>
+    <unit id="Starting">
+      <segment>
+        <source>Starting…</source>
+        <target state="translated">正在啟動…</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

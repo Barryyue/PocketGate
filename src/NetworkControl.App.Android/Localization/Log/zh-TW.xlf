@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.LogLangResourceKind">
+    <unit id="AllowApp">
+      <segment>
+        <source>Allow this app</source>
+        <target state="translated">允許此應用程式</target>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>Nothing has been blocked yet</source>
+        <target state="translated">尚未阻擋任何連線</target>
+      </segment>
+    </unit>
+    <unit id="ReasonMode">
+      <segment>
+        <source>Mode</source>
+        <target state="translated">模式</target>
+      </segment>
+    </unit>
+    <unit id="ReasonOther">
+      <segment>
+        <source>Default</source>
+        <target state="translated">預設</target>
+      </segment>
+    </unit>
+    <unit id="ReasonPrompt">
+      <segment>
+        <source>Your choice</source>
+        <target state="translated">你的選擇</target>
+      </segment>
+    </unit>
+    <unit id="ReasonRule">
+      <segment>
+        <source>Rule</source>
+        <target state="translated">規則</target>
+      </segment>
+    </unit>
+    <unit id="ReasonTimeout">
+      <segment>
+        <source>No answer</source>
+        <target state="translated">未回應</target>
+      </segment>
+    </unit>
+    <unit id="Times">
+      <segment>
+        <source>×{0}</source>
+        <target state="translated">×{0}</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

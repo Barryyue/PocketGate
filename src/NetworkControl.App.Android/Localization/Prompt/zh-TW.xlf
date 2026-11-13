@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.PromptLangResourceKind">
+    <unit id="Duration">
+      <segment>
+        <source>Remember</source>
+        <target state="translated">有效期</target>
+      </segment>
+    </unit>
+    <unit id="Forever">
+      <segment>
+        <source>Always</source>
+        <target state="translated">永久</target>
+      </segment>
+    </unit>
+    <unit id="Hint">
+      <segment>
+        <source>The connection was blocked for now. After you allow it, the app can connect when it retries.</source>
+        <target state="translated">此連線已被暫時阻止，允許後應用程式重新連線即可上網。</target>
+      </segment>
+    </unit>
+    <unit id="Later">
+      <segment>
+        <source>Later</source>
+        <target state="translated">稍後</target>
+      </segment>
+    </unit>
+    <unit id="MoreConnections">
+      <segment>
+        <source>{0} connections</source>
+        <target state="translated">共 {0} 個連線</target>
+      </segment>
+    </unit>
+    <unit id="OneHour">
+      <segment>
+        <source>1 hour</source>
+        <target state="translated">1 小時</target>
+      </segment>
+    </unit>
+    <unit id="Queue">
+      <segment>
+        <source>{0} more waiting</source>
+        <target state="translated">還有 {0} 個詢問</target>
+      </segment>
+    </unit>
+    <unit id="TamperHint">
+      <segment>
+        <source>The app signature differs from the one you approved. It may have been replaced.</source>
+        <target state="translated">應用程式的簽章與你允許時不同，可能已被替換。</target>
+      </segment>
+    </unit>
+    <unit id="TamperTitle">
+      <segment>
+        <source>{0} has changed</source>
+        <target state="translated">{0} 已被變更</target>
+      </segment>
+    </unit>
+    <unit id="Target">
+      <segment>
+        <source>Destination</source>
+        <target state="translated">目的地</target>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>{0} wants to connect</source>
+        <target state="translated">{0} 想要連線網路</target>
+      </segment>
+    </unit>
+    <unit id="UntilRestart">
+      <segment>
+        <source>Until restart</source>
+        <target state="translated">直到重新啟動</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

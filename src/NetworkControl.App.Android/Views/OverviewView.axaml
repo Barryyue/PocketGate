@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.Android.ViewModels"
+             xmlns:loc="using:NetworkControl.Android.Localization"
+             x:Class="NetworkControl.Android.Views.OverviewView"
+             x:DataType="vm:OverviewViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="16" Spacing="16">
+      <TextBlock Classes="page-title" Text="{loc:ShellLangResource AppTitle}" />
+
+      <!-- 保護開關 -->
+      <atom:Card>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="title" Text="{Binding StatusText}"
+                       Classes.success="{Binding StatusColor, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=success}"
+                       Classes.warning="{Binding StatusColor, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=warning}"
+                       Classes.error="{Binding StatusColor, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=error}" />
+            <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding StatusHint}" />
+          </StackPanel>
+          <atom:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding IsProtectionOn}" IsEnabled="{Binding !IsBusy}" />
+        </Grid>
+      </atom:Card>
+
+      <atom:Alert Type="Warning" IsShowIcon="True" Message="{loc:OverviewLangResource BlockAllActive}" IsVisible="{Binding IsBlockAll}" />
+
+      <atom:Card IsVisible="{Binding NotificationsOff}">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+          <TextBlock Classes="secondary" TextWrapping="Wrap" VerticalAlignment="Center" Text="{loc:OverviewLangResource NotificationsOff}" />
+          <atom:Button Grid.Column="1" Command="{Binding EnableNotificationsCommand}" Content="{loc:OverviewLangResource EnableNotifications}" />
+        </Grid>
+      </atom:Card>
+
+      <!-- 模式 -->
+      <atom:Card Header="{loc:OverviewLangResource Mode}">
+        <StackPanel Spacing="12">
+          <atom:Segmented SelectedIndex="{Binding ModeIndex}" IsEnabled="{Binding !IsBlockAll}" HorizontalAlignment="Stretch" IsExpanding="True">
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeAsk}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeWhitelist}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeBlacklist}" />
+          </atom:Segmented>
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding ModeDescriptionText}" />
+          <atom:Button ButtonType="Primary" IsDanger="True" HorizontalAlignment="Stretch" IsVisible="{Binding !IsBlockAll}"
+                       Icon="{antdicons:AntDesignIconProvider Kind=StopOutlined}"
+                       Command="{Binding ToggleBlockAllCommand}" Content="{loc:OverviewLangResource BlockAll}" />
+          <atom:Button ButtonType="Primary" HorizontalAlignment="Stretch" IsVisible="{Binding IsBlockAll}"
+                       Icon="{antdicons:AntDesignIconProvider Kind=PoweroffOutlined}"
+                       Command="{Binding ToggleBlockAllCommand}" Content="{loc:OverviewLangResource Restore}" />
+        </StackPanel>
+      </atom:Card>
+
+      <!-- 統計 -->
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+        <atom:Card>
+          <atom:Statistic Header="{loc:OverviewLangResource BlockedToday}" Value="{Binding BlockedToday}" />
+        </atom:Card>
+        <atom:Card Grid.Column="1">
+          <StackPanel Spacing="8">
+            <atom:Statistic Header="{loc:OverviewLangResource PendingPrompts}" Value="{Binding PendingPrompts}" />
+            <atom:Button IsVisible="{Binding HasPendingPrompts}" Command="{Binding ShowPromptCommand}" Content="{loc:OverviewLangResource ShowPrompt}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </atom:Card>
+      </Grid>
+
+      <atom:Alert Type="Info" IsShowIcon="True" Message="{Binding SkippedRulesText}" IsVisible="{Binding HasSkippedRules}" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

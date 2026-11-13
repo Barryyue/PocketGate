@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.Android.ViewModels"
+             xmlns:loc="using:NetworkControl.Android.Localization"
+             x:Class="NetworkControl.Android.Views.AppsView"
+             x:DataType="vm:AppsViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <StackPanel Margin="16,16,16,8" Spacing="10">
+      <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavApps}" />
+      <atom:LineEdit PlaceholderText="{loc:AppsLangResource Search}" Text="{Binding SearchText}"
+                     LeftAddOn="{antdicons:AntDesignIconProvider Kind=SearchOutlined}" />
+      <atom:Segmented SelectedIndex="{Binding FilterIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+        <atom:SegmentedItem Content="{loc:AppsLangResource FilterAll}" />
+        <atom:SegmentedItem Content="{loc:AppsLangResource FilterAllowed}" />
+        <atom:SegmentedItem Content="{loc:AppsLangResource FilterBlocked}" />
+        <atom:SegmentedItem Content="{loc:AppsLangResource FilterUnset}" />
+      </atom:Segmented>
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+        <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding CountText}" />
+        <TextBlock Grid.Column="1" Classes="secondary" VerticalAlignment="Center" Text="{loc:AppsLangResource ShowSystem}" />
+        <atom:ToggleSwitch Grid.Column="2" IsChecked="{Binding ShowSystem}" />
+      </Grid>
+    </StackPanel>
+
+    <ListBox Grid.Row="1" Classes="plain" ItemsSource="{Binding Visible}" SelectionMode="Single">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:AppItemViewModel">
+          <Border Classes="row">
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+              <Image Grid.RowSpan="2" Width="40" Height="40" VerticalAlignment="Top" Source="{Binding Icon}" />
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Classes="title" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="caption" Text="{Binding PackageName}" TextTrimming="CharacterEllipsis" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock FontSize="12" Classes.success="{Binding StatusKind, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=success}"
+                             Classes.warning="{Binding StatusKind, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=warning}"
+                             Classes.error="{Binding StatusKind, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=error}"
+                             Text="{Binding StatusText}" />
+                  <atom:Tag TagColor="red" Text="{loc:AppsLangResource Tampered}" IsVisible="{Binding IsTampered}" />
+                  <atom:Tag Text="{loc:AppsLangResource System}" IsVisible="{Binding IsSystem}" />
+                </StackPanel>
+              </StackPanel>
+              <atom:Segmented Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" SizeType="Small"
+                              SelectedIndex="{Binding DecisionIndex}" IsEnabled="{Binding !IsBusy}">
+                <atom:SegmentedItem Content="{loc:CommonLangResource Allow}" />
+                <atom:SegmentedItem Content="{loc:CommonLangResource Unset}" />
+                <atom:SegmentedItem Content="{loc:CommonLangResource Block}" />
+              </atom:Segmented>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <TextBlock Grid.Row="1" Classes="secondary" HorizontalAlignment="Center" VerticalAlignment="Center"
+               Text="{loc:AppsLangResource Empty}" IsVisible="{Binding IsEmpty}" />
+  </Grid>
+</UserControl>

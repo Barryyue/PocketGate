@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.PromptLangResourceKind">
+    <unit id="Duration">
+      <segment>
+        <source>Remember</source>
+      </segment>
+    </unit>
+    <unit id="Forever">
+      <segment>
+        <source>Always</source>
+      </segment>
+    </unit>
+    <unit id="Hint">
+      <segment>
+        <source>The connection was blocked for now. After you allow it, the app can connect when it retries.</source>
+      </segment>
+    </unit>
+    <unit id="Later">
+      <segment>
+        <source>Later</source>
+      </segment>
+    </unit>
+    <unit id="MoreConnections">
+      <segment>
+        <source>{0} connections</source>
+      </segment>
+    </unit>
+    <unit id="OneHour">
+      <segment>
+        <source>1 hour</source>
+      </segment>
+    </unit>
+    <unit id="Queue">
+      <segment>
+        <source>{0} more waiting</source>
+      </segment>
+    </unit>
+    <unit id="TamperHint">
+      <segment>
+        <source>The app signature differs from the one you approved. It may have been replaced.</source>
+      </segment>
+    </unit>
+    <unit id="TamperTitle">
+      <segment>
+        <source>{0} has changed</source>
+      </segment>
+    </unit>
+    <unit id="Target">
+      <segment>
+        <source>Destination</source>
+      </segment>
+    </unit>
+    <unit id="Title">
+      <segment>
+        <source>{0} wants to connect</source>
+      </segment>
+    </unit>
+    <unit id="UntilRestart">
+      <segment>
+        <source>Until restart</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

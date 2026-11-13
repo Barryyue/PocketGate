@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.OverviewLangResourceKind">
+    <unit id="BlockAll">
+      <segment>
+        <source>Block all apps</source>
+      </segment>
+    </unit>
+    <unit id="BlockAllActive">
+      <segment>
+        <source>All apps are blocked. Tap Restore to return to the previous mode.</source>
+      </segment>
+    </unit>
+    <unit id="BlockedToday">
+      <segment>
+        <source>Blocked today</source>
+      </segment>
+    </unit>
+    <unit id="EnableNotifications">
+      <segment>
+        <source>Turn on</source>
+      </segment>
+    </unit>
+    <unit id="HintNeedsConsent">
+      <segment>
+        <source>Allow NetworkControl to create a local VPN. Traffic never leaves your device.</source>
+      </segment>
+    </unit>
+    <unit id="HintOff">
+      <segment>
+        <source>All apps can connect to the network.</source>
+      </segment>
+    </unit>
+    <unit id="HintOn">
+      <segment>
+        <source>Apps without permission cannot connect to the network.</source>
+      </segment>
+    </unit>
+    <unit id="HintRevoked">
+      <segment>
+        <source>Another VPN may have been turned on. Turn protection on again to resume.</source>
+      </segment>
+    </unit>
+    <unit id="Mode">
+      <segment>
+        <source>Mode</source>
+      </segment>
+    </unit>
+    <unit id="NotificationsOff">
+      <segment>
+        <source>Notifications are off: connection requests are only shown inside the app.</source>
+      </segment>
+    </unit>
+    <unit id="PendingPrompts">
+      <segment>
+        <source>Waiting for you</source>
+      </segment>
+    </unit>
+    <unit id="Protection">
+      <segment>
+        <source>Protection</source>
+      </segment>
+    </unit>
+    <unit id="Restore">
+      <segment>
+        <source>Restore</source>
+      </segment>
+    </unit>
+    <unit id="ShowPrompt">
+      <segment>
+        <source>Review</source>
+      </segment>
+    </unit>
+    <unit id="SkippedRules">
+      <segment>
+        <source>{0} rules have no effect on Android (they use domain, IP or port conditions).</source>
+      </segment>
+    </unit>
+    <unit id="StatusFailed">
+      <segment>
+        <source>Protection failed</source>
+      </segment>
+    </unit>
+    <unit id="StatusNeedsConsent">
+      <segment>
+        <source>Permission needed</source>
+      </segment>
+    </unit>
+    <unit id="StatusOff">
+      <segment>
+        <source>Protection is off</source>
+      </segment>
+    </unit>
+    <unit id="StatusOn">
+      <segment>
+        <source>Protection is on</source>
+      </segment>
+    </unit>
+    <unit id="StatusRevoked">
+      <segment>
+        <source>Stopped by the system</source>
+      </segment>
+    </unit>
+    <unit id="StatusStarting">
+      <segment>
+        <source>Starting protection…</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

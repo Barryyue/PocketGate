@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Android 版（docs/android.md）：Avalonia.Android + AtomUI 界面、進程內的核心（BackendHost）、黑洞式分流 VPN。
+    需要 .NET Android 工作負載，不在主解決方案中；構建方法見 docs/development.md「Android」一節（scripts/android.ps1）。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <ApplicationId>com.networkcontrol.android</ApplicationId>
+    <ApplicationTitle>NetworkControl</ApplicationTitle>
+    <!-- 顯示版本取 Directory.Build.props 的 VersionPrefix；整數版本碼 = major*10000 + minor*100 + patch -->
+    <ApplicationDisplayVersion>$(VersionPrefix)</ApplicationDisplayVersion>
+    <ApplicationVersion>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($(VersionPrefix.Split('.')[0]), 10000)), $([MSBuild]::Multiply($(VersionPrefix.Split('.')[1]), 100)))), $(VersionPrefix.Split('.')[2])))</ApplicationVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- 界面文本使用 AtomUI 的 XLIFF Catalog（Localization/*），不使用 resx 衛星程序集 -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <RootNamespace>NetworkControl.Android</RootNamespace>
+    <AssemblyName>NetworkControl.Android</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
+    <ProjectReference Include="..\NetworkControl.Storage\NetworkControl.Storage.csproj" />
+    <ProjectReference Include="..\NetworkControl.Engine.Vpn\NetworkControl.Engine.Vpn.csproj" />
+    <ProjectReference Include="..\NetworkControl.Engine.Android\NetworkControl.Engine.Android.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Android" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="AtomUI.Desktop.Controls" />
+    <PackageReference Include="AtomUI.Generator" PrivateAssets="all" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+</Project>

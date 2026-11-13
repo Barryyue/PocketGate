@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:vm="using:NetworkControl.Android.ViewModels"
+             xmlns:loc="using:NetworkControl.Android.Localization"
+             x:Class="NetworkControl.Android.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="16" Spacing="16">
+      <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavSettings}" />
+
+      <atom:Card Header="{loc:SettingsLangResource Language}">
+        <atom:Segmented SelectedIndex="{Binding LanguageIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+          <atom:SegmentedItem Content="{loc:SettingsLangResource FollowSystem}" />
+          <atom:SegmentedItem Content="繁體" />
+          <atom:SegmentedItem Content="简体" />
+          <atom:SegmentedItem Content="EN" />
+        </atom:Segmented>
+      </atom:Card>
+
+      <atom:Card Header="{loc:SettingsLangResource Theme}">
+        <atom:Segmented SelectedIndex="{Binding ThemeIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+          <atom:SegmentedItem Content="{loc:SettingsLangResource FollowSystem}" />
+          <atom:SegmentedItem Content="{loc:SettingsLangResource ThemeLight}" />
+          <atom:SegmentedItem Content="{loc:SettingsLangResource ThemeDark}" />
+        </atom:Segmented>
+      </atom:Card>
+
+      <atom:Card Header="{loc:SettingsLangResource Prompts}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" Text="{loc:SettingsLangResource PromptTimeout}" />
+          <atom:Segmented SelectedIndex="{Binding TimeoutIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+            <atom:SegmentedItem Content="{Binding Timeout15}" />
+            <atom:SegmentedItem Content="{Binding Timeout30}" />
+            <atom:SegmentedItem Content="{Binding Timeout60}" />
+            <atom:SegmentedItem Content="{Binding Timeout120}" />
+          </atom:Segmented>
+          <TextBlock Classes="secondary" Text="{loc:SettingsLangResource DefaultAction}" />
+          <atom:Segmented SelectedIndex="{Binding DefaultActionIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+            <atom:SegmentedItem Content="{loc:CommonLangResource Block}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource Allow}" />
+          </atom:Segmented>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <StackPanel>
+              <TextBlock Text="{loc:SettingsLangResource Notifications}" />
+              <TextBlock Classes="caption" Text="{Binding NotificationsText}" />
+            </StackPanel>
+            <atom:Button Grid.Column="1" VerticalAlignment="Center" Command="{Binding OpenNotificationSettingsCommand}" Content="{loc:SettingsLangResource Open}" />
+          </Grid>
+        </StackPanel>
+      </atom:Card>
+
+      <atom:Card Header="{loc:SettingsLangResource AlwaysOn}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource AlwaysOnHint}" />
+          <atom:Button HorizontalAlignment="Left" Command="{Binding OpenVpnSettingsCommand}" Content="{loc:SettingsLangResource Open}" />
+        </StackPanel>
+      </atom:Card>
+
+      <atom:Card Header="{loc:SettingsLangResource Battery}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource BatteryHint}" />
+          <atom:Button HorizontalAlignment="Left" Command="{Binding OpenBatterySettingsCommand}" Content="{loc:SettingsLangResource Open}" />
+        </StackPanel>
+      </atom:Card>
+
+      <atom:Card Header="{loc:SettingsLangResource About}">
+        <StackPanel Spacing="6">
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+            <TextBlock Classes="secondary" Text="{loc:SettingsLangResource Version}" />
+            <TextBlock Grid.Column="1" Text="{x:Static vm:SettingsViewModel.Version}" TextWrapping="Wrap" />
+          </Grid>
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+            <TextBlock Classes="secondary" Text="{loc:SettingsLangResource Statistics}" />
+            <TextBlock Grid.Column="1" Text="{Binding StatisticsText}" TextWrapping="Wrap" />
+          </Grid>
+        </StackPanel>
+      </atom:Card>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.SettingsLangResourceKind">
+    <unit id="About">
+      <segment>
+        <source>About</source>
+        <target state="translated">關於</target>
+      </segment>
+    </unit>
+    <unit id="AlwaysOn">
+      <segment>
+        <source>Always-on VPN</source>
+        <target state="translated">永久連線的 VPN</target>
+      </segment>
+    </unit>
+    <unit id="AlwaysOnHint">
+      <segment>
+        <source>To keep apps blocked even if NetworkControl stops, turn on "Always-on VPN" and "Block connections without VPN" for NetworkControl in system settings.</source>
+        <target state="translated">若要在 NetworkControl 停止時仍阻擋應用程式，請在系統設定中為 NetworkControl 開啟「永久連線的 VPN」和「封鎖未使用 VPN 的連線」。</target>
+      </segment>
+    </unit>
+    <unit id="Battery">
+      <segment>
+        <source>Battery optimization</source>
+        <target state="translated">電池最佳化</target>
+      </segment>
+    </unit>
+    <unit id="BatteryHint">
+      <segment>
+        <source>Some phones stop background apps aggressively. Exclude NetworkControl from battery optimization if protection turns off by itself.</source>
+        <target state="translated">部分手機會積極停止背景應用程式。若保護會自行關閉，請將 NetworkControl 排除在電池最佳化之外。</target>
+      </segment>
+    </unit>
+    <unit id="DefaultAction">
+      <segment>
+        <source>If not answered</source>
+        <target state="translated">未回應時</target>
+      </segment>
+    </unit>
+    <unit id="FollowSystem">
+      <segment>
+        <source>System</source>
+        <target state="translated">跟隨系統</target>
+      </segment>
+    </unit>
+    <unit id="Language">
+      <segment>
+        <source>Language</source>
+        <target state="translated">語言</target>
+      </segment>
+    </unit>
+    <unit id="Notifications">
+      <segment>
+        <source>Notifications</source>
+        <target state="translated">通知</target>
+      </segment>
+    </unit>
+    <unit id="NotificationsOff">
+      <segment>
+        <source>Off</source>
+        <target state="translated">已關閉</target>
+      </segment>
+    </unit>
+    <unit id="NotificationsOn">
+      <segment>
+        <source>On</source>
+        <target state="translated">已開啟</target>
+      </segment>
+    </unit>
+    <unit id="Open">
+      <segment>
+        <source>Open</source>
+        <target state="translated">開啟</target>
+      </segment>
+    </unit>
+    <unit id="PromptTimeout">
+      <segment>
+        <source>Answer within</source>
+        <target state="translated">回應時限</target>
+      </segment>
+    </unit>
+    <unit id="Prompts">
+      <segment>
+        <source>Connection requests</source>
+        <target state="translated">連線詢問</target>
+      </segment>
+    </unit>
+    <unit id="Seconds">
+      <segment>
+        <source>{0} s</source>
+        <target state="translated">{0} 秒</target>
+      </segment>
+    </unit>
+    <unit id="Statistics">
+      <segment>
+        <source>Engine</source>
+        <target state="translated">攔截引擎</target>
+      </segment>
+    </unit>
+    <unit id="StatisticsFormat">
+      <segment>
+        <source>{0} packets, {1} attempts, {2} reported</source>
+        <target state="translated">{0} 個封包，{1} 次連線嘗試，{2} 次回報</target>
+      </segment>
+    </unit>
+    <unit id="Theme">
+      <segment>
+        <source>Appearance</source>
+        <target state="translated">外觀</target>
+      </segment>
+    </unit>
+    <unit id="ThemeDark">
+      <segment>
+        <source>Dark</source>
+        <target state="translated">深色</target>
+      </segment>
+    </unit>
+    <unit id="ThemeLight">
+      <segment>
+        <source>Light</source>
+        <target state="translated">淺色</target>
+      </segment>
+    </unit>
+    <unit id="Version">
+      <segment>
+        <source>Version</source>
+        <target state="translated">版本</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>
