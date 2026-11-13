@@ -51,5 +51,10 @@
         <source>Quit</source>
       </segment>
     </unit>
+    <unit id="NavApps">
+      <segment>
+        <source>Apps</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

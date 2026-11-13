@@ -39,6 +39,10 @@
     <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorError}" />
   </Style>
 
+  <Style Selector="TextBlock.danger-text">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorError}" />
+  </Style>
+
   <!-- 指標卡片的標題行 -->
   <Style Selector="TextBlock.kpi-caption">
     <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextSecondary}" />

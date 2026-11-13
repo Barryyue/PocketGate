@@ -79,6 +79,7 @@ try
     app.MapGrpcService<PromptsGrpcService>();
     app.MapGrpcService<RulesGrpcService>();
     app.MapGrpcService<ActivityGrpcService>();
+    app.MapGrpcService<AppsGrpcService>();
     app.MapGrpcService<DiagnosticsGrpcService>();
     app.MapEngineEndpoints(serviceOptions);
 

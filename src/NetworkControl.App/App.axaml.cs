@@ -107,6 +107,7 @@ public sealed partial class App : Application
         // 頁面：註冊順序即導航順序（與 ShellWindow 中的導航菜單一致）
         services.AddSingleton<ActivityDashboardViewModel>();
         services.AddSingleton<PageViewModel, OverviewViewModel>();
+        services.AddSingleton<PageViewModel, AppsViewModel>();
         services.AddSingleton<PageViewModel, RulesViewModel>();
         services.AddSingleton<PageViewModel, LogViewModel>();
         services.AddSingleton<PageViewModel, SettingsViewModel>();

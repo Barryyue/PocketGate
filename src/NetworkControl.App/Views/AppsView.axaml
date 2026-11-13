@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             x:Class="NetworkControl.App.Views.AppsView"
+             x:DataType="vm:AppsViewModel"
+             x:Name="Root">
+
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Spacing="16" Margin="0,0,0,16">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <atom:Segmented SelectedIndex="{Binding RangeIndex}">
+            <atom:SegmentedItem Content="{loc:OverviewLangResource RangeDay}" />
+            <atom:SegmentedItem Content="{loc:OverviewLangResource RangeWeek}" />
+            <atom:SegmentedItem Content="{loc:OverviewLangResource RangeMonth}" />
+          </atom:Segmented>
+          <atom:Button Icon="{antdicons:AntDesignIconProvider Kind=ReloadOutlined}"
+                       Command="{Binding RefreshCommand}" Content="{loc:CommonLangResource Refresh}" />
+        </StackPanel>
+        <StackPanel Spacing="2">
+          <TextBlock Classes="page-title" Text="{loc:AppsLangResource Title}" />
+          <TextBlock Classes="secondary" Text="{loc:AppsLangResource Subtitle}" />
+        </StackPanel>
+      </DockPanel>
+
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Right" Classes="secondary" VerticalAlignment="Center" Text="{Binding CountText}" />
+        <atom:SearchEdit Width="320" HorizontalAlignment="Left" Text="{Binding Keyword}"
+                         PlaceholderText="{loc:AppsLangResource SearchPlaceholder}" />
+      </DockPanel>
+
+      <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
+                  IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
+    </StackPanel>
+
+    <Panel>
+      <atom:Empty IsVisible="{Binding IsEmpty}" Description="{loc:AppsLangResource Empty}"
+                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <atom:DataGrid ItemsSource="{Binding ItemsSource}" IsVisible="{Binding !IsEmpty}" IsReadOnly="True"
+                     CanUserResizeColumns="True">
+        <atom:DataGrid.Columns>
+          <atom:DataGridTemplateColumn Header="{loc:AppsLangResource ColumnApp}" Width="3*">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:AppItemViewModel">
+                <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,6">
+                  <TextBlock Classes="rank-label" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="caption" Text="{Binding Path}" IsVisible="{Binding HasPath}"
+                             TextTrimming="PrefixCharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                </StackPanel>
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+          <atom:DataGridTemplateColumn Header="{loc:AppsLangResource ColumnTrust}" Width="2*">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:AppItemViewModel">
+                <atom:Tag Text="{Binding TrustText}" TagColor="{Binding TrustColor}" ToolTip.Tip="{Binding TrustText}"
+                          HorizontalAlignment="Left" VerticalAlignment="Center" MaxWidth="220" />
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+          <atom:DataGridTextColumn x:DataType="vm:AppItemViewModel" Header="{loc:AppsLangResource ColumnAllowed}" Binding="{Binding AllowedText}" Width="90" />
+          <atom:DataGridTemplateColumn Header="{loc:AppsLangResource ColumnBlocked}" Width="90">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:AppItemViewModel">
+                <TextBlock Text="{Binding BlockedText}" VerticalAlignment="Center"
+                           Classes.danger-text="{Binding HasBlocked}" />
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+          <atom:DataGridTextColumn x:DataType="vm:AppItemViewModel" Header="{loc:AppsLangResource ColumnRules}" Binding="{Binding RulesText}" Width="140" />
+          <atom:DataGridTextColumn x:DataType="vm:AppItemViewModel" Header="{loc:AppsLangResource ColumnLastSeen}" Binding="{Binding LastSeenText}" Width="140" />
+          <atom:DataGridTemplateColumn Header="{loc:AppsLangResource ColumnOperations}" Width="230">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:AppItemViewModel">
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                  <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:AppsLangResource AllowApp}"
+                               IsEnabled="{Binding HasPath}" ToolTip.Tip="{loc:AppsLangResource AllowTooltip}"
+                               Command="{Binding #Root.((vm:AppsViewModel)DataContext).AllowCommand}" CommandParameter="{Binding}" />
+                  <atom:Button ButtonType="Link" SizeType="Small" IsDanger="True" Content="{loc:AppsLangResource DenyApp}"
+                               IsEnabled="{Binding HasPath}" ToolTip.Tip="{loc:AppsLangResource DenyTooltip}"
+                               Command="{Binding #Root.((vm:AppsViewModel)DataContext).DenyCommand}" CommandParameter="{Binding}" />
+                  <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:AppsLangResource ViewLog}"
+                               Command="{Binding #Root.((vm:AppsViewModel)DataContext).ViewLogCommand}" CommandParameter="{Binding}" />
+                  <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:AppsLangResource ViewRules}"
+                               Command="{Binding #Root.((vm:AppsViewModel)DataContext).ViewRulesCommand}" CommandParameter="{Binding}" />
+                </StackPanel>
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+        </atom:DataGrid.Columns>
+      </atom:DataGrid>
+    </Panel>
+  </DockPanel>
+</UserControl>

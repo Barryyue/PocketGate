@@ -16,4 +16,5 @@ public enum ShellLangResourceKind
     StatusDisconnected,
     StatusEngine,
     Quit,
+    NavApps,
 }

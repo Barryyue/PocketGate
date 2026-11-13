@@ -14,6 +14,9 @@ public sealed class NavigationService
 
 public sealed record NavigationRequest(string Page, object? Parameter);
 
+/// <summary>跳轉到規則頁時的搜索關鍵字（例如應用路徑）。</summary>
+public sealed record RulesNavigation(string Keyword);
+
 /// <summary>跳轉到連線記錄頁時的篩選條件。</summary>
 /// <param name="ActionFilter">0 全部，1 允許，2 阻斷。</param>
 public sealed record LogNavigation(string Keyword, int ActionFilter = 0);

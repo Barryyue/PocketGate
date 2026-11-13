@@ -61,5 +61,11 @@
         <target state="translated">退出</target>
       </segment>
     </unit>
+    <unit id="NavApps">
+      <segment>
+        <source>Apps</source>
+        <target state="translated">应用</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

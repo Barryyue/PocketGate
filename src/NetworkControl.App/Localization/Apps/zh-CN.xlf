@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-CN" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.AppsLangResourceKind">
+    <unit id="Title">
+      <segment>
+        <source>Apps</source>
+        <target state="translated">应用</target>
+      </segment>
+    </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Every app that used the network and how it is handled</source>
+        <target state="translated">所有联网过的应用及其处理方式</target>
+      </segment>
+    </unit>
+    <unit id="SearchPlaceholder">
+      <segment>
+        <source>Search apps or paths</source>
+        <target state="translated">搜索应用或路径</target>
+      </segment>
+    </unit>
+    <unit id="ColumnApp">
+      <segment>
+        <source>App</source>
+        <target state="translated">应用</target>
+      </segment>
+    </unit>
+    <unit id="ColumnTrust">
+      <segment>
+        <source>Signature</source>
+        <target state="translated">签名</target>
+      </segment>
+    </unit>
+    <unit id="ColumnAllowed">
+      <segment>
+        <source>Allowed</source>
+        <target state="translated">允许</target>
+      </segment>
+    </unit>
+    <unit id="ColumnBlocked">
+      <segment>
+        <source>Denied</source>
+        <target state="translated">拒绝</target>
+      </segment>
+    </unit>
+    <unit id="ColumnRules">
+      <segment>
+        <source>Rules</source>
+        <target state="translated">规则</target>
+      </segment>
+    </unit>
+    <unit id="ColumnLastSeen">
+      <segment>
+        <source>Last seen</source>
+        <target state="translated">最近连接</target>
+      </segment>
+    </unit>
+    <unit id="ColumnOperations">
+      <segment>
+        <source>Actions</source>
+        <target state="translated">操作</target>
+      </segment>
+    </unit>
+    <unit id="TrustUnsigned">
+      <segment>
+        <source>Unsigned</source>
+        <target state="translated">未签名</target>
+      </segment>
+    </unit>
+    <unit id="TrustSystem">
+      <segment>
+        <source>System</source>
+        <target state="translated">系统</target>
+      </segment>
+    </unit>
+    <unit id="TrustUnknown">
+      <segment>
+        <source>Unidentified</source>
+        <target state="translated">未识别</target>
+      </segment>
+    </unit>
+    <unit id="RulesNone">
+      <segment>
+        <source>No rules</source>
+        <target state="translated">无规则</target>
+      </segment>
+    </unit>
+    <unit id="RulesSummary">
+      <segment>
+        <source>{0} allow · {1} deny</source>
+        <target state="translated">{0} 允许 · {1} 拒绝</target>
+      </segment>
+    </unit>
+    <unit id="AllowApp">
+      <segment>
+        <source>Allow</source>
+        <target state="translated">允许</target>
+      </segment>
+    </unit>
+    <unit id="DenyApp">
+      <segment>
+        <source>Deny</source>
+        <target state="translated">拒绝</target>
+      </segment>
+    </unit>
+    <unit id="ViewLog">
+      <segment>
+        <source>Log</source>
+        <target state="translated">记录</target>
+      </segment>
+    </unit>
+    <unit id="ViewRules">
+      <segment>
+        <source>Rules</source>
+        <target state="translated">规则</target>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>No app connected to the network during this period</source>
+        <target state="translated">这段时间没有应用联网</target>
+      </segment>
+    </unit>
+    <unit id="CountSummary">
+      <segment>
+        <source>{0} apps</source>
+        <target state="translated">共 {0} 个应用</target>
+      </segment>
+    </unit>
+    <unit id="LastSeenJustNow">
+      <segment>
+        <source>Just now</source>
+        <target state="translated">刚刚</target>
+      </segment>
+    </unit>
+    <unit id="LastSeenMinutes">
+      <segment>
+        <source>{0} min ago</source>
+        <target state="translated">{0} 分钟前</target>
+      </segment>
+    </unit>
+    <unit id="LastSeenHours">
+      <segment>
+        <source>{0} h ago</source>
+        <target state="translated">{0} 小时前</target>
+      </segment>
+    </unit>
+    <unit id="AllowTooltip">
+      <segment>
+        <source>Create a rule that allows this app</source>
+        <target state="translated">为此应用新建允许规则</target>
+      </segment>
+    </unit>
+    <unit id="DenyTooltip">
+      <segment>
+        <source>Create a rule that denies this app</source>
+        <target state="translated">为此应用新建拒绝规则</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

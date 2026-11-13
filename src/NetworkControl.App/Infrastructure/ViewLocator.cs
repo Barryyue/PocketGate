@@ -14,6 +14,7 @@ public sealed class ViewLocator : IDataTemplate
     private static readonly Dictionary<Type, Func<Control>> Factories = new()
     {
         [typeof(OverviewViewModel)] = () => new OverviewView(),
+        [typeof(AppsViewModel)] = () => new AppsView(),
         [typeof(RulesViewModel)] = () => new RulesView(),
         [typeof(LogViewModel)] = () => new LogView(),
         [typeof(SettingsViewModel)] = () => new SettingsView(),

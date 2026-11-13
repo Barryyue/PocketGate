@@ -24,6 +24,9 @@
           <atom:NavMenuNode ItemKey="overview" Header="{loc:ShellLangResource NavOverview}"
                             Icon="{antdicons:AntDesignIconProvider Kind=DashboardOutlined}"
                             Command="{Binding NavigateCommand}" CommandParameter="overview" />
+          <atom:NavMenuNode ItemKey="apps" Header="{loc:ShellLangResource NavApps}"
+                            Icon="{antdicons:AntDesignIconProvider Kind=AppstoreOutlined}"
+                            Command="{Binding NavigateCommand}" CommandParameter="apps" />
           <atom:NavMenuNode ItemKey="rules" Header="{loc:ShellLangResource NavRules}"
                             Icon="{antdicons:AntDesignIconProvider Kind=SafetyCertificateOutlined}"
                             Command="{Binding NavigateCommand}" CommandParameter="rules" />

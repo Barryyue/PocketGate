@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+import "google/protobuf/timestamp.proto";
+
+// 應用視圖：按應用聚合連接統計和規則。
+service Apps {
+  rpc List (ListAppsRequest) returns (ListAppsResponse);
+}
+
+message ListAppsRequest {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+  int32 limit = 3;
+}
+
+message AppSummary {
+  // "app:<id>" 或 "path:<路徑>"（未識別的應用）。
+  string key = 1;
+  optional int64 app_id = 2;
+  string path = 3;
+  string display_name = 4;
+  optional string signer = 5;
+  bool is_platform = 6;
+  int64 allowed = 7;
+  int64 blocked = 8;
+  google.protobuf.Timestamp last_seen = 9;
+  // 指定了此應用（路徑模式匹配）且已啟用的規則數；全局規則不計入。
+  int32 allow_rules = 10;
+  int32 deny_rules = 11;
+}
+
+message ListAppsResponse {
+  repeated AppSummary apps = 1;
+}

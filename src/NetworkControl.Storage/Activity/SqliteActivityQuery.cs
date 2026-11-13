@@ -187,6 +187,39 @@ internal sealed class SqliteActivityQuery(ActivityDatabase db) : IActivityQuery
         return new ActivitySummary(allowed.Sum(), blocked.Sum(), appCount, destinationCount, timeline, topApps, topDestinations);
     }
 
+    public async Task<IReadOnlyList<AppActivity>> ListAppActivityAsync(DateTimeOffset from, DateTimeOffset to, int limit, CancellationToken cancellationToken)
+    {
+        await using var connection = await db.OpenAsync(cancellationToken);
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT app_id, CASE WHEN app_id < 0 THEN COALESCE(app_path, '') ELSE '' END AS k,
+                   MAX(app_path), MAX(app_name),
+                   SUM(CASE WHEN verdict = 0 THEN count ELSE 0 END), SUM(CASE WHEN verdict = 0 THEN 0 ELSE count END),
+                   MAX(last_ts)
+            FROM connection_log
+            WHERE minute_ts >= $from AND minute_ts < $to
+            GROUP BY app_id, k
+            ORDER BY MAX(last_ts) DESC
+            LIMIT $limit;
+            """;
+        cmd.With("$from", from.ToUnixMs() / 60_000 * 60_000).With("$to", to.ToUnixMs()).With("$limit", Math.Clamp(limit, 1, 5000));
+        var result = new List<AppActivity>();
+        await using var r = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await r.ReadAsync(cancellationToken))
+        {
+            var appId = r.GetInt64(0);
+            result.Add(new AppActivity(
+                appId >= 0 ? appId : null,
+                r.GetNullableString(2),
+                r.GetNullableString(3),
+                r.GetInt64(4),
+                r.GetInt64(5),
+                SqliteExtensions.FromUnixMs(r.GetInt64(6))));
+        }
+
+        return result;
+    }
+
     private static async Task<IReadOnlyList<ActivityTopItem>> QueryTopAsync(
         Microsoft.Data.Sqlite.SqliteConnection connection,
         string sql,

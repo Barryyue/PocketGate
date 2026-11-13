@@ -61,6 +61,25 @@ public sealed class ActivitySummaryTests
     }
 
     [Fact]
+    public async Task Lists_app_activity_by_most_recent_connection()
+    {
+        await using var fx = await StorageFixture.CreateAsync();
+        var writer = new ActivityLogWriter(fx.Activity, new SettingsService(new SqliteSettingsRepository(fx.Config)), fx.Options, new FakeTimeProvider(Start), NullLogger<ActivityLogWriter>.Instance);
+        await writer.StartAsync(Ct);
+        writer.Consume(Event(Start.AddMinutes(1), 7, "/usr/bin/curl", "curl", "api.github.com", "140.82.112.3", VerdictAction.Allow));
+        writer.Consume(Event(Start.AddMinutes(30), 7, "/usr/bin/curl", "curl", "api.github.com", "140.82.112.3", VerdictAction.Deny));
+        writer.Consume(Event(Start.AddMinutes(10), null, "/tmp/a", null, null, "1.2.3.4", VerdictAction.Deny));
+        writer.Consume(Event(Start.AddMinutes(20), null, "/tmp/b", null, null, "1.2.3.4", VerdictAction.Allow));
+        await writer.StopAsync(Ct);
+
+        var apps = await new SqliteActivityQuery(fx.Activity).ListAppActivityAsync(Start, Start.AddHours(1), 10, Ct);
+
+        Assert.Equal(["/usr/bin/curl", "/tmp/b", "/tmp/a"], apps.Select(a => a.Path));
+        Assert.Equal(new AppActivity(7, "/usr/bin/curl", "curl", 1, 1, Start.AddMinutes(30)), apps[0]);
+        Assert.Null(apps[1].AppId);
+    }
+
+    [Fact]
     public async Task Empty_range_returns_zero_filled_timeline()
     {
         await using var fx = await StorageFixture.CreateAsync();

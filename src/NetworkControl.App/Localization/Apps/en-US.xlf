@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.AppsLangResourceKind">
+    <unit id="Title">
+      <segment>
+        <source>Apps</source>
+      </segment>
+    </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Every app that used the network and how it is handled</source>
+      </segment>
+    </unit>
+    <unit id="SearchPlaceholder">
+      <segment>
+        <source>Search apps or paths</source>
+      </segment>
+    </unit>
+    <unit id="ColumnApp">
+      <segment>
+        <source>App</source>
+      </segment>
+    </unit>
+    <unit id="ColumnTrust">
+      <segment>
+        <source>Signature</source>
+      </segment>
+    </unit>
+    <unit id="ColumnAllowed">
+      <segment>
+        <source>Allowed</source>
+      </segment>
+    </unit>
+    <unit id="ColumnBlocked">
+      <segment>
+        <source>Denied</source>
+      </segment>
+    </unit>
+    <unit id="ColumnRules">
+      <segment>
+        <source>Rules</source>
+      </segment>
+    </unit>
+    <unit id="ColumnLastSeen">
+      <segment>
+        <source>Last seen</source>
+      </segment>
+    </unit>
+    <unit id="ColumnOperations">
+      <segment>
+        <source>Actions</source>
+      </segment>
+    </unit>
+    <unit id="TrustUnsigned">
+      <segment>
+        <source>Unsigned</source>
+      </segment>
+    </unit>
+    <unit id="TrustSystem">
+      <segment>
+        <source>System</source>
+      </segment>
+    </unit>
+    <unit id="TrustUnknown">
+      <segment>
+        <source>Unidentified</source>
+      </segment>
+    </unit>
+    <unit id="RulesNone">
+      <segment>
+        <source>No rules</source>
+      </segment>
+    </unit>
+    <unit id="RulesSummary">
+      <segment>
+        <source>{0} allow · {1} deny</source>
+      </segment>
+    </unit>
+    <unit id="AllowApp">
+      <segment>
+        <source>Allow</source>
+      </segment>
+    </unit>
+    <unit id="DenyApp">
+      <segment>
+        <source>Deny</source>
+      </segment>
+    </unit>
+    <unit id="ViewLog">
+      <segment>
+        <source>Log</source>
+      </segment>
+    </unit>
+    <unit id="ViewRules">
+      <segment>
+        <source>Rules</source>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>No app connected to the network during this period</source>
+      </segment>
+    </unit>
+    <unit id="CountSummary">
+      <segment>
+        <source>{0} apps</source>
+      </segment>
+    </unit>
+    <unit id="LastSeenJustNow">
+      <segment>
+        <source>Just now</source>
+      </segment>
+    </unit>
+    <unit id="LastSeenMinutes">
+      <segment>
+        <source>{0} min ago</source>
+      </segment>
+    </unit>
+    <unit id="LastSeenHours">
+      <segment>
+        <source>{0} h ago</source>
+      </segment>
+    </unit>
+    <unit id="AllowTooltip">
+      <segment>
+        <source>Create a rule that allows this app</source>
+      </segment>
+    </unit>
+    <unit id="DenyTooltip">
+      <segment>
+        <source>Create a rule that denies this app</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

@@ -46,6 +46,8 @@ public sealed class IpcClients(GrpcChannel channel)
 
     public Proto.ActivityLog.ActivityLogClient Activity { get; } = new(channel);
 
+    public Proto.Apps.AppsClient Apps { get; } = new(channel);
+
     public Proto.Simulator.SimulatorClient Simulator { get; } = new(channel);
 
     public Proto.Diagnostics.DiagnosticsClient Diagnostics { get; } = new(channel);

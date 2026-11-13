@@ -129,6 +129,18 @@ public sealed partial class RulesViewModel : PageViewModel
 
     public override Task OnActivatedAsync() => RefreshAsync();
 
+    public override bool ApplyNavigation(object parameter)
+    {
+        if (parameter is not RulesNavigation navigation)
+        {
+            return false;
+        }
+
+        ActionFilter = 0;
+        Keyword = navigation.Keyword;
+        return false; // 仍由主窗口調用 OnActivatedAsync 刷新規則列表，刷新後按關鍵字篩選
+    }
+
     [RelayCommand]
     private Task RefreshAsync() => RunAsync(async () =>
     {

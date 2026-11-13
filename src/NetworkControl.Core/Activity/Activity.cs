@@ -120,9 +120,15 @@ public sealed record ActivitySummary(
     IReadOnlyList<ActivityTopItem> TopApps,
     IReadOnlyList<ActivityTopItem> TopDestinations);
 
+/// <summary>一個應用在一段時間內的連接統計（應用頁）。未識別的應用 <see cref="AppId"/> 為 null，按路徑區分。</summary>
+public sealed record AppActivity(long? AppId, string? Path, string? Name, long Allowed, long Blocked, DateTimeOffset LastSeen);
+
 /// <summary>【存儲實現】日誌查詢。</summary>
 public interface IActivityQuery
 {
+    /// <summary>按應用統計 [from, to) 內的連接，按最近連接時間倒序。</summary>
+    Task<IReadOnlyList<AppActivity>> ListAppActivityAsync(DateTimeOffset from, DateTimeOffset to, int limit, CancellationToken cancellationToken);
+
     Task<IReadOnlyList<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken);
 
     /// <summary>統計一段時間內的允許 / 阻斷次數、時間軸和排行榜。時間軸包含範圍內的全部分桶（沒有記錄的為 0）。</summary>
