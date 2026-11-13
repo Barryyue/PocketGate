@@ -87,8 +87,44 @@ public sealed record LogEntry(
     Verdict Verdict,
     int Count);
 
+/// <summary>活動統計的查詢條件：時間範圍 [From, To) 按 <see cref="BucketSize"/> 分桶。</summary>
+public sealed record ActivitySummaryQuery
+{
+    public required DateTimeOffset From { get; init; }
+
+    public required DateTimeOffset To { get; init; }
+
+    /// <summary>時間軸的分桶大小，至少 1 分鐘（日誌按分鐘聚合）。</summary>
+    public TimeSpan BucketSize { get; init; } = TimeSpan.FromHours(1);
+
+    /// <summary>排行榜返回的條目數。</summary>
+    public int TopCount { get; init; } = 8;
+}
+
+/// <summary>時間軸上的一個分桶。</summary>
+public sealed record ActivityBucket(DateTimeOffset Start, long Allowed, long Blocked);
+
+/// <summary>排行榜條目：應用（<see cref="AppId"/> 有值或為未知應用）或目標（域名 / IP）。</summary>
+public sealed record ActivityTopItem(string Key, string? Label, long? AppId, long Allowed, long Blocked, string? Path = null)
+{
+    public long Total => Allowed + Blocked;
+}
+
+/// <summary>一段時間內的連接統計（總覽儀表板）。</summary>
+public sealed record ActivitySummary(
+    long Allowed,
+    long Blocked,
+    int AppCount,
+    int DestinationCount,
+    IReadOnlyList<ActivityBucket> Timeline,
+    IReadOnlyList<ActivityTopItem> TopApps,
+    IReadOnlyList<ActivityTopItem> TopDestinations);
+
 /// <summary>【存儲實現】日誌查詢。</summary>
 public interface IActivityQuery
 {
     Task<IReadOnlyList<LogEntry>> QueryAsync(LogQuery query, CancellationToken cancellationToken);
+
+    /// <summary>統計一段時間內的允許 / 阻斷次數、時間軸和排行榜。時間軸包含範圍內的全部分桶（沒有記錄的為 0）。</summary>
+    Task<ActivitySummary> SummarizeAsync(ActivitySummaryQuery query, CancellationToken cancellationToken);
 }

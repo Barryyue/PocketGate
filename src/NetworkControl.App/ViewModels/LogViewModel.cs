@@ -107,6 +107,7 @@ public sealed partial class LogViewModel : PageViewModel
 
     private readonly ServiceConnection _connection;
     private readonly RuleEditing _editing;
+    private bool _applyingNavigation;
     private CancellationTokenSource? _watch;
 
     public LogViewModel(ServiceConnection connection, RuleEditing editing, DisplayText text)
@@ -143,6 +144,21 @@ public sealed partial class LogViewModel : PageViewModel
 
     public override Task OnActivatedAsync() => QueryAsync();
 
+    public override bool ApplyNavigation(object parameter)
+    {
+        if (parameter is not LogNavigation filter)
+        {
+            return false;
+        }
+
+        _applyingNavigation = true;
+        Keyword = filter.Keyword;
+        ActionFilter = filter.ActionFilter;
+        _applyingNavigation = false;
+        _ = QueryAsync();
+        return true;
+    }
+
     [RelayCommand]
     private Task QueryAsync() => RunAsync(async () =>
     {
@@ -170,7 +186,13 @@ public sealed partial class LogViewModel : PageViewModel
     [RelayCommand]
     private Task CreateRuleAsync(LogItemViewModel item) => _editing.CreateAsync(item.ToPrefill());
 
-    partial void OnActionFilterChanged(int value) => _ = QueryAsync();
+    partial void OnActionFilterChanged(int value)
+    {
+        if (!_applyingNavigation)
+        {
+            _ = QueryAsync();
+        }
+    }
 
     protected override void OnLanguageChanged()
     {

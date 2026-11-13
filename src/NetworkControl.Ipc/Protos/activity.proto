@@ -4,6 +4,7 @@ package netcontrol.v1;
 
 option csharp_namespace = "NetworkControl.Ipc.V1";
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "common.proto";
@@ -12,6 +13,8 @@ import "common.proto";
 service ActivityLog {
   rpc QueryLog (LogQuery) returns (LogPage);
   rpc WatchConnections (google.protobuf.Empty) returns (stream ConnectionEvent);
+  // 一段時間內的連接統計（總覽儀表板、應用頁）。
+  rpc GetSummary (SummaryQuery) returns (SummaryReply);
 }
 
 message LogQuery {
@@ -41,6 +44,41 @@ message LogEntry {
 
 message LogPage {
   repeated LogEntry entries = 1;
+}
+
+message SummaryQuery {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+  // 時間軸分桶大小，至少 1 分鐘。
+  google.protobuf.Duration bucket = 3;
+  int32 top_count = 4;
+}
+
+message SummaryBucket {
+  google.protobuf.Timestamp start = 1;
+  int64 allowed = 2;
+  int64 blocked = 3;
+}
+
+message SummaryItem {
+  // 應用為 "app:<id>" 或 "path:<路徑>"；目標為域名或 IP。
+  string key = 1;
+  optional string label = 2;
+  optional int64 app_id = 3;
+  int64 allowed = 4;
+  int64 blocked = 5;
+  // 應用的可執行文件路徑（目標條目為空）。
+  optional string path = 6;
+}
+
+message SummaryReply {
+  int64 allowed = 1;
+  int64 blocked = 2;
+  int32 app_count = 3;
+  int32 destination_count = 4;
+  repeated SummaryBucket timeline = 5;
+  repeated SummaryItem top_apps = 6;
+  repeated SummaryItem top_destinations = 7;
 }
 
 message ConnectionEvent {

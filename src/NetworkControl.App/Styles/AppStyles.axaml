@@ -35,6 +35,58 @@
     <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeSM}" />
   </Style>
 
+  <Style Selector="TextBlock.metric.danger">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorError}" />
+  </Style>
+
+  <!-- 指標卡片的標題行 -->
+  <Style Selector="TextBlock.kpi-caption">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextSecondary}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- 圖例圓點：顏色與圖表一致（允許 = 主色，拒絕 = 錯誤色） -->
+  <Style Selector="Ellipse.legend">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Ellipse.legend.allowed">
+    <Setter Property="Fill" Value="{atom:SharedTokenResource ColorPrimary}" />
+  </Style>
+  <Style Selector="Ellipse.legend.blocked">
+    <Setter Property="Fill" Value="{atom:SharedTokenResource ColorError}" />
+  </Style>
+
+  <!-- 可點擊的列表行（排行榜等）：透明背景，懸停時淺色填充 -->
+  <Style Selector="Button.rank-row">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="Margin" Value="-10,0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="CornerRadius" Value="{atom:SharedTokenResource BorderRadius}" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.rank-row:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorFillTertiary}" />
+  </Style>
+  <Style Selector="Button.rank-row:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorFillSecondary}" />
+  </Style>
+  <Style Selector="Button.rank-row:pressed">
+    <Setter Property="RenderTransform" Value="none" />
+  </Style>
+  <Style Selector="TextBlock.rank-label">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorText}" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="TextBlock.rank-count">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextSecondary}" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+
   <!-- 主窗口佈局 -->
   <Style Selector="Border.sider">
     <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgContainer}" />

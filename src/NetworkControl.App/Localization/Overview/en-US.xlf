@@ -141,5 +141,112 @@
         <source>Could not switch the engine: {0}</source>
       </segment>
     </unit>
+    <unit id="RangeDay">
+      <segment>
+        <source>24 hours</source>
+      </segment>
+    </unit>
+    <unit id="RangeWeek">
+      <segment>
+        <source>7 days</source>
+      </segment>
+    </unit>
+    <unit id="RangeMonth">
+      <segment>
+        <source>30 days</source>
+      </segment>
+    </unit>
+    <unit id="ActivityTitle">
+      <segment>
+        <source>Connection activity</source>
+      </segment>
+    </unit>
+    <unit id="Allowed">
+      <segment>
+        <source>Allowed</source>
+      </segment>
+    </unit>
+    <unit id="Blocked">
+      <segment>
+        <source>Denied</source>
+      </segment>
+    </unit>
+    <unit id="BlockRate">
+      <segment>
+        <source>{0} denied</source>
+      </segment>
+    </unit>
+    <unit id="ActiveApps">
+      <segment>
+        <source>Active apps</source>
+      </segment>
+    </unit>
+    <unit id="DestinationCount">
+      <segment>
+        <source>{0} destinations</source>
+      </segment>
+    </unit>
+    <unit id="TopApps">
+      <segment>
+        <source>Most active apps</source>
+      </segment>
+    </unit>
+    <unit id="TopDestinations">
+      <segment>
+        <source>Top destinations</source>
+      </segment>
+    </unit>
+    <unit id="NoActivity">
+      <segment>
+        <source>No connections in this period</source>
+      </segment>
+    </unit>
+    <unit id="UnknownApp">
+      <segment>
+        <source>Unidentified app</source>
+      </segment>
+    </unit>
+    <unit id="ChartTooltip">
+      <segment>
+        <source>{0}
+Allowed {1}  ·  Denied {2}</source>
+      </segment>
+    </unit>
+    <unit id="Protection">
+      <segment>
+        <source>Protection</source>
+      </segment>
+    </unit>
+    <unit id="EngineCaption">
+      <segment>
+        <source>Engine: {0}</source>
+      </segment>
+    </unit>
+    <unit id="PendingPromptsCaption">
+      <segment>
+        <source>{0} connections awaiting your answer</source>
+      </segment>
+    </unit>
+    <unit id="QuickActions">
+      <segment>
+        <source>Quick actions</source>
+      </segment>
+    </unit>
+    <unit id="RankTooltip">
+      <segment>
+        <source>Allowed {0}  ·  Denied {1}
+Click to view in the connection log</source>
+      </segment>
+    </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Protection status and network activity at a glance</source>
+      </segment>
+    </unit>
+    <unit id="NoPendingPrompts">
+      <segment>
+        <source>No connections awaiting an answer</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

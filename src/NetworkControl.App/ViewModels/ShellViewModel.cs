@@ -12,16 +12,19 @@ public sealed partial class ShellViewModel : LocalizedViewModel
 {
     private readonly Dictionary<string, PageViewModel> _pages;
     private readonly ShellActivator _activator;
+    private bool _suppressActivation;
 
     public ShellViewModel(
         ServiceConnection connection,
         IEnumerable<PageViewModel> pages,
         ServiceUnavailableViewModel serviceUnavailable,
         ShellActivator activator,
+        NavigationService navigation,
         DisplayText text)
         : base(text)
     {
         _activator = activator;
+        navigation.Requested += (_, request) => NavigateTo(request.Page, request.Parameter);
         Connection = connection;
         ServiceUnavailable = serviceUnavailable;
         Pages = pages.ToArray();
@@ -71,15 +74,51 @@ public sealed partial class ShellViewModel : LocalizedViewModel
         }
     }
 
+    /// <summary>切換到指定頁面並傳遞參數（例如連線記錄的篩選條件）。</summary>
+    public void NavigateTo(string key, object? parameter)
+    {
+        if (!_pages.TryGetValue(key, out var page))
+        {
+            return;
+        }
+
+        _activator.Show();
+        if (parameter is null)
+        {
+            Navigate(key);
+            return;
+        }
+
+        var handled = page.ApplyNavigation(parameter);
+        if (ReferenceEquals(page, CurrentPage))
+        {
+            if (!handled)
+            {
+                _ = page.OnActivatedAsync();
+            }
+
+            return;
+        }
+
+        _suppressActivation = handled;
+        CurrentPage = page;
+        _suppressActivation = false;
+    }
+
     /// <summary>退出界面（不依賴托盤菜單也能退出）。</summary>
     [RelayCommand]
     private void Quit() => _activator.Quit();
 
-    partial void OnCurrentPageChanged(PageViewModel value)
+    partial void OnCurrentPageChanged(PageViewModel oldValue, PageViewModel newValue)
     {
+        // 首次賦值時 oldValue 為 null（生成代碼的簽名沒有標註可空）
+        (oldValue as PageViewModel)?.OnDeactivated();
         OnPropertyChanged(nameof(CurrentKey));
         OnPropertyChanged(nameof(SelectedMenuPath));
-        _ = value.OnActivatedAsync();
+        if (!_suppressActivation)
+        {
+            _ = newValue.OnActivatedAsync();
+        }
     }
 
     private void OnConnectionChanged(object? sender, PropertyChangedEventArgs e)

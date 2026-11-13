@@ -130,7 +130,7 @@ internal sealed partial class ActivityLogWriter : BackgroundService, IActivityCo
                 INSERT INTO connection_log (minute_ts, app_id, app_path, app_name, direction, protocol, remote_ip, remote_port,
                                             hostname, verdict, reason, rule_id, count, first_ts, last_ts)
                 VALUES ($minute, $app, $path, $name, $dir, $proto, $ip, $port, $host, $verdict, $reason, $rule, 1, $ts, $ts)
-                ON CONFLICT (minute_ts, app_id, direction, protocol, remote_ip, remote_port, verdict, reason) DO UPDATE SET
+                ON CONFLICT (minute_ts, app_id, ifnull(app_path, ''), direction, protocol, remote_ip, remote_port, verdict, reason) DO UPDATE SET
                     count = count + 1,
                     last_ts = MAX(last_ts, excluded.last_ts),
                     hostname = COALESCE(excluded.hostname, hostname),

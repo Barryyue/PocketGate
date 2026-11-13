@@ -183,6 +183,26 @@ public class ActivityLogTests
         Assert.Empty(await query.QueryAsync(new LogQuery { Keyword = "100%_" }, TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task Unidentified_apps_are_not_merged_with_each_other()
+    {
+        await using var fx = await StorageFixture.CreateAsync();
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 11, 12, 8, 0, 10, TimeSpan.Zero));
+        var settings = new SettingsService(new SqliteSettingsRepository(fx.Config));
+        var writer = new ActivityLogWriter(fx.Activity, settings, fx.Options, time, NullLogger<ActivityLogWriter>.Instance);
+
+        await writer.StartAsync(TestContext.Current.CancellationToken);
+        writer.Consume(Event(time.GetUtcNow(), VerdictAction.Allow) with { AppId = null, AppPath = "/opt/a", AppName = null });
+        writer.Consume(Event(time.GetUtcNow(), VerdictAction.Allow) with { AppId = null, AppPath = "/opt/b", AppName = null });
+        writer.Consume(Event(time.GetUtcNow(), VerdictAction.Allow) with { AppId = null, AppPath = "/opt/b", AppName = null });
+        await writer.StopAsync(TestContext.Current.CancellationToken);
+
+        var entries = await new SqliteActivityQuery(fx.Activity).QueryAsync(new LogQuery(), TestContext.Current.CancellationToken);
+        Assert.Equal(2, entries.Count);
+        Assert.Equal(1, entries.Single(e => e.AppPath == "/opt/a").Count);
+        Assert.Equal(2, entries.Single(e => e.AppPath == "/opt/b").Count);
+    }
+
     private static ConnectionEvent Event(DateTimeOffset at, VerdictAction action) => new(
         at,
         AppId: 7,

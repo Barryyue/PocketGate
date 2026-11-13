@@ -89,6 +89,7 @@ public sealed partial class App : Application
         services.AddSingleton<FeedbackService>();
         services.AddSingleton<DialogService>();
         services.AddSingleton<ShellActivator>();
+        services.AddSingleton<NavigationService>();
         services.AddSingleton<ToastService>();
 
         // 與服務交互
@@ -104,6 +105,7 @@ public sealed partial class App : Application
         services.AddSingleton<DiagnosticsExportFlow>();
 
         // 頁面：註冊順序即導航順序（與 ShellWindow 中的導航菜單一致）
+        services.AddSingleton<ActivityDashboardViewModel>();
         services.AddSingleton<PageViewModel, OverviewViewModel>();
         services.AddSingleton<PageViewModel, RulesViewModel>();
         services.AddSingleton<PageViewModel, LogViewModel>();

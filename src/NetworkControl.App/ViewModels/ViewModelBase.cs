@@ -39,6 +39,17 @@ public abstract partial class PageViewModel(DisplayText text) : LocalizedViewMod
     /// <summary>頁面變為當前頁時調用，用於加載數據。</summary>
     public virtual Task OnActivatedAsync() => Task.CompletedTask;
 
+    /// <summary>離開頁面時調用，用於停止定時刷新等。</summary>
+    public virtual void OnDeactivated()
+    {
+    }
+
+    /// <summary>
+    /// 從其他頁面跳轉過來時帶的參數（見 <see cref="Services.NavigationService"/>），在 <see cref="OnActivatedAsync"/> 之前調用。
+    /// 返回 true 表示頁面會自行加載數據，主窗口不再調用 <see cref="OnActivatedAsync"/>。
+    /// </summary>
+    public virtual bool ApplyNavigation(object parameter) => false;
+
     /// <summary>執行一個遠程操作，把 gRPC 錯誤轉成用戶可讀的提示。返回是否成功。</summary>
     protected async Task<bool> RunAsync(Func<Task> action)
     {

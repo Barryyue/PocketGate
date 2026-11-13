@@ -83,6 +83,137 @@ internal sealed class SqliteActivityQuery(ActivityDatabase db) : IActivityQuery
         return result;
     }
 
+    public async Task<ActivitySummary> SummarizeAsync(ActivitySummaryQuery query, CancellationToken cancellationToken)
+    {
+        var bucketMs = Math.Max(60_000L, (long)query.BucketSize.TotalMilliseconds);
+        var fromMs = query.From.ToUnixMs() / 60_000 * 60_000;
+        var toMs = Math.Max(fromMs, query.To.ToUnixMs());
+        var bucketCount = (int)Math.Min(10_000, (toMs - fromMs + bucketMs - 1) / bucketMs);
+        var top = Math.Clamp(query.TopCount, 0, 100);
+
+        await using var connection = await db.OpenAsync(cancellationToken);
+
+        // 時間軸（同時得出總數）：日誌按分鐘聚合，按 minute_ts 分桶
+        var allowed = new long[bucketCount];
+        var blocked = new long[bucketCount];
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT (minute_ts - $from) / $bucket AS b, verdict, SUM(count)
+                FROM connection_log
+                WHERE minute_ts >= $from AND minute_ts < $to
+                GROUP BY b, verdict;
+                """;
+            cmd.With("$from", fromMs).With("$to", toMs).With("$bucket", bucketMs);
+            await using var r = await cmd.ExecuteReaderAsync(cancellationToken);
+            while (await r.ReadAsync(cancellationToken))
+            {
+                var index = r.GetInt64(0);
+                if (index < 0 || index >= bucketCount)
+                {
+                    continue;
+                }
+
+                (r.GetInt32(1) == (int)VerdictAction.Allow ? allowed : blocked)[index] += r.GetInt64(2);
+            }
+        }
+
+        var timeline = new ActivityBucket[bucketCount];
+        for (var i = 0; i < bucketCount; i++)
+        {
+            timeline[i] = new ActivityBucket(SqliteExtensions.FromUnixMs(fromMs + (i * bucketMs)), allowed[i], blocked[i]);
+        }
+
+        int appCount;
+        int destinationCount;
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT COUNT(DISTINCT app_id || ':' || CASE WHEN app_id < 0 THEN COALESCE(app_path, '') ELSE '' END),
+                       COUNT(DISTINCT COALESCE(hostname, remote_ip))
+                FROM connection_log
+                WHERE minute_ts >= $from AND minute_ts < $to;
+                """;
+            cmd.With("$from", fromMs).With("$to", toMs);
+            await using var r = await cmd.ExecuteReaderAsync(cancellationToken);
+            await r.ReadAsync(cancellationToken);
+            appCount = r.GetInt32(0);
+            destinationCount = r.GetInt32(1);
+        }
+
+        // 已識別的應用按 app_id 合併；未識別的（app_id = -1）按路徑區分
+        var topApps = await QueryTopAsync(
+            connection,
+            """
+            SELECT app_id, CASE WHEN app_id < 0 THEN COALESCE(app_path, '') ELSE '' END AS k,
+                   MAX(app_name), MAX(app_path),
+                   SUM(CASE WHEN verdict = 0 THEN count ELSE 0 END), SUM(CASE WHEN verdict = 0 THEN 0 ELSE count END)
+            FROM connection_log
+            WHERE minute_ts >= $from AND minute_ts < $to
+            GROUP BY app_id, k
+            ORDER BY SUM(count) DESC
+            LIMIT $top;
+            """,
+            fromMs,
+            toMs,
+            top,
+            r =>
+            {
+                var appId = r.GetInt64(0);
+                var name = r.GetNullableString(2);
+                var path = r.GetNullableString(3);
+                var label = !string.IsNullOrWhiteSpace(name) ? name : path;
+                return new ActivityTopItem(appId >= 0 ? $"app:{appId}" : $"path:{path}", label, appId >= 0 ? appId : null, r.GetInt64(4), r.GetInt64(5), path);
+            },
+            cancellationToken);
+
+        var topDestinations = await QueryTopAsync(
+            connection,
+            """
+            SELECT COALESCE(hostname, remote_ip) AS d, 0, NULL, NULL,
+                   SUM(CASE WHEN verdict = 0 THEN count ELSE 0 END), SUM(CASE WHEN verdict = 0 THEN 0 ELSE count END)
+            FROM connection_log
+            WHERE minute_ts >= $from AND minute_ts < $to
+            GROUP BY d
+            ORDER BY SUM(count) DESC
+            LIMIT $top;
+            """,
+            fromMs,
+            toMs,
+            top,
+            r => new ActivityTopItem(r.GetString(0), r.GetString(0), null, r.GetInt64(4), r.GetInt64(5)),
+            cancellationToken);
+
+        return new ActivitySummary(allowed.Sum(), blocked.Sum(), appCount, destinationCount, timeline, topApps, topDestinations);
+    }
+
+    private static async Task<IReadOnlyList<ActivityTopItem>> QueryTopAsync(
+        Microsoft.Data.Sqlite.SqliteConnection connection,
+        string sql,
+        long fromMs,
+        long toMs,
+        int top,
+        Func<Microsoft.Data.Sqlite.SqliteDataReader, ActivityTopItem> map,
+        CancellationToken cancellationToken)
+    {
+        if (top == 0)
+        {
+            return [];
+        }
+
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = sql;
+        cmd.With("$from", fromMs).With("$to", toMs).With("$top", top);
+        var result = new List<ActivityTopItem>();
+        await using var r = await cmd.ExecuteReaderAsync(cancellationToken);
+        while (await r.ReadAsync(cancellationToken))
+        {
+            result.Add(map(r));
+        }
+
+        return result;
+    }
+
     private static string EscapeLike(string value) =>
         value.Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("%", "\\%", StringComparison.Ordinal)

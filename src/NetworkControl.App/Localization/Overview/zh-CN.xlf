@@ -169,5 +169,135 @@
         <target state="translated">切换引擎失败：{0}</target>
       </segment>
     </unit>
+    <unit id="RangeDay">
+      <segment>
+        <source>24 hours</source>
+        <target state="translated">24 小时</target>
+      </segment>
+    </unit>
+    <unit id="RangeWeek">
+      <segment>
+        <source>7 days</source>
+        <target state="translated">7 天</target>
+      </segment>
+    </unit>
+    <unit id="RangeMonth">
+      <segment>
+        <source>30 days</source>
+        <target state="translated">30 天</target>
+      </segment>
+    </unit>
+    <unit id="ActivityTitle">
+      <segment>
+        <source>Connection activity</source>
+        <target state="translated">连接活动</target>
+      </segment>
+    </unit>
+    <unit id="Allowed">
+      <segment>
+        <source>Allowed</source>
+        <target state="translated">已允许</target>
+      </segment>
+    </unit>
+    <unit id="Blocked">
+      <segment>
+        <source>Denied</source>
+        <target state="translated">已拒绝</target>
+      </segment>
+    </unit>
+    <unit id="BlockRate">
+      <segment>
+        <source>{0} denied</source>
+        <target state="translated">拒绝率 {0}</target>
+      </segment>
+    </unit>
+    <unit id="ActiveApps">
+      <segment>
+        <source>Active apps</source>
+        <target state="translated">活跃应用</target>
+      </segment>
+    </unit>
+    <unit id="DestinationCount">
+      <segment>
+        <source>{0} destinations</source>
+        <target state="translated">{0} 个目标</target>
+      </segment>
+    </unit>
+    <unit id="TopApps">
+      <segment>
+        <source>Most active apps</source>
+        <target state="translated">连接最多的应用</target>
+      </segment>
+    </unit>
+    <unit id="TopDestinations">
+      <segment>
+        <source>Top destinations</source>
+        <target state="translated">连接最多的目标</target>
+      </segment>
+    </unit>
+    <unit id="NoActivity">
+      <segment>
+        <source>No connections in this period</source>
+        <target state="translated">这段时间没有连接记录</target>
+      </segment>
+    </unit>
+    <unit id="UnknownApp">
+      <segment>
+        <source>Unidentified app</source>
+        <target state="translated">未识别的应用</target>
+      </segment>
+    </unit>
+    <unit id="ChartTooltip">
+      <segment>
+        <source>{0}
+Allowed {1}  ·  Denied {2}</source>
+        <target state="translated">{0}
+允许 {1}  ·  拒绝 {2}</target>
+      </segment>
+    </unit>
+    <unit id="Protection">
+      <segment>
+        <source>Protection</source>
+        <target state="translated">防护模式</target>
+      </segment>
+    </unit>
+    <unit id="EngineCaption">
+      <segment>
+        <source>Engine: {0}</source>
+        <target state="translated">引擎：{0}</target>
+      </segment>
+    </unit>
+    <unit id="PendingPromptsCaption">
+      <segment>
+        <source>{0} connections awaiting your answer</source>
+        <target state="translated">{0} 个连接等待回应</target>
+      </segment>
+    </unit>
+    <unit id="QuickActions">
+      <segment>
+        <source>Quick actions</source>
+        <target state="translated">快捷操作</target>
+      </segment>
+    </unit>
+    <unit id="RankTooltip">
+      <segment>
+        <source>Allowed {0}  ·  Denied {1}
+Click to view in the connection log</source>
+        <target state="translated">允许 {0}  ·  拒绝 {1}
+点击在连接记录中查看</target>
+      </segment>
+    </unit>
+    <unit id="Subtitle">
+      <segment>
+        <source>Protection status and network activity at a glance</source>
+        <target state="translated">一眼掌握防护状态和网络活动</target>
+      </segment>
+    </unit>
+    <unit id="NoPendingPrompts">
+      <segment>
+        <source>No connections awaiting an answer</source>
+        <target state="translated">没有等待回应的连接</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

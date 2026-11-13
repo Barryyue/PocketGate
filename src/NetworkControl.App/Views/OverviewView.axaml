@@ -3,41 +3,167 @@
              xmlns:atom="https://atomui.net"
              xmlns:antdicons="https://atomui.net/icons/antdesign"
              xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:controls="using:NetworkControl.App.Controls"
              xmlns:loc="using:NetworkControl.App.Localization"
              xmlns:proto="using:NetworkControl.Ipc.V1"
              x:Class="NetworkControl.App.Views.OverviewView"
-             x:DataType="vm:OverviewViewModel">
+             x:DataType="vm:OverviewViewModel"
+             x:Name="Root">
+
+  <UserControl.Resources>
+    <!-- 排行榜的一行：點擊跳轉到篩選好的連線記錄 -->
+    <DataTemplate x:Key="RankItemTemplate" x:DataType="vm:RankItemViewModel">
+      <Button Classes="rank-row" ToolTip.Tip="{Binding Tooltip}"
+              Command="{Binding #Root.((vm:OverviewViewModel)DataContext).Dashboard.OpenCommand}" CommandParameter="{Binding}">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
+          <TextBlock Classes="rank-label" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="1" Classes="rank-count" Text="{Binding CountText}" Margin="12,0,0,0" />
+          <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="caption" Text="{Binding Detail}" IsVisible="{Binding HasDetail}"
+                     TextTrimming="PrefixCharacterEllipsis" Margin="0,2,0,0" />
+          <controls:ShareBar Grid.Row="2" Grid.ColumnSpan="2" Margin="0,8,0,0" Height="6"
+                             Allowed="{Binding Allowed}" Blocked="{Binding Blocked}" Maximum="{Binding Maximum}"
+                             AllowedBrush="{atom:SharedTokenResource ColorPrimary}"
+                             BlockedBrush="{atom:SharedTokenResource ColorError}"
+                             TrackBrush="{atom:SharedTokenResource ColorFillSecondary}" />
+        </Grid>
+      </Button>
+    </DataTemplate>
+  </UserControl.Resources>
 
   <ScrollViewer>
-    <StackPanel Spacing="16">
-      <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavOverview}" />
+    <StackPanel Spacing="16" Margin="0,0,0,8">
+
+      <!-- 標題 + 統計時間範圍 -->
+      <DockPanel>
+        <atom:Segmented DockPanel.Dock="Right" VerticalAlignment="Center" SelectedIndex="{Binding Dashboard.RangeIndex}">
+          <atom:SegmentedItem Content="{loc:OverviewLangResource RangeDay}" />
+          <atom:SegmentedItem Content="{loc:OverviewLangResource RangeWeek}" />
+          <atom:SegmentedItem Content="{loc:OverviewLangResource RangeMonth}" />
+        </atom:Segmented>
+        <StackPanel Spacing="2">
+          <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavOverview}" />
+          <TextBlock Classes="secondary" Text="{loc:OverviewLangResource Subtitle}" />
+        </StackPanel>
+      </DockPanel>
 
       <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
                   IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
       <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding EngineFault}" IsVisible="{Binding HasEngineFault}" />
       <atom:Alert Type="Warning" IsShowIcon="True" Message="{loc:OverviewLangResource BlockAllActive}" IsVisible="{Binding IsBlockAll}" />
 
-      <!-- 狀態卡片 -->
+      <!-- 關鍵指標 -->
       <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="16">
-        <atom:Card Grid.Column="0" Header="{loc:OverviewLangResource Mode}">
-          <StackPanel Spacing="4">
+        <atom:Card Grid.Column="0">
+          <StackPanel Spacing="6">
+            <TextBlock Classes="kpi-caption" Text="{loc:OverviewLangResource Protection}" />
             <TextBlock Classes="metric" Text="{Binding ModeText}" />
-            <TextBlock Classes="secondary" Text="{Binding ModeDescription}" TextWrapping="Wrap" />
+            <TextBlock Classes="caption" Text="{Binding EngineCaption}" TextWrapping="Wrap" />
           </StackPanel>
         </atom:Card>
-        <atom:Card Grid.Column="1" Header="{loc:OverviewLangResource Engine}">
-          <StackPanel Spacing="4">
-            <TextBlock Classes="metric" Text="{Binding EngineName}" />
-            <TextBlock Classes="secondary" Text="{Binding EngineBehavior}" TextWrapping="Wrap" />
+        <atom:Card Grid.Column="1">
+          <StackPanel Spacing="6">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Ellipse Classes="legend allowed" />
+              <TextBlock Classes="kpi-caption" Text="{loc:OverviewLangResource Allowed}" />
+            </StackPanel>
+            <TextBlock Classes="metric" Text="{Binding Dashboard.AllowedText}" />
+            <TextBlock Classes="caption" Text="{Binding Dashboard.DestinationCountText}" />
           </StackPanel>
         </atom:Card>
         <atom:Card Grid.Column="2">
-          <atom:Statistic Header="{loc:OverviewLangResource ActiveRules}" Value="{Binding ActiveRuleCount}" />
+          <StackPanel Spacing="6">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Ellipse Classes="legend blocked" />
+              <TextBlock Classes="kpi-caption" Text="{loc:OverviewLangResource Blocked}" />
+            </StackPanel>
+            <TextBlock Classes="metric danger" Text="{Binding Dashboard.BlockedText}" />
+            <TextBlock Classes="caption" Text="{Binding Dashboard.BlockRateText}" />
+          </StackPanel>
         </atom:Card>
         <atom:Card Grid.Column="3">
-          <atom:Statistic Header="{loc:OverviewLangResource PendingPrompts}" Value="{Binding PendingPromptFlows}" />
+          <StackPanel Spacing="6">
+            <TextBlock Classes="kpi-caption" Text="{loc:OverviewLangResource ActiveApps}" />
+            <TextBlock Classes="metric" Text="{Binding Dashboard.AppCountText}" />
+            <TextBlock Classes="caption" Text="{Binding PendingPromptsCaption}" TextWrapping="Wrap" />
+          </StackPanel>
         </atom:Card>
       </Grid>
+
+      <!-- 連接活動時間軸 -->
+      <atom:Card Header="{loc:OverviewLangResource ActivityTitle}">
+        <StackPanel Spacing="8">
+          <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Right">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Ellipse Classes="legend allowed" />
+              <TextBlock Classes="caption" Text="{loc:CommonLangResource Allow}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Ellipse Classes="legend blocked" />
+              <TextBlock Classes="caption" Text="{loc:CommonLangResource Deny}" />
+            </StackPanel>
+          </StackPanel>
+          <controls:ActivityChart Height="220" Points="{Binding Dashboard.Points}"
+                                  AllowedBrush="{atom:SharedTokenResource ColorPrimary}"
+                                  BlockedBrush="{atom:SharedTokenResource ColorError}"
+                                  GridBrush="{atom:SharedTokenResource ColorBorderSecondary}"
+                                  LabelBrush="{atom:SharedTokenResource ColorTextTertiary}"
+                                  HoverBrush="{atom:SharedTokenResource ColorFillTertiary}"
+                                  TooltipBackground="{atom:SharedTokenResource ColorBgElevated}"
+                                  TooltipForeground="{atom:SharedTokenResource ColorText}" />
+        </StackPanel>
+      </atom:Card>
+
+      <!-- 排行榜 -->
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+        <atom:Card Grid.Column="0" Header="{loc:OverviewLangResource TopApps}">
+          <Panel MinHeight="120">
+            <atom:Empty IsVisible="{Binding Dashboard.ShowEmptyLists}" Description="{loc:OverviewLangResource NoActivity}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <ItemsControl ItemsSource="{Binding Dashboard.TopApps}" ItemTemplate="{StaticResource RankItemTemplate}" />
+          </Panel>
+        </atom:Card>
+        <atom:Card Grid.Column="1" Header="{loc:OverviewLangResource TopDestinations}">
+          <Panel MinHeight="120">
+            <atom:Empty IsVisible="{Binding Dashboard.ShowEmptyLists}" Description="{loc:OverviewLangResource NoActivity}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <ItemsControl ItemsSource="{Binding Dashboard.TopDestinations}" ItemTemplate="{StaticResource RankItemTemplate}" />
+          </Panel>
+        </atom:Card>
+      </Grid>
+
+      <!-- 模式切換與快捷操作 -->
+      <atom:Card Header="{loc:OverviewLangResource QuickActions}" IsEnabled="{Binding IsConnected}">
+        <StackPanel Spacing="16">
+          <DockPanel>
+            <atom:Statistic DockPanel.Dock="Right" Header="{loc:OverviewLangResource ActiveRules}" Value="{Binding ActiveRuleCount}" />
+            <StackPanel Spacing="8">
+              <TextBlock Classes="caption" Text="{loc:OverviewLangResource SwitchMode}" />
+              <atom:Segmented SelectedIndex="{Binding SelectedModeIndex}" HorizontalAlignment="Left">
+                <atom:SegmentedItem Content="{loc:CommonLangResource ModeAsk}" />
+                <atom:SegmentedItem Content="{loc:CommonLangResource ModeWhitelist}" />
+                <atom:SegmentedItem Content="{loc:CommonLangResource ModeBlacklist}" />
+                <atom:SegmentedItem Content="{loc:CommonLangResource ModeDisabled}" />
+              </atom:Segmented>
+              <TextBlock Classes="secondary" Text="{Binding ModeDescription}" TextWrapping="Wrap" />
+            </StackPanel>
+          </DockPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <atom:Button ButtonType="Primary" IsDanger="True" IsVisible="{Binding !IsBlockAll}"
+                         Icon="{antdicons:AntDesignIconProvider Kind=StopOutlined}"
+                         Command="{Binding ToggleBlockAllCommand}" Content="{loc:OverviewLangResource BlockAll}" />
+            <atom:Button ButtonType="Primary" IsVisible="{Binding IsBlockAll}"
+                         Icon="{antdicons:AntDesignIconProvider Kind=PoweroffOutlined}"
+                         Command="{Binding ToggleBlockAllCommand}" Content="{loc:OverviewLangResource Restore}" />
+            <atom:Button IsVisible="{Binding !IsDoNotDisturb}"
+                         Icon="{antdicons:AntDesignIconProvider Kind=BellOutlined}"
+                         Command="{Binding ToggleDoNotDisturbCommand}" Content="{loc:OverviewLangResource DoNotDisturb}" />
+            <atom:Button IsVisible="{Binding IsDoNotDisturb}"
+                         Icon="{antdicons:AntDesignIconProvider Kind=NotificationOutlined}"
+                         Command="{Binding ToggleDoNotDisturbCommand}" Content="{loc:OverviewLangResource DoNotDisturbOff}" />
+            <TextBlock Classes="secondary" VerticalAlignment="Center" Text="{Binding DoNotDisturbText}" />
+          </StackPanel>
+        </StackPanel>
+      </atom:Card>
 
       <!-- 引擎：開發版可切換模擬 / 真實攔截；安裝版只說明配置位置 -->
       <atom:Card Header="{loc:OverviewLangResource Engine}" IsVisible="{Binding ShowEngineCard}">
@@ -52,32 +178,6 @@
           </StackPanel>
           <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding CanSwitchEngine}" Text="{loc:OverviewLangResource EngineSwitchHint}" />
           <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding ShowInstalledEngineHint}" Text="{loc:OverviewLangResource EngineInstalledHint}" />
-        </StackPanel>
-      </atom:Card>
-
-      <!-- 模式切換與快捷操作 -->
-      <atom:Card Header="{loc:OverviewLangResource SwitchMode}" IsEnabled="{Binding IsConnected}">
-        <StackPanel Spacing="16">
-          <atom:Segmented SelectedIndex="{Binding SelectedModeIndex}" HorizontalAlignment="Left">
-            <atom:SegmentedItem Content="{loc:CommonLangResource ModeAsk}" />
-            <atom:SegmentedItem Content="{loc:CommonLangResource ModeWhitelist}" />
-            <atom:SegmentedItem Content="{loc:CommonLangResource ModeBlacklist}" />
-            <atom:SegmentedItem Content="{loc:CommonLangResource ModeDisabled}" />
-          </atom:Segmented>
-          <StackPanel Orientation="Horizontal" Spacing="8">
-            <atom:Button ButtonType="Primary" IsDanger="True" IsVisible="{Binding !IsBlockAll}"
-                         Icon="{antdicons:AntDesignIconProvider Kind=StopOutlined}"
-                         Command="{Binding ToggleBlockAllCommand}" Content="{loc:OverviewLangResource BlockAll}" />
-            <atom:Button ButtonType="Primary" IsVisible="{Binding IsBlockAll}"
-                         Icon="{antdicons:AntDesignIconProvider Kind=PoweroffOutlined}"
-                         Command="{Binding ToggleBlockAllCommand}" Content="{loc:OverviewLangResource Restore}" />
-            <atom:Button IsVisible="{Binding !IsDoNotDisturb}"
-                         Icon="{antdicons:AntDesignIconProvider Kind=BellOutlined}"
-                         Command="{Binding ToggleDoNotDisturbCommand}" Content="{loc:OverviewLangResource DoNotDisturb}" />
-            <atom:Button IsVisible="{Binding IsDoNotDisturb}"
-                         Command="{Binding ToggleDoNotDisturbCommand}" Content="{loc:OverviewLangResource DoNotDisturbOff}" />
-            <TextBlock Classes="secondary" VerticalAlignment="Center" Text="{Binding DoNotDisturbText}" />
-          </StackPanel>
         </StackPanel>
       </atom:Card>
 

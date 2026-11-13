@@ -21,17 +21,21 @@ public sealed partial class OverviewViewModel : PageViewModel
     private readonly ServiceLifecycle _lifecycle;
     private bool _syncingMode;
 
-    public OverviewViewModel(ServiceConnection connection, ServiceLifecycle lifecycle, DisplayText text)
+    public OverviewViewModel(ServiceConnection connection, ServiceLifecycle lifecycle, ActivityDashboardViewModel dashboard, DisplayText text)
         : base(text)
     {
         _connection = connection;
         _lifecycle = lifecycle;
+        Dashboard = dashboard;
         connection.PropertyChanged += OnConnectionChanged;
         // 每次重新連接都重新判斷：引擎可能已經從模擬切換為 WFP，模擬器接口只在模擬引擎下存在
         connection.Connected += (_, _) => _ = LoadSimulatorAppsAsync(reload: true);
     }
 
     public override string Key => "overview";
+
+    /// <summary>連接活動統計（時間軸、排行榜）。</summary>
+    public ActivityDashboardViewModel Dashboard { get; }
 
     public ObservableCollection<Proto.SimulatorApp> SimulatorApps { get; } = [];
 
@@ -104,7 +108,22 @@ public sealed partial class OverviewViewModel : PageViewModel
         ? Loc.Format(OverviewLangResourceKind.DoNotDisturbUntil, until.ToDateTimeOffset().ToLocalTime().DateTime)
         : "";
 
-    public override Task OnActivatedAsync() => LoadSimulatorAppsAsync(reload: false);
+    /// <summary>防護模式卡片的說明行：引擎名稱與攔截方式。</summary>
+    public string EngineCaption => Status?.Engine is { } e
+        ? $"{Loc.Format(OverviewLangResourceKind.EngineCaption, e.Name)} · {EngineBehavior}"
+        : "";
+
+    public string PendingPromptsCaption => PendingPromptFlows > 0
+        ? Loc.Format(OverviewLangResourceKind.PendingPromptsCaption, PendingPromptFlows)
+        : Loc.Get(OverviewLangResourceKind.NoPendingPrompts);
+
+    public override Task OnActivatedAsync()
+    {
+        Dashboard.Activate();
+        return LoadSimulatorAppsAsync(reload: false);
+    }
+
+    public override void OnDeactivated() => Dashboard.Deactivate();
 
     partial void OnSelectedModeIndexChanged(int value)
     {
