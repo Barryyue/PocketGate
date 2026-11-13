@@ -21,6 +21,9 @@ public sealed record UiPreferences
     public string? Language { get; init; }
 
     public ThemePreference Theme { get; init; } = ThemePreference.System;
+
+    /// <summary>已看過的首次運行引導版本；0 表示從未顯示（見 <c>OnboardingFlow.CurrentVersion</c>）。</summary>
+    public int OnboardingVersion { get; init; }
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true, UseStringEnumConverter = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]

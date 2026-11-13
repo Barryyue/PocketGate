@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-CN" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.OnboardingLangResourceKind">
+    <unit id="Title">
+      <segment>
+        <source>Welcome to NetworkControl</source>
+        <target state="translated">欢迎使用 NetworkControl</target>
+      </segment>
+    </unit>
+    <unit id="Intro">
+      <segment>
+        <source>NetworkControl decides which apps may use the network. Here is how it works:</source>
+        <target state="translated">NetworkControl 帮你决定哪些应用可以联网。它是这样工作的：</target>
+      </segment>
+    </unit>
+    <unit id="Step1Title">
+      <segment>
+        <source>You decide when an app first connects</source>
+        <target state="translated">应用首次联网时由你决定</target>
+      </segment>
+    </unit>
+    <unit id="Step1Body">
+      <segment>
+        <source>A prompt shows the app and where it wants to connect. Allow or deny, and choose how long to remember the answer.</source>
+        <target state="translated">弹窗会显示是哪个应用、要连到哪里。选择允许或拒绝，并决定记住多久。</target>
+      </segment>
+    </unit>
+    <unit id="Step2Title">
+      <segment>
+        <source>See everything at a glance</source>
+        <target state="translated">一目了然</target>
+      </segment>
+    </unit>
+    <unit id="Step2Body">
+      <segment>
+        <source>The overview shows connection activity over time; the Apps page lists every app that used the network.</source>
+        <target state="translated">总览页显示连接活动的变化；应用页列出所有联网过的应用。</target>
+      </segment>
+    </unit>
+    <unit id="Step3Title">
+      <segment>
+        <source>Stay in control from the tray</source>
+        <target state="translated">托盘随时掌控</target>
+      </segment>
+    </unit>
+    <unit id="Step3Body">
+      <segment>
+        <source>Closing the window keeps protection running. Use the tray icon to switch modes or block all traffic instantly.</source>
+        <target state="translated">关闭窗口后防护仍在运行。通过托盘图标可以切换模式或一键断网。</target>
+      </segment>
+    </unit>
+    <unit id="ChooseMode">
+      <segment>
+        <source>Choose how to start</source>
+        <target state="translated">选择初始模式</target>
+      </segment>
+    </unit>
+    <unit id="Recommended">
+      <segment>
+        <source>Recommended</source>
+        <target state="translated">推荐</target>
+      </segment>
+    </unit>
+    <unit id="ModeLater">
+      <segment>
+        <source>You can change the mode at any time on the overview page or from the tray.</source>
+        <target state="translated">之后可以随时在总览页或托盘菜单中切换模式。</target>
+      </segment>
+    </unit>
+    <unit id="NotConnected">
+      <segment>
+        <source>The core service is not connected yet; the mode can be chosen later on the overview page.</source>
+        <target state="translated">核心服务尚未连接，稍后可在总览页选择模式。</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

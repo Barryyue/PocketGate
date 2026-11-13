@@ -91,6 +91,29 @@
     <Setter Property="FontFeatures" Value="+tnum" />
   </Style>
 
+  <!-- 引導頁的圓形圖標 -->
+  <Style Selector="Border.onboarding-icon">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="CornerRadius" Value="20" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorPrimaryBg}" />
+  </Style>
+  <Style Selector="Border.onboarding-icon > ContentControl">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.onboarding-icon atom|Icon">
+    <Setter Property="Width" Value="20" />
+    <Setter Property="Height" Value="20" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorPrimary}" />
+  </Style>
+
+  <Style Selector="Border.divider">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBorderSecondary}" />
+  </Style>
+
   <!-- 主窗口佈局 -->
   <Style Selector="Border.sider">
     <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgContainer}" />

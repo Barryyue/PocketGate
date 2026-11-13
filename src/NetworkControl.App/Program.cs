@@ -22,7 +22,12 @@ internal static class Program
         using var instance = SingleInstance.TryAcquire();
         if (instance is null)
         {
-            // 已有實例在運行時直接退出；後續通過本地 IPC 喚起已有實例的主窗口
+            // 已有實例在運行：讓它顯示主窗口，本進程退出（開機自啟的 --minimized 不喚起）
+            if (!args.Contains("--minimized", StringComparer.OrdinalIgnoreCase))
+            {
+                SingleInstance.SignalExisting(TimeSpan.FromSeconds(2));
+            }
+
             return 0;
         }
 

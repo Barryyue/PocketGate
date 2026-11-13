@@ -57,6 +57,9 @@ public sealed partial class App : Application
             tray.ExitAllRequested += (_, _) => activator.QuitEverything();
             desktop.ShutdownRequested += (_, _) => _ = ShutdownAsync();
 
+            // 第二次啟動時喚起主窗口
+            SingleInstance.Current?.Listen(() => Avalonia.Threading.Dispatcher.UIThread.Post(ShowShell));
+
             StartManagedServiceIfNeeded(services);
             services.GetRequiredService<ServiceConnection>().Start();
 
@@ -104,6 +107,7 @@ public sealed partial class App : Application
         services.AddSingleton<DiagnosticsExporter>();
         services.AddSingleton<DiagnosticsExportFlow>();
         services.AddSingleton<RuleTransferFlow>();
+        services.AddSingleton<OnboardingFlow>();
 
         // 頁面：註冊順序即導航順序（與 ShellWindow 中的導航菜單一致）
         services.AddSingleton<ActivityDashboardViewModel>();
@@ -136,6 +140,7 @@ public sealed partial class App : Application
             _shell.Closed += (_, _) => _shell = null;
             _shell.Show();
             _ = shell.CurrentPage.OnActivatedAsync();
+            _ = _services.GetRequiredService<OnboardingFlow>().RunIfNeededAsync();
         }
         else
         {

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.OnboardingLangResourceKind">
+    <unit id="Title">
+      <segment>
+        <source>Welcome to NetworkControl</source>
+      </segment>
+    </unit>
+    <unit id="Intro">
+      <segment>
+        <source>NetworkControl decides which apps may use the network. Here is how it works:</source>
+      </segment>
+    </unit>
+    <unit id="Step1Title">
+      <segment>
+        <source>You decide when an app first connects</source>
+      </segment>
+    </unit>
+    <unit id="Step1Body">
+      <segment>
+        <source>A prompt shows the app and where it wants to connect. Allow or deny, and choose how long to remember the answer.</source>
+      </segment>
+    </unit>
+    <unit id="Step2Title">
+      <segment>
+        <source>See everything at a glance</source>
+      </segment>
+    </unit>
+    <unit id="Step2Body">
+      <segment>
+        <source>The overview shows connection activity over time; the Apps page lists every app that used the network.</source>
+      </segment>
+    </unit>
+    <unit id="Step3Title">
+      <segment>
+        <source>Stay in control from the tray</source>
+      </segment>
+    </unit>
+    <unit id="Step3Body">
+      <segment>
+        <source>Closing the window keeps protection running. Use the tray icon to switch modes or block all traffic instantly.</source>
+      </segment>
+    </unit>
+    <unit id="ChooseMode">
+      <segment>
+        <source>Choose how to start</source>
+      </segment>
+    </unit>
+    <unit id="Recommended">
+      <segment>
+        <source>Recommended</source>
+      </segment>
+    </unit>
+    <unit id="ModeLater">
+      <segment>
+        <source>You can change the mode at any time on the overview page or from the tray.</source>
+      </segment>
+    </unit>
+    <unit id="NotConnected">
+      <segment>
+        <source>The core service is not connected yet; the mode can be chosen later on the overview page.</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>
