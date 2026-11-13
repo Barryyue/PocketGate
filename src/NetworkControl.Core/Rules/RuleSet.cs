@@ -80,6 +80,38 @@ public sealed class RuleSet
         }
     }
 
+    /// <summary>
+    /// 按優先級順序找到第一條匹配給定應用、且通過 <paramref name="includeRule"/> 篩選的規則（不看連接條件）。
+    /// 供只能按應用分流的引擎（Android 黑洞式 VPN）把規則集編譯成分流名單；篡改的規則跳過並記入 <see cref="RuleMatch.TamperedRule"/>。
+    /// </summary>
+    public RuleMatch FindAppRule(AppIdentity app, Func<Rule, bool> includeRule)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(includeRule);
+
+        var exact = _byExactPath.TryGetValue(PathPattern.Normalize(app.Path), out var found) ? found : [];
+        int i = 0, j = 0, k = 0;
+        Rule? tampered = null;
+        while (PickNext(exact, ref i, _wildcardAppRules, ref j, _globalRules, ref k) is { } next)
+        {
+            if (!includeRule(next.Rule))
+            {
+                continue;
+            }
+
+            switch (next.MatchApp(app))
+            {
+                case AppMatchOutcome.Match:
+                    return new RuleMatch(next.Rule, tampered);
+                case AppMatchOutcome.Tampered:
+                    tampered ??= next.Rule;
+                    break;
+            }
+        }
+
+        return new RuleMatch(null, tampered);
+    }
+
     private static CompiledRule? PickNext(
         CompiledRule[] a, ref int i,
         CompiledRule[] b, ref int j,

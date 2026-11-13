@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    黑洞式分流 VPN 引擎（Android，見 docs/android.md §5）的平台無關部分：報文解析、路由規劃、阻斷上報、引擎本身。
+    平台實現（VpnService、PackageManager、UID 查詢）在 NetworkControl.Engine.Android 中；本項目只有 net10.0，可以在任何機器上構建和測試。
+  -->
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NetworkControl.Engine.Vpn.Tests" />
+  </ItemGroup>
+</Project>
