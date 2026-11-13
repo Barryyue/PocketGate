@@ -97,5 +97,83 @@
         <target state="translated">每一次連線判決（按分鐘合併）。可以直接從記錄新增規則。</target>
       </segment>
     </unit>
+    <unit id="Details">
+      <segment>
+        <source>Details</source>
+        <target state="translated">詳細資料</target>
+      </segment>
+    </unit>
+    <unit id="DetailTitle">
+      <segment>
+        <source>Connection details</source>
+        <target state="translated">連線詳細資料</target>
+      </segment>
+    </unit>
+    <unit id="FieldPath">
+      <segment>
+        <source>Path</source>
+        <target state="translated">路徑</target>
+      </segment>
+    </unit>
+    <unit id="FieldRule">
+      <segment>
+        <source>Rule</source>
+        <target state="translated">規則</target>
+      </segment>
+    </unit>
+    <unit id="ExplainRule">
+      <segment>
+        <source>A rule matched this connection.</source>
+        <target state="translated">這條連線符合了一條規則。</target>
+      </segment>
+    </unit>
+    <unit id="ExplainMode">
+      <segment>
+        <source>No rule matched, so the current filter mode decided.</source>
+        <target state="translated">沒有符合的規則，由目前的過濾模式決定。</target>
+      </segment>
+    </unit>
+    <unit id="ExplainPrompt">
+      <segment>
+        <source>You answered a prompt for this connection.</source>
+        <target state="translated">你在彈出視窗中對這條連線作出了選擇。</target>
+      </segment>
+    </unit>
+    <unit id="ExplainPromptTimeout">
+      <segment>
+        <source>The prompt was not answered in time, so the default action was applied.</source>
+        <target state="translated">彈出視窗在限定時間內沒有得到回應，依預設動作處理。</target>
+      </segment>
+    </unit>
+    <unit id="ExplainBuiltin">
+      <segment>
+        <source>Essential system traffic (such as DHCP and DNS) is always allowed.</source>
+        <target state="translated">系統必要的流量（如 DHCP、DNS）一律放行。</target>
+      </segment>
+    </unit>
+    <unit id="ExplainNoUserSession">
+      <segment>
+        <source>No signed-in user could be asked, so the default action was applied.</source>
+        <target state="translated">沒有可以詢問的已登入使用者，依預設動作處理。</target>
+      </segment>
+    </unit>
+    <unit id="ExplainDoNotDisturb">
+      <segment>
+        <source>Do not disturb was on, so no prompt was shown and the default action was applied.</source>
+        <target state="translated">勿擾模式開啟，沒有彈出視窗，依預設動作處理。</target>
+      </segment>
+    </unit>
+    <unit id="ExplainFailSafe">
+      <segment>
+        <source>An internal error occurred, so the fail policy decided.</source>
+        <target state="translated">內部發生錯誤，依失效策略處理。</target>
+      </segment>
+    </unit>
+    <unit id="ExplainCancelled">
+      <segment>
+        <source>The decision was cancelled because the service was stopping.</source>
+        <target state="translated">服務正在停止，判決被取消。</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

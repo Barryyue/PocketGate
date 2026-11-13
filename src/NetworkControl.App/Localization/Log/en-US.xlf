@@ -81,5 +81,70 @@
         <source>Every connection decision, merged per minute. Create a rule directly from any entry.</source>
       </segment>
     </unit>
+    <unit id="Details">
+      <segment>
+        <source>Details</source>
+      </segment>
+    </unit>
+    <unit id="DetailTitle">
+      <segment>
+        <source>Connection details</source>
+      </segment>
+    </unit>
+    <unit id="FieldPath">
+      <segment>
+        <source>Path</source>
+      </segment>
+    </unit>
+    <unit id="FieldRule">
+      <segment>
+        <source>Rule</source>
+      </segment>
+    </unit>
+    <unit id="ExplainRule">
+      <segment>
+        <source>A rule matched this connection.</source>
+      </segment>
+    </unit>
+    <unit id="ExplainMode">
+      <segment>
+        <source>No rule matched, so the current filter mode decided.</source>
+      </segment>
+    </unit>
+    <unit id="ExplainPrompt">
+      <segment>
+        <source>You answered a prompt for this connection.</source>
+      </segment>
+    </unit>
+    <unit id="ExplainPromptTimeout">
+      <segment>
+        <source>The prompt was not answered in time, so the default action was applied.</source>
+      </segment>
+    </unit>
+    <unit id="ExplainBuiltin">
+      <segment>
+        <source>Essential system traffic (such as DHCP and DNS) is always allowed.</source>
+      </segment>
+    </unit>
+    <unit id="ExplainNoUserSession">
+      <segment>
+        <source>No signed-in user could be asked, so the default action was applied.</source>
+      </segment>
+    </unit>
+    <unit id="ExplainDoNotDisturb">
+      <segment>
+        <source>Do not disturb was on, so no prompt was shown and the default action was applied.</source>
+      </segment>
+    </unit>
+    <unit id="ExplainFailSafe">
+      <segment>
+        <source>An internal error occurred, so the fail policy decided.</source>
+      </segment>
+    </unit>
+    <unit id="ExplainCancelled">
+      <segment>
+        <source>The decision was cancelled because the service was stopping.</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

@@ -107,14 +107,16 @@ public sealed partial class LogViewModel : PageViewModel
 
     private readonly ServiceConnection _connection;
     private readonly RuleEditing _editing;
+    private readonly Infrastructure.DialogService _dialogs;
     private bool _applyingNavigation;
     private CancellationTokenSource? _watch;
 
-    public LogViewModel(ServiceConnection connection, RuleEditing editing, DisplayText text)
+    public LogViewModel(ServiceConnection connection, RuleEditing editing, Infrastructure.DialogService dialogs, DisplayText text)
         : base(text)
     {
         _connection = connection;
         _editing = editing;
+        _dialogs = dialogs;
         connection.Connected += (_, clients) => _ = WatchAsync(clients);
     }
 
@@ -185,6 +187,10 @@ public sealed partial class LogViewModel : PageViewModel
 
     [RelayCommand]
     private Task CreateRuleAsync(LogItemViewModel item) => _editing.CreateAsync(item.ToPrefill());
+
+    [RelayCommand]
+    private Task ShowDetailsAsync(LogItemViewModel item) =>
+        _dialogs.ShowFormAsync<Views.LogDetailView, LogDetailViewModel>(new LogDetailViewModel(item, Text), Loc.Get(LogLangResourceKind.DetailTitle), width: 600, okOnly: true);
 
     partial void OnActionFilterChanged(int value)
     {

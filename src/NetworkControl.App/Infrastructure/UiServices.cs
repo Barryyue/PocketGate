@@ -86,8 +86,8 @@ public interface IValidatingDialogContent
 /// <summary>模態表單對話框（Ant Design Modal）。</summary>
 public sealed class DialogService(WindowHost host)
 {
-    /// <summary>顯示表單；用戶點「確定」且校驗通過時返回 true。</summary>
-    public async Task<bool> ShowFormAsync<TView, TViewModel>(TViewModel viewModel, string title, double width = 560)
+    /// <summary>顯示表單；用戶點「確定」且校驗通過時返回 true。<paramref name="okOnly"/> 為 true 時只有「確定」按鈕（純信息對話框）。</summary>
+    public async Task<bool> ShowFormAsync<TView, TViewModel>(TViewModel viewModel, string title, double width = 560, bool okOnly = false)
         where TView : Control, new()
         where TViewModel : class, IValidatingDialogContent
     {
@@ -105,7 +105,7 @@ public sealed class DialogService(WindowHost host)
             IsMaximizable = false,
             IsMinimizable = false,
             IsMaskClosable = false,
-            StandardButtons = DialogStandardButton.Ok | DialogStandardButton.Cancel,
+            StandardButtons = okOnly ? DialogStandardButton.Ok : DialogStandardButton.Ok | DialogStandardButton.Cancel,
             DefaultStandardButton = DialogStandardButton.Ok,
             BeforeCloseAsync = context =>
             {

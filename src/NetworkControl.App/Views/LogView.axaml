@@ -64,12 +64,16 @@
           </atom:DataGridTemplateColumn>
           <atom:DataGridTextColumn x:DataType="vm:LogItemViewModel" Header="{loc:LogLangResource ColumnReason}" Binding="{Binding ReasonText}" Width="110" />
           <atom:DataGridTextColumn x:DataType="vm:LogItemViewModel" Header="{loc:LogLangResource ColumnCount}" Binding="{Binding Count}" Width="72" />
-          <atom:DataGridTemplateColumn Header="{loc:LogLangResource ColumnOperations}" Width="110">
+          <atom:DataGridTemplateColumn Header="{loc:LogLangResource ColumnOperations}" Width="150">
             <atom:DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:LogItemViewModel">
-                <atom:Button ButtonType="Link" SizeType="Small" VerticalAlignment="Center"
-                             Content="{loc:LogLangResource CreateRule}"
-                             Command="{Binding #Root.((vm:LogViewModel)DataContext).CreateRuleCommand}" CommandParameter="{Binding}" />
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                  <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:LogLangResource Details}"
+                               Command="{Binding #Root.((vm:LogViewModel)DataContext).ShowDetailsCommand}" CommandParameter="{Binding}" />
+                  <atom:Button ButtonType="Link" SizeType="Small"
+                               Content="{loc:LogLangResource CreateRule}"
+                               Command="{Binding #Root.((vm:LogViewModel)DataContext).CreateRuleCommand}" CommandParameter="{Binding}" />
+                </StackPanel>
               </DataTemplate>
             </atom:DataGridTemplateColumn.CellTemplate>
           </atom:DataGridTemplateColumn>
