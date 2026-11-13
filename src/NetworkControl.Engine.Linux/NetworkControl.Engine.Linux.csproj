@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Linux 引擎（M2，進行中）：nftables + libnetfilter_queue 掛起連接；/proc 進程信息。尚未接入服務。 -->
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="NetworkControl.Engine.Linux.Tests" />
+  </ItemGroup>
+</Project>

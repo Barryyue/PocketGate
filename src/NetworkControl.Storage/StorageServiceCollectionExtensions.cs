@@ -11,6 +11,7 @@ using NetworkControl.Core.Hosting;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
 using NetworkControl.Storage.Activity;
+using NetworkControl.Storage.Backup;
 using NetworkControl.Storage.Diagnostics;
 using NetworkControl.Storage.Repositories;
 using NetworkControl.Storage.Sqlite;
@@ -36,6 +37,9 @@ public static class StorageServiceCollectionExtensions
 
         services.AddActivityConsumer<ActivityLogWriter>();
         services.AddHostedService(sp => sp.GetRequiredService<ActivityLogWriter>());
+        services.TryAddSingleton<ConfigBackup>();
+        services.AddStartupTask<ConfigBackupStartupTask>();
+        services.AddHostedService<ConfigBackupService>();
 
         services.AddStartupTask<StorageStartupTask>();
         services.AddDiagnosticsContributor<StorageDiagnosticsContributor>();

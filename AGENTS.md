@@ -102,4 +102,6 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 - **`BackgroundService` 中不要釋放 `ExecuteAsync` 仍在使用的對象**：主機啟動失敗時 `Dispose` 會在 `ExecuteAsync` 的取消分支執行期間被調用（`ActivityLogWriter` 的信號量曾因此拋出 ObjectDisposedException）。
 - **PowerShell 中的 `[IO.File]` 相對路徑**按進程當前目錄解析，不是 `Set-Location` 的位置：一律用絕對路徑。
 - **proto 生成類型避開常見類型名**：已有 `VerdictAction`、`IpEndpoint`、`ActivityLog`；C# 中的別名統一用 `Proto`（全局命名空間裡已經有 `Pb`）。
+- **System.Text.Json 源生成會覆蓋 init 屬性的初始值**：`public bool Enabled { get; init; } = true;` 在 JSON 缺少該字段時反序列化為 `false`。需要「缺省為 true」時用可空類型並在映射時 `?? true`。
+- **開發機的透明加密（tipray）**：倉庫中已有的文件對部分進程是密文——Claude Code 的 Read / Edit 工具讀到亂碼並報「NUL bytes」，而 git、dotnet、Git Bash、Python 讀到的是明文。遇到這種情況用 Python（`-X utf8`，保留 BOM 和換行）或 Git Bash 修改；新建文件不受影響。
 - **可攜版與安裝版目錄結構相同**：可攜模式只能靠根目錄的 `portable.txt` 判斷，不能靠 `App\` / `Service\` 目錄；安裝程序不得複製這個文件。可攜版使用獨立管道 `NetworkControl.portable.v1` 和 `<根目錄>\data`，不要和安裝版同時運行服務。

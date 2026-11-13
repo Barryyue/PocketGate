@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using Microsoft.Data.Sqlite;
 using NetworkControl.Core.Activity;
 using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Domain;
@@ -83,12 +82,7 @@ internal sealed class StorageDiagnosticsContributor(
         var temp = Path.Combine(Path.GetTempPath(), $"networkcontrol-{Guid.NewGuid():N}.db");
         try
         {
-            await using (var source = await database.OpenAsync(cancellationToken))
-            await using (var target = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = temp, Pooling = false }.ToString()))
-            {
-                await target.OpenAsync(cancellationToken);
-                source.BackupDatabase(target);
-            }
+            await database.BackupToAsync(temp, cancellationToken);
 
             await using var stream = new FileStream(temp, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.Asynchronous);
             await sink.AddBinaryAsync(Path.GetFileName(database.Path), stream, cancellationToken);

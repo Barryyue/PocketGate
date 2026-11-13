@@ -3,7 +3,7 @@
 > 每完成一項任務、或發現新問題時更新本文件（同時更新「最後更新」）。新會話從這裡了解當前狀態。
 > 需求見 [requirements.md](requirements.md)，設計見 [design.md](design.md)（§22 記錄了實現與原設計的差異），開發方法見 [development.md](development.md)。
 
-**最後更新：2026-11-12**
+**最後更新：2026-11-13**
 **當前階段：M1（Windows MVP）—— 可以發給朋友試用：Native AOT 發布包 + 安裝程序 + 診斷包已完成；安裝版已在開發機上以 SYSTEM 服務跑通**
 
 ---
@@ -76,7 +76,7 @@
   - 驗證：`PortableLayout` 單元測試；Debug 佈局 + Fake 引擎端到端已驗證（服務從 `Service` 啟動、數據寫入 `data`、端點為 `pipe:NetworkControl.portable.v1`、界面診斷包中 `Launcher=Portable` 且成功連上服務）；AOT zip 的離線和在線診斷包均已驗證（`Native AOT=True`、`Launcher=Portable`；非管理員啟動時 WFP 按預期故障、服務存活且界面可連接）。
   - 待用戶驗證：可攜版首次啟動的 UAC 提權和真實 WFP 攔截（需要管理員權限）；從 zip 安裝 / 升級 / 卸載的回歸。
 
-**測試現狀：157 個全部通過；Debug / Release 構建零警告；`dotnet format --verify-no-changes` 通過。**
+**測試現狀（2026-11-13）：217 個，216 通過、1 個跳過（Linux /proc 符號鏈接測試，Windows 非開發者模式不能建立符號鏈接）；完整解決方案 Debug 構建零警告零錯誤；`dotnet format --verify-no-changes` 通過。**
 
 ---
 
@@ -85,16 +85,24 @@
 > 認領規則、分支和完成標準見 [AGENTS.md §2](../AGENTS.md#2-協作規則多-agent-並行)。認領時把 `[ ]` 改為 `[~] (agent, 日期)`。
 > 這些任務邊界清楚，不需要管理員權限，也不涉及核心設計決策。
 
-- [ ] **A1 config.db 每日備份**（FR-SET-04，小）
+- [x] (codex, 2026-11-13) **A1 config.db 每日備份**（FR-SET-04，小）
   - 範圍：`src/NetworkControl.Storage/Backup/`（新建）、`StorageServiceCollectionExtensions.cs`、`tests/NetworkControl.Storage.Tests/`
   - 做法：用 `BackgroundService` 每天一次，通過 `SqliteConnection.BackupDatabase` 把 config.db 備份到 `<數據目錄>/backups/config-yyyyMMdd.db`，保留最近 7 份；時間通過 `TimeProvider` 注入。
   - 驗收：用 `FakeTimeProvider` 推進時間的測試，覆蓋生成備份、超過 7 份時刪除最舊的、備份可以打開並讀到規則。
+  - 完成（codex 初版，claude 審查後修正）：`Backup/ConfigBackup`（核心邏輯）+ `ConfigBackupStartupTask`（Order 在數據庫遷移之前）+ `ConfigBackupService`（每小時檢查，跨過本地日期才建立）。按本地日期命名，**當天已有備份就不覆蓋**（升級當天遷移前的副本得以保留）；首次安裝數據庫不存在時跳過；先寫臨時文件再改名；只清理 `config-yyyyMMdd.db` 格式的文件；刪除失敗單獨記警告。新增 `SqliteDatabase.BackupToAsync`，診斷包的一致性副本也改用它。
+  - 測試：生成備份可讀到規則、同日不覆蓋、保留 7 份且不刪用戶文件、數據庫不存在時跳過、啟動任務先於遷移、後台服務跨日期生成新備份（FakeTimeProvider）。
+  - 未做：一鍵恢復（FR-SET-04 後半）需要 IPC + 界面，列入長期規劃。
   - 不要改：Core、proto、App。
-- [ ] **A2 規則導出格式與序列化**（FR-SET-03 第一步，中）
+- [x] (codex, 2026-11-13) **A2 規則導出格式與序列化**（FR-SET-03 第一步，中）
   - 範圍：`src/NetworkControl.Storage/Serialization/`（新增導出 DTO 和序列化器）、對應測試
   - 做法：格式為 `{ "format": "netcontrol-rules", "version": 1, "rules": [...] }`，使用 System.Text.Json 源生成。路徑中的用戶目錄替換為 `%USERPROFILE%` 等佔位符，導入時展開。複用現有的 `DtoMapper`。
   - 驗收：導出再導入的往返測試；佔位符替換測試；格式版本不符時報錯。
   - 不要改：IPC 接口和界面（下一步由主 agent 接入）。
+  - 完成（codex 初版，claude 審查後修正）：`RuleExportFormat.cs`（獨立的嚴格源生成上下文：`RespectNullableAnnotations` / `RespectRequiredConstructorParameters`，不影響數據庫 JSON 列）、`RuleExportSerializer`、`PathPlaceholderMapper`。
+    - **佔位符目錄由調用方傳入**（服務以 SYSTEM 運行，不能用服務進程自己的目錄）；`ForCurrentUser()` 只用於以用戶身份運行的進程。前綴按路徑段匹配（`C:\Users\bob` 不匹配 `C:\Users\bobby`），按目錄長度從長到短匹配。
+    - 只導出永久 / 限時規則，跳過內置規則和臨時規則（僅本次、進程退出前、重啟前），格式中沒有 `BoundProcess`；`IsExportable` 供界面提示「N 條不會導出」。
+    - 導入先讀格式名和版本再嚴格解析；缺字段、null、未知枚舉值、端口越界、限時規則缺過期時間、無效 IP 等一律報 `FormatException`（指明第幾條）。
+    - 導入結果原樣保留 Id / ProfileId / Source：合併或覆蓋、Id 衝突、配置文件不存在等策略由接入 IPC 的一方決定。
 - [ ] **A3 譯文審校**（小）
   - 範圍：只改 `src/NetworkControl.App/Localization/**/zh-CN.xlf`、`zh-TW.xlf` 中的 `<target>`。
   - 要求：zh-TW 使用台灣用語，zh-CN 使用大陸用語；不改 unit id、`<source>` 和 `{0}` 等佔位符；保持 `state="translated"`。
@@ -133,7 +141,10 @@
 - [ ] 檢查更新（目前由用戶手動下載新版安裝程序覆蓋安裝）
 
 ### P2 / 後續里程碑
-- [ ] M2 Linux 引擎（nftables NFQUEUE + eBPF + NFLOG）
+- [~] (codex → claude, 2026-11-13) M2 Linux 引擎（nftables NFQUEUE + eBPF + NFLOG）——基礎層，**尚未接入服務，從未在 Linux 上運行過**
+  - 已有：`NetworkControl.Engine.Linux`——nftables 腳本（冪等：先 add 再 delete 表；`queue num 0 [bypass]`）、`NfqueueAdapter`（專用收包線程，poll + eventfd 停止，先等線程退出再釋放句柄；ENOBUFS / EINTR 繼續，致命錯誤上報 `OnEngineFault` 並銷毀隊列讓 bypass 生效；`LibraryImport` + `UnmanagedCallersOnly`；按 `.so.1` 解析庫名）、`NfqueuePacketHandler`（判決異步完成，掛起的彈窗不阻塞其他報文；解析失敗、判決失敗、掛起過多都按失效策略處理；64 位 FlowId）、IPv6 擴展頭和分片解析、`/proc` 進程信息（UID 按 Tab 解析）、`LinuxAppInspector`（SHA-256）、`LinuxProcessExitWatcher`（輪詢啟動時間）。
+  - 2026-11-13 審查：codex 版本把引擎接入了服務的 Auto，但缺 `IAppInspector` / `IProcessExitWatcher` 註冊（Linux 上服務啟動即失敗）、收包線程同步等待彈窗（全機斷網）等，已修正；**服務接入已撤回**。
+  - 待做：eBPF 進程歸屬（沒有 PID 時應用規則無法匹配）、DNS 採集（域名規則）、運行時切換失效策略後重新下發、服務接入（只允許顯式配置 `NfQueue`，完成歸屬前不進入 Auto）、在 Linux 虛擬機上用 root 驗證 `nft -c -f` 和真實攔截。
 - [ ] M4 macOS 引擎（NE 系統擴展，Swift）—— 需提前申請 Apple 開發者帳號和 NE 權限
 - [ ] 限速、黑名單訂閱、時間段規則、地圖 / ASN、密碼保護、ncctl
 - [ ] Windows WFP Callout 驅動（掛起連接，需 EV 證書）

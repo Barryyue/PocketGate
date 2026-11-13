@@ -40,6 +40,23 @@ public abstract class SqliteDatabase
             throw;
         }
     }
+
+    /// <summary>
+    /// 用 SQLite 在線備份 API 把數據庫完整複製到 <paramref name="destination"/>（覆蓋已有內容）。
+    /// 備份期間其他連接可以繼續讀寫，得到的副本是一致的。
+    /// </summary>
+    public async Task BackupToAsync(string destination, CancellationToken cancellationToken)
+    {
+        await using var source = await OpenAsync(cancellationToken);
+        await using var target = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = destination,
+            Mode = SqliteOpenMode.ReadWriteCreate,
+            Pooling = false,
+        }.ToString());
+        await target.OpenAsync(cancellationToken);
+        source.BackupDatabase(target);
+    }
 }
 
 /// <summary>config.db：規則、應用、配置文件、設置。體積小、關鍵，需要備份。</summary>
