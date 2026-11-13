@@ -7,7 +7,7 @@
              xmlns:loc="using:NetworkControl.Android.Localization"
              x:Class="NetworkControl.Android.Views.ShellView"
              x:DataType="vm:MainViewModel">
-  <Border Classes="page" x:Name="Root">
+  <Border Classes="page">
     <Grid RowDefinitions="*,Auto">
       <!-- 頁面：保持各頁面存活，切換時只改變可見性 -->
       <Panel Grid.Row="0">
@@ -32,7 +32,7 @@
       </Panel>
 
       <!-- 底部導航 -->
-      <Border Grid.Row="1" Classes="bottom-nav" x:Name="BottomNav">
+      <Border Grid.Row="1" Classes="bottom-nav">
         <UniformGrid Columns="4">
           <Button Classes="nav" Classes.active="{Binding IsOverview}" Command="{Binding NavigateCommand}" CommandParameter="0">
             <StackPanel Spacing="2">

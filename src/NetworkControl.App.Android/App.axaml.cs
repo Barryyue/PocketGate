@@ -15,7 +15,11 @@ public sealed partial class App : Avalonia.Application
 {
     private MainViewModel? _main;
 
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+        TouchAdapters.Register();
+    }
 
     public override void OnFrameworkInitializationCompleted()
     {

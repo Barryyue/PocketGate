@@ -1,30 +1,15 @@
-using Avalonia;
 using Avalonia.Controls;
 
 namespace NetworkControl.Android.Views;
 
-/// <summary>主視圖。Android 15+ 強制邊到邊顯示：按系統欄的安全區域留出內邊距。</summary>
+/// <summary>
+/// 主視圖。Avalonia 12.1 在 Android 上默認把內容限制在系統欄之內，不要再按 SafeAreaPadding 手動留邊
+/// （它以物理像素報告，疊加後頂部和底部會多出一大片空白，見 AGENTS.md 第 6 節）。
+/// </summary>
 public sealed partial class ShellView : UserControl
 {
     public ShellView()
     {
         InitializeComponent();
-    }
-
-    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-    {
-        base.OnAttachedToVisualTree(e);
-        if (TopLevel.GetTopLevel(this)?.InsetsManager is { } insets)
-        {
-            insets.DisplayEdgeToEdgePreference = true;
-            ApplySafeArea(insets.SafeAreaPadding);
-            insets.SafeAreaChanged += (_, args) => ApplySafeArea(args.SafeAreaPadding);
-        }
-    }
-
-    private void ApplySafeArea(Thickness padding)
-    {
-        Root.Padding = new Thickness(padding.Left, padding.Top, padding.Right, 0);
-        BottomNav.Padding = new Thickness(0, 0, 0, padding.Bottom);
     }
 }

@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
 using NetworkControl.Core.Domain;
 using NetworkControl.Core.Engine;
+using NetworkControl.Engine.Vpn.Dns;
 using NetworkControl.Engine.Vpn.Packets;
 using NetworkControl.Engine.Vpn.Platform;
 using NetworkControl.Engine.Vpn.Routing;
@@ -19,6 +20,8 @@ public sealed class VpnEngineCounters
     private long _unknownOwner;
     private long _deduplicated;
     private long _reported;
+    private long _dnsAnswered;
+    private long _systemUid;
 
     /// <summary>從虛擬網卡讀到的報文數。</summary>
     public long Packets => Interlocked.Read(ref _packets);
@@ -41,7 +44,17 @@ public sealed class VpnEngineCounters
     /// <summary>上報給核心的阻斷事件數。</summary>
     public long Reported => Interlocked.Read(ref _reported);
 
+    /// <summary>假 DNS 回答的查詢數。</summary>
+    public long DnsAnswered => Interlocked.Read(ref _dnsAnswered);
+
     internal void AddPacket() => Interlocked.Increment(ref _packets);
+
+    internal void AddDnsAnswered() => Interlocked.Increment(ref _dnsAnswered);
+
+    /// <summary>來自系統核心 UID（沒有軟件包、無法按包排除，例如 DNS 解析服務的 DoT 探測）的嘗試數：只計數，不上報。</summary>
+    public long SystemUid => Interlocked.Read(ref _systemUid);
+
+    internal void AddSystemUid() => Interlocked.Increment(ref _systemUid);
 
     internal void AddUnparsed() => Interlocked.Increment(ref _unparsed);
 
@@ -59,11 +72,15 @@ public sealed class VpnEngineCounters
 /// <summary>
 /// 把虛擬網卡中的報文轉換成核心的阻斷事件（docs/android.md §5.5）：
 /// 讀線程只解析和入隊；後台任務查詢 UID、去重、構造 <see cref="FlowInfo"/> 並調用 <see cref="IEngineHost.OnFlowBlocked"/>。
+/// 發往 <see cref="VpnTunnelConfig.DnsServer"/> 的 DNS 查詢在讀線程上直接用假地址回答。
 /// </summary>
 internal sealed partial class BlockedFlowReporter : IPacketSink
 {
     private const int QueueCapacity = 512;
     private const int MaxDedupEntries = 4096;
+
+    /// <summary>假 DNS 回答的 TTL：盡量短，用戶允許後應用（改走真實網絡）很快就會重新解析。</summary>
+    private const uint FakeDnsTtlSeconds = 1;
 
     private readonly IConnectionOwnerResolver _owners;
     private readonly IInstalledAppCatalog _catalog;
@@ -75,6 +92,7 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
         new BoundedChannelOptions(QueueCapacity) { FullMode = BoundedChannelFullMode.DropWrite, SingleReader = true });
 
     private readonly Dictionary<DedupKey, DateTimeOffset> _recent = [];
+    private readonly FakeDnsPool _fakeDns;
     private long _nextFlowId;
 
     public BlockedFlowReporter(
@@ -84,8 +102,10 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
         VpnEngineCounters counters,
         TimeProvider time,
         TimeSpan dedupWindow,
-        ILogger logger)
+        ILogger logger,
+        FakeDnsPool? fakeDns = null)
     {
+        _fakeDns = fakeDns ?? new FakeDnsPool();
         _owners = owners;
         _catalog = catalog;
         _plan = plan;
@@ -97,12 +117,18 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
 
     public VpnEngineCounters Counters { get; }
 
-    public void OnPacket(ReadOnlySpan<byte> packet)
+    public void OnPacket(ReadOnlySpan<byte> packet, IPacketWriter writer)
     {
         Counters.AddPacket();
         if (!IpPacketParser.TryParse(packet, out var info))
         {
             Counters.AddUnparsed();
+            return;
+        }
+
+        if (info.Protocol == L4Protocol.Udp && info.Destination.Port == 53 && info.Destination.Address.Equals(VpnTunnelConfig.DnsServer))
+        {
+            AnswerDns(packet, info, writer);
             return;
         }
 
@@ -150,6 +176,12 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
             return null;
         }
 
+        if (VpnRoutingPlanner.IsSystemUid(uid))
+        {
+            Counters.AddSystemUid();
+            return null;
+        }
+
         var now = _time.GetUtcNow();
         var key = new DedupKey(uid, packet.Protocol, packet.Destination.Address, packet.Destination.Port);
         if (_recent.TryGetValue(key, out var last) && now - last < _dedupWindow)
@@ -180,6 +212,8 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
             ExecutablePath = package is null ? PackageAppPath.ForUid(uid) : PackageAppPath.ForPackage(package),
             Timestamp = now,
             Origin = FlowOrigin.BlockedEvent,
+            // 連向假 DNS 地址：反查出應用想訪問的域名
+            EngineHostname = _fakeDns.TryGetName(packet.Destination.Address, out var hostname) ? hostname : null,
         };
 
         // 已被規則拒絕的應用只記錄日誌；其他情況（未決定、應用剛安裝還沒有進入計劃）交給核心判斷是否詢問
@@ -193,6 +227,24 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
     }
 
     public void Complete() => _queue.Writer.TryComplete();
+
+    /// <summary>
+    /// 假 DNS：A 查詢返回地址池中分配給該域名的地址，其他類型返回沒有記錄（應用會退回 IPv4）。
+    /// 只有被阻斷的應用會走到這裡（允許的應用不經過 VPN）。
+    /// </summary>
+    private void AnswerDns(ReadOnlySpan<byte> packet, in PacketInfo info, IPacketWriter writer)
+    {
+        var message = packet.Slice(info.PayloadOffset, info.PayloadLength);
+        if (!DnsWire.TryParseQuery(message, out var query) || query.Name.Length == 0)
+        {
+            return;
+        }
+
+        var address = query.Type == DnsWire.TypeA ? _fakeDns.Allocate(query.Name) : null;
+        var response = DnsWire.BuildResponse(query, message.Slice(12, query.QuestionLength), address, FakeDnsTtlSeconds);
+        writer.Write(IpPacketBuilder.Udp4(info.Destination, info.Source, response));
+        Counters.AddDnsAnswered();
+    }
 
     private void PruneExpired(DateTimeOffset now)
     {

@@ -26,7 +26,9 @@ public static partial class BackendHost
     {
         lock (Gate)
         {
-            return _starting ??= StartAsync(context.ApplicationContext ?? context);
+            // 在線程池上啟動：托管服務的後台循環不能捕獲界面線程的同步上下文
+            var appContext = context.ApplicationContext ?? context;
+            return _starting ??= Task.Run(() => StartAsync(appContext));
         }
     }
 

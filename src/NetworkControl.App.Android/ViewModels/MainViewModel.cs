@@ -73,6 +73,7 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
             MainActivity.ForegroundChanged += (_, foreground) =>
             {
                 context.Notifier.IsUiForeground = foreground;
+                Prompt.IsForeground = foreground;
                 if (foreground)
                 {
                     Dispatcher.UIThread.Post(RefreshAll);

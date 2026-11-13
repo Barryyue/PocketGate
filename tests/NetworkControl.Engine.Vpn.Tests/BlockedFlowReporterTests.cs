@@ -75,6 +75,18 @@ public class BlockedFlowReporterTests
     }
 
     [Fact]
+    public void System_uids_are_counted_but_not_reported()
+    {
+        // 例如 DNS 解析服務（UID 1051）的 DoT 探測：沒有軟件包，無法排除在 VPN 之外，也不應該詢問
+        _owners.UidByLocalPort[40_000] = 1051;
+        var reporter = CreateReporter();
+
+        Assert.Null(reporter.Process(_host, Parse(Packets.Syn("10.111.222.1", 40_000, "10.111.222.2", 853))));
+        Assert.Empty(_host.Blocked);
+        Assert.Equal(1, reporter.Counters.SystemUid);
+    }
+
+    [Fact]
     public void Uid_without_package_uses_uid_path()
     {
         _owners.UidByLocalPort[40_000] = 10_999;
@@ -102,9 +114,10 @@ public class BlockedFlowReporterTests
     public void Sink_ignores_non_attempts_and_garbage()
     {
         var reporter = CreateReporter();
-        reporter.OnPacket(Packets.Ipv4("10.111.222.1", "1.1.1.1", Packets.Tcp, Packets.TcpSegment(40_000, 443, 0x10)));
-        reporter.OnPacket([0x45, 0x00]);
-        reporter.OnPacket(Packets.Syn("10.111.222.1", 40_000, "1.1.1.1", 443));
+        var writer = new RecordingWriter();
+        reporter.OnPacket(Packets.Ipv4("10.111.222.1", "1.1.1.1", Packets.Tcp, Packets.TcpSegment(40_000, 443, 0x10)), writer);
+        reporter.OnPacket([0x45, 0x00], writer);
+        reporter.OnPacket(Packets.Syn("10.111.222.1", 40_000, "1.1.1.1", 443), writer);
 
         Assert.Equal(3, reporter.Counters.Packets);
         Assert.Equal(1, reporter.Counters.Unparsed);

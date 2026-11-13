@@ -108,8 +108,11 @@ public sealed partial class VpnBlackholeEngine : INetworkEngine
             _protection.Changed += OnInputChanged;
             _tunnel.StateChanged += OnTunnelStateChanged;
 
-            _reporting = _reporter.RunAsync(host, _cts.Token);
-            _loop = RunAsync(_cts.Token);
+            // 後台循環不能繼承調用方的同步上下文：宿主可能在界面線程上啟動（Android 上在主線程做 UID 查詢會拋出 NetworkOnMainThreadException）
+            var reporter = _reporter;
+            var token = _cts.Token;
+            _reporting = Task.Run(() => reporter.RunAsync(host, token), CancellationToken.None);
+            _loop = Task.Run(() => RunAsync(token), CancellationToken.None);
         }
 
         // 立即規劃一次：引擎啟動後保護開關已打開時馬上建立虛擬網卡

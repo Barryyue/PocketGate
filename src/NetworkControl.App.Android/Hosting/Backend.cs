@@ -96,6 +96,9 @@ public interface IBackend
 
     Task AnswerPromptAsync(Guid promptId, VerdictAction action, RuleLifetime lifetime, TimeSpan? duration, CancellationToken cancellationToken);
 
+    /// <summary>用戶正在看這個詢問：推遲超時（不超過詢問的最長存活時間），避免內容在用戶點擊前被下一個詢問替換。</summary>
+    void HoldPrompt(Guid promptId);
+
     Task UpdateSettingsAsync(Func<UserSettings, UserSettings> update, CancellationToken cancellationToken);
 }
 
@@ -284,6 +287,8 @@ internal sealed class Backend : IBackend
             Duration = duration,
             Scope = PromptScope.AnyConnection,
         }, cancellationToken);
+
+    public void HoldPrompt(Guid promptId) => _prompts.PauseTimer(promptId);
 
     public Task UpdateSettingsAsync(Func<UserSettings, UserSettings> update, CancellationToken cancellationToken) =>
         _settings.UpdateAsync(update, cancellationToken);

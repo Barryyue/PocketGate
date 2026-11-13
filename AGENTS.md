@@ -103,3 +103,14 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 - **PowerShell 中的 `[IO.File]` 相對路徑**按進程當前目錄解析，不是 `Set-Location` 的位置：一律用絕對路徑。
 - **proto 生成類型避開常見類型名**：已有 `VerdictAction`、`IpEndpoint`、`ActivityLog`；C# 中的別名統一用 `Proto`（全局命名空間裡已經有 `Pb`）。
 - **可攜版與安裝版目錄結構相同**：可攜模式只能靠根目錄的 `portable.txt` 判斷，不能靠 `App\` / `Service\` 目錄；安裝程序不得複製這個文件。可攜版使用獨立管道 `NetworkControl.portable.v1` 和 `<根目錄>\data`，不要和安裝版同時運行服務。
+- **Android 版**（設計見 docs/android.md，構建見 docs/development.md §11）：
+  - Android 項目需要 .NET Android 工作負載，只放在 `NetworkControl.Android.slnx`；主解決方案只包含平台無關的 `Engine.Vpn`，不要把 Android 項目加進 `NetworkControl.slnx`。
+  - 開發機用的是 `D:\tools\android-dev` 下的用戶級工具鏈；下載工作負載 / NuGet 時用 `HTTPS_PROXY=http://127.0.0.1:9` + `NO_PROXY=*` 臨時繞過 Reqable（只對當前終端）。`-t:InstallAndroidDependencies` 不支持這種繞過，SDK 要手動安裝。
+  - 模擬器 37.x 在本機 Windows 10 的 WHPX 下無法啟動（宿主崩潰或客戶機卡住），用 `D:\tools\android-dev\emu34\emulator\emulator.exe`（33.1.24）；adb 只用 SDK 自帶的版本，`D:\tools\platform-tools` 的舊 adb 會讓設備一直顯示 offline。
+  - 黑洞式 VPN 必須宣告 DNS 服務器並用假 DNS 回答，否則被阻斷的應用在本機解析失敗、根本不發起連接，引擎無法按 UID 歸屬，也就不會詢問。
+  - `getConnectionOwnerUid` 是 Binder 調用，不能在主線程上執行；引擎的後台循環要用 `Task.Run` 啟動，不能繼承調用方（界面線程）的同步上下文。
+  - 系統核心 UID（< 10000，例如 DNS 解析服務 1051）沒有軟件包、無法按包排除在 VPN 之外：只計數，不上報、不詢問。
+  - Android 的隱式 using 包含 `Android.App`：`Application` 與 Avalonia 的同名，Avalonia 的要寫 `Avalonia.Application`；項目命名空間是 `NetworkControl.Android`，引用 Android SDK 類型一律用頂層 `using global::Android...`。
+  - AtomUI 在 Android 上：`Segmented` 不響應觸控（由 `TouchAdapters` 補上）；默認字體沒有中文字形且不回退，必須 `atom.WithDefaultFontFamily("sans-serif")`；ListBox 等基礎控件需要 `FluentTheme`。
+  - Avalonia 12.1 在 Android 上已經把內容限制在系統欄內，`InsetsManager.SafeAreaPadding` 還是以物理像素報告：不要再手動按它留邊。
+  - 通知文本在 `Resources/values*/strings.xml`（沒有界面時也要可用），界面文本由 `tools/android-strings.py` 生成 XLIFF；兩處都要維護三種語言。

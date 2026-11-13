@@ -1,6 +1,6 @@
 # NetworkControl Android 版設計
 
-> 狀態：M-A（Android MVP）設計稿，2026-11-13。實現進度見 [progress.md](progress.md) 的「Android MVP」一節。
+> 狀態：M-A（Android MVP）已實現並在模擬器上端到端驗證，2026-11-14。實現進度見 [progress.md](progress.md) 的「Android MVP」一節。
 > 本文只描述 Android 特有的部分；領域模型、規則引擎、判決管線、詢問代理沿用 [design.md](design.md)。
 
 ---
@@ -79,7 +79,11 @@ flowchart LR
 ```
 
 - 這與 Windows 用戶態 WFP 引擎的「先阻斷後詢問」完全相同：引擎能力為 `RulePush`，連接以 `FlowOrigin.BlockedEvent` 上報，用戶允許後生成規則、引擎重建分流名單，應用重試即可連上（FR-INT-07 的提示文案沿用）。
-- 被阻斷應用的 DNS 查詢也會進入虛擬網卡（Android 10+ 的 DnsResolver 按發起應用的 UID 選擇網絡），因此域名解析同樣被阻斷。虛擬網卡不設置 DNS 服務器。
+- **假 DNS（設備驗證後加入）**：虛擬網卡如果不宣告 DNS 服務器，被阻斷應用的域名解析在本機就失敗了，應用根本不會發起連接，引擎也就沒有可以按 UID 歸屬的報文，無法詢問（模擬器上實測：10 個報文、0 次聯網嘗試）。因此虛擬網卡宣告 DNS 服務器 `10.111.222.2`，發往它的查詢由引擎直接回答：
+  - A 查詢：從 `198.18.0.0/15`（RFC 2544 基準測試保留地址）中為每個域名分配一個地址，TTL 1 秒；其他類型（AAAA、HTTPS 等）回答「沒有記錄」，應用退回 IPv4。
+  - 應用隨後連向這個假地址，SYN 被按 UID 歸屬並上報；地址池能反查出域名，填入 `FlowInfo.EngineHostname`，**詢問和記錄中顯示的是域名**（例如 `example.com:443`），而不是無意義的假地址。
+  - 只有被阻斷（在 VPN 內）的應用會收到假地址；允許的應用不經過 VPN，使用真實網絡和真實 DNS。用戶允許後應用改走真實網絡，系統按網絡隔離 DNS 緩存，TTL 又只有 1 秒，不會沿用假地址。
+  - 系統的 DNS 解析服務（UID 1051）會向這個地址做 DoT（853 端口）探測：系統核心 UID 一律只計數、不上報。
 - MVP 對被丟棄的 TCP SYN 不回覆 RST，應用會等到超時才報錯；後續可回寫 RST / ICMP 不可達讓應用快速失敗（P1）。
 
 ---
@@ -201,7 +205,6 @@ Core 以「可執行文件路徑」為應用的主鍵。Android 上用合成路�
 
 ```csharp
 public sealed record VpnRoutingPlan(
-    bool TunnelRequired,                       // false：沒有需要阻斷的應用，可以不建立虛擬網卡
     IReadOnlySet<string> BypassPackages,       // 傳給 addDisallowedApplication（允許的應用 + 自身）
     IReadOnlyDictionary<int, AppRouting> ByUid,// 每個 UID 的決策和依據，供日誌 / 界面 / 診斷
     IReadOnlyList<SkippedRule> SkippedRules);  // 此平台無法執行的規則及原因
@@ -226,9 +229,9 @@ public enum AppRoutingDecision { Bypass, Block, BlockAndAsk }
 | 白名單 | `Block` | 按規則 |
 | 黑名單 | `Bypass` | 按規則 |
 | 全部阻斷 | 全部 `Block`（只有自身和系統核心 UID 放行） | 忽略規則 |
-| 停用 | 全部 `Bypass`；`TunnelRequired = false`，關閉虛擬網卡 | 忽略規則 |
+| 停用 | 全部 `Bypass`（虛擬網卡保持建立） | 忽略規則 |
 
-`TunnelRequired = false` 時（例如停用模式、黑名單模式下沒有拒絕規則）關閉虛擬網卡，避免狀態欄常駐 VPN 圖標和不必要的開銷；保護開關仍顯示「開啟」。
+保護開啟期間虛擬網卡**始終保持建立**，即使沒有任何應用需要阻斷（例如停用模式）：如果用戶開啟了系統的「封鎖未使用 VPN 的連線」，關閉虛擬網卡會讓所有應用斷網；狀態欄的 VPN 圖標也正好表示保護在運行。（設計稿中的 `TunnelRequired` 已取消。）
 
 需要給 Core 增加一個公開 API（只讀、不影響現有求值）：
 
@@ -242,10 +245,10 @@ public RuleMatch FindAppRule(AppIdentity app, Func<Rule, bool> includeRule);
 ### 5.5 報文處理與阻斷上報
 
 1. Android 實現用阻塞模式（`Builder.setBlocking(true)`）讀取虛擬網卡，每個報文觸發 `PacketReceived`；讀線程是專用線程，關閉文件描述符時退出。
-2. `IpPacketParser`（純函數、零分配）解析 IPv4 / IPv6 頭（跳過 IPv6 擴展頭）和 TCP / UDP 端口、TCP 標誌；分片的非首片、無法解析的報文直接丟棄。
-3. 只為「新連接」上報：TCP 只看 SYN（無 ACK）；UDP 每個五元組每 10 秒最多一次；ICMP 不上報。
-4. `IConnectionOwnerResolver` 查 UID → `IInstalledAppCatalog` 查包名 → 構造 `FlowInfo`：`Origin = BlockedEvent`、`ExecutablePath = android-app://<包名>`、`Process = null`。查不到 UID 的報文只計數，不上報。
-5. 去重：同一 UID 在 5 秒內只上報一次（應用重試時會連續發 SYN），避免把判決管線和日誌淹沒。
+2. `IpPacketParser`（純函數）解析 IPv4 / IPv6 頭（跳過 IPv6 擴展頭）和 TCP / UDP 端口、TCP 標誌；分片的非首片、無法解析的報文直接丟棄。
+3. 發往假 DNS 服務器的 UDP 53 在讀線程上直接回答（§3.2），不算聯網嘗試。其餘只為「新連接」上報：TCP 只看 SYN（無 ACK）；UDP 由下面的去重控制；ICMP 不上報。
+4. `IConnectionOwnerResolver` 查 UID → `IInstalledAppCatalog` 查包名 → 構造 `FlowInfo`：`Origin = BlockedEvent`、`ExecutablePath = android-app://<包名>`、`Process = null`、`EngineHostname = 假 DNS 反查出的域名`。查不到 UID 的報文、系統核心 UID 的報文只計數，不上報。查詢在後台線程上進行（`getConnectionOwnerUid` 是 Binder 調用，在主線程上調用會拋出 `NetworkOnMainThreadException`）。
+5. 去重：同一 UID 到同一目標（協議 + 地址 + 端口）在 5 秒內只上報一次（應用重試時會連續發 SYN），避免把判決管線和日誌淹沒。
 6. `BlockReason`：路由決策為 `BlockAndAsk` → `DefaultBlock`（觸發詢問）；`Block` → `UserRule`（只記錄日誌）。核心的判決管線決定是否詢問、記錄什麼，引擎不做判斷。
 7. 被丟棄的報文不寫回，不分配緩衝區以外的內存；讀循環的緩衝區大小等於 MTU（1500）。
 
@@ -286,6 +289,8 @@ public RuleMatch FindAppRule(AppIdentity app, Func<Rule, bool> includeRule);
   - Android 上拿不到進程，「直到應用退出」會退化為「直到重啟」。
 - 範圍固定為「此應用的任意連線」（同上原因）。
 - 默認超時沿用設置（30 秒）。超時後報文仍被丟棄，應用下一次嘗試（去重窗口之後）會重新觸發詢問。
+- **詢問顯示在前台時每 10 秒推遲一次超時**（`PromptBroker.PauseTimer`，不超過最長存活時間 5 分鐘）。設備驗證中發現：詢問在用戶點擊前超時被移除，隊列中的下一個詢問頂替到同一位置，用戶點「允許」時允許的是另一個應用。
+- 「稍後」按**應用**擱置 10 分鐘，而不是只擱置這一個詢問：應用重試會產生新的詢問實例，只擱置實例會讓同一應用反覆彈出。總覽頁的「查看」會取消所有擱置。
 
 ### 6.3 文案（FR-INT-07）
 
@@ -420,12 +425,15 @@ public interface IBackend
 
 | 項目 | 結論 |
 |---|---|
-| AtomUI 主題初始化 | 待驗證 |
-| 常用組件（按鈕、開關、分段選擇器、輸入框、列表、標籤、卡片） | 待驗證 |
-| 覆蓋層對話框、消息提示 | 待驗證 |
-| 語言 Catalog 運行時切換 | 待驗證 |
-| APK 大小（Debug / Release） | 待驗證 |
-| 冷啟動時間 | 待驗證 |
+| AtomUI 主題初始化 | ✅ `UseAtomUI` + `UseDesktopControls` 在 Avalonia.Android 上正常初始化（不調用 `UseAtomUIPlatformDetect`，平台後端由 `AvaloniaAndroidApplication` 提供） |
+| 常用組件 | ✅ Button（含圖標）、ToggleSwitch、Card、Statistic、Alert、Tag、LineEdit（含 LeftAddOn）、IconPresenter 正常；⚠️ **Segmented 不響應觸控**（只處理鼠標按下），由 `Infrastructure/TouchAdapters` 在 Tapped 手勢上補選中 |
+| 基礎控件 | ListBox、ScrollViewer 等 AtomUI 沒有主題的類型需要 `FluentTheme` 兜底（與桌面版相同） |
+| 覆蓋層對話框 | 詢問用自繪的底部卡片（覆蓋層），沒有使用 AtomUI 的窗口類對話框 |
+| 中文字體 | ⚠️ AtomUI 默認字體（Alibaba Sans + Microsoft YaHei）在 Android 上沒有中文字形且不回退，中文顯示為方框；`atom.WithDefaultFontFamily("sans-serif")` 後由系統 Noto Sans CJK 回退，正常 |
+| 系統欄安全區域 | Avalonia 12.1 默認把內容限制在系統欄內；`SafeAreaPadding` 以物理像素報告，不要再手動留邊 |
+| 語言 Catalog 運行時切換 | ✅ zh-TW / zh-CN / en-US 即時切換；明暗主題即時切換 |
+| APK 大小 | Debug（含兩個 ABI、未裁剪）見 progress.md；Release 待測 |
+| 冷啟動時間 | 模擬器（軟件渲染）上從啟動到核心就緒約 3 秒（數據庫遷移、規則加載）；真機待測 |
 
 ---
 

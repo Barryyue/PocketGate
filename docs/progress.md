@@ -80,6 +80,34 @@
 
 ---
 
+## 📱 Android MVP（M-A，分支 `agent/claude/android-mvp`，2026-11-14）
+
+設計見 [android.md](android.md)，構建見 [development.md §11](development.md#11-android)。方案：不需要 root 的**黑洞式分流 VPN**（允許的應用被排除在 VPN 外直接上網，其餘應用的流量進入虛擬網卡後丟棄並觸發詢問）+ 假 DNS；界面為 Avalonia 12 + AtomUI；核心（Core / Storage）原樣在同一進程中運行。
+
+- [x] (claude, 2026-11-14) **A-0 設計與工具鏈**：`docs/android.md`；用戶級工具鏈 `D:\tools\android-dev`（.NET SDK 10.0.402 + android 工作負載 36.1、JDK 17、Android SDK 36、模擬器）；`scripts/android.ps1`；`NetworkControl.Android.slnx`。
+- [x] (claude, 2026-11-14) **A-1 預研 R-A1**：AtomUI 可以在 Android 上運行，結論見 android.md §11（Segmented 觸控、中文字體、安全區域三個坑已處理）。
+- [x] (claude, 2026-11-14) **A-2 Core**：`RuleSet.FindAppRule`；Android 上路徑匹配區分大小寫。
+- [x] (claude, 2026-11-14) **A-3 Engine.Vpn**（net10.0，在主解決方案中）：報文解析、路由規劃、阻斷上報（去重、系統 UID 過濾）、假 DNS（DnsWire / FakeDnsPool / IpPacketBuilder）、`VpnBlackholeEngine`。55 個單元 / 場景測試。
+- [x] (claude, 2026-11-14) **A-4 Engine.Android**：`NcVpnService`、`AndroidVpnTunnel`（poll 讀寫線程）、PackageManager 應用目錄（簽名 SHA-256、軟件包廣播）、`getConnectionOwnerUid`、保護開關。
+- [x] (claude, 2026-11-14) **A-5 App.Android 核心宿主**：`BackendHost`（Generic Host，進程級單例）、`IBackend` 門面、logcat + 文件日誌。
+- [x] (claude, 2026-11-14) **A-6 界面**：總覽、應用程式（搜索 / 篩選 / 三態設定 / 圖標）、阻擋記錄、設定（語言、外觀、詢問超時和默認動作、通知、永久連線 VPN、電池最佳化、版本和引擎計數）。
+- [x] (claude, 2026-11-14) **A-7 詢問**：應用內底部卡片（防誤觸 1 秒、前台時推遲超時、「稍後」按應用擱置）+ 系統通知（允許 / 拒絕按鈕）。
+- [x] (claude, 2026-11-14) **A-8 開機恢復、始終開啟的 VPN、撤銷處理**。
+- [x] (claude, 2026-11-14) **A-9 Release APK**：`scripts/android.ps1 publish` → `artifacts/android/com.networkcontrol.android-Signed.apk`（45.8 MB，arm64-v8a + x86_64，裁剪；**目前用調試簽名**，正式分發前需要用戶生成自己的密鑰庫並設置 `NC_ANDROID_KEYSTORE` 等環境變量）。已在模擬器上從 Debug 版原地升級並驗證：設定、規則、保護狀態保留，裁剪後界面和完整詢問流程正常；冷啟動到首幀約 7.5 秒（模擬器軟件渲染，真機待測）。
+
+**模擬器上已驗證（Android 15 / API 35，x86_64，emulator 33.1.24）**：核心在 Android 上啟動（SQLite 遷移、規則、引擎）；應用目錄（61 個聯網應用）；保護開關 → VPN 授權 → 虛擬網卡建立；Chrome 被阻斷 → 假 DNS → 按 UID 歸屬 → 詢問顯示「Chrome 想要連線網路 · example.com:443」並合併多個連線；應用內「允許（1 小時）」→ 限時規則 → 300 ms 內重建 VPN，`dumpsys connectivity` 確認 Chrome 的 UID 10145 已不在 VPN 範圍內；拒絕 → 永久拒絕規則；應用程式頁搜尋和三態設定；阻擋記錄頁（顯示域名、原因、次數）；全部封鎖 / 恢復、詢問 / 黑名單模式切換（分流隨之重建）；通知上的「拒絕」按鈕；重新啟動後無界面自動恢復保護；繁中 / 簡中 / 英文即時切換；淺色 / 深色。
+
+**未驗證 / 已知限制**：
+- **允許後應用是否真的能上網**：開發機的網絡需要經過代理，模擬器沒有可用的外網（宿主直連 example.com 也超時），只驗證了應用的 UID 已被排除在 VPN 之外。需要用戶在真機上確認。
+- **真機**（尤其 MIUI / HyperOS 的後台限制、VPN 授權對話框、通知權限對話框）：模擬器上用 `appops` / `pm grant` 跳過了兩個授權對話框，對話框本身的流程未在設備上走過。
+- 「始終開啟的 VPN」由系統啟動服務的路徑、VPN 被其他應用撤銷的處理：只有單元測試，沒有在設備上觸發過。
+- 通知文本跟隨系統語言，不跟隨應用內選擇的語言（`Resources/values*/strings.xml`）。
+- 只能按應用控制；按域名 / IP / 端口的規則在 Android 上不生效（界面會提示數量）；允許的應用沒有日誌和流量統計（設計上的取捨，見 android.md §1.2）。
+- 被阻斷應用的 TCP SYN 沒有回覆 RST，應用要等到超時才報錯（P1）。
+- 模擬器 37.x 在本機 WHPX 下無法啟動，見 AGENTS.md 第 6 節。
+
+---
+
 ## 🤝 可分派任務（適合交給其他 agent 獨立完成）
 
 > 認領規則、分支和完成標準見 [AGENTS.md §2](../AGENTS.md#2-協作規則多-agent-並行)。認領時把 `[ ]` 改為 `[~] (agent, 日期)`。
@@ -134,6 +162,7 @@
 
 ### P2 / 後續里程碑
 - [ ] M2 Linux 引擎（nftables NFQUEUE + eBPF + NFLOG）
+- [~] (claude, 2026-11-14) Android 版（M-A）—— 見上方「Android MVP」一節
 - [ ] M4 macOS 引擎（NE 系統擴展，Swift）—— 需提前申請 Apple 開發者帳號和 NE 權限
 - [ ] 限速、黑名單訂閱、時間段規則、地圖 / ASN、密碼保護、ncctl
 - [ ] Windows WFP Callout 驅動（掛起連接，需 EV 證書）

@@ -1202,3 +1202,7 @@ M0 骨架已按本文檔實現。以下是實現過程中對原設計的調整�
 | 發布形式 | §2 self-contained | Native AOT（界面約 70 MB、服務約 25 MB），運行時版本在發布時固定；Inno Setup 安裝程序 + zip | 啟動快、目標機器不需要 .NET；AOT 會把運行時鏈接進可執行文件，必須避開本機 SDK 自帶的有漏洞版本 |
 | 模擬引擎 | 開發用 | 只存在於 Debug 構建（`IncludeFakeEngine`），Release 不引用、不映射模擬器接口 | 正式版不應帶開發功能，也減少攻擊面 |
 | 部署形式 | 安裝為系統服務 | 同一發布包同時支援安裝版和可攜版：根目錄有 `portable.txt` 時界面拉起同目錄 `Service`，數據放在 `<根目錄>\data`，使用獨立管道 `NetworkControl.portable.v1`；安裝程序不複製標識文件 | 便於試用、無安裝環境和隨身攜帶；目錄結構與安裝版相同，只能靠標識文件區分，獨立管道避免影響已安裝的系統服務 |
+| Android 平台 | 未規劃 | 不需要 root 的黑洞式分流 VPN（`Engine.Vpn` 平台無關 + `Engine.Android`），單進程：界面直接調用進程內的 Core / Storage，不運行 gRPC 服務；設計見 [android.md](android.md) | Android 上第三方應用只能用 VpnService 控制其他應用的網絡；Android 工作負載沒有 ASP.NET Core（Kestrel），同一進程內也不需要 IPC 和對端鑒權 |
+| Android 應用身份 | 可執行文件路徑 | 合成路徑 `android-app://<包名>`，簽名者 = 簽名證書 SHA-256，文件戳 = (versionCode, lastUpdateTime) | 復用 Core 以路徑為主鍵的應用身份、規則匹配和篡改檢測，不改領域模型 |
+| Android 詢問觸發 | — | 假 DNS：虛擬網卡宣告 DNS 服務器，引擎用 198.18.0.0/15 中的地址回答並能反查域名 | 不宣告 DNS 時被阻斷應用在本機解析失敗、不發起連接，無法按 UID 歸屬，也就無法詢問（設備驗證中發現） |
+| 只能按應用分流的引擎 | — | `RuleSet.FindAppRule(app, filter)`：按優先級查找作用於應用的第一條規則，帶連接條件的規則由引擎篩掉並報告為「此平台不生效」 | 讓 Android 引擎與 WFP 引擎共用同一套規則優先級和篡改檢測 |

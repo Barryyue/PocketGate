@@ -17,15 +17,25 @@ namespace NetworkControl.Android.ViewModels;
 public sealed partial class PromptViewModel : LocalizedViewModel
 {
     private static readonly TimeSpan GuardDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan HoldInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan SnoozeDuration = TimeSpan.FromMinutes(10);
 
     private readonly Dictionary<Guid, PromptSnapshot> _pending = [];
-    private readonly HashSet<Guid> _deferred = [];
+    /// <summary>「稍後」擱置的應用及擱置截止時間：同一應用重試時會產生新的詢問，按應用擱置才不會反覆彈出。</summary>
+    private readonly Dictionary<string, DateTimeOffset> _snoozed = new(StringComparer.Ordinal);
     private CancellationTokenSource? _subscription;
+    private readonly DispatcherTimer _hold;
 
     public PromptViewModel(UiContext context)
         : base(context)
     {
+        // 詢問顯示在前台時定期推遲超時：詢問因超時被移除時，下一個詢問會頂替到同一位置，用戶可能點到錯誤的應用上
+        _hold = new DispatcherTimer(HoldInterval, DispatcherPriority.Background, (_, _) => Hold());
+        _hold.Start();
     }
+
+    /// <summary>界面是否在前台（由主視圖模型設置）。</summary>
+    public bool IsForeground { get; set; } = true;
 
     [ObservableProperty]
     public partial PromptSnapshot? Current { get; set; }
@@ -61,7 +71,9 @@ public sealed partial class PromptViewModel : LocalizedViewModel
             }
 
             var flow = p.Flows[^1];
-            var address = flow.Remote.AddressFamily == AddressFamily.InterNetworkV6 ? $"[{flow.Remote.Address}]" : flow.Remote.Address.ToString();
+            // 假 DNS 地址沒有意義：有域名時只顯示域名
+            var address = flow.Domains.Count > 0 ? flow.Domains[0]
+                : flow.Remote.AddressFamily == AddressFamily.InterNetworkV6 ? $"[{flow.Remote.Address}]" : flow.Remote.Address.ToString();
             var protocol = flow.Protocol == L4Protocol.Udp ? "UDP" : "TCP";
             return $"{address}:{flow.Remote.Port} {protocol}";
         }
@@ -69,7 +81,7 @@ public sealed partial class PromptViewModel : LocalizedViewModel
 
     public string MoreText => Current is { Flows.Count: > 1 } p ? Loc.Format(PromptLangResourceKind.MoreConnections, p.Flows.Count) : "";
 
-    public int QueueCount => _pending.Keys.Count(id => id != Current?.Id && !_deferred.Contains(id));
+    public int QueueCount => _pending.Values.Count(p => p.Id != Current?.Id && !IsSnoozed(p));
 
     public string QueueText => QueueCount > 0 ? Loc.Format(PromptLangResourceKind.Queue, QueueCount) : "";
 
@@ -97,9 +109,9 @@ public sealed partial class PromptViewModel : LocalizedViewModel
     /// <summary>打開指定的詢問（例如從通知點擊進入）；被「稍後」擱置的詢問也會重新顯示。</summary>
     public void Open(Guid promptId)
     {
-        _deferred.Remove(promptId);
         if (_pending.TryGetValue(promptId, out var prompt))
         {
+            _snoozed.Remove(AppKey(prompt));
             Show(prompt);
         }
     }
@@ -107,7 +119,7 @@ public sealed partial class PromptViewModel : LocalizedViewModel
     /// <summary>重新顯示第一個待決詢問（總覽頁的「查看」）。</summary>
     public void OpenFirst()
     {
-        _deferred.Clear();
+        _snoozed.Clear();
         ShowNext();
     }
 
@@ -122,7 +134,7 @@ public sealed partial class PromptViewModel : LocalizedViewModel
     {
         if (Current is { } p)
         {
-            _deferred.Add(p.Id);
+            _snoozed[AppKey(p)] = DateTimeOffset.UtcNow + SnoozeDuration;
         }
 
         ShowNext();
@@ -163,7 +175,6 @@ public sealed partial class PromptViewModel : LocalizedViewModel
         {
             case PromptEventKind.Removed:
                 _pending.Remove(evt.Prompt.Id);
-                _deferred.Remove(evt.Prompt.Id);
                 if (Current?.Id == evt.Prompt.Id)
                 {
                     ShowNext();
@@ -177,7 +188,7 @@ public sealed partial class PromptViewModel : LocalizedViewModel
                     // 合併了新的連線：只刷新內容，不重置防誤觸
                     Current = evt.Prompt;
                 }
-                else if (Current is null && !_deferred.Contains(evt.Prompt.Id))
+                else if (Current is null && !IsSnoozed(evt.Prompt))
                 {
                     Show(evt.Prompt);
                 }
@@ -191,7 +202,7 @@ public sealed partial class PromptViewModel : LocalizedViewModel
 
     private void ShowNext()
     {
-        var next = _pending.Values.Where(p => !_deferred.Contains(p.Id)).OrderBy(p => p.CreatedAt).FirstOrDefault();
+        var next = _pending.Values.Where(p => !IsSnoozed(p)).OrderBy(p => p.CreatedAt).FirstOrDefault();
         if (next is null)
         {
             Current = null;
@@ -205,6 +216,7 @@ public sealed partial class PromptViewModel : LocalizedViewModel
     private void Show(PromptSnapshot prompt)
     {
         Current = prompt;
+        Hold();
         DurationIndex = 0;
         IsInteractive = false;
         Icon = null;
@@ -232,6 +244,19 @@ public sealed partial class PromptViewModel : LocalizedViewModel
         if (Current?.Id == promptId)
         {
             Icon = icon;
+        }
+    }
+
+    private static string AppKey(PromptSnapshot prompt) => prompt.App?.Path ?? prompt.ExecutablePath ?? prompt.Id.ToString();
+
+    private bool IsSnoozed(PromptSnapshot prompt) =>
+        _snoozed.TryGetValue(AppKey(prompt), out var until) && until > DateTimeOffset.UtcNow;
+
+    private void Hold()
+    {
+        if (IsForeground && Current is { } prompt)
+        {
+            Backend.HoldPrompt(prompt.Id);
         }
     }
 

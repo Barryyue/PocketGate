@@ -81,8 +81,11 @@ internal sealed class FakeTunnel : IVpnTunnel
         return Task.CompletedTask;
     }
 
+    /// <summary>寫回虛擬網卡的報文。</summary>
+    public RecordingWriter Written { get; } = new();
+
     /// <summary>模擬從虛擬網卡讀到一個報文。</summary>
-    public void Receive(byte[] packet) => (_sink ?? throw new InvalidOperationException("虛擬網卡未建立。")).OnPacket(packet);
+    public void Receive(byte[] packet) => (_sink ?? throw new InvalidOperationException("虛擬網卡未建立。")).OnPacket(packet, Written);
 
     public void Revoke()
     {
@@ -96,6 +99,14 @@ internal sealed class FakeTunnel : IVpnTunnel
         State = state;
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
+}
+
+/// <summary>記錄寫回虛擬網卡的報文。</summary>
+internal sealed class RecordingWriter : IPacketWriter
+{
+    public ConcurrentQueue<byte[]> Packets { get; } = new();
+
+    public void Write(ReadOnlySpan<byte> packet) => Packets.Enqueue(packet.ToArray());
 }
 
 /// <summary>記錄上報事件的引擎宿主。</summary>

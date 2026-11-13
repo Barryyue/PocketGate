@@ -175,3 +175,42 @@ M1 已知限制：
 | 安裝 | `install.cmd` / `install-service.ps1` 仍然可用：它會把 `App\`、`Service\` 複製到安裝目錄並註冊系統服務，不會複製 `portable.txt`，因此安裝後回到原來的系統服務模式。 |
 
 驗證可攜版佈局（不需要管理員權限）：用 Debug 構建把 `App`、`Service` 的輸出複製到臨時目錄，創建 `portable.txt`，以 `--NetworkControl:Service:Engine=Fake` 啟動服務，再用 `NetworkControl.exe --export-diagnostics <路徑>` 檢查連接端點和 `data` 目錄。
+
+## 11. Android
+
+設計見 [android.md](android.md)。Android 項目（`Engine.Android`、`App.Android`）需要 .NET Android 工作負載，因此放在獨立的 `NetworkControl.Android.slnx` 中；主解決方案只包含平台無關的 `Engine.Vpn` 及其測試，日常的 `dotnet build / test / format NetworkControl.slnx` 不受影響。
+
+### 11.1 工具鏈（不需要管理員權限）
+
+系統的 dotnet 在 `Program Files`，安裝工作負載需要管理員權限，因此使用一套用戶級工具鏈（默認 `D:\tools\android-dev`，可用環境變量 `NC_ANDROID_TOOLCHAIN` 覆蓋）：
+
+| 目錄 | 內容 | 安裝方法 |
+|---|---|---|
+| `dotnet` | .NET SDK 10.0.402 + `android` 工作負載 | `dotnet-install.ps1 -Version 10.0.402 -InstallDir <目錄>\dotnet`，然後 `<目錄>\dotnet\dotnet.exe workload install android` |
+| `jdk` | Microsoft OpenJDK 17 | 解壓 `https://aka.ms/download-jdk/microsoft-jdk-17-windows-x64.zip` |
+| `android-sdk` | `cmdline-tools/latest`、`platform-tools`、`platforms;android-36`、`build-tools;36.0.0` | 解壓 cmdline-tools 後用 `sdkmanager --sdk_root=<目錄>\android-sdk` 安裝（在 PowerShell 中包名要加引號：`'"platforms;android-36"'`，否則 `;` 會被 cmd 拆開） |
+
+開發機上的系統代理（Reqable）會讓工作負載和 NuGet 下載的 TLS 握手失敗；在當前終端臨時繞過即可（不要修改系統設置，也不要提交）：
+
+```powershell
+$env:HTTPS_PROXY='http://127.0.0.1:9'; $env:HTTP_PROXY='http://127.0.0.1:9'; $env:NO_PROXY='*'   # 只影響當前終端
+```
+
+`dotnet build -t:InstallAndroidDependencies` 不支持 `NO_PROXY=*`（會嘗試連接這個不存在的代理），不要用它安裝 SDK，按上表手動安裝。
+
+### 11.2 構建與運行
+
+```powershell
+.\scripts\android.ps1 build      # Debug APK
+.\scripts\android.ps1 run        # 安裝到已連接的設備並啟動（adb）
+.\scripts\android.ps1 logcat     # 應用日誌（標籤 NetworkControl）
+.\scripts\android.ps1 publish    # Release APK → artifacts\android（未設置 NC_ANDROID_KEYSTORE 時使用調試簽名）
+```
+
+- 設備上的數據：`/data/data/com.networkcontrol.android/files/{data,logs}`，Debug 構建可用 `adb shell run-as com.networkcontrol.android ls files` 查看。
+- 跳過 VPN 授權對話框（測試用）：`adb shell appops set com.networkcontrol.android ACTIVATE_VPN allow`。
+- 界面文本：編輯 `tools/android-strings.py` 中的表格後運行 `python -X utf8 tools/android-strings.py`，不要手工修改生成的 `Localization/**`。通知等界面之外顯示的文本在 `Resources/values*/strings.xml`（三種語言）。
+
+### 11.3 模擬器
+
+開發機（Windows 10 19045）上，模擬器 37.x 在 WHPX 下無法啟動虛擬機（`-gpu swiftshader_indirect` 時宿主進程訪問衝突崩潰或客戶機卡住不輸出內核日誌，`-gpu guest` 時靜默退出）。處理過程和結論見 progress.md 的「Android MVP」一節。真機驗證（USB 調試）最可靠。

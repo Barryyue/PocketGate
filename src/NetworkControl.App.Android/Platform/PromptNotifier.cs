@@ -79,7 +79,8 @@ public sealed partial class PromptNotifier(Context context, PromptBroker prompts
             ? string.Format(CultureInfo.CurrentCulture, _context.GetString(Resource.String.prompt_title_tampered)!, appName)
             : string.Format(CultureInfo.CurrentCulture, _context.GetString(Resource.String.prompt_title)!, appName);
         var flow = prompt.Flows.Count > 0 ? prompt.Flows[^1] : null;
-        var target = flow is null ? "" : $"{FormatAddress(flow.Remote.Address)}:{flow.Remote.Port} {Protocol(flow.Protocol)}";
+        var host = flow is null ? "" : flow.Domains.Count > 0 ? flow.Domains[0] : FormatAddress(flow.Remote.Address);
+        var target = flow is null ? "" : $"{host}:{flow.Remote.Port} {Protocol(flow.Protocol)}";
         var text = prompt.Flows.Count > 1
             ? string.Format(CultureInfo.CurrentCulture, _context.GetString(Resource.String.prompt_text_multiple)!, target, prompt.Flows.Count)
             : target;

@@ -72,6 +72,18 @@ public sealed record VpnTunnelConfig(IReadOnlySet<string> BypassPackages)
 {
     public const int DefaultMtu = 1500;
 
+    /// <summary>虛擬網卡自身的 IPv4 地址。</summary>
+    public static readonly IPAddress Ipv4Address = IPAddress.Parse("10.111.222.1");
+
+    /// <summary>虛擬網卡自身的 IPv6 地址。</summary>
+    public static readonly IPAddress Ipv6Address = IPAddress.Parse("fd00:6e63::1");
+
+    /// <summary>
+    /// 對被阻斷應用宣告的 DNS 服務器：發往它的查詢由引擎用假 DNS 回答（docs/android.md §3.2），
+    /// 讓應用解析成功並發起連接，從而能按 UID 歸屬並詢問。
+    /// </summary>
+    public static readonly IPAddress DnsServer = IPAddress.Parse("10.111.222.2");
+
     public int Mtu { get; init; } = DefaultMtu;
 
     /// <summary>判斷兩個配置是否會產生相同的虛擬網卡（相同時不需要重建）。</summary>
@@ -81,10 +93,18 @@ public sealed record VpnTunnelConfig(IReadOnlySet<string> BypassPackages)
     public static VpnTunnelConfig From(VpnRoutingPlan plan) => new(plan.BypassPackages);
 }
 
+/// <summary>把報文寫回虛擬網卡（即發給 VPN 內的應用）。</summary>
+public interface IPacketWriter
+{
+    void Write(ReadOnlySpan<byte> packet);
+}
+
 /// <summary>接收從虛擬網卡讀到的報文。在平台的讀線程上調用，實現必須快速返回。</summary>
 public interface IPacketSink
 {
-    void OnPacket(ReadOnlySpan<byte> packet);
+    /// <param name="packet">完整的 IP 報文。</param>
+    /// <param name="writer">需要回應時（例如假 DNS）用它寫回虛擬網卡。</param>
+    void OnPacket(ReadOnlySpan<byte> packet, IPacketWriter writer);
 }
 
 /// <summary>【平台實現】虛擬網卡（Android：VpnService）。</summary>

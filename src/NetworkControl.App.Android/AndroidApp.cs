@@ -32,6 +32,9 @@ public sealed class AndroidApp : AvaloniaAndroidApplication<App>
             {
                 atom.UseLanguages(SupportedLanguages.Resolve(preferences.Language), SupportedLanguages.All);
                 atom.WithInitialTheme(IThemeManager.DEFAULT_THEME_ID, AppearanceService.InitialConfig(preferences.Theme, SystemPrefersDark(this)));
+                // AtomUI 默認字體（Alibaba Sans + Microsoft YaHei）在 Android 上沒有中文字形，也不會回退到系統字體，中文顯示為方框：
+                // 改用系統的 sans-serif（Roboto），中文由系統的 Noto Sans CJK 回退提供（見 AGENTS.md 第 6 節）
+                atom.WithDefaultFontFamily("sans-serif");
                 atom.UseDesktopControls();
             });
     }

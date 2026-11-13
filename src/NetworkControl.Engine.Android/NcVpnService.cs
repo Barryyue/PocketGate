@@ -27,9 +27,6 @@ public sealed class NcVpnService : VpnService
 
     public const string SessionName = "NetworkControl";
 
-    private const string Ipv4Address = "10.111.222.1";
-    private const string Ipv6Address = "fd00:6e63::1";
-
     private bool _foreground;
 
     public NcVpnService()
@@ -77,8 +74,10 @@ public sealed class NcVpnService : VpnService
         using var builder = new Builder(this);
         builder.SetSession(SessionName);
         builder.SetMtu(config.Mtu);
-        builder.AddAddress(Ipv4Address, 32);
-        builder.AddAddress(Ipv6Address, 128);
+        builder.AddAddress(Vpn.Platform.VpnTunnelConfig.Ipv4Address.ToString(), 32);
+        builder.AddAddress(Vpn.Platform.VpnTunnelConfig.Ipv6Address.ToString(), 128);
+        // 假 DNS：被阻斷的應用解析成功後才會發起連接，引擎才能按 UID 歸屬並詢問
+        builder.AddDnsServer(Vpn.Platform.VpnTunnelConfig.DnsServer.ToString());
         builder.AddRoute("0.0.0.0", 0);
         builder.AddRoute("::", 0);
         // API 29+ 的 VPN 默認視為按流量計費，會讓系統和應用誤以為在用行動網路

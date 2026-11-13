@@ -17,11 +17,19 @@ public enum TcpFlags : byte
 }
 
 /// <summary>從 IP 報文中解析出的連接信息。</summary>
+/// <param name="Protocol">傳輸層協議。</param>
+/// <param name="Source">源地址和端口。</param>
+/// <param name="Destination">目標地址和端口。</param>
+/// <param name="TcpFlags">TCP 標誌（其他協議為 None）。</param>
+/// <param name="PayloadOffset">UDP 載荷在報文中的偏移（其他協議為 0）。</param>
+/// <param name="PayloadLength">UDP 載荷的長度（其他協議為 0）。</param>
 public readonly record struct PacketInfo(
     L4Protocol Protocol,
     IPEndPoint Source,
     IPEndPoint Destination,
-    TcpFlags TcpFlags)
+    TcpFlags TcpFlags,
+    int PayloadOffset = 0,
+    int PayloadLength = 0)
 {
     /// <summary>
     /// 是否表示一次新的聯網嘗試：TCP 只看 SYN（不帶 ACK），UDP 每個報文都可能是新的流（由上報器按五元組去重）。
@@ -90,7 +98,7 @@ public static class IpPacketParser
 
         var source = new IPAddress(packet.Slice(12, 4));
         var destination = new IPAddress(packet.Slice(16, 4));
-        return TryParseTransport(packet[9], packet[headerLength..totalLength], source, destination, out info);
+        return TryParseTransport(packet[9], packet[headerLength..totalLength], headerLength, source, destination, out info);
     }
 
     private static bool TryParseIpv6(ReadOnlySpan<byte> packet, out PacketInfo info)
@@ -111,6 +119,7 @@ public static class IpPacketParser
         var destination = new IPAddress(packet.Slice(24, 16));
         var nextHeader = packet[6];
         var payload = packet.Slice(Ipv6Header, payloadLength);
+        var payloadStart = Ipv6Header;
 
         for (var i = 0; i < MaxIpv6ExtensionHeaders; i++)
         {
@@ -147,7 +156,7 @@ public static class IpPacketParser
                     length = (payload[1] + 2) * 4;
                     break;
                 default:
-                    return TryParseTransport(nextHeader, payload, source, destination, out info);
+                    return TryParseTransport(nextHeader, payload, payloadStart, source, destination, out info);
             }
 
             if (length > payload.Length)
@@ -157,13 +166,14 @@ public static class IpPacketParser
 
             nextHeader = payload[0];
             payload = payload[length..];
+            payloadStart += length;
         }
 
         info = default;
         return false;
     }
 
-    private static bool TryParseTransport(byte protocolNumber, ReadOnlySpan<byte> segment, IPAddress source, IPAddress destination, out PacketInfo info)
+    private static bool TryParseTransport(byte protocolNumber, ReadOnlySpan<byte> segment, int segmentOffset, IPAddress source, IPAddress destination, out PacketInfo info)
     {
         info = default;
         var protocol = protocolNumber switch
@@ -176,6 +186,7 @@ public static class IpPacketParser
         };
 
         ushort sourcePort = 0, destinationPort = 0;
+        int payloadOffset = 0, payloadLength = 0;
         var flags = TcpFlags.None;
         switch (protocol)
         {
@@ -197,10 +208,18 @@ public static class IpPacketParser
 
                 sourcePort = BinaryPrimitives.ReadUInt16BigEndian(segment);
                 destinationPort = BinaryPrimitives.ReadUInt16BigEndian(segment[2..]);
+                var udpLength = BinaryPrimitives.ReadUInt16BigEndian(segment[4..]);
+                if (udpLength < 8 || udpLength > segment.Length)
+                {
+                    return false;
+                }
+
+                payloadOffset = segmentOffset + 8;
+                payloadLength = udpLength - 8;
                 break;
         }
 
-        info = new PacketInfo(protocol, new IPEndPoint(source, sourcePort), new IPEndPoint(destination, destinationPort), flags);
+        info = new PacketInfo(protocol, new IPEndPoint(source, sourcePort), new IPEndPoint(destination, destinationPort), flags, payloadOffset, payloadLength);
         return true;
     }
 }

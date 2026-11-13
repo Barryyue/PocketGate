@@ -49,9 +49,11 @@ public sealed partial class LogItemViewModel(UiContext context, LogEntry entry) 
 
     public string AppName => entry.AppName ?? entry.AppPath ?? "?";
 
-    public string Target => entry.RemoteAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6
-        ? $"[{entry.RemoteAddress}]:{entry.RemotePort} {Protocol}"
-        : $"{entry.RemoteAddress}:{entry.RemotePort} {Protocol}";
+    public string Target => entry.Hostname is { Length: > 0 } host
+        ? $"{host}:{entry.RemotePort} {Protocol}"
+        : entry.RemoteAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6
+            ? $"[{entry.RemoteAddress}]:{entry.RemotePort} {Protocol}"
+            : $"{entry.RemoteAddress}:{entry.RemotePort} {Protocol}";
 
     public string Time => entry.LastSeen.ToLocalTime().ToString("g", Culture);
 

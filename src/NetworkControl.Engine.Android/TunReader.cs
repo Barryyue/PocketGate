@@ -7,8 +7,9 @@ namespace NetworkControl.Engine.Android;
 /// <summary>
 /// 讀取虛擬網卡的專用線程。文件描述符保持非阻塞，用 poll 帶超時等待，
 /// 這樣停止時不需要等下一個報文到達（在另一個線程上關閉文件描述符不能可靠地喚醒阻塞中的 read）。
+/// 同時作為 <see cref="IPacketWriter"/>，把假 DNS 的回應寫回虛擬網卡。
 /// </summary>
-internal sealed partial class TunReader : IDisposable
+internal sealed partial class TunReader : IDisposable, IPacketWriter
 {
     private const short PollIn = 0x0001;
     private const int PollTimeoutMs = 250;
@@ -53,6 +54,21 @@ internal sealed partial class TunReader : IDisposable
         _descriptor.Dispose();
     }
 
+    public void Write(ReadOnlySpan<byte> packet)
+    {
+        if (_stopping)
+        {
+            return;
+        }
+
+        // 虛擬網卡按報文寫入：一次 write 就是一個完整的報文；非阻塞模式下隊列滿時丟棄（DNS 客戶端會重試）
+        var written = WriteFd(_descriptor.Fd, packet, packet.Length);
+        if (written < 0 && Marshal.GetLastPInvokeError() is not (Eagain or Eintr))
+        {
+            throw new IOException($"寫入虛擬網卡失敗（errno {Marshal.GetLastPInvokeError()}）。");
+        }
+    }
+
     private void Run()
     {
         var fd = _descriptor.Fd;
@@ -86,7 +102,7 @@ internal sealed partial class TunReader : IDisposable
                     var read = Read(fd, buffer, buffer.Length);
                     if (read > 0)
                     {
-                        _sink.OnPacket(buffer.AsSpan(0, (int)read));
+                        _sink.OnPacket(buffer.AsSpan(0, (int)read), this);
                         continue;
                     }
 
@@ -121,6 +137,9 @@ internal sealed partial class TunReader : IDisposable
 
     [LibraryImport("libc", EntryPoint = "poll", SetLastError = true)]
     private static partial int Poll(ref PollFd fds, nuint count, int timeout);
+
+    [LibraryImport("libc", EntryPoint = "write", SetLastError = true)]
+    private static partial nint WriteFd(int fd, ReadOnlySpan<byte> buffer, nint count);
 
     [LibraryImport("libc", EntryPoint = "read", SetLastError = true)]
     private static partial nint Read(int fd, [Out] byte[] buffer, nint count);
