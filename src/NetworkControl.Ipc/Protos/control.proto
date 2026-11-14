@@ -72,6 +72,7 @@ message ServiceStatus {
   string active_profile_name = 10;
   string network_display_name = 11;
   QuietPeriodSummary last_quiet_period = 12;
+  int64 profiles_revision = 13;
 }
 
 message QuietPeriodApp {

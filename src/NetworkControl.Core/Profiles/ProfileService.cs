@@ -39,12 +39,16 @@ public sealed partial class ProfileService(
 {
     private readonly SemaphoreSlim _writeGate = new(1, 1);
     private Profile[] _profiles = [];
+    private long _revision;
 
     public event EventHandler? Changed;
 
     public event EventHandler<ProfileActivatedEventArgs>? Activated;
 
     public IReadOnlyList<Profile> All => Volatile.Read(ref _profiles);
+
+    /// <summary>配置文件列表或當前配置文件的變更計數，供狀態推送判斷是否需要刷新。</summary>
+    public long Revision => Volatile.Read(ref _revision);
 
     public Profile Active =>
         All.FirstOrDefault(p => p.Id == state.ActiveProfileId)
@@ -125,7 +129,7 @@ public sealed partial class ProfileService(
             }
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        NotifyChanged();
         return profile;
     }
 
@@ -158,7 +162,7 @@ public sealed partial class ProfileService(
             _writeGate.Release();
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        NotifyChanged();
         return updated;
     }
 
@@ -192,7 +196,7 @@ public sealed partial class ProfileService(
             _writeGate.Release();
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        NotifyChanged();
     }
 
     public async Task ActivateAsync(Guid id, ProfileSwitchReason reason, CancellationToken cancellationToken)
@@ -210,10 +214,16 @@ public sealed partial class ProfileService(
         }
 
         Activated?.Invoke(this, new ProfileActivatedEventArgs(profile.Id, reason));
-        Changed?.Invoke(this, EventArgs.Empty);
+        NotifyChanged();
     }
 
     public Profile? Find(Guid id) => All.FirstOrDefault(p => p.Id == id);
+
+    private void NotifyChanged()
+    {
+        Interlocked.Increment(ref _revision);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
 
     private static Profile[] Sort(IEnumerable<Profile> profiles) =>
         profiles.OrderBy(p => p.SortOrder).ThenBy(p => p.Name, StringComparer.CurrentCulture).ToArray();

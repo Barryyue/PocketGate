@@ -61,6 +61,7 @@ internal sealed class ServiceStatusBuilder(
             ActiveProfileId = snapshot.ActiveProfileId.ToString(),
             ActiveProfileName = profiles.Find(snapshot.ActiveProfileId)?.Name ?? "",
             NetworkDisplayName = monitors.FirstOrDefault()?.Current.DisplayName ?? "",
+            ProfilesRevision = profiles.Revision,
             DoNotDisturbUntil = state.IsDoNotDisturb ? snapshot.DoNotDisturbUntil.ToProto() : null,
             Engine = engineInfo,
             ActiveRuleCount = rules.Current.Count,

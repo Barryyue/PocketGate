@@ -89,6 +89,28 @@ public sealed class ProfileServiceTests
     }
 
     [Fact]
+    public async Task Revision_changes_on_every_profile_mutation()
+    {
+        await using var host = await ScenarioHost.StartAsync(withUiSession: false);
+        var ct = TestContext.Current.CancellationToken;
+        var initial = host.Profiles.Revision;
+
+        var profile = await host.Profiles.CreateAsync("版本", FilterMode.Ask, null, ct);
+        var afterCreate = host.Profiles.Revision;
+        Assert.True(afterCreate > initial);
+
+        await host.Profiles.UpdateAsync(profile with { Name = "版本 2" }, ct);
+        Assert.True(host.Profiles.Revision > afterCreate);
+
+        await host.Profiles.ActivateAsync(profile.Id, ProfileSwitchReason.User, ct);
+        await host.Profiles.ActivateAsync(Profile.DefaultId, ProfileSwitchReason.User, ct);
+        var afterActivate = host.Profiles.Revision;
+
+        await host.Profiles.DeleteAsync(profile.Id, ct);
+        Assert.True(host.Profiles.Revision > afterActivate);
+    }
+
+    [Fact]
     public async Task Activate_and_delete_cannot_both_succeed()
     {
         await using var host = await ScenarioHost.StartAsync(withUiSession: false);

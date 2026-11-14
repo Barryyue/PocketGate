@@ -3,6 +3,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using NetworkControl.Core.Engine;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
@@ -18,6 +19,7 @@ internal sealed class ControlGrpcService(
     SettingsService settings,
     EngineStatus engine,
     RuleEngine rules,
+    ProfileService profiles,
     QuietPeriodTracker quietPeriods,
     ServiceStatusBuilder statusBuilder,
     IHostApplicationLifetime lifetime,
@@ -36,6 +38,7 @@ internal sealed class ControlGrpcService(
         void OnChanged(object? sender, EventArgs e) => signal.Writer.TryWrite(true);
 
         state.Changed += OnChanged;
+        profiles.Changed += OnChanged;
         engine.Changed += OnChanged;
         rules.RuleSetChanged += OnChanged;
         try
@@ -63,6 +66,7 @@ internal sealed class ControlGrpcService(
         finally
         {
             state.Changed -= OnChanged;
+            profiles.Changed -= OnChanged;
             engine.Changed -= OnChanged;
             rules.RuleSetChanged -= OnChanged;
         }
