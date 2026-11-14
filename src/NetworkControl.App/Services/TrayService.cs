@@ -26,20 +26,23 @@ public sealed class TrayService : IDisposable
 
     private readonly ServiceConnection _connection;
     private readonly DisplayText _text;
+    private readonly UpdateChecker _updates;
     private readonly TrayIcon _trayIcon;
     private bool _refreshQueued;
     private IReadOnlyList<Proto.ProfileInfo> _profiles = [];
     private bool _loadingProfiles;
 
-    public TrayService(ServiceConnection connection, DisplayText text)
+    public TrayService(ServiceConnection connection, DisplayText text, UpdateChecker updates)
     {
         _connection = connection;
         _text = text;
+        _updates = updates;
         _trayIcon = new TrayIcon { IsVisible = true };
         _trayIcon.Clicked += (_, _) => NavigateRequested?.Invoke(this, null);
 
         connection.PropertyChanged += OnConnectionChanged;
         text.Localization.LanguageChanged += OnLanguageChanged;
+        updates.PropertyChanged += OnUpdateChanged;
         Refresh();
     }
 
@@ -59,6 +62,7 @@ public sealed class TrayService : IDisposable
     {
         _connection.PropertyChanged -= OnConnectionChanged;
         _text.Localization.LanguageChanged -= OnLanguageChanged;
+        _updates.PropertyChanged -= OnUpdateChanged;
         _trayIcon.IsVisible = false;
         _trayIcon.Dispose();
     }
@@ -74,6 +78,14 @@ public sealed class TrayService : IDisposable
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e) => QueueRefresh();
+
+    private void OnUpdateChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(UpdateChecker.HasUpdate) or nameof(UpdateChecker.AvailableVersion))
+        {
+            QueueRefresh();
+        }
+    }
 
     /// <summary>狀態推送可能很頻繁，合併到下一次 UI 循環統一重建。</summary>
     private void QueueRefresh()
@@ -156,6 +168,13 @@ public sealed class TrayService : IDisposable
         menu.Items.Add(Item(loc.Get(TrayLangResourceKind.ShowRules), () => NavigateRequested?.Invoke(this, "rules")));
         menu.Items.Add(Item(loc.Get(TrayLangResourceKind.ShowLog), () => NavigateRequested?.Invoke(this, "log")));
         menu.Items.Add(Item(loc.Get(TrayLangResourceKind.ShowSettings), () => NavigateRequested?.Invoke(this, "settings")));
+
+        // 有新版時放在導航項之後、分隔線之前；點擊打開下載頁（不做自動下載安裝）
+        if (_updates.HasUpdate)
+        {
+            menu.Items.Add(Item(loc.Format(TrayLangResourceKind.UpdateAvailable, _updates.AvailableVersion), _updates.OpenDownloadPage));
+        }
+
         menu.Items.Add(new NativeMenuItemSeparator());
 
         // 過濾模式

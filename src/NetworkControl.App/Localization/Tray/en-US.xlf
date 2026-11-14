@@ -71,5 +71,10 @@
         <source>Apps</source>
       </segment>
     </unit>
+    <unit id="UpdateAvailable">
+      <segment>
+        <source>Update {0} available</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

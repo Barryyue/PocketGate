@@ -72,12 +72,18 @@ public sealed partial class UpdateChecker : ObservableObject, IAsyncDisposable
     /// <summary>可提示的新版本；null 表示沒有新版、已是最新、或者用戶忽略了該版本。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUpdate))]
+    [NotifyPropertyChangedFor(nameof(AvailableVersion))]
     [NotifyPropertyChangedFor(nameof(AvailableText))]
     [NotifyPropertyChangedFor(nameof(NotesText))]
     [NotifyPropertyChangedFor(nameof(HasNotes))]
     public partial UpdateManifest? Available { get; set; }
 
     public bool HasUpdate => Available is not null;
+
+    /// <summary>提示中的版本號（去掉 <c>+提交哈希</c>）；沒有新版時為空字串。</summary>
+    public string AvailableVersion => Available is null
+        ? ""
+        : UpdateVersion.TryParse(Available.Version, out var version) ? version.ToString() : Available.Version;
 
     public bool HasNotes => !string.IsNullOrWhiteSpace(NotesText);
 
