@@ -34,6 +34,8 @@
 
       <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
                   IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
+      <atom:Alert Type="Info" IsShowIcon="True" Message="{loc:CommonLangResource AdminRequiredHint}"
+                  IsVisible="{Binding !CanModify}" />
     </StackPanel>
 
     <Panel>
@@ -78,10 +80,10 @@
               <DataTemplate x:DataType="vm:AppItemViewModel">
                 <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
                   <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:AppsLangResource AllowApp}"
-                               IsEnabled="{Binding HasPath}" ToolTip.Tip="{loc:AppsLangResource AllowTooltip}"
+                               IsEnabled="{Binding #Root.((vm:AppsViewModel)DataContext).CanModify}" ToolTip.Tip="{loc:AppsLangResource AllowTooltip}"
                                Command="{Binding #Root.((vm:AppsViewModel)DataContext).AllowCommand}" CommandParameter="{Binding}" />
                   <atom:Button ButtonType="Link" SizeType="Small" IsDanger="True" Content="{loc:AppsLangResource DenyApp}"
-                               IsEnabled="{Binding HasPath}" ToolTip.Tip="{loc:AppsLangResource DenyTooltip}"
+                               IsEnabled="{Binding #Root.((vm:AppsViewModel)DataContext).CanModify}" ToolTip.Tip="{loc:AppsLangResource DenyTooltip}"
                                Command="{Binding #Root.((vm:AppsViewModel)DataContext).DenyCommand}" CommandParameter="{Binding}" />
                   <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:AppsLangResource ViewLog}"
                                Command="{Binding #Root.((vm:AppsViewModel)DataContext).ViewLogCommand}" CommandParameter="{Binding}" />

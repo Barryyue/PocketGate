@@ -26,6 +26,13 @@ public sealed partial class OverviewViewModel : PageViewModel
         : base(text)
     {
         _connection = connection;
+        connection.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ServiceConnection.Status))
+            {
+                OnPropertyChanged(nameof(CanModify));
+            }
+        };
         _lifecycle = lifecycle;
         Dashboard = dashboard;
         connection.PropertyChanged += OnConnectionChanged;
@@ -38,6 +45,8 @@ public sealed partial class OverviewViewModel : PageViewModel
     }
 
     public override string Key => "overview";
+
+    public bool CanModify => _connection.CanModify;
 
     /// <summary>連接活動統計（時間軸、排行榜）。</summary>
     public ActivityDashboardViewModel Dashboard { get; }

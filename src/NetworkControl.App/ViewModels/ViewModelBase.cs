@@ -59,6 +59,10 @@ public abstract partial class PageViewModel(DisplayText text) : LocalizedViewMod
             await action();
             return true;
         }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.PermissionDenied)
+        {
+            ErrorMessage = Loc.Get(CommonLangResourceKind.PermissionDenied);
+        }
         catch (RpcException ex)
         {
             ErrorMessage = Loc.Format(CommonLangResourceKind.ErrorFormat, ex.Status.Detail);

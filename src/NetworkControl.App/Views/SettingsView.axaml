@@ -23,6 +23,8 @@
 
       <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
                   IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
+      <atom:Alert Type="Info" IsShowIcon="True" Message="{loc:CommonLangResource AdminRequiredHint}"
+                  IsVisible="{Binding !CanModify}" />
 
       <!-- 界面設置：保存在本機，即時生效 -->
       <atom:Card Header="{loc:SettingsLangResource SectionInterface}">
@@ -44,7 +46,7 @@
       </atom:Card>
 
       <!-- 配置文件（FR-MOD-02）：每組有自己的模式和專屬規則 -->
-      <atom:Card Header="{loc:ProfilesLangResource CardTitle}" IsEnabled="{Binding IsConnected}">
+      <atom:Card Header="{loc:ProfilesLangResource CardTitle}" IsEnabled="{Binding CanModify}">
         <StackPanel Spacing="12">
           <TextBlock Classes="secondary" Text="{loc:ProfilesLangResource CardDescription}" TextWrapping="Wrap" />
           <atom:Button ButtonType="Primary" HorizontalAlignment="Left"
@@ -88,7 +90,7 @@
       </atom:Card>
 
       <!-- 服務設置：保存在核心服務中，對本機所有用戶生效 -->
-      <StackPanel Spacing="16" IsEnabled="{Binding IsConnected}">
+      <StackPanel Spacing="16" IsEnabled="{Binding CanModify}">
         <TextBlock Classes="secondary" Text="{loc:SettingsLangResource ServiceSettingsHint}" TextWrapping="Wrap" />
 
         <atom:Card Header="{loc:SettingsLangResource SectionPrompt}">
@@ -124,7 +126,7 @@
       </StackPanel>
 
       <!-- 規則導出 / 導入 / 從備份恢復（FR-SET-03 / 04） -->
-      <atom:Card Header="{loc:SettingsLangResource SectionTransfer}" IsEnabled="{Binding IsConnected}">
+      <atom:Card Header="{loc:SettingsLangResource SectionTransfer}" IsEnabled="{Binding CanModify}">
         <StackPanel Spacing="14">
           <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource TransferHint}" />
           <StackPanel Orientation="Horizontal" Spacing="8">

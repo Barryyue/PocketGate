@@ -15,7 +15,7 @@
           <atom:Button Icon="{antdicons:AntDesignIconProvider Kind=ReloadOutlined}"
                        Command="{Binding RefreshCommand}" Content="{loc:CommonLangResource Refresh}" />
           <atom:Button ButtonType="Primary" Icon="{antdicons:AntDesignIconProvider Kind=PlusOutlined}"
-                       Command="{Binding AddCommand}" Content="{loc:RulesLangResource Add}" />
+                       IsEnabled="{Binding CanModify}" Command="{Binding AddCommand}" Content="{loc:RulesLangResource Add}" />
         </StackPanel>
         <StackPanel Spacing="2">
           <TextBlock Classes="page-title" Text="{loc:RulesLangResource Title}" />
@@ -52,6 +52,8 @@
 
       <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
                   IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
+      <atom:Alert Type="Info" IsShowIcon="True" Message="{loc:CommonLangResource AdminRequiredHint}"
+                  IsVisible="{Binding !CanModify}" />
     </StackPanel>
 
     <Panel>
@@ -63,7 +65,7 @@
           <atom:DataGridTemplateColumn Header="{loc:RulesLangResource ColumnEnabled}" Width="72">
             <atom:DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:RuleItemViewModel">
-                <atom:ToggleSwitch IsChecked="{Binding IsEnabled}" HorizontalAlignment="Center" />
+                <atom:ToggleSwitch IsChecked="{Binding IsEnabled}" IsEnabled="{Binding #Root.((vm:RulesViewModel)DataContext).CanModify}" HorizontalAlignment="Center" />
               </DataTemplate>
             </atom:DataGridTemplateColumn.CellTemplate>
           </atom:DataGridTemplateColumn>
@@ -91,12 +93,12 @@
             <atom:DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:RuleItemViewModel">
                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                  <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:CommonLangResource Edit}"
+                  <atom:Button ButtonType="Link" SizeType="Small" IsEnabled="{Binding #Root.((vm:RulesViewModel)DataContext).CanModify}" Content="{loc:CommonLangResource Edit}"
                                Command="{Binding #Root.((vm:RulesViewModel)DataContext).EditCommand}" CommandParameter="{Binding}" />
                   <atom:PopupConfirm IsVisible="{Binding CanDelete}" Title="{loc:RulesLangResource DeleteConfirmTitle}"
                                      ConfirmContent="{loc:RulesLangResource DeleteConfirmContent}"
                                      OkButtonType="Primary" Confirmed="OnDeleteConfirmed">
-                    <atom:Button ButtonType="Link" SizeType="Small" IsDanger="True" Content="{loc:CommonLangResource Delete}" />
+                    <atom:Button ButtonType="Link" SizeType="Small" IsDanger="True" IsEnabled="{Binding #Root.((vm:RulesViewModel)DataContext).CanModify}" Content="{loc:CommonLangResource Delete}" />
                   </atom:PopupConfirm>
                 </StackPanel>
               </DataTemplate>

@@ -319,5 +319,7 @@
         <target state="translated">本機</target>
       </segment>
     </unit>
+    <unit id="PermissionDenied"><segment><source>You need administrator permission for this action.</source><target state="translated">此操作需要管理員權限。</target></segment></unit>
+    <unit id="AdminRequiredHint"><segment><source>You can view rules and answer prompts, but changing rules, profiles or service settings requires administrator permission.</source><target state="translated">你可以查看規則和回應彈窗，但修改規則、設定檔或服務設定需要管理員權限。</target></segment></unit>
   </file>
 </xliff>

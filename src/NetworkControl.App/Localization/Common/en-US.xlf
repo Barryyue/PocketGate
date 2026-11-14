@@ -266,5 +266,7 @@
         <source>This computer</source>
       </segment>
     </unit>
+    <unit id="PermissionDenied"><segment><source>You need administrator permission for this action.</source></segment></unit>
+    <unit id="AdminRequiredHint"><segment><source>You can view rules and answer prompts, but changing rules, profiles or service settings requires administrator permission.</source></segment></unit>
   </file>
 </xliff>

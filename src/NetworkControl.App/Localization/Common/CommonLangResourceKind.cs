@@ -59,4 +59,6 @@ public enum CommonLangResourceKind
     Edit,
     Refresh,
     All,
+    PermissionDenied,
+    AdminRequiredHint,
 }

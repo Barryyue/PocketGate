@@ -78,6 +78,10 @@ public sealed partial class ServiceConnection : ObservableObject, IAsyncDisposab
     [ObservableProperty]
     public partial Proto.ServiceStatus? Status { get; private set; }
 
+    public bool CanModify => Status?.Client?.IsAdmin == true;
+
+    partial void OnStatusChanged(Proto.ServiceStatus? value) => OnPropertyChanged(nameof(CanModify));
+
     [ObservableProperty]
     public partial ConnectionFailure? LastFailure { get; private set; }
 

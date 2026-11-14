@@ -104,11 +104,20 @@ public sealed partial class RulesViewModel : PageViewModel
         : base(text)
     {
         _connection = connection;
+        connection.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ServiceConnection.Status))
+            {
+                OnPropertyChanged(nameof(CanModify));
+            }
+        };
         _editing = editing;
         connection.Connected += (_, clients) => _ = WatchAsync(clients);
     }
 
     public override string Key => "rules";
+
+    public bool CanModify => _connection.CanModify;
 
     /// <summary>AtomUI 表格的行描述：規則 ID 作為穩定的行鍵（選中、增量更新依賴它）。</summary>
     private static readonly DataGridLocalSourceDescriptor<RuleItemViewModel> RowDescriptor =

@@ -92,11 +92,20 @@ public sealed partial class AppsViewModel : PageViewModel
         : base(text)
     {
         _connection = connection;
+        connection.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ServiceConnection.Status))
+            {
+                OnPropertyChanged(nameof(CanModify));
+            }
+        };
         _editing = editing;
         _navigation = navigation;
     }
 
     public override string Key => "apps";
+
+    public bool CanModify => _connection.CanModify;
 
     public ObservableCollection<AppItemViewModel> Items { get; } = [];
 

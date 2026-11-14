@@ -42,6 +42,13 @@ public sealed partial class SettingsViewModel : PageViewModel
         _transfer = transfer;
         _diagnostics = diagnostics;
         _connection = connection;
+        connection.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ServiceConnection.Status))
+            {
+                OnPropertyChanged(nameof(CanModify));
+            }
+        };
         _appearance = appearance;
         _autoStart = autoStart;
         _feedback = feedback;
@@ -70,6 +77,8 @@ public sealed partial class SettingsViewModel : PageViewModel
     }
 
     public override string Key => "settings";
+
+    public bool CanModify => _connection.CanModify;
 
     public IReadOnlyList<Choice<LanguageTag?>> Languages { get; }
 

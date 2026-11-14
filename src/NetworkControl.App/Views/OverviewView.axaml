@@ -63,6 +63,8 @@
 
       <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
                   IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
+      <atom:Alert Type="Info" IsShowIcon="True" Message="{loc:CommonLangResource AdminRequiredHint}"
+                  IsVisible="{Binding !CanModify}" />
       <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding EngineFault}" IsVisible="{Binding HasEngineFault}" />
       <atom:Alert Type="Warning" IsShowIcon="True" Message="{loc:OverviewLangResource BlockAllActive}" IsVisible="{Binding IsBlockAll}" />
 
@@ -194,7 +196,7 @@
       </Grid>
 
       <!-- 模式切換與快捷操作 -->
-      <atom:Card Header="{loc:OverviewLangResource QuickActions}" IsEnabled="{Binding IsConnected}">
+      <atom:Card Header="{loc:OverviewLangResource QuickActions}" IsEnabled="{Binding CanModify}">
         <StackPanel Spacing="16">
           <StackPanel Spacing="8" IsVisible="{Binding ShowProfiles}">
             <TextBlock Classes="caption" Text="{loc:ProfilesLangResource CardTitle}" />
