@@ -34,14 +34,14 @@
 
 ## 待辦（按優先級）
 
-### P1
-- [ ] 被阻斷應用的 TCP SYN 回覆 RST、UDP 回覆 ICMP 不可達，讓應用快速失敗而不是等到超時
-- [ ] 按網絡類型（Wi-Fi / 行動網路）分別允許，網絡變化時重建分流
-- [ ] 快速設定磁貼（開關保護、一鍵斷網）
-- [ ] 通知文本跟隨應用內選擇的語言（AppCompatDelegate.setApplicationLocales）
-- [ ] 規則導入導出（復用 Storage 的 netcontrol-rules 格式），與桌面版互通
+### P1（詳細設計見 [m3-tasks.md](m3-tasks.md)）
+- [ ] 被阻斷應用的 TCP SYN 回覆 RST、UDP 回覆 ICMP 不可達，讓應用快速失敗而不是等到超時 → **M3-05**
+- [ ] 按網絡類型（Wi-Fi / 行動網路）分別允許，網絡變化時重建分流 → **M3-03 + M3-04**（通過配置文件按網絡自動切換實現）
+- [ ] 快速設定磁貼（開關保護、一鍵斷網）→ **M3-09**
+- [ ] 通知文本跟隨應用內選擇的語言（AppCompatDelegate.setApplicationLocales）→ **M3-10**
+- [ ] 規則導入導出（復用 Storage 的 netcontrol-rules 格式），與桌面版互通 → **M3-06**
 - [ ] 正式簽名：用戶生成密鑰庫，`NC_ANDROID_KEYSTORE` 等環境變量；版本發布流程寫入 development.md
-- [ ] 診斷資訊導出（日誌 + 路由計劃 + 計數器）
+- [ ] 診斷資訊導出（日誌 + 路由計劃 + 計數器）→ **M3-11**
 - [ ] 廠商 ROM 實測（MIUI / HyperOS 後台限制、電池最佳化）
 
 ### M3（與桌面版同步，見 progress.md「第二階段」）

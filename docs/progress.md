@@ -133,12 +133,22 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
   - 數據源：**模擬引擎**（允許連接時和每 10 秒為活躍進程生成流量）；**Windows**：`Traffic/NetworkTrafficMonitor`，ETW Microsoft-Windows-Kernel-Network 的 TCP / UDP 收發事件按 PID 累加，每 10 秒上報（失敗時報非致命故障，診斷包中有事件計數）；**Android**：`AndroidUidTrafficSource`（NetworkStatsManager，Wi-Fi + 行動網路）+ `Engine.Vpn` 中平台無關的 `UidTrafficCollector`（系統分桶持續增長，記住每個（UID, 分桶起點）上次的值只上報增量；狀態存文件，進程重啟不重複計數）。
   - IPC：`ActivityLog.GetTraffic`；`Apps.List` 新增 `bytes_in / bytes_out`。桌面界面：總覽「網路用量」卡片（下載 / 上傳總量、堆疊柱狀圖、用量排行），應用頁「用量」列。
   - 驗證：聚合器、倉儲、ETW 事件分類 / 按進程聚合、UID 增量與重啟恢復的單元測試；模擬引擎探針：`GetTraffic` 返回 4 個應用的下載 / 上傳和時間軸，`Apps.List` 帶用量。**未驗證**：真實 WFP 下的 ETW 流量（需要管理員）、Android 設備上的 NetworkStatsManager（本機無設備）、界面效果。
-- [ ] **T2 實時連線視圖**：桌面 `GetExtendedTcpTable / UdpTable`（不需要管理員）；Android 10+ 無法讀取其他應用的連線表，**不適用**。
-- [ ] **T3 配置文件與按網絡自動切換**：Core 配置文件切換 + 網絡識別抽象；桌面按網絡配置文件 / SSID，Android 按 Wi-Fi / 行動網路（同時完成 Android P1「按網絡類型分別允許」）。
-- [ ] **T4 Android 阻斷快速失敗**：TCP SYN 回 RST、UDP 回 ICMP 不可達。
-- [ ] **T5 Android 規則導入導出**：復用 `RuleExportSerializer`，與桌面互通。
-- [ ] **T6 勿擾期間阻斷彙總通知**（桌面 + Android）。
-- [ ] **T7 其他 P1**：入站控制（WFP ALE_AUTH_RECV_ACCEPT）、權限分級提示、檢查更新、代碼簽名（需要用戶的證書）。
+- [ ] **其餘任務已拆分並寫好詳細設計，見 [m3-tasks.md](m3-tasks.md)**，可以分派給外部 agent（Codex、DeepSeek 等）實現，由 claude 審查。認領時在下面對應行標 `[~] (agent, 日期)`：
+  - [ ] M3-01 實時連線視圖（桌面）
+  - [ ] M3-02 斷開連線（桌面，依賴 M3-01）
+  - [ ] M3-03 配置文件管理（Core + 桌面 + Android）
+  - [ ] M3-04 按網絡自動切換配置文件（依賴 M3-03）
+  - [ ] M3-05 Android 阻斷快速失敗（TCP RST / ICMP 不可達）
+  - [ ] M3-06 Android 規則導入導出
+  - [ ] M3-07 勿擾期間阻斷彙總通知（Core + 桌面 + Android）
+  - [ ] M3-08 入站連線控制（Windows WFP）
+  - [ ] M3-09 Android 快速設定磁貼
+  - [ ] M3-10 Android 通知文本跟隨應用內語言
+  - [ ] M3-11 Android 診斷資訊導出
+  - [ ] M3-12 權限分級提示（桌面）
+  - [ ] M3-13 檢查更新（桌面，**需要用戶先決定發布源**）
+  - [ ] M3-14 應用圖標（桌面）
+- 用戶事項（不需要編碼）：Windows 代碼簽名證書、Android 正式密鑰庫（`NC_ANDROID_KEYSTORE`）。
 
 ---
 
