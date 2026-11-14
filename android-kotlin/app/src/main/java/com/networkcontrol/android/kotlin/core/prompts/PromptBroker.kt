@@ -7,6 +7,7 @@ import com.networkcontrol.android.kotlin.core.model.DomainCandidates
 import com.networkcontrol.android.kotlin.core.model.FlowInfo
 import com.networkcontrol.android.kotlin.core.model.FlowOrigin
 import com.networkcontrol.android.kotlin.core.model.PromptAnswerResult
+import com.networkcontrol.android.kotlin.core.model.PromptBatchResult
 import com.networkcontrol.android.kotlin.core.model.PromptDecision
 import com.networkcontrol.android.kotlin.core.model.PromptEvent
 import com.networkcontrol.android.kotlin.core.model.PromptEventKind
@@ -202,6 +203,101 @@ class PromptBroker(
         return PromptAnswerResult(true, created?.id, resolved.size, remaining)
     }
 
+    /**
+     * 批量回答：一次建立所有規則（只發布一次規則集），再逐個解決詢問。
+     * 逾時或已被移除的詢問會被跳過。
+     */
+    suspend fun answerMany(
+        promptIds: Collection<String>,
+        decision: PromptDecision,
+    ): PromptBatchResult {
+        val selections = mutableListOf<BatchSelection>()
+        gate.withLock {
+            promptIds.distinct().forEach { id ->
+                val prompt = prompts[id] ?: return@forEach
+                val first = prompt.flows.firstOrNull() ?: return@forEach
+                selections += BatchSelection(prompt.id, first, prompt.app, first.domains)
+            }
+        }
+        if (selections.isEmpty()) return PromptBatchResult(0, 0, prompts.size)
+
+        val now = Time.now()
+        val toAdd = mutableListOf<Rule>()
+        val ruleIndexes = mutableListOf<Int>()
+        selections.forEachIndexed { index, selection ->
+            PromptRuleFactory.createRule(
+                decision = decision,
+                flow = selection.first.flow,
+                app = selection.app ?: selection.first.flow.executablePath
+                    ?.takeIf { it.startsWith("android-app://") && !it.startsWith("android-app://uid:") }
+                    ?.let { AppIdentity(path = it, displayName = it.removePrefix("android-app://")) },
+                domains = selection.domains,
+                profileId = runtime.activeProfileId,
+                now = now,
+                onceFallbackSeconds = settings.state.value.onceFallbackSeconds,
+            )?.let {
+                toAdd += it
+                ruleIndexes += index
+            }
+        }
+        val saved = if (toAdd.isEmpty()) emptyList() else rules.addRange(toAdd)
+        val ruleIds = mutableMapOf<Int, String>()
+        ruleIndexes.forEachIndexed { order, selectionIndex ->
+            saved.getOrNull(order)?.let { ruleIds[selectionIndex] = it.id }
+        }
+
+        var resolvedFlows = 0
+        val verdicts = mutableListOf<Pair<List<PendingFlow>, Verdict>>()
+        val events = mutableListOf<PromptEvent>()
+        gate.withLock {
+            selections.forEachIndexed { index, selection ->
+                val prompt = prompts[selection.promptId] ?: return@forEachIndexed
+                val first = prompt.flows.firstOrNull { it === selection.first }
+                    ?: prompt.flows.firstOrNull()
+                    ?: return@forEachIndexed
+                val coverageRule = Rule(
+                    id = "",
+                    conditions = PromptRuleFactory.createConditions(decision, first.flow, first.domains),
+                    action = decision.action,
+                    lifetime = RuleLifetime.Once,
+                    source = RuleSource.Prompt,
+                    createdAt = 0,
+                    updatedAt = 0,
+                )
+                val coverage = CompiledRule(coverageRule)
+                val resolved = if (decision.applyToAllFlows) {
+                    prompt.flows.filter {
+                        it === first || coverage.matchConditions(
+                            it.flow,
+                            it.domains,
+                            NetworkZones.classify(it.flow.remote.address),
+                        )
+                    }
+                } else {
+                    listOf(first)
+                }
+                prompt.flows.removeAll(resolved.toSet())
+                pendingFlows = (pendingFlows - resolved.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
+                resolvedFlows += resolved.size
+                if (prompt.flows.isEmpty()) {
+                    removeLocked(prompt)
+                    events += PromptEvent(PromptEventKind.Removed, prompt.snapshot())
+                } else {
+                    events += PromptEvent(PromptEventKind.Updated, prompt.snapshot())
+                }
+                verdicts += resolved to Verdict(decision.action, VerdictReason.Prompt, ruleIds[index])
+            }
+            refreshPendingLocked()
+        }
+        verdicts.forEach { (flows, verdict) -> flows.forEach { it.deferred.complete(verdict) } }
+        events.forEach { _events.emit(it) }
+        com.networkcontrol.android.kotlin.platform.AppLog.i(
+            "prompt",
+            "batch ${decision.action} ${decision.lifetime} prompts=${selections.size} resolved=$resolvedFlows",
+        )
+        return PromptBatchResult(selections.size, resolvedFlows, prompts.size)
+    }
+
     suspend fun pauseTimer(promptId: String): Boolean {
         var changed = false
         var event: PromptEvent? = null
@@ -256,6 +352,14 @@ class PromptBroker(
         return true
     }
 
+    suspend fun dismissMany(promptIds: Collection<String>): Int {
+        var count = 0
+        promptIds.distinct().forEach { id ->
+            if (dismiss(id)) count++
+        }
+        return count
+    }
+
     fun getPending(): List<PromptSnapshot> = _pending.value
 
     private fun scheduleTimeout(prompt: PendingPrompt): Job = scope.launch {
@@ -301,6 +405,13 @@ class PromptBroker(
         val flow: FlowInfo,
         val domains: DomainCandidates,
         val deferred: CompletableDeferred<Verdict>,
+    )
+
+    private class BatchSelection(
+        val promptId: String,
+        val first: PendingFlow,
+        val app: AppIdentity?,
+        val domains: DomainCandidates,
     )
 
     private class PendingPrompt(

@@ -46,4 +46,24 @@ class NetworkProfileTest {
         val second = NetworkContext(kind = NetworkKind.Cellular, subscriptionId = 2)
         assertTrue(first.fingerprint != second.fingerprint)
     }
+
+    @Test
+    fun subscriptionTakesPrecedenceOverSlotWhenBothPresent() {
+        val condition = AutoActivateCondition(subscriptionIds = listOf(2), simSlots = listOf(0))
+        assertTrue(
+            condition.matches(
+                NetworkContext(kind = NetworkKind.Cellular, subscriptionId = 2, simSlotIndex = 1),
+            ),
+        )
+        assertFalse(
+            condition.matches(
+                NetworkContext(kind = NetworkKind.Cellular, subscriptionId = 1, simSlotIndex = 0),
+            ),
+        )
+        assertTrue(
+            condition.matches(
+                NetworkContext(kind = NetworkKind.Cellular, subscriptionId = null, simSlotIndex = 0),
+            ),
+        )
+    }
 }

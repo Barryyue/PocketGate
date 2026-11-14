@@ -84,26 +84,29 @@ class PromptNotifier(
             .addAction(
                 0,
                 context.getString(R.string.prompt_deny),
-                actionIntent(prompt.id, false),
+                actionIntent(prompt, false),
             )
             .addAction(
                 0,
                 context.getString(R.string.prompt_allow),
-                actionIntent(prompt.id, true),
+                actionIntent(prompt, true),
             )
             .build()
         runCatching { NotificationManagerCompat.from(context).notify(notificationId, notification) }
     }
 
-    private fun actionIntent(promptId: String, allow: Boolean): PendingIntent {
+    private fun actionIntent(prompt: PromptSnapshot, allow: Boolean): PendingIntent {
+        val appPath = prompt.app?.path
+            ?: prompt.executablePath?.takeIf { it.startsWith("android-app://") }
         val intent = Intent(context, NotificationActionReceiver::class.java).apply {
             action = NotificationActionReceiver.ACTION_ANSWER
-            putExtra(NotificationActionReceiver.EXTRA_PROMPT_ID, promptId)
+            putExtra(NotificationActionReceiver.EXTRA_PROMPT_ID, prompt.id)
             putExtra(NotificationActionReceiver.EXTRA_ALLOW, allow)
+            putExtra(NotificationActionReceiver.EXTRA_APP_PATH, appPath)
         }
         return PendingIntent.getBroadcast(
             context,
-            promptId.hashCode() * 31 + if (allow) 1 else 0,
+            prompt.id.hashCode() * 31 + if (allow) 1 else 0,
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )

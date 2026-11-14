@@ -13,9 +13,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SegmentedButton
@@ -23,6 +28,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,13 +47,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.core.model.FilterMode
 import com.networkcontrol.android.kotlin.core.model.ProtectionStatus
+import com.networkcontrol.android.kotlin.core.model.PromptSnapshot
+import com.networkcontrol.android.kotlin.core.model.RuleLifetime
 import com.networkcontrol.android.kotlin.core.model.TrafficUsage
+import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.MetricCard
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
 import com.networkcontrol.android.kotlin.ui.common.formatBytes
 import com.networkcontrol.android.kotlin.ui.common.formatDateTime
+import com.networkcontrol.android.kotlin.ui.common.protocolLabel
+import com.networkcontrol.android.kotlin.ui.prompt.promptDisplayName
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -70,6 +81,7 @@ fun OverviewScreen(backend: AppBackend) {
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var showBatchPrompts by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -347,6 +359,12 @@ fun OverviewScreen(backend: AppBackend) {
                         s.format(S.PromptFlows, prompts.size),
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    OutlinedButton(
+                        onClick = { showBatchPrompts = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(s[S.BatchPrompts])
+                    }
                 }
             }
         }
@@ -380,4 +398,120 @@ fun OverviewScreen(backend: AppBackend) {
             }
         }
     }
+
+    if (showBatchPrompts) {
+        BatchPromptDialog(
+            prompts = prompts,
+            onDismiss = { showBatchPrompts = false },
+            onAnswer = { ids, action, lifetime ->
+                backend.answerPrompts(
+                    ids,
+                    action,
+                    lifetime,
+                    if (lifetime == RuleLifetime.Timed) 3600 else null,
+                )
+                showBatchPrompts = false
+            },
+            onLater = { ids ->
+                backend.dismissPrompts(ids)
+                showBatchPrompts = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun BatchPromptDialog(
+    prompts: List<PromptSnapshot>,
+    onDismiss: () -> Unit,
+    onAnswer: (Set<String>, VerdictAction, RuleLifetime) -> Unit,
+    onLater: (Set<String>) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var selected by remember(prompts.map { it.id }) {
+        mutableStateOf(prompts.map { it.id }.toSet())
+    }
+    var lifetime by remember { mutableStateOf(RuleLifetime.Permanent) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.BatchPrompts]) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { selected = prompts.map { it.id }.toSet() }) {
+                        Text(s[S.SelectAll])
+                    }
+                    TextButton(onClick = { selected = emptySet() }) {
+                        Text(s[S.ClearSelection])
+                    }
+                }
+                prompts.forEach { prompt ->
+                    val name = prompt.app?.displayName
+                        ?: prompt.app?.name
+                        ?: promptDisplayName(prompt.executablePath)
+                        ?: s[S.UnknownApp]
+                    val first = prompt.flows.firstOrNull()
+                    val target = first?.let {
+                        it.domains.firstOrNull() ?: "${it.remote.address.hostAddress}:${it.remote.port}"
+                    }.orEmpty()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = prompt.id in selected,
+                            onCheckedChange = { checked ->
+                                selected = if (checked) selected + prompt.id else selected - prompt.id
+                            },
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(name, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "$target · ${first?.let { protocolLabel(it.protocol) }.orEmpty()}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                Text(s[S.BatchPromptsHint], style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        lifetime == RuleLifetime.Permanent,
+                        { lifetime = RuleLifetime.Permanent },
+                        { Text(s[S.PromptPermanent]) },
+                    )
+                    FilterChip(
+                        lifetime == RuleLifetime.Timed,
+                        { lifetime = RuleLifetime.Timed },
+                        { Text(s[S.PromptOneHour]) },
+                    )
+                    FilterChip(
+                        lifetime == RuleLifetime.UntilRestart,
+                        { lifetime = RuleLifetime.UntilRestart },
+                        { Text(s[S.PromptUntilRestart]) },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TextButton(onClick = { onLater(selected) }, enabled = selected.isNotEmpty()) {
+                    Text(s[S.PromptLater])
+                }
+                OutlinedButton(
+                    onClick = { onAnswer(selected, VerdictAction.Deny, lifetime) },
+                    enabled = selected.isNotEmpty(),
+                ) { Text(s[S.Deny]) }
+                Button(
+                    onClick = { onAnswer(selected, VerdictAction.Allow, lifetime) },
+                    enabled = selected.isNotEmpty(),
+                ) { Text(s[S.Allow]) }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
 }

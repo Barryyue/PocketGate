@@ -48,9 +48,34 @@ class RuleService(
     fun find(id: String): Rule? = rules[id]
 
     suspend fun initialize() {
-        store.loadAll().forEach { rule ->
-            rules[rule.id] = rule
-            hits[rule.id] = HitCounter(rule.hitCount, rule.lastHitAt)
+        val now = Time.now()
+        val loaded = store.loadAll()
+        val duplicates = mutableListOf<Rule>()
+        loaded.groupBy { RuleIdentity.key(it) }.values.forEach { group ->
+            val keeper = group.maxWith(
+                compareBy<Rule> { it.updatedAt }
+                    .thenBy { it.manualPriority }
+                    .thenBy { it.id },
+            )
+            val totalHits = group.sumOf { it.hitCount }
+            val lastHitAt = group.mapNotNull { it.lastHitAt }.maxOrNull()
+            rules[keeper.id] = keeper
+            hits[keeper.id] = HitCounter(totalHits, lastHitAt)
+            if (group.size > 1) {
+                runCatching {
+                    store.upsert(keeper.copy(hitCount = totalHits, lastHitAt = lastHitAt))
+                }
+            }
+            group.filter { it.id != keeper.id }.forEach {
+                duplicates += it
+            }
+        }
+        if (duplicates.isNotEmpty()) {
+            runCatching { store.delete(duplicates, RuleEndReason.Replaced, now) }
+            com.networkcontrol.android.kotlin.platform.AppLog.i(
+                "rules",
+                "merged ${duplicates.size} duplicate rules on startup",
+            )
         }
         publish()
         started = true
@@ -63,33 +88,55 @@ class RuleService(
 
     suspend fun add(rule: Rule): Rule {
         validate(rule)
+        val now = Time.now()
+        var result: Rule? = null
+        var added = true
         gate.withLock {
-            if (rule.isPersistent) store.upsert(rule)
-            rules[rule.id] = rule
-            hits.putIfAbsent(rule.id, HitCounter(0, null))
+            val outcome = addLocked(rule, now)
+            result = outcome.first
+            added = outcome.second
             publishLocked()
         }
-        _changes.emit(RuleChange(RuleChangeKind.Added, rule))
-        return rule
+        val saved = result ?: rule
+        _changes.emit(RuleChange(if (added) RuleChangeKind.Added else RuleChangeKind.Updated, saved))
+        return saved
     }
 
-    suspend fun addRange(items: List<Rule>) {
-        if (items.isEmpty()) return
+    suspend fun addRange(items: List<Rule>): List<Rule> {
+        if (items.isEmpty()) return emptyList()
         items.forEach(::validate)
+        val now = Time.now()
+        val outcomes = mutableListOf<Pair<Rule, Boolean>>()
         gate.withLock {
-            items.forEach { if (it.isPersistent) store.upsert(it) }
-            items.forEach {
-                rules[it.id] = it
-                hits.putIfAbsent(it.id, HitCounter(0, null))
-            }
+            items.forEach { outcomes += addLocked(it, now) }
             publishLocked()
         }
-        items.forEach { _changes.emit(RuleChange(RuleChangeKind.Added, it)) }
+        outcomes.forEach { (rule, added) ->
+            _changes.emit(RuleChange(if (added) RuleChangeKind.Added else RuleChangeKind.Updated, rule))
+        }
+        return outcomes.map { it.first }
+    }
+
+    private suspend fun addLocked(rule: Rule, now: Long): Pair<Rule, Boolean> {
+        val key = RuleIdentity.key(rule)
+        val existing = rules.values.firstOrNull { RuleIdentity.key(it) == key }
+        if (existing != null) {
+            if (existing.source == RuleSource.Builtin) return existing to false
+            val merged = RuleIdentity.merge(existing, rule, now)
+            if (merged.isPersistent) store.upsert(merged)
+            rules[merged.id] = merged
+            return merged to false
+        }
+        if (rule.isPersistent) store.upsert(rule)
+        rules[rule.id] = rule
+        hits.putIfAbsent(rule.id, HitCounter(0, null))
+        return rule to true
     }
 
     suspend fun update(rule: Rule): Rule {
         validate(rule)
         val updated: Rule
+        var replaced: Rule? = null
         gate.withLock {
             val existing = rules[rule.id] ?: throw NoSuchElementException("規則 ${rule.id} 不存在。")
             val candidate = if (existing.source == RuleSource.Builtin) {
@@ -98,10 +145,24 @@ class RuleService(
                 rule
             }
             updated = candidate.copy(createdAt = existing.createdAt, updatedAt = Time.now())
+            val key = RuleIdentity.key(updated)
+            replaced = rules.values.firstOrNull {
+                it.id != updated.id &&
+                    it.source != RuleSource.Builtin &&
+                    RuleIdentity.key(it) == key
+            }
+            replaced?.let { duplicate ->
+                if (duplicate.isPersistent) {
+                    store.delete(listOf(duplicate), RuleEndReason.Replaced, Time.now())
+                }
+                rules.remove(duplicate.id)
+                hits.remove(duplicate.id)
+            }
             if (updated.isPersistent) store.upsert(updated)
             rules[updated.id] = updated
             publishLocked()
         }
+        replaced?.let { _changes.emit(RuleChange(RuleChangeKind.Removed, it, RuleEndReason.Replaced)) }
         _changes.emit(RuleChange(RuleChangeKind.Updated, updated))
         return updated
     }

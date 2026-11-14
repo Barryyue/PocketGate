@@ -25,6 +25,7 @@ class VpnEngine(
     private val scope: CoroutineScope,
     private val rules: RuleService,
     private val runtime: RuntimeStateService,
+    private val settings: com.networkcontrol.android.kotlin.core.settings.SettingsService,
     private val catalog: AppCatalog,
     private val apps: com.networkcontrol.android.kotlin.core.storage.AppStore,
     owners: ConnectionOwnerResolver,
@@ -72,6 +73,7 @@ class VpnEngine(
         scope.launch { protection.enabled.collect { requestReplan() } }
         scope.launch { rules.ruleSet.collect { requestReplan() } }
         scope.launch { runtime.state.collect { requestReplan() } }
+        scope.launch { settings.state.collect { requestReplan() } }
         // 網路類型 / SIM 變更會改變帶網路條件的應用規則，必須重新規劃路由。
         scope.launch { network.state.collect { requestReplan() } }
         scope.launch {
@@ -97,6 +99,8 @@ class VpnEngine(
             apps = catalog.getApps(),
             selfPackage = selfPackage,
             network = network.current,
+            allowSystemAppsByDefault = settings.state.value.allowSystemAppsByDefault,
+            trustedSigners = settings.state.value.trustedSigners,
         )
         _plan.value = plan
 

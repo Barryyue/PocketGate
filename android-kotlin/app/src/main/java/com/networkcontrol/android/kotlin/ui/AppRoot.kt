@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -38,6 +39,7 @@ import com.networkcontrol.android.kotlin.ui.apps.AppsScreen
 import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
 import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
+import com.networkcontrol.android.kotlin.ui.rules.RulesScreen
 import com.networkcontrol.android.kotlin.ui.settings.SettingsScreen
 
 private data class Tab(val label: S, val icon: ImageVector)
@@ -45,6 +47,7 @@ private data class Tab(val label: S, val icon: ImageVector)
 private val tabs = listOf(
     Tab(S.Overview, Icons.Filled.Home),
     Tab(S.Apps, Icons.AutoMirrored.Filled.List),
+    Tab(S.Rules, Icons.Filled.Lock),
     Tab(S.Logs, Icons.Filled.Notifications),
     Tab(S.Settings, Icons.Filled.Settings),
 )
@@ -107,7 +110,8 @@ fun AppRoot(container: AppContainer) {
                 when (selected) {
                     0 -> OverviewScreen(backend)
                     1 -> AppsScreen(backend)
-                    2 -> LogsScreen(backend)
+                    2 -> RulesScreen(backend)
+                    3 -> LogsScreen(backend)
                     else -> SettingsScreen(backend)
                 }
             }

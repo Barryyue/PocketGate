@@ -87,13 +87,16 @@ data class RuleConditions(
 
     fun matchesNetwork(network: NetworkContext): Boolean {
         if (networkKinds.isNotEmpty() && network.kind !in networkKinds) return false
-        if (subscriptionIds.isNotEmpty() &&
-            (network.subscriptionId == null || network.subscriptionId !in subscriptionIds)
-        ) {
-            return false
-        }
-        if (simSlots.isNotEmpty() && (network.simSlotIndex == null || network.simSlotIndex !in simSlots)) {
-            return false
+        if (subscriptionIds.isNotEmpty()) {
+            val subscription = network.subscriptionId
+            if (subscription != null) {
+                if (subscription !in subscriptionIds) return false
+            } else {
+                if (simSlots.isEmpty()) return false
+                if (network.simSlotIndex == null || network.simSlotIndex !in simSlots) return false
+            }
+        } else if (simSlots.isNotEmpty()) {
+            if (network.simSlotIndex == null || network.simSlotIndex !in simSlots) return false
         }
         return true
     }
@@ -150,13 +153,16 @@ data class AutoActivateCondition(
         if (networkIds.isNotEmpty() && (context.networkId == null || !networkIds.contains(context.networkId))) {
             return false
         }
-        if (subscriptionIds.isNotEmpty() &&
-            (context.subscriptionId == null || !subscriptionIds.contains(context.subscriptionId))
-        ) {
-            return false
-        }
-        if (simSlots.isNotEmpty() && (context.simSlotIndex == null || !simSlots.contains(context.simSlotIndex))) {
-            return false
+        if (subscriptionIds.isNotEmpty()) {
+            val subscription = context.subscriptionId
+            if (subscription != null) {
+                if (subscription !in subscriptionIds) return false
+            } else {
+                if (simSlots.isEmpty()) return false
+                if (context.simSlotIndex == null || context.simSlotIndex !in simSlots) return false
+            }
+        } else if (simSlots.isNotEmpty()) {
+            if (context.simSlotIndex == null || context.simSlotIndex !in simSlots) return false
         }
         return true
     }
@@ -213,6 +219,10 @@ data class UserSettings(
     val maxPendingFlows: Int = 1000,
     val allowIcmpByDefault: Boolean = true,
     val logRetentionDays: Int = 30,
+    /** 系統應用（預裝）在沒有明確規則時默認放行。 */
+    val allowSystemAppsByDefault: Boolean = false,
+    /** 受信任的簽章者（Android 為簽章 SHA-256）；其應用在沒有明確規則時默認放行。 */
+    val trustedSigners: Set<String> = emptySet(),
 ) {
     fun validated(): UserSettings = copy(
         promptTimeoutSeconds = promptTimeoutSeconds.coerceIn(5, 300),
@@ -328,6 +338,12 @@ data class PromptAnswerResult(
     val createdRuleId: String?,
     val resolvedFlows: Int,
     val remainingFlows: Int,
+)
+
+data class PromptBatchResult(
+    val answered: Int,
+    val resolvedFlows: Int,
+    val remainingPrompts: Int,
 )
 
 data class AppRouting(
@@ -498,6 +514,13 @@ data class RuleImportPlan(
     val toUpdate: List<Rule>,
     val toRemove: List<Rule>,
     val unchanged: Int,
+)
+
+data class RuleGroup(
+    val key: String,
+    val label: String,
+    val packageName: String?,
+    val rules: List<Rule>,
 )
 
 data class NetworkSummary(

@@ -60,7 +60,9 @@ class TrafficCollector(
             val now = Time.now()
             val todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
             val since = prefs.getLong(KEY_LAST_COLLECTED, todayStart).let {
-                if (it <= 0L || it > now) todayStart else it
+                val safe = if (it <= 0L || it > now) todayStart else it
+                // 進程可能被回收數天：不要把過去幾天的流量全部記到今天。
+                maxOf(safe, todayStart)
             }
 
             val usages = mutableListOf<Usage>()

@@ -91,6 +91,7 @@ class AppContainer(context: Context) {
         scope = scope,
         rules = rules,
         runtime = runtime,
+        settings = settings,
         catalog = appCatalog,
         apps = appStore,
         owners = owners,

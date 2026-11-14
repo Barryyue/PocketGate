@@ -29,6 +29,8 @@ object VpnRoutingPlanner {
         apps: List<InstalledApp>,
         selfPackage: String,
         network: NetworkContext = NetworkContext.None,
+        allowSystemAppsByDefault: Boolean = false,
+        trustedSigners: Set<String> = emptySet(),
     ): VpnRoutingPlan {
         val skipped = rules.rules.mapNotNull { rule ->
             getSkipReason(rule)?.let { SkippedRule(rule.id, it) }
@@ -40,7 +42,17 @@ object VpnRoutingPlanner {
             val sorted = group.sortedBy { it.packageName }
             val primary = sorted.first()
             val packages = sorted.map { it.packageName }
-            val routing = decide(rules, mode, uid, primary, packages, selfPackage, network)
+            val routing = decide(
+                rules,
+                mode,
+                uid,
+                primary,
+                packages,
+                selfPackage,
+                network,
+                allowSystemAppsByDefault,
+                trustedSigners,
+            )
             byUid[uid] = routing
             if (routing.decision == AppRoutingDecision.Bypass) bypass.addAll(packages)
         }
@@ -82,6 +94,8 @@ object VpnRoutingPlanner {
         packages: List<String>,
         selfPackage: String,
         network: NetworkContext,
+        allowSystemAppsByDefault: Boolean,
+        trustedSigners: Set<String>,
     ): AppRouting {
         if (packages.contains(selfPackage)) {
             return AppRouting(uid, primary.packageName, packages, AppRoutingDecision.Bypass, AppRoutingReason.Self)
@@ -118,6 +132,20 @@ object VpnRoutingPlanner {
         }
 
         val tampered = match.tamperedRule != null
+        val signer = primary.signerSha256
+        val trusted = !tampered &&
+            ((allowSystemAppsByDefault && primary.isSystem) ||
+                (signer != null && trustedSigners.contains(signer)))
+        if (trusted) {
+            return AppRouting(
+                uid = uid,
+                packageName = primary.packageName,
+                packages = packages,
+                decision = AppRoutingDecision.Bypass,
+                reason = AppRoutingReason.Trusted,
+                tamperedRuleId = null,
+            )
+        }
         val fallback = when {
             mode == FilterMode.Blacklist && !tampered -> AppRoutingDecision.Bypass
             mode == FilterMode.Ask || mode == FilterMode.Blacklist -> AppRoutingDecision.BlockAndAsk

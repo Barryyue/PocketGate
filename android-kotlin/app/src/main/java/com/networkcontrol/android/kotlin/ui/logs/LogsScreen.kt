@@ -1,5 +1,8 @@
 package com.networkcontrol.android.kotlin.ui.logs
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,11 +33,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.core.model.LogEntry
 import com.networkcontrol.android.kotlin.core.model.VerdictReason
+import com.networkcontrol.android.kotlin.data.transfer.LogCsv
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.formatDateTime
@@ -42,18 +47,49 @@ import com.networkcontrol.android.kotlin.ui.common.protocolLabel
 import com.networkcontrol.android.kotlin.ui.common.reasonLabel
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 private enum class ReasonFilter { All, Rule, Mode, Prompt, Dnd }
 
 @Composable
 fun LogsScreen(backend: AppBackend) {
     val s = rememberUiStrings()
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(ReasonFilter.All) }
     var entries by remember { mutableStateOf<List<LogEntry>>(emptyList()) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<LogEntry?>(null) }
+    var showExportDialog by remember { mutableStateOf(false) }
+    var pendingExport by remember { mutableStateOf<List<LogEntry>?>(null) }
+
+    val createDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv"),
+    ) { uri ->
+        val data = pendingExport
+        pendingExport = null
+        if (uri == null || data == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(LogCsv.encode(data).toByteArray(Charsets.UTF_8))
+                    } ?: error("無法開啟輸出檔案")
+                }
+            }
+            val message = if (result.isSuccess) {
+                s[S.ExportDone]
+            } else {
+                s.format(S.ExportFailed, result.exceptionOrNull()?.message.orEmpty())
+            }
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     LaunchedEffect(refreshKey) {
         entries = withContext(Dispatchers.IO) {
@@ -123,6 +159,11 @@ fun LogsScreen(backend: AppBackend) {
             LogRow(entry, onClick = { selected = entry })
         }
         item {
+            OutlinedButton(onClick = { showExportDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(s[S.ExportCsv])
+            }
+        }
+        item {
             OutlinedButton(onClick = { refreshKey++ }, modifier = Modifier.fillMaxWidth()) {
                 Text(s[S.Refresh])
             }
@@ -132,6 +173,47 @@ fun LogsScreen(backend: AppBackend) {
     selected?.let { entry ->
         LogDetailDialog(entry = entry, onDismiss = { selected = null })
     }
+
+    if (showExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = { Text(s[S.ExportCsv]) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = {
+                            pendingExport = filtered
+                            showExportDialog = false
+                            createDocument.launch(exportFileName())
+                        },
+                    ) { Text(s[S.ExportFiltered]) }
+                    TextButton(
+                        onClick = {
+                            showExportDialog = false
+                            scope.launch {
+                                pendingExport = withContext(Dispatchers.IO) {
+                                    runCatching { backend.getAllLogsForExport() }
+                                        .getOrDefault(emptyList())
+                                }
+                                createDocument.launch(exportFileName())
+                            }
+                        },
+                    ) { Text(s[S.ExportAll]) }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showExportDialog = false }) { Text(s[S.Cancel]) }
+            },
+        )
+    }
+}
+
+private val exportNameTime = DateTimeFormatter.ofPattern("HHmm")
+
+private fun exportFileName(): String {
+    val date = LocalDate.now()
+    val time = LocalTime.now().format(exportNameTime)
+    return "networkcontrol-logs-$date-$time.csv"
 }
 
 @Composable

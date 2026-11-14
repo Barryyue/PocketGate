@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.AlertDialog
@@ -38,10 +39,12 @@ import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.core.model.AppDecision
 import com.networkcontrol.android.kotlin.core.model.AppEntry
 import com.networkcontrol.android.kotlin.core.model.AppRoutingDecision
+import com.networkcontrol.android.kotlin.core.model.AppRoutingReason
 import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import com.networkcontrol.android.kotlin.core.model.Rule
 import com.networkcontrol.android.kotlin.core.model.RuleConditions
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
+import com.networkcontrol.android.kotlin.core.model.LogEntry
 import com.networkcontrol.android.kotlin.core.model.TrafficUsage
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.AppIcon
@@ -69,6 +72,7 @@ fun AppsScreen(backend: AppBackend) {
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
     var lastSeen by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var refreshKey by remember { mutableIntStateOf(0) }
+    val sims = remember { runCatching { backend.subscriptions() }.getOrDefault(emptyList()) }
 
     LaunchedEffect(plan, rules.version, refreshKey) {
         entries = withContext(Dispatchers.IO) { runCatching { backend.appEntries() }.getOrDefault(emptyList()) }
@@ -149,6 +153,7 @@ fun AppsScreen(backend: AppBackend) {
                 backend = backend,
                 entry = entry,
                 rulesVersion = rules.version,
+                sims = sims,
                 traffic = traffic.byPackage[entry.app.packageName],
                 lastSeen = lastSeen[entry.app.packageName],
                 onChanged = { refreshKey++ },
@@ -164,6 +169,7 @@ private fun AppRow(
     backend: AppBackend,
     entry: AppEntry,
     rulesVersion: Long,
+    sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     traffic: Pair<Long, Long>?,
     lastSeen: Long?,
     onChanged: () -> Unit,
@@ -171,10 +177,11 @@ private fun AppRow(
 ) {
     val s = rememberUiStrings()
     var showNetworkDialog by remember { mutableStateOf(false) }
-    val sims = remember { runCatching { backend.subscriptions() }.getOrDefault(emptyList()) }
-    val scopedRules = remember(entry.app.packageName, rulesVersion) {
-        backend.appRules(entry.app.packageName).filter { it.conditions.hasNetworkScope }
+    var showDetail by remember { mutableStateOf(false) }
+    val appRules = remember(entry.app.packageName, rulesVersion) {
+        backend.appRules(entry.app.packageName)
     }
+    val scopedRules = remember(appRules) { appRules.filter { it.conditions.hasNetworkScope } }
     val effectiveLabel = when (entry.effective) {
         AppRoutingDecision.Bypass -> s[S.Allow]
         AppRoutingDecision.Block -> s[S.Deny]
@@ -211,7 +218,11 @@ private fun AppRow(
                     selected = entry.decision == AppDecision.Allow,
                     onClick = {
                         scope.launch {
-                            backend.setAppDecision(entry.app.packageName, AppDecision.Allow)
+                            backend.setAppDecision(
+                                entry.app.packageName,
+                                AppDecision.Allow,
+                                replaceAllScopes = false,
+                            )
                             onChanged()
                         }
                     },
@@ -221,7 +232,11 @@ private fun AppRow(
                     selected = entry.decision == AppDecision.Deny,
                     onClick = {
                         scope.launch {
-                            backend.setAppDecision(entry.app.packageName, AppDecision.Deny)
+                            backend.setAppDecision(
+                                entry.app.packageName,
+                                AppDecision.Deny,
+                                replaceAllScopes = false,
+                            )
                             onChanged()
                         }
                     },
@@ -231,7 +246,11 @@ private fun AppRow(
                     selected = entry.decision == AppDecision.Unset,
                     onClick = {
                         scope.launch {
-                            backend.setAppDecision(entry.app.packageName, AppDecision.Unset)
+                            backend.setAppDecision(
+                                entry.app.packageName,
+                                AppDecision.Unset,
+                                replaceAllScopes = false,
+                            )
                             onChanged()
                         }
                     },
@@ -241,6 +260,9 @@ private fun AppRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { showNetworkDialog = true }) {
                     Text(s[S.NetworkConditions])
+                }
+                TextButton(onClick = { showDetail = true }) {
+                    Text(s[S.Details])
                 }
                 if (scopedRules.isNotEmpty()) {
                     Text(
@@ -297,7 +319,7 @@ private fun AppRow(
     if (showNetworkDialog) {
         NetworkRuleDialog(
             title = entry.app.label,
-            rules = scopedRules,
+            rules = appRules,
             initialDecision = entry.decision,
             initialKind = backend.container.network.current.kind
                 .takeIf { it == NetworkKind.Wifi || it == NetworkKind.Cellular || it == NetworkKind.Wired },
@@ -318,6 +340,146 @@ private fun AppRow(
             },
         )
     }
+
+    if (showDetail) {
+        AppDetailDialog(
+            backend = backend,
+            entry = entry,
+            rules = appRules,
+            traffic = traffic,
+            sims = sims,
+            onDismiss = { showDetail = false },
+        )
+    }
+}
+
+@Composable
+private fun AppDetailDialog(
+    backend: AppBackend,
+    entry: AppEntry,
+    rules: List<Rule>,
+    traffic: Pair<Long, Long>?,
+    sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
+    onDismiss: () -> Unit,
+) {
+    val s = rememberUiStrings()
+    var recent by remember { mutableStateOf<List<LogEntry>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
+    val settings by backend.settings.collectAsStateWithLifecycle()
+
+    LaunchedEffect(entry.app.packageName) {
+        recent = withContext(Dispatchers.IO) {
+            runCatching { backend.appRecentLogs(entry.app.packageName) }.getOrDefault(emptyList())
+        }
+        loaded = true
+    }
+
+    val effectiveLabel = when (entry.effective) {
+        AppRoutingDecision.Bypass -> s[S.Allow]
+        AppRoutingDecision.Block -> s[S.Deny]
+        AppRoutingDecision.BlockAndAsk -> s[S.ModeAsk]
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AppIcon(entry.app.packageName, Modifier.width(40.dp).height(40.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(entry.app.label)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(entry.app.packageName, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "${s[S.Uid]}：${entry.app.uid}" +
+                        if (entry.app.isSystem) " · ${s[S.FilterSystem]}" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                entry.app.signerSha256?.let {
+                    Text(
+                        "${s[S.Signer]}：${it.take(16)}…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (it !in settings.trustedSigners) {
+                        TextButton(onClick = { backend.trustPublisher(it) }) {
+                            Text(s[S.TrustPublisher])
+                        }
+                    } else {
+                        Text(
+                            s[S.Trusted],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                Text(
+                    "${s[S.Effective]}：$effectiveLabel · ${s[S.Reason]}：${routingReasonLabel(entry.reason, s)}",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                traffic?.let {
+                    Text(
+                        "${s[S.TrafficToday]}：${formatBytes(it.first + it.second)}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text("${s[S.Rules]}：${rules.size}", style = MaterialTheme.typography.titleSmall)
+                if (rules.isEmpty()) {
+                    Text(
+                        s[S.ModeAsk],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                rules.forEach { rule ->
+                    Text(
+                        "${networkScopeLabel(rule.conditions, sims, s)} → ${actionLabel(rule.action, s)}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text(s[S.RecentActivity], style = MaterialTheme.typography.titleSmall)
+                if (loaded && recent.isEmpty()) {
+                    Text(
+                        s[S.NoRecentActivity],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                recent.groupBy { it.hostname ?: "${it.remoteIp}:${it.remotePort}" }
+                    .map { (target, list) ->
+                        Triple(target, list.sumOf { it.count }, list.maxOf { it.lastTs })
+                    }
+                    .sortedByDescending { it.second }
+                    .take(10)
+                    .forEach { (target, count, lastTs) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                target,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                "$count× · ${formatDateTime(lastTs)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Close]) }
+        },
+    )
 }
 
 @Composable
@@ -357,8 +519,10 @@ private fun NetworkRuleDialog(
 
     LaunchedEffect(kind, subscriptionId) {
         val existing = matchingRule()
-        if (existing != null) {
-            decision = if (existing.action == VerdictAction.Allow) AppDecision.Allow else AppDecision.Deny
+        decision = when (existing?.action) {
+            VerdictAction.Allow -> AppDecision.Allow
+            VerdictAction.Deny -> AppDecision.Deny
+            null -> AppDecision.Unset
         }
     }
 
@@ -484,4 +648,15 @@ private fun actionLabel(
     action: VerdictAction,
     s: com.networkcontrol.android.kotlin.ui.UiStrings,
 ): String = if (action == VerdictAction.Allow) s[S.Allow] else s[S.Deny]
+
+private fun routingReasonLabel(
+    reason: AppRoutingReason,
+    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+): String = when (reason) {
+    AppRoutingReason.Rule -> s[S.ReasonRule]
+    AppRoutingReason.Mode -> s[S.ReasonMode]
+    AppRoutingReason.Self -> "Self"
+    AppRoutingReason.SystemUid -> "System UID"
+    AppRoutingReason.Trusted -> s[S.Trusted]
+}
 

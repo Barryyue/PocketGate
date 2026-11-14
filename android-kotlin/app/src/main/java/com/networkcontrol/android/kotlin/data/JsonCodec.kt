@@ -30,6 +30,8 @@ object JsonCodec {
         put("maxPendingFlows", settings.maxPendingFlows)
         put("allowIcmpByDefault", settings.allowIcmpByDefault)
         put("logRetentionDays", settings.logRetentionDays)
+        put("allowSystemAppsByDefault", settings.allowSystemAppsByDefault)
+        put("trustedSigners", JSONArray(settings.trustedSigners.toList()))
     }.toString()
 
     fun settingsFromJson(json: String): UserSettings {
@@ -42,6 +44,8 @@ object JsonCodec {
             maxPendingFlows = obj.optInt("maxPendingFlows", 1000),
             allowIcmpByDefault = obj.optBoolean("allowIcmpByDefault", true),
             logRetentionDays = obj.optInt("logRetentionDays", 30),
+            allowSystemAppsByDefault = obj.optBoolean("allowSystemAppsByDefault", false),
+            trustedSigners = obj.optJSONArray("trustedSigners")?.toStringList()?.toSet() ?: emptySet(),
         ).validated()
     }
 

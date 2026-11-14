@@ -235,6 +235,41 @@ fun SettingsScreen(backend: AppBackend) {
         }
 
         item {
+            SectionCard(s[S.TrustSettings]) {
+                SwitchRow(
+                    title = s[S.AllowSystemApps],
+                    subtitle = s[S.AllowSystemAppsHint],
+                    checked = settings.allowSystemAppsByDefault,
+                    onCheckedChange = { backend.setAllowSystemAppsByDefault(it) },
+                )
+                Text(s[S.TrustedPublishers], style = MaterialTheme.typography.bodyMedium)
+                if (settings.trustedSigners.isEmpty()) {
+                    Text(
+                        s[S.NoTrustedPublishers],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    settings.trustedSigners.forEach { signer ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "${signer.take(20)}…",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = { backend.untrustPublisher(signer) }) {
+                                Text(s[S.Delete])
+                            }
+                        }
+                    }
+                    OutlinedButton(onClick = { backend.clearTrustedPublishers() }) {
+                        Text(s[S.ClearTrustedPublishers])
+                    }
+                }
+            }
+        }
+
+        item {
             SectionCard(s[S.Notifications]) {
                 SwitchRow(
                     title = s[S.NotificationsEnabled],

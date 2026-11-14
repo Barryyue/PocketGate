@@ -141,7 +141,8 @@ enum class AppRoutingReason(val code: Int) {
     Self(0),
     SystemUid(1),
     Rule(2),
-    Mode(3);
+    Mode(3),
+    Trusted(4);
 
     companion object {
         fun fromCode(code: Int): AppRoutingReason = entries.firstOrNull { it.code == code } ?: Mode

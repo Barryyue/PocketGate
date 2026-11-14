@@ -30,6 +30,7 @@ import com.networkcontrol.android.kotlin.core.model.TrafficUsage
 import com.networkcontrol.android.kotlin.core.model.UserSettings
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.core.rules.AppMatcherFactory
+import com.networkcontrol.android.kotlin.core.rules.RuleIdentity
 import com.networkcontrol.android.kotlin.data.transfer.RuleTransferService
 import com.networkcontrol.android.kotlin.engine.apps.AppCatalog
 import com.networkcontrol.android.kotlin.engine.vpn.AndroidRuleCompatibility
@@ -117,6 +118,7 @@ class AppBackend(val container: AppContainer) {
         replaceAllScopes: Boolean = networkKinds.isEmpty() && subscriptionIds.isEmpty() && simSlots.isEmpty(),
     ) {
         val path = AppCatalog.appPath(packageName)
+        val app = if (decision == AppDecision.Unset) null else container.appCatalog.find(packageName) ?: return
         val activeProfileId = container.profiles.active.id
         val existing = container.rules.all
             .filter { it.source == RuleSource.User || it.source == RuleSource.Prompt }
@@ -132,8 +134,7 @@ class AppBackend(val container: AppContainer) {
         if (existing.isNotEmpty()) {
             container.rules.remove(existing, RuleEndReason.Replaced)
         }
-        if (decision == AppDecision.Unset) return
-        val app = container.appCatalog.find(packageName) ?: return
+        if (decision == AppDecision.Unset || app == null) return
         val now = Time.now()
         container.rules.add(
             Rule(
@@ -165,10 +166,71 @@ class AppBackend(val container: AppContainer) {
             .filter { it.profileId == null || it.profileId == activeProfileId }
     }
 
+    /** 應用詳情用的最近連線記錄。 */
+    suspend fun appRecentLogs(packageName: String, limit: Int = 100): List<LogEntry> {
+        val identity = container.appStore.find(AppCatalog.appPath(packageName)) ?: return emptyList()
+        return container.activityStore.query(LogQuery(appId = identity.appId, limit = limit))
+    }
+
+    /** 目前配置文件（含全域）的規則，按應用分組。 */
+    fun ruleGroups(): List<com.networkcontrol.android.kotlin.core.model.RuleGroup> {
+        val activeProfileId = container.profiles.active.id
+        val visible = container.rules.all.filter {
+            it.profileId == null || it.profileId == activeProfileId
+        }
+        return visible.groupBy { it.app?.pathPattern ?: "*" }
+            .map { (key, group) ->
+                val path = group.firstNotNullOfOrNull { it.app?.pathPattern }
+                val packageName = path
+                    ?.removePrefix("android-app://")
+                    ?.takeIf { path.startsWith("android-app://") && it.isNotBlank() }
+                val label = packageName?.let { container.appCatalog.find(it)?.label } ?: packageName
+                com.networkcontrol.android.kotlin.core.model.RuleGroup(
+                    key = key,
+                    label = label ?: "Global",
+                    packageName = packageName,
+                    rules = group
+                        .map { rule ->
+                            val stats = container.rules.getHitStats(rule.id)
+                            rule.copy(hitCount = stats.first, lastHitAt = stats.second)
+                        }
+                        .sortedWith(
+                            compareByDescending<Rule> { it.manualPriority }
+                                .thenByDescending { it.updatedAt },
+                        ),
+                )
+            }
+            .sortedBy { it.label.lowercase() }
+    }
+
+    suspend fun setRuleEnabled(id: String, enabled: Boolean) {
+        runCatching { container.rules.setEnabled(id, enabled) }
+    }
+
+    suspend fun deleteRule(id: String) {
+        runCatching { container.rules.remove(listOf(id), RuleEndReason.Deleted) }
+    }
+
     suspend fun getLogs(limit: Int = 300, keyword: String? = null): List<LogEntry> =
         container.activityStore.query(
             LogQuery(action = VerdictAction.Deny, keyword = keyword, limit = limit),
         )
+
+    /** 匯出用：分頁讀取所有記錄，避開單次查詢上限。 */
+    suspend fun getAllLogsForExport(pageSize: Int = 1000): List<LogEntry> {
+        val all = mutableListOf<LogEntry>()
+        var beforeId: Long? = null
+        while (true) {
+            val page = container.activityStore.query(
+                LogQuery(beforeId = beforeId, limit = pageSize),
+            )
+            if (page.isEmpty()) break
+            all += page
+            if (page.size < pageSize) break
+            beforeId = page.last().id
+        }
+        return all
+    }
 
     suspend fun countBlockedToday(): Long {
         val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -263,10 +325,52 @@ class AppBackend(val container: AppContainer) {
         container.scope.launch { container.prompts.dismiss(id) }
     }
 
+    fun answerPrompts(
+        ids: Collection<String>,
+        action: VerdictAction,
+        lifetime: RuleLifetime,
+        durationSeconds: Int? = null,
+    ) {
+        if (ids.isEmpty()) return
+        container.scope.launch {
+            container.prompts.answerMany(
+                ids,
+                com.networkcontrol.android.kotlin.core.model.PromptDecision(
+                    action = action,
+                    lifetime = lifetime,
+                    durationSeconds = durationSeconds,
+                    scope = com.networkcontrol.android.kotlin.core.model.PromptScope.AnyConnection,
+                ),
+            )
+        }
+    }
+
+    fun dismissPrompts(ids: Collection<String>) {
+        if (ids.isEmpty()) return
+        container.scope.launch { container.prompts.dismissMany(ids) }
+    }
+
     fun dismissQuietPeriod() = container.quietPeriods.dismiss()
 
     fun updateSettings(transform: (UserSettings) -> UserSettings) {
         container.scope.launch { container.settings.update(transform) }
+    }
+
+    fun setAllowSystemAppsByDefault(enabled: Boolean) {
+        updateSettings { it.copy(allowSystemAppsByDefault = enabled) }
+    }
+
+    fun trustPublisher(signerSha256: String) {
+        if (signerSha256.isBlank()) return
+        updateSettings { it.copy(trustedSigners = it.trustedSigners + signerSha256) }
+    }
+
+    fun untrustPublisher(signerSha256: String) {
+        updateSettings { it.copy(trustedSigners = it.trustedSigners - signerSha256) }
+    }
+
+    fun clearTrustedPublishers() {
+        updateSettings { it.copy(trustedSigners = emptySet()) }
     }
 
     fun hasTrafficAccess(): Boolean = container.trafficCollector.isAvailable
@@ -349,11 +453,12 @@ class AppBackend(val container: AppContainer) {
     suspend fun applyImport(json: String, mode: RuleImportMode): RuleImportPreview {
         val imported = RuleTransferService.importForPlan(json, container.profiles.all)
         val plan = RuleTransferService.plan(container.rules.all, imported, mode)
-        if (plan.toAdd.isNotEmpty()) container.rules.addRange(plan.toAdd)
-        plan.toUpdate.forEach { container.rules.update(it) }
+        // Replace 模式先刪除未匯入的規則，再新增/更新；避免身份合併後又被刪掉。
         if (plan.toRemove.isNotEmpty()) {
             container.rules.remove(plan.toRemove.map { it.id }, RuleEndReason.Replaced)
         }
+        if (plan.toAdd.isNotEmpty()) container.rules.addRange(plan.toAdd)
+        plan.toUpdate.forEach { container.rules.update(it) }
         return RuleImportPreview(
             total = imported.size,
             added = plan.toAdd.size,
@@ -384,7 +489,7 @@ class AppBackend(val container: AppContainer) {
 
     private fun ownRule(rules: List<Rule>, path: String): Rule? =
         rules.firstOrNull {
-            isOwnRule(it, path) && it.conditions.matchesNetwork(container.network.current)
+            isOwnRule(it, path) && !it.conditions.hasNetworkScope
         }
 
     private fun isOwnRule(rule: Rule, path: String): Boolean =
