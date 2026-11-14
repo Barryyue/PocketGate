@@ -163,6 +163,7 @@ public sealed partial class ProfileService(
         var normalized = NormalizeName(profile.Name);
         var validatedMode = ValidateMode(profile.Mode);
         Profile updated;
+        var modeChanged = false;
         await _writeGate.WaitAsync(cancellationToken);
         try
         {
@@ -175,11 +176,19 @@ public sealed partial class ProfileService(
                 SortOrder = Math.Max(0, profile.SortOrder),
                 AutoActivate = profile.AutoActivate,
             };
+            modeChanged = existing.Mode != validatedMode;
             await repository.UpsertAsync(updated, cancellationToken);
             Volatile.Write(ref _profiles, Sort(All.Select(p => p.Id == updated.Id ? updated : p)));
-            if (updated.Id == state.ActiveProfileId && state.Mode != FilterMode.BlockAll)
+            if (modeChanged && updated.Id == state.ActiveProfileId)
             {
-                await state.SetModeAsync(updated.Mode, cancellationToken);
+                if (state.Mode == FilterMode.BlockAll)
+                {
+                    await state.ActivateProfileAsync(updated.Id, updated.Mode, cancellationToken);
+                }
+                else if (state.Mode != FilterMode.Disabled)
+                {
+                    await state.SetModeAsync(updated.Mode, cancellationToken);
+                }
             }
         }
         finally
@@ -222,6 +231,37 @@ public sealed partial class ProfileService(
         }
 
         NotifyChanged();
+    }
+
+    /// <summary>
+    /// 用戶切換模式：詢問 / 白名單 / 黑名單會回寫當前配置文件；全部阻斷和停用過濾只改運行狀態。
+    /// </summary>
+    public async Task SetActiveModeAsync(FilterMode mode, CancellationToken cancellationToken)
+    {
+        var temporary = mode is FilterMode.BlockAll or FilterMode.Disabled;
+        var profileChanged = false;
+        await _writeGate.WaitAsync(cancellationToken);
+        try
+        {
+            var active = Find(state.ActiveProfileId);
+            if (active is not null && !temporary && active.Mode != mode)
+            {
+                await repository.UpsertAsync(active with { Mode = mode }, cancellationToken);
+                Volatile.Write(ref _profiles, Sort(All.Select(p => p.Id == active.Id ? p with { Mode = mode } : p)));
+                profileChanged = true;
+            }
+
+            await state.SetModeAsync(mode, cancellationToken);
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
+
+        if (profileChanged)
+        {
+            NotifyChanged();
+        }
     }
 
     public async Task ActivateAsync(Guid id, ProfileSwitchReason reason, CancellationToken cancellationToken)

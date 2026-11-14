@@ -54,14 +54,21 @@ public sealed class RuntimeStateService(ISettingsRepository repository, TimeProv
     public Task ActivateProfileAsync(Guid profileId, FilterMode mode, CancellationToken cancellationToken) =>
         UpdateAsync(s =>
         {
-            if (s.ActiveProfileId == profileId && s.ModeBeforeBlockAll is null
-                && (s.Mode == mode || s.Mode == FilterMode.BlockAll))
+            if (s.Mode == FilterMode.BlockAll)
             {
-                return s;
+                return s.ActiveProfileId == profileId && s.ModeBeforeBlockAll == mode
+                    ? s
+                    : s with { ActiveProfileId = profileId, ModeBeforeBlockAll = mode };
             }
 
-            return s.Mode == FilterMode.BlockAll
-                ? s with { ActiveProfileId = profileId, ModeBeforeBlockAll = mode }
+            if (s.Mode == FilterMode.Disabled)
+            {
+                // 停用過濾是臨時狀態；切換配置文件不應重新打開保護
+                return s.ActiveProfileId == profileId ? s : s with { ActiveProfileId = profileId };
+            }
+
+            return s.ActiveProfileId == profileId && s.Mode == mode
+                ? s
                 : s with { ActiveProfileId = profileId, Mode = mode, ModeBeforeBlockAll = null };
         }, cancellationToken);
 

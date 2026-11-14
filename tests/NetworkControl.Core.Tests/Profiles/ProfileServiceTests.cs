@@ -89,6 +89,62 @@ public sealed class ProfileServiceTests
     }
 
     [Fact]
+    public async Task Updating_the_active_profile_mode_while_block_all_restores_to_the_new_mode()
+    {
+        await using var host = await ScenarioHost.StartAsync(withUiSession: false);
+        var ct = TestContext.Current.CancellationToken;
+        var company = await host.Profiles.CreateAsync("公司", FilterMode.Ask, null, ct);
+        await host.Profiles.ActivateAsync(company.Id, ProfileSwitchReason.User, ct);
+        await host.State.SetModeAsync(FilterMode.BlockAll, ct);
+
+        await host.Profiles.UpdateAsync(company with { Mode = FilterMode.Whitelist }, ct);
+        await host.State.RestoreFromBlockAllAsync(ct);
+
+        Assert.Equal(FilterMode.Whitelist, host.State.Mode);
+    }
+
+    [Fact]
+    public async Task Active_mode_write_back_survives_rename_and_temporary_modes()
+    {
+        await using var host = await ScenarioHost.StartAsync(withUiSession: false);
+        var ct = TestContext.Current.CancellationToken;
+        var company = await host.Profiles.CreateAsync("公司", FilterMode.Ask, null, ct);
+        await host.Profiles.ActivateAsync(company.Id, ProfileSwitchReason.User, ct);
+
+        await host.Profiles.SetActiveModeAsync(FilterMode.Blacklist, ct);
+        Assert.Equal(FilterMode.Blacklist, host.Profiles.Find(company.Id)?.Mode);
+        Assert.Equal(FilterMode.Blacklist, host.State.Mode);
+
+        await host.Profiles.UpdateAsync(host.Profiles.Find(company.Id)! with { Name = "公司 2" }, ct);
+        Assert.Equal(FilterMode.Blacklist, host.State.Mode);
+
+        await host.Profiles.SetActiveModeAsync(FilterMode.BlockAll, ct);
+        Assert.Equal(FilterMode.Blacklist, host.Profiles.Find(company.Id)?.Mode);
+        await host.State.RestoreFromBlockAllAsync(ct);
+        Assert.Equal(FilterMode.Blacklist, host.State.Mode);
+
+        await host.Profiles.SetActiveModeAsync(FilterMode.Disabled, ct);
+        await host.Profiles.ActivateAsync(Profile.DefaultId, ProfileSwitchReason.User, ct);
+        Assert.Equal(FilterMode.Disabled, host.State.Mode);
+        Assert.Equal(Profile.DefaultId, host.State.ActiveProfileId);
+    }
+
+    [Fact]
+    public async Task Switching_away_and_back_restores_the_written_back_mode()
+    {
+        await using var host = await ScenarioHost.StartAsync(withUiSession: false);
+        var ct = TestContext.Current.CancellationToken;
+        var company = await host.Profiles.CreateAsync("公司", FilterMode.Ask, null, ct);
+        await host.Profiles.ActivateAsync(company.Id, ProfileSwitchReason.User, ct);
+        await host.Profiles.SetActiveModeAsync(FilterMode.Whitelist, ct);
+
+        await host.Profiles.ActivateAsync(Profile.DefaultId, ProfileSwitchReason.User, ct);
+        await host.Profiles.ActivateAsync(company.Id, ProfileSwitchReason.User, ct);
+
+        Assert.Equal(FilterMode.Whitelist, host.State.Mode);
+    }
+
+    [Fact]
     public async Task Creating_from_a_missing_profile_fails_without_creating_anything()
     {
         await using var host = await ScenarioHost.StartAsync(withUiSession: false);

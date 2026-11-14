@@ -75,7 +75,7 @@ internal sealed class ControlGrpcService(
     [Authorize(Policy = IpcPolicies.Admin)]
     public override async Task<Proto.ServiceStatus> SetMode(Proto.SetModeRequest request, ServerCallContext context)
     {
-        await state.SetModeAsync(request.Mode.ToDomain(), context.CancellationToken);
+        await profiles.SetActiveModeAsync(request.Mode.ToDomain(), context.CancellationToken);
         return statusBuilder.Build(context.GetHttpContext().User);
     }
 
