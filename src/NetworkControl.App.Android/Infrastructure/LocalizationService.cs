@@ -69,5 +69,8 @@ public sealed class LocalizationService
         Dispatcher.UIThread.VerifyAccess();
         _preferences.Language = language?.ToString();
         _manager.ChangeLanguage(language ?? SupportedLanguages.Resolve(null));
+
+        // 同步給系統的「應用程式語言」（API 33+）；API 29–32 跳過
+        AndroidApplicationLocales.Apply(language);
     }
 }

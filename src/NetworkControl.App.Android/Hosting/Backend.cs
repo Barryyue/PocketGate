@@ -135,6 +135,9 @@ public interface IBackend
     QuietPeriodSummary? LastQuietPeriod { get; }
 
     void DismissQuietPeriod();
+
+    /// <summary>語言切換後刷新通知渠道名稱、前台通知和已顯示的詢問通知。</summary>
+    void RefreshNotifications();
 }
 
 internal sealed class Backend : IBackend
@@ -150,6 +153,7 @@ internal sealed class Backend : IBackend
     private readonly RuleEngine _rules;
     private readonly RuleService _ruleService;
     private readonly PromptBroker _prompts;
+    private readonly PromptNotifier _notifier;
     private readonly IActivityQuery _activity;
     private readonly TimeProvider _time;
     private readonly Context _context;
@@ -200,6 +204,7 @@ internal sealed class Backend : IBackend
         _rules = rules;
         _ruleService = ruleService;
         _prompts = prompts;
+        _notifier = notifier;
         _activity = activity;
         _time = time;
         _selfPackage = context.PackageName ?? "";
@@ -271,6 +276,13 @@ internal sealed class Backend : IBackend
     public QuietPeriodSummary? LastQuietPeriod => _quietPeriods.LastSummary;
 
     public void DismissQuietPeriod() => _quietPeriods.Dismiss();
+
+    public void RefreshNotifications()
+    {
+        NotificationChannels.Ensure(_context);
+        _tunnel.RefreshNotification();
+        _notifier.RefreshPending();
+    }
 
     public Intent? CreateVpnConsentIntent() => _tunnel.CreatePrepareIntent();
 

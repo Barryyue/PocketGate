@@ -1,9 +1,14 @@
 using global::Android.App;
 using global::Android.Content;
+using NetworkControl.Android.Infrastructure;
+using NetworkControl.Android.Localization;
 
 namespace NetworkControl.Android.Platform;
 
-/// <summary>通知渠道（Android 8+）。名稱來自 Android 字符串資源，跟隨應用語言。</summary>
+/// <summary>
+/// 通知渠道（Android 8+）。名稱和說明取自 AtomUI Catalog（與界面同源，docs/m3-tasks.md M3-10），
+/// 語言切換後由 <c>Backend.RefreshNotifications</c> 重新調用 <see cref="Ensure"/> 更新。
+/// </summary>
 internal static class NotificationChannels
 {
     /// <summary>聯網詢問：懸浮顯示。</summary>
@@ -22,15 +27,16 @@ internal static class NotificationChannels
             return;
         }
 
-        manager.CreateNotificationChannel(new NotificationChannel(Prompts, context.GetString(Resource.String.channel_prompts), NotificationImportance.High)
+        var text = NotificationText.Current;
+        manager.CreateNotificationChannel(new NotificationChannel(Prompts, text.Get(context, PromptLangResourceKind.ChannelPrompts), NotificationImportance.High)
         {
-            Description = context.GetString(Resource.String.channel_prompts_description),
+            Description = text.Get(context, PromptLangResourceKind.ChannelPromptsDescription),
         });
-        manager.CreateNotificationChannel(new NotificationChannel(Service, context.GetString(Resource.String.channel_service), NotificationImportance.Low)
+        manager.CreateNotificationChannel(new NotificationChannel(Service, text.Get(context, PromptLangResourceKind.ChannelService), NotificationImportance.Low)
         {
-            Description = context.GetString(Resource.String.channel_service_description),
+            Description = text.Get(context, PromptLangResourceKind.ChannelServiceDescription),
         });
-        manager.CreateNotificationChannel(new NotificationChannel(Alerts, context.GetString(Resource.String.channel_alerts), NotificationImportance.Default));
+        manager.CreateNotificationChannel(new NotificationChannel(Alerts, text.Get(context, PromptLangResourceKind.ChannelAlerts), NotificationImportance.Default));
     }
 
     /// <summary>打開主界面的 PendingIntent；<paramref name="promptId"/> 有值時界面打開對應的詢問。</summary>

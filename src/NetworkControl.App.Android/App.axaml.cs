@@ -2,6 +2,7 @@ using AtomUI;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using NetworkControl.Android.Infrastructure;
 using NetworkControl.Android.ViewModels;
 using NetworkControl.Android.Views;
@@ -50,6 +51,9 @@ public sealed partial class App : Avalonia.Application
                 this.GetLanguageManager() ?? throw new InvalidOperationException("AtomUI language manager is not available."),
                 this.GetLocalizer() ?? throw new InvalidOperationException("AtomUI localizer is not available."),
                 preferences);
+            // 通知文本來自同一組 Catalog：語言切換後刷新渠道名稱、前台通知和已顯示的詢問
+            localization.LanguageChanged += (_, _) =>
+                Hosting.BackendHost.Current?.Services.GetService<Hosting.IBackend>()?.RefreshNotifications();
             var appearance = new AppearanceService(
                 this.GetThemeManager() ?? throw new InvalidOperationException("AtomUI theme manager is not available."),
                 preferences);

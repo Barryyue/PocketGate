@@ -41,6 +41,7 @@ CATALOGS = {
         ('Cancel', 'Cancel', '取消', '取消'),
         ('Retry', 'Retry', '重試', '重试'),
         ('Refresh', 'Refresh', '重新整理', '刷新'),
+        ('UnknownApp', 'Unknown app', '未知的應用程式', '未知应用'),
     ],
     'Overview': [
         ('Protection', 'Protection', '保護', '保护'),
@@ -116,6 +117,12 @@ CATALOGS = {
         ('UntilRestart', 'Until restart', '直到重新啟動', '直到重启'),
         ('Later', 'Later', '稍後', '稍后'),
         ('Queue', '{0} more waiting', '還有 {0} 個詢問', '还有 {0} 个询问'),
+        ('NotificationMultiple', '{0} and {1} connections in total', '{0}，共 {1} 個連線', '{0}，共 {1} 个连接'),
+        ('ChannelPrompts', 'Connection requests', '連線詢問', '联网询问'),
+        ('ChannelPromptsDescription', 'Asks whether an app may connect to the network', '詢問應用程式是否可以連線網路', '询问应用是否可以联网'),
+        ('ChannelService', 'Protection status', '保護狀態', '保护状态'),
+        ('ChannelServiceDescription', 'Shown while protection is on', '保護開啟時顯示', '保护开启时显示'),
+        ('ChannelAlerts', 'Alerts', '提醒', '提醒'),
     ],
     'Settings': [
         ('Language', 'Language', '語言', '语言'),

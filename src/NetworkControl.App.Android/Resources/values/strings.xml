@@ -1,19 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <!-- 通知等在界面之外顯示的文本（沒有界面時也要可用，因此不放在 AtomUI Catalog 中）。三種語言同時維護。 -->
+  <!-- 系統在應用進程外讀取的文本（應用名、磁貼標籤）。通知等進程內文本由 AtomUI Catalog 提供（Infrastructure/NotificationText.cs）。 -->
   <string name="app_name">NetworkControl</string>
-  <string name="channel_prompts">Connection requests</string>
-  <string name="channel_prompts_description">Asks whether an app may connect to the network</string>
-  <string name="channel_service">Protection status</string>
-  <string name="channel_service_description">Shown while protection is on</string>
-  <string name="channel_alerts">Alerts</string>
-  <string name="service_title">Protection is on</string>
-  <string name="service_text">Apps without permission cannot connect to the network</string>
-  <string name="unknown_app">Unknown app</string>
-  <string name="prompt_title">{0} wants to connect</string>
-  <string name="prompt_title_tampered">{0} has changed and wants to connect</string>
-  <string name="prompt_text_multiple">{0} and {1} connections in total</string>
-  <string name="prompt_hint">The connection was blocked for now. After you allow it, the app can connect when it retries.</string>
-  <string name="action_allow">Allow</string>
-  <string name="action_block">Block</string>
 </resources>

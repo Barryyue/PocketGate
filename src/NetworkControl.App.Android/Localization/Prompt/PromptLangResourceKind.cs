@@ -18,4 +18,10 @@ public enum PromptLangResourceKind
     UntilRestart,
     Later,
     Queue,
+    NotificationMultiple,
+    ChannelPrompts,
+    ChannelPromptsDescription,
+    ChannelService,
+    ChannelServiceDescription,
+    ChannelAlerts,
 }

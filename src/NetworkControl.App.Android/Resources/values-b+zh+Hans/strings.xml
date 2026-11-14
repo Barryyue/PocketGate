@@ -1,18 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string name="app_name">NetworkControl</string>
-  <string name="channel_prompts">联网询问</string>
-  <string name="channel_prompts_description">询问应用是否可以联网</string>
-  <string name="channel_service">保护状态</string>
-  <string name="channel_service_description">保护开启时显示</string>
-  <string name="channel_alerts">提醒</string>
-  <string name="service_title">保护已开启</string>
-  <string name="service_text">未获允许的应用无法联网</string>
-  <string name="unknown_app">未知应用</string>
-  <string name="prompt_title">{0} 想要联网</string>
-  <string name="prompt_title_tampered">{0} 已被更改，想要联网</string>
-  <string name="prompt_text_multiple">{0}，共 {1} 个连接</string>
-  <string name="prompt_hint">此连接已被暂时阻止，允许后应用重新连接即可上网。</string>
-  <string name="action_allow">允许</string>
-  <string name="action_block">拒绝</string>
 </resources>
