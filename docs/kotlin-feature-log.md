@@ -1,0 +1,68 @@
+# Kotlin Android 版功能完成記錄
+
+> 用途：每個已完成的功能都在這裡留一條可追溯的記錄，方便後期驗證、回歸和同步。  
+> 規則：功能合併或交付時，**必須**在「完成項」追加一行；未在真機驗證的項目要如實寫明，不能只寫「完成」。  
+> 相關文件：[android-kotlin.md](android-kotlin.md)（計劃與階段）、[progress.md](progress.md)（整體看板）、[progress-android.md](progress-android.md)（Avalonia 版）。
+
+## 1. 記錄格式
+
+| 欄位 | 說明 |
+|---|---|
+| ID | `K-xxx`，按完成順序遞增 |
+| 功能 | 使用者可見的行為，不是單個類名 |
+| 版本 / 日期 | 首次完成的版本和日期 |
+| 實作位置 | 主要文件或目錄，方便定位 |
+| 驗證 | 自動化測試、模擬器、真機、待驗證 |
+| 提交 | 首次完成的提交（後續修正另註明） |
+
+## 2. 完成項
+
+### v0.1（2026-11-14，提交 `65e01e0`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-001 | 獨立 Kotlin Gradle 專案、Compose 骨架、可與 Avalonia 版並存 | `android-kotlin/`、`scripts/android-kotlin.ps1` | 模擬器啟動 | applicationId `com.networkcontrol.android.kotlin` |
+| K-002 | SQLite schema / 遷移 / 規則、設定、配置文件、應用、日誌、流量倉儲 | `data/db/`、`data/repository/` | JVM 測試；模擬器 | 與 C# schema 對齊 |
+| K-003 | 規則模型、匹配器、條件、具體度、優先級、篡改檢測、時效 | `core/model/`、`core/rules/` | 規則單元測試 | 30 個測試的一部分 |
+| K-004 | 判決階段鏈、詢問合併 / 排隊 / 超時 / 暫停 / 稍後、規則生成 | `core/pipeline/`、`core/prompts/` | 模擬器詢問流程 | BlockedEvent 只通報並返回 Deny |
+| K-005 | 黑洞式 VpnService、假 DNS、UID 歸屬、路由規劃 | `engine/vpn/`、`engine/apps/` | 模擬器 + `dumpsys connectivity` | 允許的應用排除在 VPN 外 |
+| K-006 | TCP RST / ICMP 不可達快速失敗 | `IpPacketBuilder`、`BlockedFlowReporter` | 封包單元測試；模擬器 | 每目標 1 秒限流 |
+| K-007 | 總覽、應用、記錄、設定、詢問卡片 | `ui/` | 模擬器逐頁操作 | 三語、明暗主題 |
+| K-008 | 應用三態、圖標、今日用量、最近連線 | `ui/apps/`、`AppBackend` | 模擬器 | — |
+| K-009 | 阻擋記錄聚合、原因 / 關鍵字篩選、詳情 | `ui/logs/`、`SqliteActivityStore` | 模擬器 | — |
+| K-010 | 流量總量（Wi-Fi + 行動網路合計） | `TrafficCollector`、`SqliteTrafficStore` | 模擬器授權後顯示 | **不區分網路類型** |
+| K-011 | 配置文件建立 / 改名 / 刪除 / 切換、模式回寫 | `ProfileService`、`SettingsScreen` | 模擬器 | v0.2 修正規則隔離 |
+| K-012 | 規則導入導出（`netcontrol-rules` v1，SAF） | `RuleTransferService`、`SettingsScreen` | JVM 測試 | 設備往返待驗證 |
+| K-013 | 診斷包 zip + 分享 | `DiagnosticsExporter` | 模擬器 | 資料庫 / 日誌待最終回歸 |
+| K-014 | 快捷設定磁貼、開機恢復、always-on VPN、撤銷處理 | `platform/`、`NcVpnService` | 代碼 / 模擬器部分 | 真機路徑待驗證 |
+| K-015 | 三語、明暗主題、通知渠道、前景通知 | `UiStrings`、`NotificationChannels` | 模擬器切換繁中 | 主題色在 v0.2 擴展 |
+| K-016 | 每日 config.db 備份、文件日誌 | `ConfigBackup`、`AppLog` | 代碼 / 模擬器 | 保留 7 份 / 7 天 |
+
+### v0.2（2026-11-15，提交 `f0e61c2`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-017 | 應用列表權限引導：Manifest 宣告 `GET_INSTALLED_APPS` / `GET_APP_LIST`，啟動偵測、`requestPermissions`、設定頁狀態、降級顯示包名 / UID | `AppCatalog`、`AppRoot`、`SettingsScreen`、`AndroidManifest.xml` | 模擬器設定頁；真機待驗證 | 不同 ROM 的設定路徑見 [android-app-list-permission.md](android-app-list-permission.md) |
+| K-018 | 主題色：10 個預設 + HSV 自訂選色盤，全局即時生效、持久化 | `Theme.kt`、`ThemeColorDialog.kt`、`ThemeController.kt` | 模擬器切換紫色 | 自訂色盤可拖動 |
+| K-019 | 應用三態規則按配置文件隔離；舊共享應用規則遷移到默認配置文件 | `AppBackend.setAppDecision`、`AppContainer.migrateLegacySharedAppRules` | 模擬器：默認 2 條、Work 0 條 | 修正用戶回報的規則共享 bug |
+| K-020 | 即時上下行網速（總覽 + 前景通知，TrafficStats 差值） | `SpeedMonitor`、`OverviewScreen`、`VpnForegroundNotifier` | 模擬器顯示 | 2 秒取樣 |
+| K-021 | 勿擾入口（1 小時 / 關閉）+ 摘要通知 + 摘要卡片 | `OverviewScreen`、`QuietPeriodTracker`、`QuietPeriodNotifier` | 模擬器入口 / 代碼 | 摘要通知真機待驗證 |
+| K-022 | 按網絡類型 / SSID 自動切換配置文件；NetworkMonitor 改為默認網路回調、忽略自身 VPN | `ProfileAutoSwitcher`、`NetworkMonitor`、`SettingsScreen` | 模擬器 UI；自動切換待真機 | SSID 需定位權限 |
+| K-023 | P0/P1 審查修正：配置文件操作閃退、隧道重建競態、detach/revoke 競爭、BlockedEvent 待決額度、初始化/重配異常隔離、流量重複計數、日誌保留、通知權限回呼、UID -1、per-app 語言覆寫 | `VpnTunnel`、`PromptBroker`、`AppContainer`、`TrafficCollector` 等 | JVM 測試 + 構建 + 模擬器 | 詳見 [kotlin-audit-2026-11-15.md](kotlin-audit-2026-11-15.md) |
+
+### 尚未完成（待辦，不屬於完成項）
+
+| ID | 功能 | 狀態 / 計劃 |
+|---|---|---|
+| K-024 | Wi-Fi / 行動網路 / SIM1 / SIM2 的流量拆分與管控 | 計劃見 [android-network-sim-plan.md](android-network-sim-plan.md) |
+| K-025 | 通知動作在進程被回收後失效（P2-6） | 待做 |
+| K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 待做 |
+| K-027 | 懸浮詢問面板、專注模式 / 時間表、鎖屏斷網、允許一次 | 路線圖 |
+| K-028 | 轉發模式 + 上游代理 | 預研完成，見 [android-forwarding-research.md](android-forwarding-research.md) |
+
+## 3. 維護規則
+
+1. 每完成一個使用者可見功能，追加一行 `K-xxx`；純重構若影響行為也要記錄。
+2. 驗證欄位必須具體：`JVM 測試`、`模擬器`、`真機`、`待驗證`，不能只寫「完成」。
+3. 每次發布 APK 時，在 `android-kotlin.md` 的版本章節記錄路徑、大小、SHA-256 和未驗證項。
+4. 功能被後續版本修正時，保留原記錄，新增「修正」備註和提交號，不要覆寫歷史。

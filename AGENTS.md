@@ -25,6 +25,7 @@
   3. `dotnet format NetworkControl.slnx --verify-no-changes --exclude src/NetworkControl.App.Android src/NetworkControl.Engine.Android` 通過（Android 項目沒有工作負載時無法分析，必須排除；它們的格式由 `NetworkControl.Android.slnx` 檢查）。
   4. **改動了 Core 或 Storage**（Android 版共用它們）：本機有 Android 工具鏈時，再構建一次 `NetworkControl.Android.slnx`（見 docs/development.md §11）；沒有工具鏈時在進度文件中註明「未驗證 Android 構建」，CI 的 Android 任務會兜底。盡量以追加的方式修改公開接口（新增方法、可選參數），不要直接改已有的簽名。
   5. 更新 `docs/progress.md`（Android 任務更新 `docs/progress-android.md`）：任務標為 `[x]`，寫明完成內容；有沒驗證到的部分要如實寫明。設計有變化時同步更新 `docs/design.md` §22；發現新的坑就補充到本文件第 6 節。
+  6. **完成項落盤**：在 `docs/kotlin-feature-log.md`（Kotlin 版）或對應的功能記錄文件中追加一行，註明功能、日期、提交、驗證方式和未驗證項。沒有落盤的功能不能算完成。
 - **提交信息**：使用 Conventional Commits 格式，例如 `feat(storage): daily backup of config.db`，正文可以用中文。
 - **禁止事項**：
   - 不要修改已發布的數據庫遷移腳本，也不要修改 proto 中已有的字段編號。

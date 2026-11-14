@@ -4,6 +4,8 @@
 > 目標：用 Kotlin + Jetpack Compose 完整重寫 Android 版，先追平 2026-11-14 的 Avalonia 版功能，再產出可安裝的 **v0.1 APK**。
 > 用途：保留兩套 Android 實現並行維護，作為後期技術選型（APK 體積、冷啟動、流暢度、內存、耗電、開發效率、平台整合成本）的實測對照。
 > 本文件是執行計劃和狀態看板；`docs/progress.md` / `docs/progress-android.md` 只保留入口連結，避免三處狀態不一致。
+> **完成項記錄：** [kotlin-feature-log.md](kotlin-feature-log.md)（每個功能必須落盤，見 AGENTS.md 完成標準第 6 條）。
+> **網絡 / SIM 規劃：** [android-network-sim-plan.md](android-network-sim-plan.md)。
 >
 > **目前狀態（2026-11-15）：v0.2 已完成並打包。** 在 v0.1 基礎上新增應用列表權限引導、主題色（預設 + HSV 自訂）、規則按配置文件隔離、即時網速、勿擾入口與摘要通知、按網絡自動切換配置文件，並修正代碼審查發現的 P0/P1 問題。Release APK 約 3.2 MB（雙 ABI，Debug 簽名），模擬器冷啟動約 2.1 秒。真機仍需回歸 OEM 應用列表權限、自動切換、主題色與通知路徑，詳見 §11。
 
