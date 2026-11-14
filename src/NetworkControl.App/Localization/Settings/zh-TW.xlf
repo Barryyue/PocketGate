@@ -355,5 +355,65 @@
         <target state="translated">介面偏好只影響你自己；服務設定對本機所有使用者生效。</target>
       </segment>
     </unit>
+    <unit id="SectionUpdate">
+      <segment>
+        <source>Updates</source>
+        <target state="translated">更新</target>
+      </segment>
+    </unit>
+    <unit id="UpdateHint">
+      <segment>
+        <source>NetworkControl checks for a new version at most once a day. Nothing is uploaded, and updates are not installed automatically.</source>
+        <target state="translated">NetworkControl 每天最多檢查一次新版本。不會上傳任何內容，也不會自動安裝。</target>
+      </segment>
+    </unit>
+    <unit id="UpdateAutoCheck">
+      <segment>
+        <source>Check for updates automatically</source>
+        <target state="translated">自動檢查更新</target>
+      </segment>
+    </unit>
+    <unit id="UpdateCheckNow">
+      <segment>
+        <source>Check now</source>
+        <target state="translated">立即檢查</target>
+      </segment>
+    </unit>
+    <unit id="UpdateChecking">
+      <segment>
+        <source>Checking…</source>
+        <target state="translated">正在檢查…</target>
+      </segment>
+    </unit>
+    <unit id="UpdateNeverChecked">
+      <segment>
+        <source>Not checked yet</source>
+        <target state="translated">尚未檢查</target>
+      </segment>
+    </unit>
+    <unit id="UpdateLastChecked">
+      <segment>
+        <source>Last checked: {0}</source>
+        <target state="translated">上次檢查：{0}</target>
+      </segment>
+    </unit>
+    <unit id="UpdateAvailable">
+      <segment>
+        <source>Version {0} is available (you have {1}).</source>
+        <target state="translated">有新版本 {0} 可以使用（目前為 {1}）。</target>
+      </segment>
+    </unit>
+    <unit id="UpdateDownload">
+      <segment>
+        <source>Download</source>
+        <target state="translated">下載</target>
+      </segment>
+    </unit>
+    <unit id="UpdateIgnore">
+      <segment>
+        <source>Ignore this version</source>
+        <target state="translated">忽略此版本</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

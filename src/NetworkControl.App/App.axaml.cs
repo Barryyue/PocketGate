@@ -64,6 +64,9 @@ public sealed partial class App : Application
             StartManagedServiceIfNeeded(services);
             services.GetRequiredService<ServiceConnection>().Start();
 
+            // 更新檢查只由界面進程發起（服務以 SYSTEM 運行，不應主動聯網）；地址為空或開發構建時自動停用
+            services.GetRequiredService<UpdateChecker>().Start();
+
             // 開機自啟時以 --minimized 啟動，只顯示托盤
             var minimized = desktop.Args?.Contains("--minimized", StringComparer.OrdinalIgnoreCase) == true;
             if (!minimized)
@@ -111,6 +114,7 @@ public sealed partial class App : Application
         services.AddSingleton<DiagnosticsExportFlow>();
         services.AddSingleton<RuleTransferFlow>();
         services.AddSingleton<OnboardingFlow>();
+        services.AddSingleton<UpdateChecker>();
 
         // 頁面：註冊順序即導航順序（與 ShellWindow 中的導航菜單一致）
         services.AddSingleton<ActivityDashboardViewModel>();

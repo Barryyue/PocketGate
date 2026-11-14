@@ -24,6 +24,15 @@ public sealed record UiPreferences
 
     /// <summary>已看過的首次運行引導版本；0 表示從未顯示（見 <c>OnboardingFlow.CurrentVersion</c>）。</summary>
     public int OnboardingVersion { get; init; }
+
+    /// <summary>
+    /// 自動檢查更新；null 表示尚未設置（默認開啟）。
+    /// 用可空類型而不是 <c>= true</c> 的初始值：源生成 JSON 在缺少字段時會把 bool 反序列化為 false（見 AGENTS.md 第 6 節）。
+    /// </summary>
+    public bool? AutoCheckUpdates { get; init; }
+
+    /// <summary>用戶選擇「忽略此版本」的版本號；null 表示沒有忽略任何版本。</summary>
+    public string? IgnoredUpdateVersion { get; init; }
 }
 
 [JsonSourceGenerationOptions(WriteIndented = true, UseStringEnumConverter = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
