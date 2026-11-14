@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+import "common.proto";
+
+service Connections {
+  rpc List (ListConnectionsRequest) returns (ListConnectionsResponse);
+  rpc Kill (KillConnectionRequest) returns (KillConnectionResponse);
+}
+
+message ListConnectionsRequest {
+  bool include_listening = 1;
+  bool include_loopback = 2;
+}
+
+enum ConnectionStateKind {
+  CONNECTION_STATE_KIND_LISTEN = 0;
+  CONNECTION_STATE_KIND_ESTABLISHED = 1;
+  CONNECTION_STATE_KIND_SYN_SENT = 2;
+  CONNECTION_STATE_KIND_SYN_RECEIVED = 3;
+  CONNECTION_STATE_KIND_CLOSING = 4;
+  CONNECTION_STATE_KIND_TIME_WAIT = 5;
+  CONNECTION_STATE_KIND_CLOSED = 6;
+  CONNECTION_STATE_KIND_UDP = 7;
+}
+
+message LiveConnection {
+  Protocol protocol = 1;
+  IpEndpoint local = 2;
+  IpEndpoint remote = 3;
+  ConnectionStateKind state = 4;
+  int32 pid = 5;
+  optional int64 app_id = 6;
+  string app_name = 7;
+  string app_path = 8;
+  optional string hostname = 9;
+}
+
+message ListConnectionsResponse {
+  repeated LiveConnection connections = 1;
+  bool supported = 2;
+}
+
+message KillConnectionRequest {
+  Protocol protocol = 1;
+  IpEndpoint local = 2;
+  IpEndpoint remote = 3;
+}
+
+message KillConnectionResponse {
+  bool killed = 1;
+  string message = 2;
+}

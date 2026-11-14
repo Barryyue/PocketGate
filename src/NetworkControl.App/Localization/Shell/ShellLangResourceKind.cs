@@ -18,4 +18,5 @@ public enum ShellLangResourceKind
     Quit,
     NavApps,
     StatusPendingPrompts,
+    NavConnections,
 }

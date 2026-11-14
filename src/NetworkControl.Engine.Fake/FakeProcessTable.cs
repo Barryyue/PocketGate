@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using NetworkControl.Core.Apps;
 using NetworkControl.Core.Domain;
+using NetworkControl.Core.Engine;
 
 namespace NetworkControl.Engine.Fake;
 
@@ -34,6 +35,8 @@ public sealed class FakeProcessTable : IProcessInfoProvider, IAppInspector, IPro
     }
 
     public IReadOnlyCollection<FakeAppDefinition> Apps => _apps.Values.OrderBy(a => a.DisplayName, StringComparer.CurrentCulture).ToArray();
+
+    public IReadOnlyCollection<ProcessSnapshot> Running => _running.Values.ToArray();
 
     public void Register(FakeAppDefinition app) => _apps[app.Key] = app;
 

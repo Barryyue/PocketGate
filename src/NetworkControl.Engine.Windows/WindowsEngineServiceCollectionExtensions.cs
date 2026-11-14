@@ -17,6 +17,7 @@ public static class WindowsEngineServiceCollectionExtensions
         services.TryAddSingleton<IProcessInfoProvider>(sp => sp.GetRequiredService<WindowsProcessInfoProvider>());
         services.TryAddSingleton<IAppInspector, WindowsAppInspector>();
         services.TryAddSingleton<IProcessExitWatcher, WindowsProcessExitWatcher>();
+        services.TryAddSingleton<IConnectionTable, WindowsConnectionTable>();
 
         services.TryAddSingleton<WfpEngine>();
         services.TryAddSingleton<INetworkEngine>(sp => sp.GetRequiredService<WfpEngine>());

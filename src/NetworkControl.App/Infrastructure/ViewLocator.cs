@@ -15,6 +15,7 @@ public sealed class ViewLocator : IDataTemplate
     {
         [typeof(OverviewViewModel)] = () => new OverviewView(),
         [typeof(AppsViewModel)] = () => new AppsView(),
+        [typeof(ConnectionsViewModel)] = () => new ConnectionsView(),
         [typeof(RulesViewModel)] = () => new RulesView(),
         [typeof(LogViewModel)] = () => new LogView(),
         [typeof(SettingsViewModel)] = () => new SettingsView(),

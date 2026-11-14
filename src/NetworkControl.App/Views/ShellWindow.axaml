@@ -30,6 +30,9 @@
           <atom:NavMenuNode ItemKey="rules" Header="{loc:ShellLangResource NavRules}"
                             Icon="{antdicons:AntDesignIconProvider Kind=SafetyCertificateOutlined}"
                             Command="{Binding NavigateCommand}" CommandParameter="rules" />
+          <atom:NavMenuNode ItemKey="connections" Header="{loc:ShellLangResource NavConnections}"
+                            Icon="{antdicons:AntDesignIconProvider Kind=ApiOutlined}"
+                            Command="{Binding NavigateCommand}" CommandParameter="connections" />
           <atom:NavMenuNode ItemKey="log" Header="{loc:ShellLangResource NavLog}"
                             Icon="{antdicons:AntDesignIconProvider Kind=HistoryOutlined}"
                             Command="{Binding NavigateCommand}" CommandParameter="log" />

@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.App.ViewModels"
+             xmlns:loc="using:NetworkControl.App.Localization"
+             x:Class="NetworkControl.App.Views.ConnectionsView"
+             x:DataType="vm:ConnectionsViewModel"
+             x:Name="Root">
+  <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Spacing="16" Margin="0,0,0,16">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <atom:ToggleSwitch IsChecked="{Binding IncludeListening}" />
+            <TextBlock VerticalAlignment="Center" Text="{loc:ConnectionsLangResource IncludeListening}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <atom:ToggleSwitch IsChecked="{Binding IncludeLoopback}" />
+            <TextBlock VerticalAlignment="Center" Text="{loc:ConnectionsLangResource IncludeLoopback}" />
+          </StackPanel>
+          <atom:Button Icon="{antdicons:AntDesignIconProvider Kind=ReloadOutlined}"
+                       Command="{Binding RefreshCommand}" Content="{loc:CommonLangResource Refresh}" />
+        </StackPanel>
+        <StackPanel Spacing="2">
+          <TextBlock Classes="page-title" Text="{loc:ConnectionsLangResource Title}" />
+          <TextBlock Classes="secondary" Text="{loc:ConnectionsLangResource Subtitle}" />
+        </StackPanel>
+      </DockPanel>
+      <atom:SearchEdit Width="320" Text="{Binding Keyword}" PlaceholderText="{loc:ConnectionsLangResource SearchPlaceholder}" />
+      <atom:Alert Type="Error" IsShowIcon="True" IsClosable="True" Message="{Binding ErrorMessage}"
+                  IsVisible="{Binding ErrorMessage, Converter={x:Static vm:Converters.HasText}}" />
+    </StackPanel>
+    <Panel>
+      <atom:Empty IsVisible="{Binding ShowUnsupported}" Description="{loc:ConnectionsLangResource Unsupported}"
+                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <atom:Empty IsVisible="{Binding IsEmpty}" Description="{loc:ConnectionsLangResource Empty}"
+                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+      <atom:DataGrid ItemsSource="{Binding ItemsSource}" IsVisible="{Binding !ShowUnsupported}" IsReadOnly="True"
+                     CanUserResizeColumns="True">
+        <atom:DataGrid.Columns>
+          <atom:DataGridTemplateColumn Header="{loc:ConnectionsLangResource ColumnApp}" Width="2*">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ConnectionItemViewModel">
+                <StackPanel Spacing="2" Margin="0,5">
+                  <TextBlock Classes="rank-label" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="caption" Text="{Binding AppPath}" IsVisible="{Binding AppPath, Converter={x:Static vm:Converters.HasText}}"
+                             TextTrimming="PrefixCharacterEllipsis" ToolTip.Tip="{Binding AppPath}" />
+                </StackPanel>
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+          <atom:DataGridTextColumn x:DataType="vm:ConnectionItemViewModel" Header="{loc:ConnectionsLangResource ColumnProtocol}" Binding="{Binding ProtocolText}" Width="86" />
+          <atom:DataGridTextColumn x:DataType="vm:ConnectionItemViewModel" Header="{loc:ConnectionsLangResource ColumnLocal}" Binding="{Binding Local}" Width="170" />
+          <atom:DataGridTemplateColumn Header="{loc:ConnectionsLangResource ColumnRemote}" Width="200">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ConnectionItemViewModel">
+                <TextBlock Text="{Binding RemoteDisplay}" ToolTip.Tip="{Binding RemoteTooltip}" TextTrimming="CharacterEllipsis" />
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+          <atom:DataGridTextColumn x:DataType="vm:ConnectionItemViewModel" Header="{loc:ConnectionsLangResource ColumnState}" Binding="{Binding StateText}" Width="120" />
+          <atom:DataGridTextColumn x:DataType="vm:ConnectionItemViewModel" Header="{loc:ConnectionsLangResource ColumnPid}" Binding="{Binding Connection.Pid}" Width="82" />
+          <atom:DataGridTemplateColumn Header="{loc:ConnectionsLangResource ColumnOperations}" Width="230">
+            <atom:DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:ConnectionItemViewModel">
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                  <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:ConnectionsLangResource ViewLog}"
+                               Command="{Binding #Root.((vm:ConnectionsViewModel)DataContext).ViewLogCommand}" CommandParameter="{Binding}" />
+                  <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:ConnectionsLangResource CreateRule}"
+                               Command="{Binding #Root.((vm:ConnectionsViewModel)DataContext).CreateRuleCommand}" CommandParameter="{Binding}" />
+                  <atom:PopupConfirm IsVisible="{Binding CanKill}" Title="{loc:ConnectionsLangResource DisconnectConfirmTitle}"
+                                     ConfirmContent="{loc:ConnectionsLangResource DisconnectConfirmContent}"
+                                     OkButtonType="Primary" Confirmed="OnKillConfirmed">
+                    <atom:Button ButtonType="Link" SizeType="Small" IsDanger="True" Content="{loc:ConnectionsLangResource Disconnect}" />
+                  </atom:PopupConfirm>
+                  <atom:Button ButtonType="Link" SizeType="Small" IsVisible="{Binding CanKill}"
+                               Content="{loc:ConnectionsLangResource DisconnectAndDeny}"
+                               Command="{Binding #Root.((vm:ConnectionsViewModel)DataContext).KillAndDenyCommand}" CommandParameter="{Binding}" />
+                </StackPanel>
+              </DataTemplate>
+            </atom:DataGridTemplateColumn.CellTemplate>
+          </atom:DataGridTemplateColumn>
+        </atom:DataGrid.Columns>
+      </atom:DataGrid>
+    </Panel>
+  </DockPanel>
+</UserControl>

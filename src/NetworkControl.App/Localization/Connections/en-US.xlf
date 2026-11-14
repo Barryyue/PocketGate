@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.ConnectionsLangResourceKind">
+    <unit id="Title"><segment><source>Live connections</source></segment></unit>
+    <unit id="Subtitle"><segment><source>Current TCP connections and UDP endpoints on this computer.</source></segment></unit>
+    <unit id="SearchPlaceholder"><segment><source>Search app or endpoint</source></segment></unit>
+    <unit id="IncludeListening"><segment><source>Listening</source></segment></unit>
+    <unit id="IncludeLoopback"><segment><source>Loopback</source></segment></unit>
+    <unit id="Empty"><segment><source>No active connections.</source></segment></unit>
+    <unit id="Unsupported"><segment><source>This platform does not provide a connection table.</source></segment></unit>
+    <unit id="ColumnApp"><segment><source>App</source></segment></unit>
+    <unit id="ColumnProtocol"><segment><source>Protocol</source></segment></unit>
+    <unit id="ColumnLocal"><segment><source>Local</source></segment></unit>
+    <unit id="ColumnRemote"><segment><source>Remote</source></segment></unit>
+    <unit id="ColumnState"><segment><source>State</source></segment></unit>
+    <unit id="ColumnPid"><segment><source>PID</source></segment></unit>
+    <unit id="StateListen"><segment><source>Listening</source></segment></unit>
+    <unit id="StateEstablished"><segment><source>Established</source></segment></unit>
+    <unit id="StateSynSent"><segment><source>SYN sent</source></segment></unit>
+    <unit id="StateSynReceived"><segment><source>SYN received</source></segment></unit>
+    <unit id="StateClosing"><segment><source>Closing</source></segment></unit>
+    <unit id="StateTimeWait"><segment><source>Time wait</source></segment></unit>
+    <unit id="StateClosed"><segment><source>Closed</source></segment></unit>
+    <unit id="StateUdp"><segment><source>UDP</source></segment></unit>
+    <unit id="ColumnOperations"><segment><source>Actions</source></segment></unit>
+    <unit id="ViewLog"><segment><source>Log</source></segment></unit>
+    <unit id="CreateRule"><segment><source>Create rule</source></segment></unit>
+    <unit id="Disconnect"><segment><source>Disconnect</source></segment></unit>
+    <unit id="DisconnectConfirmTitle"><segment><source>Disconnect this connection?</source></segment></unit>
+    <unit id="DisconnectConfirmContent"><segment><source>The remote side will see the connection closed. The application may reconnect.</source></segment></unit>
+    <unit id="DisconnectAndDeny"><segment><source>Disconnect and deny</source></segment></unit>
+  </file>
+</xliff>

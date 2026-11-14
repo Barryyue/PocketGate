@@ -113,6 +113,7 @@ public sealed partial class App : Application
         services.AddSingleton<ActivityDashboardViewModel>();
         services.AddSingleton<PageViewModel, OverviewViewModel>();
         services.AddSingleton<PageViewModel, AppsViewModel>();
+        services.AddSingleton<PageViewModel, ConnectionsViewModel>();
         services.AddSingleton<PageViewModel, RulesViewModel>();
         services.AddSingleton<PageViewModel, LogViewModel>();
         services.AddSingleton<PageViewModel, SettingsViewModel>();

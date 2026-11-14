@@ -73,5 +73,6 @@
         <target state="translated">{0} 個連線等待回應</target>
       </segment>
     </unit>
+    <unit id="NavConnections"><segment><source>Live connections</source><target state="translated">即時連線</target></segment></unit>
   </file>
 </xliff>

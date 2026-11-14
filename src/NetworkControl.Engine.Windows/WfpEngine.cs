@@ -89,7 +89,10 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
 
     public string Name => "WFP";
 
-    public EngineCapabilities Capabilities => EngineCapabilities.RulePush | EngineCapabilities.TrafficStats;
+    public EngineCapabilities Capabilities => EngineCapabilities.RulePush | EngineCapabilities.TrafficStats | EngineCapabilities.KillConnection;
+
+    public ValueTask<bool> KillConnectionAsync(ConnectionKey key, CancellationToken cancellationToken) =>
+        WindowsConnectionKiller.KillAsync(key, cancellationToken);
 
     public async Task StartAsync(IEngineHost host, CancellationToken cancellationToken)
     {

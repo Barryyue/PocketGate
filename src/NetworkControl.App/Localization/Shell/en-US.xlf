@@ -61,5 +61,6 @@
         <source>{0} awaiting answer</source>
       </segment>
     </unit>
+    <unit id="NavConnections"><segment><source>Live connections</source></segment></unit>
   </file>
 </xliff>

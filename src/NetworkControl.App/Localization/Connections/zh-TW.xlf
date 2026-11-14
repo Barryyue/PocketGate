@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.ConnectionsLangResourceKind">
+    <unit id="Title"><segment><source>Live connections</source><target state="translated">即時連線</target></segment></unit>
+    <unit id="Subtitle"><segment><source>Current TCP connections and UDP endpoints on this computer.</source><target state="translated">這部電腦目前的 TCP 連線與 UDP 端點。</target></segment></unit>
+    <unit id="SearchPlaceholder"><segment><source>Search app or endpoint</source><target state="translated">搜尋應用程式或端點</target></segment></unit>
+    <unit id="IncludeListening"><segment><source>Listening</source><target state="translated">監聽</target></segment></unit>
+    <unit id="IncludeLoopback"><segment><source>Loopback</source><target state="translated">迴路</target></segment></unit>
+    <unit id="Empty"><segment><source>No active connections.</source><target state="translated">目前沒有作用中的連線。</target></segment></unit>
+    <unit id="Unsupported"><segment><source>This platform does not provide a connection table.</source><target state="translated">此平台不支援讀取連線表。</target></segment></unit>
+    <unit id="ColumnApp"><segment><source>App</source><target state="translated">應用程式</target></segment></unit>
+    <unit id="ColumnProtocol"><segment><source>Protocol</source><target state="translated">通訊協定</target></segment></unit>
+    <unit id="ColumnLocal"><segment><source>Local</source><target state="translated">本機</target></segment></unit>
+    <unit id="ColumnRemote"><segment><source>Remote</source><target state="translated">遠端</target></segment></unit>
+    <unit id="ColumnState"><segment><source>State</source><target state="translated">狀態</target></segment></unit>
+    <unit id="ColumnPid"><segment><source>PID</source><target state="translated">PID</target></segment></unit>
+    <unit id="StateListen"><segment><source>Listening</source><target state="translated">監聽中</target></segment></unit>
+    <unit id="StateEstablished"><segment><source>Established</source><target state="translated">已建立</target></segment></unit>
+    <unit id="StateSynSent"><segment><source>SYN sent</source><target state="translated">已傳送 SYN</target></segment></unit>
+    <unit id="StateSynReceived"><segment><source>SYN received</source><target state="translated">已收到 SYN</target></segment></unit>
+    <unit id="StateClosing"><segment><source>Closing</source><target state="translated">關閉中</target></segment></unit>
+    <unit id="StateTimeWait"><segment><source>Time wait</source><target state="translated">等待關閉</target></segment></unit>
+    <unit id="StateClosed"><segment><source>Closed</source><target state="translated">已關閉</target></segment></unit>
+    <unit id="StateUdp"><segment><source>UDP</source><target state="translated">UDP</target></segment></unit>
+    <unit id="ColumnOperations"><segment><source>Actions</source><target state="translated">操作</target></segment></unit>
+    <unit id="ViewLog"><segment><source>Log</source><target state="translated">記錄</target></segment></unit>
+    <unit id="CreateRule"><segment><source>Create rule</source><target state="translated">建立規則</target></segment></unit>
+    <unit id="Disconnect"><segment><source>Disconnect</source><target state="translated">中斷連線</target></segment></unit>
+    <unit id="DisconnectConfirmTitle"><segment><source>Disconnect this connection?</source><target state="translated">中斷這條連線？</target></segment></unit>
+    <unit id="DisconnectConfirmContent"><segment><source>The remote side will see the connection closed. The application may reconnect.</source><target state="translated">遠端會看到連線被關閉，應用程式可能會重新連線。</target></segment></unit>
+    <unit id="DisconnectAndDeny"><segment><source>Disconnect and deny</source><target state="translated">中斷並拒絕</target></segment></unit>
+  </file>
+</xliff>

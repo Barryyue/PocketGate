@@ -14,6 +14,8 @@ public static class FakeEngineServiceCollectionExtensions
         services.TryAddSingleton<IProcessInfoProvider>(sp => sp.GetRequiredService<FakeProcessTable>());
         services.TryAddSingleton<IAppInspector>(sp => sp.GetRequiredService<FakeProcessTable>());
         services.TryAddSingleton<IProcessExitWatcher>(sp => sp.GetRequiredService<FakeProcessTable>());
+        services.TryAddSingleton<FakeConnectionTable>();
+        services.TryAddSingleton<IConnectionTable>(sp => sp.GetRequiredService<FakeConnectionTable>());
 
         services.TryAddSingleton<FakeNetworkEngine>();
         services.TryAddSingleton<INetworkEngine>(sp => sp.GetRequiredService<FakeNetworkEngine>());
