@@ -63,48 +63,55 @@ public sealed partial class AppIconCache
 
         try
         {
-            if (info.ColorBitmap == IntPtr.Zero || GetObject(info.ColorBitmap, Marshal.SizeOf<NativeBitmap>(), out var native) == 0
+            if (info.ColorBitmap == IntPtr.Zero
+                || GetObject(info.ColorBitmap, Marshal.SizeOf<NativeBitmap>(), out var native) == 0
                 || native.Width <= 0 || native.Height <= 0)
             {
                 return null;
             }
 
-            var width = native.Width;
-            var height = native.Height;
-            var header = new BitmapInfoHeader
-            {
-                Size = (uint)Marshal.SizeOf<BitmapInfoHeader>(),
-                Width = width,
-                Height = -height,
-                Planes = 1,
-                BitCount = 32,
-            };
-            var infoBlock = new BitmapInfo { Header = header };
-            var pixels = new byte[width * height * 4];
-            var buffer = Marshal.AllocHGlobal(pixels.Length);
             var dc = CreateCompatibleDC(IntPtr.Zero);
+            if (dc == IntPtr.Zero)
+            {
+                return null;
+            }
+
             try
             {
-                if (GetDIBits(dc, info.ColorBitmap, 0, (uint)height, buffer, ref infoBlock, 0) == 0)
+                if (GetPixels(dc, info.ColorBitmap, native.Width, native.Height) is not { } pixels)
                 {
                     return null;
                 }
 
-                Marshal.Copy(buffer, pixels, 0, pixels.Length);
+                if (IsFullyTransparent(pixels))
+                {
+                    // 舊式圖標（例如 8 位 / 4 位）沒有 Alpha 通道：GetDIBits 轉成 32 位後 Alpha 全為 0。
+                    // 用 AND 掩碼補回透明度：掩碼位 1（白）表示透明，0（黑）表示不透明。
+                    if (info.MaskBitmap == IntPtr.Zero || GetPixels(dc, info.MaskBitmap, native.Width, native.Height) is not { } mask)
+                    {
+                        SetOpaque(pixels);
+                    }
+                    else
+                    {
+                        ApplyMaskAlpha(pixels, mask);
+                    }
+                }
+
+                var writeable = new WriteableBitmap(new PixelSize(native.Width, native.Height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+                using (var frame = writeable.Lock())
+                {
+                    for (var y = 0; y < native.Height; y++)
+                    {
+                        Marshal.Copy(pixels, y * native.Width * 4, IntPtr.Add(frame.Address, y * frame.RowBytes), native.Width * 4);
+                    }
+                }
+
+                return writeable;
             }
             finally
             {
                 DeleteDC(dc);
-                Marshal.FreeHGlobal(buffer);
             }
-
-            var writeable = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-            using (var frame = writeable.Lock())
-            {
-                Marshal.Copy(pixels, 0, frame.Address, pixels.Length);
-            }
-
-            return writeable;
         }
         finally
         {
@@ -117,6 +124,66 @@ public sealed partial class AppIconCache
             {
                 DeleteObject(info.MaskBitmap);
             }
+        }
+    }
+
+    private static byte[]? GetPixels(IntPtr dc, IntPtr bitmap, int width, int height)
+    {
+        var header = new BitmapInfoHeader
+        {
+            Size = (uint)Marshal.SizeOf<BitmapInfoHeader>(),
+            Width = width,
+            Height = -height,
+            Planes = 1,
+            BitCount = 32,
+        };
+        var info = new BitmapInfo { Header = header };
+        var pixels = new byte[width * height * 4];
+        var buffer = Marshal.AllocHGlobal(pixels.Length);
+        try
+        {
+            if (GetDIBits(dc, bitmap, 0, (uint)height, buffer, ref info, 0) == 0)
+            {
+                return null;
+            }
+
+            Marshal.Copy(buffer, pixels, 0, pixels.Length);
+            return pixels;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
+    private static bool IsFullyTransparent(byte[] bgra)
+    {
+        for (var index = 3; index < bgra.Length; index += 4)
+        {
+            if (bgra[index] != 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>用單色 AND 掩碼生成透明度：白色（1）透明，黑色（0）不透明。</summary>
+    internal static void ApplyMaskAlpha(byte[] bgra, byte[] mask)
+    {
+        var length = Math.Min(bgra.Length, mask.Length);
+        for (var index = 0; index + 3 < length; index += 4)
+        {
+            bgra[index + 3] = mask[index] > 127 ? (byte)0 : (byte)255;
+        }
+    }
+
+    private static void SetOpaque(byte[] bgra)
+    {
+        for (var index = 3; index < bgra.Length; index += 4)
+        {
+            bgra[index] = 255;
         }
     }
 
