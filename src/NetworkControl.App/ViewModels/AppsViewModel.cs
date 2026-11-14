@@ -47,6 +47,10 @@ public sealed class AppItemViewModel(Proto.AppSummary summary, DisplayText text,
 
     public string LastSeenText => Relative(Summary.LastSeen.ToDateTimeOffset());
 
+    public string UsageText => Summary.BytesIn + Summary.BytesOut == 0
+        ? "—"
+        : Loc.Format(AppsLangResourceKind.UsageText, Controls.ActivityChart.Bytes(Summary.BytesIn), Controls.ActivityChart.Bytes(Summary.BytesOut));
+
     public bool Matches(string keyword) =>
         keyword.Length == 0
         || Name.Contains(keyword, StringComparison.CurrentCultureIgnoreCase)

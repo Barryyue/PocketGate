@@ -8,7 +8,12 @@ using Proto = NetworkControl.Ipc.V1;
 namespace NetworkControl.Service.Grpc;
 
 [Authorize(Policy = IpcPolicies.Viewer)]
-internal sealed class ActivityGrpcService(IActivityQuery query, LiveActivityFeed feed) : Proto.ActivityLog.ActivityLogBase
+internal sealed class ActivityGrpcService(
+    IActivityQuery query,
+    LiveActivityFeed feed,
+    NetworkControl.Core.Traffic.ITrafficRepository traffic,
+    NetworkControl.Core.Apps.IAppRepository apps,
+    NetworkControl.Core.Engine.EngineStatus engine) : Proto.ActivityLog.ActivityLogBase
 {
     public override async Task<Proto.LogPage> QueryLog(Proto.LogQuery request, ServerCallContext context)
     {
@@ -47,6 +52,40 @@ internal sealed class ActivityGrpcService(IActivityQuery query, LiveActivityFeed
         reply.Timeline.AddRange(summary.Timeline.Select(b => new Proto.SummaryBucket { Start = Timestamp.FromDateTimeOffset(b.Start), Allowed = b.Allowed, Blocked = b.Blocked }));
         reply.TopApps.AddRange(summary.TopApps.Select(ToProto));
         reply.TopDestinations.AddRange(summary.TopDestinations.Select(ToProto));
+        return reply;
+    }
+
+    public override async Task<Proto.TrafficReply> GetTraffic(Proto.SummaryQuery request, ServerCallContext context)
+    {
+        var to = request.To?.ToDateTimeOffset() ?? DateTimeOffset.UtcNow;
+        var from = request.From?.ToDateTimeOffset() ?? to.AddDays(-1);
+        if (from >= to || to - from > TimeSpan.FromDays(400))
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "統計時間範圍無效。"));
+        }
+
+        var bucket = request.Bucket?.ToTimeSpan() is { } b && b >= TimeSpan.FromMinutes(1) ? b : TimeSpan.FromHours(1);
+        var summary = await traffic.SummarizeAsync(from, to, bucket, request.TopCount > 0 ? Math.Min(request.TopCount, 100) : 8, context.CancellationToken);
+        var reply = new Proto.TrafficReply
+        {
+            BytesIn = summary.BytesIn,
+            BytesOut = summary.BytesOut,
+            Available = engine.Capabilities.HasFlag(NetworkControl.Core.Engine.EngineCapabilities.TrafficStats),
+        };
+        reply.Timeline.AddRange(summary.Timeline.Select(t => new Proto.TrafficBucket { Start = Timestamp.FromDateTimeOffset(t.Start), BytesIn = t.BytesIn, BytesOut = t.BytesOut }));
+        foreach (var app in summary.TopApps)
+        {
+            var identity = app.AppId >= 0 ? await apps.GetAsync(app.AppId, context.CancellationToken) : null;
+            reply.TopApps.Add(new Proto.TrafficItem
+            {
+                AppId = app.AppId,
+                DisplayName = identity?.Name ?? "",
+                Path = identity?.Path ?? "",
+                BytesIn = app.BytesIn,
+                BytesOut = app.BytesOut,
+            });
+        }
+
         return reply;
     }
 

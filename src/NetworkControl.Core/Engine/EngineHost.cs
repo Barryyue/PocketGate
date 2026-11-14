@@ -55,6 +55,7 @@ public sealed partial class EngineHost(
     SettingsService settings,
     EngineStatus status,
     IHostApplicationLifetime lifetime,
+    Traffic.TrafficAggregator traffic,
     ILogger<EngineHost> logger) : IEngineHost
 {
     public RuleEngine Rules => rules;
@@ -78,10 +79,7 @@ public sealed partial class EngineHost(
 
     public void OnDnsObserved(DnsObservation observation) => dns.Observe(observation);
 
-    public void OnTraffic(ReadOnlySpan<TrafficSample> samples)
-    {
-        // P1：流量統計（FR-STA-01）在此接入 TrafficAggregator
-    }
+    public void OnTraffic(ReadOnlySpan<TrafficSample> samples) => traffic.Record(samples);
 
     public void OnEngineFault(EngineFault fault)
     {

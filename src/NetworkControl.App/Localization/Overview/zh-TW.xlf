@@ -299,5 +299,57 @@ Click to view in the connection log</source>
         <target state="translated">沒有等待回應的連線</target>
       </segment>
     </unit>
+    <unit id="TrafficTitle">
+      <segment>
+        <source>Network usage</source>
+        <target state="translated">網路用量</target>
+      </segment>
+    </unit>
+    <unit id="Download">
+      <segment>
+        <source>Download</source>
+        <target state="translated">下載</target>
+      </segment>
+    </unit>
+    <unit id="Upload">
+      <segment>
+        <source>Upload</source>
+        <target state="translated">上傳</target>
+      </segment>
+    </unit>
+    <unit id="TopTraffic">
+      <segment>
+        <source>Apps using the most data</source>
+        <target state="translated">用量最多的應用程式</target>
+      </segment>
+    </unit>
+    <unit id="TrafficUnavailable">
+      <segment>
+        <source>The current engine does not report network usage.</source>
+        <target state="translated">目前的引擎不提供流量資料。</target>
+      </segment>
+    </unit>
+    <unit id="TrafficTooltip">
+      <segment>
+        <source>{0}
+Download {1}  ·  Upload {2}</source>
+        <target state="translated">{0}
+下載 {1}  ·  上傳 {2}</target>
+      </segment>
+    </unit>
+    <unit id="TrafficRankTooltip">
+      <segment>
+        <source>Download {0}  ·  Upload {1}
+Click to view in the connection log</source>
+        <target state="translated">下載 {0}  ·  上傳 {1}
+按一下在連線記錄中檢視</target>
+      </segment>
+    </unit>
+    <unit id="NoTraffic">
+      <segment>
+        <source>No network usage in this period</source>
+        <target state="translated">這段時間沒有網路用量</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

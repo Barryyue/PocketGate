@@ -61,6 +61,12 @@
   <Style Selector="Ellipse.legend.blocked">
     <Setter Property="Fill" Value="{atom:SharedTokenResource ColorError}" />
   </Style>
+  <Style Selector="Ellipse.legend.download">
+    <Setter Property="Fill" Value="{atom:SharedTokenResource ColorPrimary}" />
+  </Style>
+  <Style Selector="Ellipse.legend.upload">
+    <Setter Property="Fill" Value="{atom:SharedTokenResource ColorSuccess}" />
+  </Style>
 
   <!-- 可點擊的列表行（排行榜等）：透明背景，懸停時淺色填充 -->
   <Style Selector="Button.rank-row">

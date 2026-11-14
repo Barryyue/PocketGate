@@ -15,6 +15,8 @@ service ActivityLog {
   rpc WatchConnections (google.protobuf.Empty) returns (stream ConnectionEvent);
   // 一段時間內的連接統計（總覽儀表板、應用頁）。
   rpc GetSummary (SummaryQuery) returns (SummaryReply);
+  // 一段時間內的流量（FR-STA-01）：時間軸和用量最大的應用。查詢條件與 GetSummary 相同。
+  rpc GetTraffic (SummaryQuery) returns (TrafficReply);
 }
 
 message LogQuery {
@@ -79,6 +81,30 @@ message SummaryReply {
   repeated SummaryBucket timeline = 5;
   repeated SummaryItem top_apps = 6;
   repeated SummaryItem top_destinations = 7;
+}
+
+message TrafficBucket {
+  google.protobuf.Timestamp start = 1;
+  int64 bytes_in = 2;
+  int64 bytes_out = 3;
+}
+
+message TrafficItem {
+  // 無法識別的應用為 -1。
+  int64 app_id = 1;
+  string display_name = 2;
+  string path = 3;
+  int64 bytes_in = 4;
+  int64 bytes_out = 5;
+}
+
+message TrafficReply {
+  int64 bytes_in = 1;
+  int64 bytes_out = 2;
+  repeated TrafficBucket timeline = 3;
+  repeated TrafficItem top_apps = 4;
+  // 引擎能否提供流量數據（例如 WFP 未啟用流量採集時為 false，界面據此提示）。
+  bool available = 5;
 }
 
 message ConnectionEvent {

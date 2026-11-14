@@ -22,6 +22,10 @@ public sealed class ActivityChart : Control
     public static readonly StyledProperty<IReadOnlyList<ChartPoint>?> PointsProperty =
         AvaloniaProperty.Register<ActivityChart, IReadOnlyList<ChartPoint>?>(nameof(Points));
 
+    /// <summary>為 true 時縱軸按字節顯示（KB / MB / GB），否則按次數。</summary>
+    public static readonly StyledProperty<bool> ShowBytesProperty =
+        AvaloniaProperty.Register<ActivityChart, bool>(nameof(ShowBytes));
+
     public static readonly StyledProperty<IBrush?> AllowedBrushProperty =
         AvaloniaProperty.Register<ActivityChart, IBrush?>(nameof(AllowedBrush), Brushes.SteelBlue);
 
@@ -54,6 +58,7 @@ public sealed class ActivityChart : Control
     {
         AffectsRender<ActivityChart>(
             PointsProperty,
+            ShowBytesProperty,
             AllowedBrushProperty,
             BlockedBrushProperty,
             GridBrushProperty,
@@ -67,6 +72,12 @@ public sealed class ActivityChart : Control
     {
         get => GetValue(PointsProperty);
         set => SetValue(PointsProperty, value);
+    }
+
+    public bool ShowBytes
+    {
+        get => GetValue(ShowBytesProperty);
+        set => SetValue(ShowBytesProperty, value);
     }
 
     public IBrush? AllowedBrush
@@ -141,6 +152,22 @@ public sealed class ActivityChart : Control
         _ => value.ToString(CultureInfo.InvariantCulture),
     };
 
+    /// <summary>字節數的緊湊格式（1024 進制）：512 B、1.5 KB、23 MB、1.2 GB。</summary>
+    public static string Bytes(long value)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double size = value;
+        var unit = 0;
+        while (size >= 1024 && unit < units.Length - 1)
+        {
+            size /= 1024;
+            unit++;
+        }
+
+        var format = unit == 0 || size >= 100 ? "0" : size >= 10 ? "0.#" : "0.##";
+        return size.ToString(format, CultureInfo.InvariantCulture) + " " + units[unit];
+    }
+
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
@@ -171,7 +198,8 @@ public sealed class ActivityChart : Control
         {
             var y = Math.Round(plot.Bottom - (plot.Height * i / GridLines)) + 0.5;
             context.DrawLine(i == 0 ? basePen : gridPen, new Point(plot.Left, y), new Point(plot.Right, y));
-            var label = Text(Compact(max * i / GridLines), LabelBrush);
+            var value = max * i / GridLines;
+            var label = Text(ShowBytes ? Bytes(value) : Compact(value), LabelBrush);
             context.DrawText(label, new Point(plot.Left - label.Width - 8, y - (label.Height / 2)));
         }
 

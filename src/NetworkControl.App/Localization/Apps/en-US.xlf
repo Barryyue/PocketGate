@@ -131,5 +131,15 @@
         <source>Create a rule that denies this app</source>
       </segment>
     </unit>
+    <unit id="ColumnUsage">
+      <segment>
+        <source>Usage</source>
+      </segment>
+    </unit>
+    <unit id="UsageText">
+      <segment>
+        <source>↓ {0}  ↑ {1}</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

@@ -42,25 +42,34 @@ public interface INetworkSimulator
 /// </summary>
 public sealed class FakeNetworkEngine(FakeProcessTable processes, TimeProvider time) : INetworkEngine, INetworkSimulator
 {
+    private static readonly TimeSpan TrafficInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan TrafficActiveWindow = TimeSpan.FromMinutes(5);
+
+    // 最近被允許連接的進程：定時為它們生成模擬流量，讓開發環境的流量圖表有數據
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<ProcessRef, (string Path, DateTimeOffset LastAllowed)> _active = new();
     private IEngineHost? _host;
+    private ITimer? _trafficTimer;
     private long _nextFlowId;
     private int _nextLocalPort = 49_152;
 
     public string Name => "Fake";
 
     public EngineCapabilities Capabilities =>
-        EngineCapabilities.PendingVerdict | EngineCapabilities.ProvidesPid | EngineCapabilities.ProvidesHostname | EngineCapabilities.Inbound;
+        EngineCapabilities.PendingVerdict | EngineCapabilities.ProvidesPid | EngineCapabilities.ProvidesHostname | EngineCapabilities.Inbound | EngineCapabilities.TrafficStats;
 
     public IReadOnlyCollection<FakeAppDefinition> Apps => processes.Apps;
 
     public Task StartAsync(IEngineHost host, CancellationToken cancellationToken)
     {
         _host = host;
+        _trafficTimer = time.CreateTimer(_ => EmitTraffic(), null, TrafficInterval, TrafficInterval);
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        _trafficTimer?.Dispose();
+        _trafficTimer = null;
         _host = null;
         return Task.CompletedTask;
     }
@@ -98,12 +107,48 @@ public sealed class FakeNetworkEngine(FakeProcessTable processes, TimeProvider t
         };
 
         var action = await host.DecideAsync(flow).AsTask().WaitAsync(cancellationToken);
+        if (action == VerdictAction.Allow)
+        {
+            _active[process.Process] = (process.ExecutablePath, time.GetUtcNow());
+            host.OnTraffic([new TrafficSample(process.Process, process.ExecutablePath, Random.Shared.NextInt64(20_000, 2_000_000), Random.Shared.NextInt64(2_000, 200_000), time.GetUtcNow())]);
+        }
+
         return new SimulatedFlowResult(flow.FlowId, action, flow.Remote, process.Process.Pid);
     }
 
     public bool ExitApp(string appKey) => processes.Exit(appKey);
 
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    public ValueTask DisposeAsync()
+    {
+        _trafficTimer?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    private void EmitTraffic()
+    {
+        if (_host is not { } host)
+        {
+            return;
+        }
+
+        var now = time.GetUtcNow();
+        var samples = new List<TrafficSample>();
+        foreach (var (process, (path, lastAllowed)) in _active)
+        {
+            if (now - lastAllowed > TrafficActiveWindow || !processes.IsAlive(process))
+            {
+                _active.TryRemove(process, out _);
+                continue;
+            }
+
+            samples.Add(new TrafficSample(process, path, Random.Shared.NextInt64(1_000, 300_000), Random.Shared.NextInt64(200, 30_000), now));
+        }
+
+        if (samples.Count > 0)
+        {
+            host.OnTraffic(samples.ToArray());
+        }
+    }
 
     /// <summary>根據名稱生成穩定的虛擬公網地址（203.0.113.0/24 是文檔保留網段）。</summary>
     private static IPAddress AddressFor(string name)

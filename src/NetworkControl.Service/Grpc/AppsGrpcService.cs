@@ -13,7 +13,7 @@ namespace NetworkControl.Service.Grpc;
 
 /// <summary>應用視圖：連接統計（activity.db）+ 應用信息（config.db）+ 當前規則集中指定該應用的規則數。</summary>
 [Authorize(Policy = IpcPolicies.Viewer)]
-internal sealed class AppsGrpcService(IActivityQuery activity, IAppRepository apps, RuleEngine rules, TimeProvider time) : Proto.Apps.AppsBase
+internal sealed class AppsGrpcService(IActivityQuery activity, IAppRepository apps, RuleEngine rules, NetworkControl.Core.Traffic.ITrafficRepository traffic, TimeProvider time) : Proto.Apps.AppsBase
 {
     public override async Task<Proto.ListAppsResponse> List(Proto.ListAppsRequest request, ServerCallContext context)
     {
@@ -25,6 +25,7 @@ internal sealed class AppsGrpcService(IActivityQuery activity, IAppRepository ap
         }
 
         var entries = await activity.ListAppActivityAsync(from, to, request.Limit > 0 ? request.Limit : 500, context.CancellationToken);
+        var usage = await traffic.ByAppAsync(from, to, context.CancellationToken);
         var appRules = rules.Current.Rules
             .Where(r => r.Enabled && r.App is not null)
             .Select(r => (Pattern: PathPattern.Parse(r.App!.PathPattern), r.Action))
@@ -48,6 +49,11 @@ internal sealed class AppsGrpcService(IActivityQuery activity, IAppRepository ap
             if (entry.AppId is { } known)
             {
                 summary.AppId = known;
+                if (usage.TryGetValue(known, out var bytes))
+                {
+                    summary.BytesIn = bytes.BytesIn;
+                    summary.BytesOut = bytes.BytesOut;
+                }
             }
 
             if (identity?.Signature?.SignerId is { } signer)

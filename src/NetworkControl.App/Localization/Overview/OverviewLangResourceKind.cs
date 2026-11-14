@@ -55,4 +55,12 @@ public enum OverviewLangResourceKind
     RankTooltip,
     Subtitle,
     NoPendingPrompts,
+    TrafficTitle,
+    Download,
+    Upload,
+    TopTraffic,
+    TrafficUnavailable,
+    TrafficTooltip,
+    TrafficRankTooltip,
+    NoTraffic,
 }

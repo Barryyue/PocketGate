@@ -75,6 +75,7 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
     private readonly NavigationService _navigation;
     private readonly DispatcherTimer _timer;
     private Proto.SummaryReply? _summary;
+    private Proto.TrafficReply? _traffic;
     private ActivityRange _range;
     private bool _loading;
 
@@ -104,6 +105,23 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
     public ObservableCollection<RankItemViewModel> TopApps { get; } = [];
 
     public ObservableCollection<RankItemViewModel> TopDestinations { get; } = [];
+
+    /// <summary>流量時間軸（下載 / 上傳堆疊）。</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<ChartPoint> TrafficPoints { get; private set; } = [];
+
+    public ObservableCollection<RankItemViewModel> TopTraffic { get; } = [];
+
+    /// <summary>引擎提供流量數據（舊版服務或不支持的引擎時為 false）。</summary>
+    public bool TrafficAvailable => _traffic?.Available == true;
+
+    public bool ShowTrafficUnavailable => _traffic is not null && !_traffic.Available;
+
+    public bool ShowNoTraffic => TrafficAvailable && _traffic!.BytesIn + _traffic.BytesOut == 0;
+
+    public string DownloadText => _traffic is { } t ? ActivityChart.Bytes(t.BytesIn) : "—";
+
+    public string UploadText => _traffic is { } t ? ActivityChart.Bytes(t.BytesOut) : "—";
 
     public bool HasData => _summary is not null;
 
@@ -162,6 +180,21 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
             });
             _range = range;
             _summary = reply;
+            try
+            {
+                _traffic = await clients.Activity.GetTrafficAsync(new Proto.SummaryQuery
+                {
+                    From = Timestamp.FromDateTimeOffset(range.From),
+                    To = Timestamp.FromDateTimeOffset(range.To),
+                    Bucket = Duration.FromTimeSpan(range.Bucket),
+                    TopCount = 6,
+                });
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)
+            {
+                _traffic = null; // 舊版服務
+            }
+
             Rebuild();
         }
         catch (RpcException)
@@ -182,6 +215,7 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
         }
 
         Points = summary.Timeline.Select(bucket => ToPoint(bucket)).ToArray();
+        RebuildTraffic();
         Fill(TopApps, summary.TopApps, isApp: true);
         Fill(TopDestinations, summary.TopDestinations, isApp: false);
         OnPropertyChanged(nameof(HasData));
@@ -192,6 +226,61 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
         OnPropertyChanged(nameof(BlockRateText));
         OnPropertyChanged(nameof(AppCountText));
         OnPropertyChanged(nameof(DestinationCountText));
+    }
+
+    private void RebuildTraffic()
+    {
+        TopTraffic.Clear();
+        if (_traffic is not { } traffic)
+        {
+            TrafficPoints = [];
+        }
+        else
+        {
+            TrafficPoints = traffic.Timeline.Select(bucket =>
+            {
+                var (axis, title) = Labels(bucket.Start.ToDateTimeOffset().ToLocalTime());
+                var tooltip = Loc.Format(OverviewLangResourceKind.TrafficTooltip, title, ActivityChart.Bytes(bucket.BytesIn), ActivityChart.Bytes(bucket.BytesOut));
+                return new ChartPoint(bucket.BytesIn, bucket.BytesOut, axis, tooltip);
+            }).ToArray();
+
+            var max = traffic.TopApps.Count == 0 ? 1 : traffic.TopApps.Max(a => a.BytesIn + a.BytesOut);
+            foreach (var app in traffic.TopApps)
+            {
+                var path = app.Path.Length > 0 ? app.Path : null;
+                var label = app.DisplayName.Length > 0 ? app.DisplayName : path is not null ? FileName(path) : Loc.Get(OverviewLangResourceKind.UnknownApp);
+                TopTraffic.Add(new RankItemViewModel(
+                    label,
+                    path,
+                    app.BytesIn,
+                    app.BytesOut,
+                    max,
+                    ActivityChart.Bytes(app.BytesIn + app.BytesOut),
+                    Loc.Format(OverviewLangResourceKind.TrafficRankTooltip, ActivityChart.Bytes(app.BytesIn), ActivityChart.Bytes(app.BytesOut)),
+                    new LogNavigation(path ?? label)));
+            }
+        }
+
+        OnPropertyChanged(nameof(TrafficAvailable));
+        OnPropertyChanged(nameof(ShowTrafficUnavailable));
+        OnPropertyChanged(nameof(ShowNoTraffic));
+        OnPropertyChanged(nameof(DownloadText));
+        OnPropertyChanged(nameof(UploadText));
+    }
+
+    /// <summary>坐標軸標籤和提示標題，與連接活動圖表一致。</summary>
+    private (string Axis, string Title) Labels(DateTimeOffset start)
+    {
+        var culture = Loc.Culture;
+        if (_range.Daily)
+        {
+            return (start.ToString("M/d", culture), start.ToString("d", culture));
+        }
+
+        var span = $"{start.ToString("HH:mm", culture)}–{start.Add(_range.Bucket).ToString("HH:mm", culture)}";
+        return _range.Bucket >= TimeSpan.FromHours(6)
+            ? (start.Hour == 0 ? start.ToString("M/d", culture) : "", $"{start.ToString("d", culture)} {span}")
+            : (start.ToString("HH:mm", culture), $"{start.ToString("M/d", culture)} {span}");
     }
 
     private ChartPoint ToPoint(Proto.SummaryBucket bucket)

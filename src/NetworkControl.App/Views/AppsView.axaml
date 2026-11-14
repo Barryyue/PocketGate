@@ -70,6 +70,7 @@
               </DataTemplate>
             </atom:DataGridTemplateColumn.CellTemplate>
           </atom:DataGridTemplateColumn>
+          <atom:DataGridTextColumn x:DataType="vm:AppItemViewModel" Header="{loc:AppsLangResource ColumnUsage}" Binding="{Binding UsageText}" Width="150" />
           <atom:DataGridTextColumn x:DataType="vm:AppItemViewModel" Header="{loc:AppsLangResource ColumnRules}" Binding="{Binding RulesText}" Width="140" />
           <atom:DataGridTextColumn x:DataType="vm:AppItemViewModel" Header="{loc:AppsLangResource ColumnLastSeen}" Binding="{Binding LastSeenText}" Width="140" />
           <atom:DataGridTemplateColumn Header="{loc:AppsLangResource ColumnOperations}" Width="230">

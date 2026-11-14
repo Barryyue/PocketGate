@@ -34,6 +34,7 @@ public static class StorageServiceCollectionExtensions
         services.TryAddSingleton<ISettingsRepository, SqliteSettingsRepository>();
         services.TryAddSingleton<IAppRepository, SqliteAppRepository>();
         services.TryAddSingleton<IActivityQuery, SqliteActivityQuery>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<NetworkControl.Core.Traffic.ITrafficRepository, SqliteTrafficRepository>());
 
         services.AddActivityConsumer<ActivityLogWriter>();
         services.AddHostedService(sp => sp.GetRequiredService<ActivityLogWriter>());

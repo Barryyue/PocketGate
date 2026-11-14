@@ -157,5 +157,17 @@
         <target state="translated">為此應用程式新增拒絕規則</target>
       </segment>
     </unit>
+    <unit id="ColumnUsage">
+      <segment>
+        <source>Usage</source>
+        <target state="translated">用量</target>
+      </segment>
+    </unit>
+    <unit id="UsageText">
+      <segment>
+        <source>↓ {0}  ↑ {1}</source>
+        <target state="translated">↓ {0}  ↑ {1}</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

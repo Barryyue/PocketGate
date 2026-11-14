@@ -59,6 +59,9 @@ public static class CoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IVerdictStage, FallbackStage>());
         services.TryAddSingleton<VerdictPipeline>();
 
+        // 流量統計（存儲層註冊 ITrafficRepository；沒有時只丟棄樣本）
+        services.TryAddSingleton<Traffic.TrafficAggregator>();
+
         // 引擎宿主
         services.TryAddSingleton<EngineStatus>();
         services.TryAddSingleton<EngineHost>();
@@ -73,6 +76,7 @@ public static class CoreServiceCollectionExtensions
         services.AddHostedService<StartupTaskRunner>();
         services.AddHostedService<RuleLifetimeManager>();
         services.AddHostedService<EngineHostedService>();
+        services.AddHostedService(sp => sp.GetRequiredService<Traffic.TrafficAggregator>());
 
         return services;
     }

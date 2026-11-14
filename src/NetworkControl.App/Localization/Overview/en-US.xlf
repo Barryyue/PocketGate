@@ -248,5 +248,47 @@ Click to view in the connection log</source>
         <source>No connections awaiting an answer</source>
       </segment>
     </unit>
+    <unit id="TrafficTitle">
+      <segment>
+        <source>Network usage</source>
+      </segment>
+    </unit>
+    <unit id="Download">
+      <segment>
+        <source>Download</source>
+      </segment>
+    </unit>
+    <unit id="Upload">
+      <segment>
+        <source>Upload</source>
+      </segment>
+    </unit>
+    <unit id="TopTraffic">
+      <segment>
+        <source>Apps using the most data</source>
+      </segment>
+    </unit>
+    <unit id="TrafficUnavailable">
+      <segment>
+        <source>The current engine does not report network usage.</source>
+      </segment>
+    </unit>
+    <unit id="TrafficTooltip">
+      <segment>
+        <source>{0}
+Download {1}  ·  Upload {2}</source>
+      </segment>
+    </unit>
+    <unit id="TrafficRankTooltip">
+      <segment>
+        <source>Download {0}  ·  Upload {1}
+Click to view in the connection log</source>
+      </segment>
+    </unit>
+    <unit id="NoTraffic">
+      <segment>
+        <source>No network usage in this period</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

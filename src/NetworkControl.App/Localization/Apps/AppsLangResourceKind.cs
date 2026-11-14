@@ -32,4 +32,6 @@ public enum AppsLangResourceKind
     LastSeenHours,
     AllowTooltip,
     DenyTooltip,
+    ColumnUsage,
+    UsageText,
 }
