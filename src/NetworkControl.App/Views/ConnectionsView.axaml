@@ -42,11 +42,14 @@
           <atom:DataGridTemplateColumn Header="{loc:ConnectionsLangResource ColumnApp}" Width="2*">
             <atom:DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:ConnectionItemViewModel">
-                <StackPanel Spacing="2" Margin="0,5">
-                  <TextBlock Classes="rank-label" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Classes="caption" Text="{Binding AppPath}" IsVisible="{Binding AppPath, Converter={x:Static vm:Converters.HasText}}"
-                             TextTrimming="PrefixCharacterEllipsis" ToolTip.Tip="{Binding AppPath}" />
-                </StackPanel>
+                <Grid ColumnDefinitions="24,*" ColumnSpacing="8" VerticalAlignment="Center" Margin="0,5">
+                  <Image Width="20" Height="20" Source="{Binding Icon}" VerticalAlignment="Top" Margin="0,3,0,0" />
+                  <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBlock Classes="rank-label" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="caption" Text="{Binding AppPath}" IsVisible="{Binding AppPath, Converter={x:Static vm:Converters.HasText}}"
+                               TextTrimming="PrefixCharacterEllipsis" ToolTip.Tip="{Binding AppPath}" />
+                  </StackPanel>
+                </Grid>
               </DataTemplate>
             </atom:DataGridTemplateColumn.CellTemplate>
           </atom:DataGridTemplateColumn>

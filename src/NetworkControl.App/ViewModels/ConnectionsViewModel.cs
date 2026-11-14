@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using AtomUI.Desktop.Controls;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -16,14 +17,27 @@ namespace NetworkControl.App.ViewModels;
 public sealed partial class ConnectionItemViewModel : ObservableObject
 {
     private readonly DisplayText _text;
+    private readonly AppIconCache _icons;
     private Proto.LiveConnection _connection;
     private bool _killSupported;
 
-    public ConnectionItemViewModel(Proto.LiveConnection connection, DisplayText text, bool killSupported)
+    public ConnectionItemViewModel(Proto.LiveConnection connection, DisplayText text, bool killSupported, AppIconCache icons)
     {
         _connection = connection;
         _text = text;
         _killSupported = killSupported;
+        _icons = icons;
+    }
+
+    public Bitmap? Icon { get; private set; }
+
+    public async Task LoadIconAsync()
+    {
+        if (AppPath.Length > 0 && await _icons.GetAsync(AppPath) is { } icon)
+        {
+            Icon = icon;
+            OnPropertyChanged(nameof(Icon));
+        }
     }
 
     public Proto.LiveConnection Connection
@@ -121,6 +135,7 @@ public sealed partial class ConnectionsViewModel : PageViewModel
 
     private readonly ServiceConnection _connection;
     private readonly RuleEditing _editing;
+    private readonly AppIconCache _icons;
     private readonly NavigationService _navigation;
     private readonly FeedbackService _feedback;
     private readonly DispatcherTimer _timer;
@@ -128,12 +143,13 @@ public sealed partial class ConnectionsViewModel : PageViewModel
     private DataGridLocalSource<ConnectionItemViewModel>? _source;
     private bool _killSupported;
 
-    public ConnectionsViewModel(ServiceConnection connection, RuleEditing editing, NavigationService navigation, FeedbackService feedback, DisplayText text) : base(text)
+    public ConnectionsViewModel(ServiceConnection connection, RuleEditing editing, NavigationService navigation, FeedbackService feedback, AppIconCache icons, DisplayText text) : base(text)
     {
         _connection = connection;
         _editing = editing;
         _navigation = navigation;
         _feedback = feedback;
+        _icons = icons;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
         _timer.Tick += (_, _) => _ = RefreshAsync();
         _connection.PropertyChanged += OnConnectionPropertyChanged;
@@ -186,7 +202,12 @@ public sealed partial class ConnectionsViewModel : PageViewModel
             });
             IsSupported = response.Supported;
             _all.Clear();
-            _all.AddRange(response.Connections.Select(c => new ConnectionItemViewModel(c, Text, _killSupported)));
+            var items = response.Connections.Select(c => new ConnectionItemViewModel(c, Text, _killSupported, _icons)).ToArray();
+            _all.AddRange(items);
+            foreach (var item in items)
+            {
+                _ = item.LoadIconAsync();
+            }
         }
         finally
         {
