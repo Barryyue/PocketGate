@@ -31,6 +31,7 @@ object VpnRoutingPlanner {
         network: NetworkContext = NetworkContext.None,
         allowSystemAppsByDefault: Boolean = false,
         trustedSigners: Set<String> = emptySet(),
+        focusAllowedPackages: Set<String> = emptySet(),
     ): VpnRoutingPlan {
         val skipped = rules.rules.mapNotNull { rule ->
             getSkipReason(rule)?.let { SkippedRule(rule.id, it) }
@@ -52,6 +53,7 @@ object VpnRoutingPlanner {
                 network,
                 allowSystemAppsByDefault,
                 trustedSigners,
+                focusAllowedPackages,
             )
             byUid[uid] = routing
             if (routing.decision == AppRoutingDecision.Bypass) bypass.addAll(packages)
@@ -96,12 +98,22 @@ object VpnRoutingPlanner {
         network: NetworkContext,
         allowSystemAppsByDefault: Boolean,
         trustedSigners: Set<String>,
+        focusAllowedPackages: Set<String>,
     ): AppRouting {
         if (packages.contains(selfPackage)) {
             return AppRouting(uid, primary.packageName, packages, AppRoutingDecision.Bypass, AppRoutingReason.Self)
         }
         if (isSystemUid(uid)) {
             return AppRouting(uid, primary.packageName, packages, AppRoutingDecision.Bypass, AppRoutingReason.SystemUid)
+        }
+        if (focusAllowedPackages.isNotEmpty() && packages.any { it in focusAllowedPackages }) {
+            return AppRouting(
+                uid,
+                primary.packageName,
+                packages,
+                AppRoutingDecision.Bypass,
+                AppRoutingReason.Focus,
+            )
         }
         when (mode) {
             FilterMode.Disabled -> return AppRouting(

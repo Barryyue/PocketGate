@@ -70,6 +70,8 @@ class AppContainer(context: Context) {
         scope = scope,
     )
     val protection = ProtectionController(preferences)
+    val focus = com.networkcontrol.android.kotlin.core.focus.FocusController(preferences, scope)
+    val focusScheduler = com.networkcontrol.android.kotlin.core.focus.FocusScheduler(preferences, focus, scope)
     val vpnNotifier = VpnForegroundNotifier(appContext)
     val vpnTunnel = VpnTunnelController(appContext, vpnNotifier)
     val quietPeriods = com.networkcontrol.android.kotlin.core.prompts.QuietPeriodTracker(runtime, scope)
@@ -102,6 +104,7 @@ class AppContainer(context: Context) {
         network = network,
         screenState = screenState,
         blockOnLockScreen = { preferences.blockOnLockScreen },
+        focus = focus,
         notifier = vpnNotifier,
         selfPackage = appContext.packageName,
     )

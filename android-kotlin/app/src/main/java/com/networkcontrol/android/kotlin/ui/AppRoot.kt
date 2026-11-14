@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
@@ -99,20 +100,25 @@ fun AppRoot(container: AppContainer) {
                         NavigationBarItem(
                             selected = selected == index,
                             onClick = { selected = index },
-                            icon = { Icon(tab.icon, contentDescription = null) },
+                            icon = { Icon(tab.icon, contentDescription = s[tab.label]) },
                             label = { Text(s[tab.label]) },
                         )
                     }
                 }
             },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
-                when (selected) {
-                    0 -> OverviewScreen(backend)
-                    1 -> AppsScreen(backend)
-                    2 -> RulesScreen(backend)
-                    3 -> LogsScreen(backend)
-                    else -> SettingsScreen(backend)
+            Box(
+                Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Box(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
+                    when (selected) {
+                        0 -> OverviewScreen(backend)
+                        1 -> AppsScreen(backend)
+                        2 -> RulesScreen(backend)
+                        3 -> LogsScreen(backend)
+                        else -> SettingsScreen(backend)
+                    }
                 }
             }
         }

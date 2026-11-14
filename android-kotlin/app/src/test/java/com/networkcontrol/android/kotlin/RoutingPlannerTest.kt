@@ -217,6 +217,20 @@ class RoutingPlannerTest {
     }
 
     @Test
+    fun focusModeAllowsOnlySelectedPackages() {
+        val plan = VpnRoutingPlanner.plan(
+            RuleSet.Empty,
+            FilterMode.BlockAll,
+            listOf(chrome, firefox),
+            self,
+            focusAllowedPackages = setOf("com.android.chrome"),
+        )
+        assertEquals(AppRoutingDecision.Bypass, plan.find(chrome.uid)?.decision)
+        assertEquals(AppRoutingReason.Focus, plan.find(chrome.uid)?.reason)
+        assertEquals(AppRoutingDecision.Block, plan.find(firefox.uid)?.decision)
+    }
+
+    @Test
     fun tamperedSignerDoesNotBecomeTrusted() {
         val tampered = chrome.copy(signerSha256 = "different")
         val plan = VpnRoutingPlanner.plan(

@@ -58,6 +58,8 @@ class AppBackend(val container: AppContainer) {
     val quietPeriod = container.quietPeriods.summary
     val speed = container.speedMonitor.speed
     val network = container.network.state
+    val focus = container.focus.session
+    val focusSchedules = container.focusScheduler.schedules
 
     fun protectionStatus(): ProtectionStatus = container.vpnEngine.status()
 
@@ -352,6 +354,33 @@ class AppBackend(val container: AppContainer) {
 
     fun dismissQuietPeriod() = container.quietPeriods.dismiss()
 
+    fun startFocus(minutes: Int, allowedPackages: Set<String>) {
+        container.focus.start(minutes, allowedPackages)
+        container.vpnEngine.requestReplan()
+    }
+
+    fun extendFocus(minutes: Int) {
+        container.focus.extend(minutes)
+        container.vpnEngine.requestReplan()
+    }
+
+    fun stopFocus() {
+        container.focus.stop()
+        container.vpnEngine.requestReplan()
+    }
+
+    fun saveFocusSchedule(schedule: com.networkcontrol.android.kotlin.core.focus.FocusSchedule) {
+        container.focusScheduler.replace(schedule)
+    }
+
+    fun deleteFocusSchedule(id: String) {
+        container.focusScheduler.remove(id)
+    }
+
+    fun setFocusScheduleEnabled(id: String, enabled: Boolean) {
+        container.focusScheduler.setEnabled(id, enabled)
+    }
+
     fun updateSettings(transform: (UserSettings) -> UserSettings) {
         container.scope.launch { container.settings.update(transform) }
     }
@@ -426,6 +455,20 @@ class AppBackend(val container: AppContainer) {
     }
 
     fun isScreenLocked(): Boolean = container.screenState.locked.value
+
+    fun privateDnsMode(): String =
+        runCatching {
+            Settings.Global.getString(context.contentResolver, "private_dns_mode").orEmpty()
+        }.getOrDefault("off")
+
+    fun isAppLockEnabled(): Boolean = container.preferences.appLockEnabled
+
+    fun isDeviceSecure(): Boolean =
+        (context.getSystemService(android.app.KeyguardManager::class.java))?.isDeviceSecure == true
+
+    fun setAppLockEnabled(enabled: Boolean) {
+        container.preferences.appLockEnabled = enabled
+    }
 
     fun canDrawOverlays(): Boolean = container.promptOverlay.canDrawOverlays()
 

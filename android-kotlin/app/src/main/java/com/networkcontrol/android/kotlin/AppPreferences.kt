@@ -57,6 +57,18 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_BLOCK_ON_LOCK, false)
         set(value) = prefs.edit().putBoolean(KEY_BLOCK_ON_LOCK, value).apply()
 
+    var focusSessionJson: String?
+        get() = prefs.getString(KEY_FOCUS_SESSION, null)
+        set(value) = prefs.edit().putString(KEY_FOCUS_SESSION, value).apply()
+
+    var focusSchedulesJson: String?
+        get() = prefs.getString(KEY_FOCUS_SCHEDULES, null)
+        set(value) = prefs.edit().putString(KEY_FOCUS_SCHEDULES, value).apply()
+
+    var appLockEnabled: Boolean
+        get() = prefs.getBoolean(KEY_APP_LOCK, false)
+        set(value) = prefs.edit().putBoolean(KEY_APP_LOCK, value).apply()
+
     private companion object {
         const val KEY_THEME = "theme"
         const val KEY_LANGUAGE = "language"
@@ -70,6 +82,9 @@ class AppPreferences(context: Context) {
         const val KEY_PROMPT_SHOW_EXPLANATION = "prompt_show_explanation"
         const val KEY_PROMPT_HIDE_DETAILS_LOCK = "prompt_hide_details_lock"
         const val KEY_BLOCK_ON_LOCK = "block_on_lock"
+        const val KEY_FOCUS_SESSION = "focus_session"
+        const val KEY_FOCUS_SCHEDULES = "focus_schedules"
+        const val KEY_APP_LOCK = "app_lock"
         const val DEFAULT_THEME_COLOR = 0xFF2E7D32.toInt()
     }
 }

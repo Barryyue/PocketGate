@@ -658,5 +658,6 @@ private fun routingReasonLabel(
     AppRoutingReason.Self -> "Self"
     AppRoutingReason.SystemUid -> "System UID"
     AppRoutingReason.Trusted -> s[S.Trusted]
+    AppRoutingReason.Focus -> s[S.FocusMode]
 }
 

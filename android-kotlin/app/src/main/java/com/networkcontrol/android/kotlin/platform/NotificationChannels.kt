@@ -10,6 +10,7 @@ object NotificationChannels {
     const val PROMPT_SOFT = "prompts_soft"
     const val PROTECTION = "protection"
     const val QUIET = "quiet"
+    const val NEW_APPS = "new_apps"
 
     fun ensure(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
@@ -42,6 +43,13 @@ object NotificationChannels {
             NotificationChannel(
                 QUIET,
                 context.getString(R.string.notification_channel_quiet),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ),
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                NEW_APPS,
+                context.getString(R.string.notification_channel_new_apps),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ),
         )

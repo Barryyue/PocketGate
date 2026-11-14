@@ -246,6 +246,14 @@ data class RuntimeState(
     fun isDoNotDisturb(now: Long): Boolean = doNotDisturbUntil != null && doNotDisturbUntil > now
 }
 
+data class FocusSession(
+    val startedAt: Long,
+    val endsAt: Long,
+    val allowedPackages: Set<String> = emptySet(),
+) {
+    fun isActive(now: Long): Boolean = endsAt > now
+}
+
 data class FlowInfo(
     val flowId: Long,
     val direction: Direction,

@@ -35,6 +35,7 @@ class VpnEngine(
     private val network: com.networkcontrol.android.kotlin.engine.network.NetworkMonitor,
     private val screenState: com.networkcontrol.android.kotlin.engine.network.ScreenStateMonitor,
     private val blockOnLockScreen: () -> Boolean,
+    private val focus: com.networkcontrol.android.kotlin.core.focus.FocusController,
     private val notifier: VpnForegroundNotifier,
     private val selfPackage: String,
 ) {
@@ -79,6 +80,7 @@ class VpnEngine(
         // 網路類型 / SIM 變更會改變帶網路條件的應用規則，必須重新規劃路由。
         scope.launch { network.state.collect { requestReplan() } }
         scope.launch { screenState.locked.collect { requestReplan() } }
+        scope.launch { focus.session.collect { requestReplan() } }
         scope.launch {
             replanSignal.debounce(300).collect {
                 runCatching { replanNow() }.onFailure { error ->
@@ -96,9 +98,10 @@ class VpnEngine(
     }
 
     private suspend fun replanNow() {
+        val focusSession = focus.active()
         val plan = VpnRoutingPlanner.plan(
             rules = rules.ruleSet.value,
-            mode = if (screenState.locked.value && blockOnLockScreen()) {
+            mode = if (focusSession != null || (screenState.locked.value && blockOnLockScreen())) {
                 com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll
             } else {
                 runtime.mode
@@ -108,6 +111,7 @@ class VpnEngine(
             network = network.current,
             allowSystemAppsByDefault = settings.state.value.allowSystemAppsByDefault,
             trustedSigners = settings.state.value.trustedSigners,
+            focusAllowedPackages = focusSession?.allowedPackages ?: emptySet(),
         )
         _plan.value = plan
 

@@ -1,5 +1,6 @@
 package com.networkcontrol.android.kotlin.ui.settings
 
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -57,6 +58,7 @@ import com.networkcontrol.android.kotlin.core.model.Profile
 import com.networkcontrol.android.kotlin.core.model.RuleImportMode
 import com.networkcontrol.android.kotlin.core.model.RuleImportPreview
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
+import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
@@ -64,6 +66,11 @@ import com.networkcontrol.android.kotlin.ui.rememberUiStrings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.DayOfWeek
+import java.time.LocalTime
+import java.time.format.TextStyle
+import java.util.Locale
+import java.util.UUID
 
 @Composable
 fun SettingsScreen(backend: AppBackend) {
@@ -75,6 +82,7 @@ fun SettingsScreen(backend: AppBackend) {
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val plan by backend.plan.collectAsStateWithLifecycle()
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
+    val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
     var overlayKey by remember { mutableIntStateOf(0) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { overlayKey++ }
     val canDrawOverlays = remember(overlayKey) { backend.canDrawOverlays() }
@@ -84,6 +92,9 @@ fun SettingsScreen(backend: AppBackend) {
     var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
     var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
+    var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
+    var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
+    var showScheduleDialog by remember { mutableStateOf(false) }
 
     var timeoutText by remember(settings.promptTimeoutSeconds) {
         mutableStateOf(settings.promptTimeoutSeconds.toString())
@@ -404,6 +415,19 @@ fun SettingsScreen(backend: AppBackend) {
                         backend.setBlockOnLockScreen(it)
                     },
                 )
+                SwitchRow(
+                    title = s[S.AppLock],
+                    subtitle = s[S.AppLockHint],
+                    checked = appLock,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !backend.isDeviceSecure()) {
+                            toast(s[S.AppLockNoCredential])
+                        } else {
+                            appLock = enabled
+                            backend.setAppLockEnabled(enabled)
+                        }
+                    },
+                )
                 OutlinedButton(onClick = { context.startActivity(backend.openAlwaysOnVpnSettings()) }) {
                     Text(s[S.AlwaysOnVpn])
                 }
@@ -415,6 +439,44 @@ fun SettingsScreen(backend: AppBackend) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+
+        item {
+            SectionCard(s[S.FocusSchedule]) {
+                Text(
+                    s[S.ScheduleHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (focusSchedules.isEmpty()) {
+                    Text(
+                        s[S.NoFocusSchedules],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                focusSchedules.forEach { schedule ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "${schedule.dayLabel(context)} ${schedule.timeLabel()}",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                        Switch(
+                            checked = schedule.enabled,
+                            onCheckedChange = { backend.setFocusScheduleEnabled(schedule.id, it) },
+                        )
+                        TextButton(onClick = { backend.deleteFocusSchedule(schedule.id) }) {
+                            Text(s[S.Delete])
+                        }
+                    }
+                }
+                OutlinedButton(onClick = {
+                    editingSchedule = null
+                    showScheduleDialog = true
+                }) { Text(s[S.AddSchedule]) }
             }
         }
 
@@ -551,6 +613,17 @@ fun SettingsScreen(backend: AppBackend) {
             current = themeColor,
             onDismiss = { showThemeColorDialog = false },
             onSelect = { backend.setThemeColor(it) },
+        )
+    }
+
+    if (showScheduleDialog) {
+        ScheduleDialog(
+            schedule = editingSchedule,
+            onDismiss = { showScheduleDialog = false },
+            onSave = { schedule ->
+                backend.saveFocusSchedule(schedule)
+                showScheduleDialog = false
+            },
         )
     }
 
@@ -869,6 +942,111 @@ private fun DropdownSetting(
             }
         }
     }
+}
+
+@Composable
+private fun ScheduleDialog(
+    schedule: FocusSchedule?,
+    onDismiss: () -> Unit,
+    onSave: (FocusSchedule) -> Unit,
+) {
+    val s = rememberUiStrings()
+    val context = LocalContext.current
+    var days by remember { mutableStateOf(schedule?.days ?: setOf(1, 2, 3, 4, 5)) }
+    var start by remember { mutableStateOf(minutesToText(schedule?.startMinute ?: 9 * 60)) }
+    var end by remember { mutableStateOf(minutesToText(schedule?.endMinute ?: 18 * 60)) }
+    val startMinute = parseMinutes(start)
+    val endMinute = parseMinutes(end)
+    val valid = days.isNotEmpty() && startMinute != null && endMinute != null && startMinute != endMinute
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.FocusSchedule]) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(s[S.ScheduleDays], style = MaterialTheme.typography.bodyMedium)
+                listOf(1..4, 5..7).forEach { range ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        range.forEach { day ->
+                            FilterChip(
+                                day in days,
+                                {
+                                    days = if (day in days) days - day else days + day
+                                },
+                                {
+                                    Text(
+                                        DayOfWeek.of(day).getDisplayName(
+                                            TextStyle.SHORT,
+                                            context.resources.configuration.locales[0] ?: Locale.getDefault(),
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = start,
+                    onValueChange = { start = it.take(5) },
+                    label = { Text(s[S.ScheduleStart]) },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = end,
+                    onValueChange = { end = it.take(5) },
+                    label = { Text(s[S.ScheduleEnd]) },
+                    singleLine = true,
+                )
+                Text(
+                    s[S.ScheduleHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val startValue = startMinute ?: return@TextButton
+                    val endValue = endMinute ?: return@TextButton
+                    onSave(
+                        FocusSchedule(
+                            id = schedule?.id ?: UUID.randomUUID().toString(),
+                            days = days,
+                            startMinute = startValue,
+                            endMinute = endValue,
+                            enabled = schedule?.enabled ?: true,
+                        ),
+                    )
+                },
+                enabled = valid,
+            ) { Text(s[S.Save]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
+}
+
+private fun FocusSchedule.timeLabel(): String = "${minutesToText(startMinute)}–${minutesToText(endMinute)}"
+
+private fun FocusSchedule.dayLabel(context: Context): String =
+    days.sorted().joinToString(" ") { day ->
+        DayOfWeek.of(day).getDisplayName(
+            TextStyle.SHORT,
+            context.resources.configuration.locales[0] ?: Locale.getDefault(),
+        )
+    }
+
+private fun minutesToText(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
+
+private fun parseMinutes(text: String): Int? {
+    val parts = text.split(':')
+    if (parts.size != 2) return null
+    val hour = parts[0].toIntOrNull() ?: return null
+    val minute = parts[1].toIntOrNull() ?: return null
+    if (hour !in 0..23 || minute !in 0..59) return null
+    return hour * 60 + minute
 }
 
 @Composable
