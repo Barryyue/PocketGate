@@ -1,4 +1,4 @@
-using NetworkControl.Ipc.Diagnostics;
+using NetworkControl.Diagnostics;
 
 namespace NetworkControl.Ipc.Tests;
 

@@ -2,7 +2,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 
-namespace NetworkControl.Ipc.Diagnostics;
+namespace NetworkControl.Diagnostics;
 
 /// <summary>診斷包的大小上限（未壓縮字節數）。</summary>
 public sealed record DiagnosticsArchiveLimits

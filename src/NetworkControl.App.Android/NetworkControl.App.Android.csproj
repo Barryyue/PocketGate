@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
+    <ProjectReference Include="..\NetworkControl.Diagnostics\NetworkControl.Diagnostics.csproj" />
     <ProjectReference Include="..\NetworkControl.Storage\NetworkControl.Storage.csproj" />
     <ProjectReference Include="..\NetworkControl.Engine.Vpn\NetworkControl.Engine.Vpn.csproj" />
     <ProjectReference Include="..\NetworkControl.Engine.Android\NetworkControl.Engine.Android.csproj" />

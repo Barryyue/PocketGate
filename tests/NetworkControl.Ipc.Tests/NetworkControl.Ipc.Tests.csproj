@@ -5,6 +5,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NetworkControl.Ipc\NetworkControl.Ipc.csproj" />
+    <ProjectReference Include="..\..\src\NetworkControl.Diagnostics\NetworkControl.Diagnostics.csproj" />
   </ItemGroup>
 
   <ItemGroup>

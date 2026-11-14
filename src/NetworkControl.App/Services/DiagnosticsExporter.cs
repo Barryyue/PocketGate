@@ -6,7 +6,7 @@ using System.Text;
 using Grpc.Core;
 using NetworkControl.App.Infrastructure;
 using NetworkControl.Ipc;
-using NetworkControl.Ipc.Diagnostics;
+using NetworkControl.Diagnostics;
 using Proto = NetworkControl.Ipc.V1;
 
 namespace NetworkControl.App.Services;

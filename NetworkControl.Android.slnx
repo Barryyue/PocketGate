@@ -2,6 +2,7 @@
   <!-- Android 版（docs/android.md）：需要 .NET Android 工作負載，構建方法見 docs/development.md「Android」一節 -->
   <Folder Name="/src/">
     <Project Path="src/NetworkControl.Core/NetworkControl.Core.csproj" />
+    <Project Path="src/NetworkControl.Diagnostics/NetworkControl.Diagnostics.csproj" />
     <Project Path="src/NetworkControl.Storage/NetworkControl.Storage.csproj" />
     <Project Path="src/NetworkControl.Engine.Vpn/NetworkControl.Engine.Vpn.csproj" />
     <Project Path="src/NetworkControl.Engine.Android/NetworkControl.Engine.Android.csproj" />

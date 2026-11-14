@@ -10,7 +10,7 @@ using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
 using NetworkControl.Ipc;
-using NetworkControl.Ipc.Diagnostics;
+using NetworkControl.Diagnostics;
 
 namespace NetworkControl.Service.Diagnostics;
 

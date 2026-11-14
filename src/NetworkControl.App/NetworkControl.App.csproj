@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NetworkControl.Ipc\NetworkControl.Ipc.csproj" />
+    <ProjectReference Include="..\NetworkControl.Diagnostics\NetworkControl.Diagnostics.csproj" />
   </ItemGroup>
 
   <ItemGroup>

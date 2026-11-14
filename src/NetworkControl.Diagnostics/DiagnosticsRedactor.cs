@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace NetworkControl.Ipc.Diagnostics;
+namespace NetworkControl.Diagnostics;
 
 /// <summary>
 /// 診斷包文本脫敏：用戶目錄中的用戶名（<c>C:\Users\張三\...</c>、<c>/home/zhang/...</c>，包括 WFP 的小寫設備路徑）
