@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Grpc.Core;
 using NetworkControl.App.Infrastructure;
-using NetworkControl.Ipc;
 using NetworkControl.Diagnostics;
+using NetworkControl.Ipc;
 using Proto = NetworkControl.Ipc.V1;
 
 namespace NetworkControl.App.Services;
