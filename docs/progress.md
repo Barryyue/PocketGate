@@ -83,7 +83,7 @@
 
 **合併 main（Android 版）後（2026-11-14）：Windows 解決方案 292 個測試，291 通過、1 個跳過；Android Debug APK 用用戶級工具鏈（`D:\tools\android-dev`，`scripts/android.ps1 build`）構建通過（0 錯誤；3 個 XA0033 是工具鏈解析 JDK 版本號的既有警告），**未在設備上回歸**。本輪改動了 Core（`IActivityQuery` 新增兩個方法、判決後補充解析應用身份）和 Storage（遷移 `Activity/0002`、備份 / 導入導出），均為追加式修改。**
 
-**測試現狀（2026-11-14）：362 個，361 通過、1 個跳過（Linux /proc 符號鏈接測試，Windows 非開發者模式不能建立符號鏈接）；完整解決方案構建零警告零錯誤；`dotnet format --verify-no-changes` 通過；Android Debug 構建通過（3 個既有 XA0033 警告），未在設備上回歸。Release / AOT 發布包本輪未重新生成。**
+**測試現狀（2026-11-14）：366 個，365 通過、1 個跳過（Linux /proc 符號鏈接測試，Windows 非開發者模式不能建立符號鏈接）；完整解決方案構建零警告零錯誤；`dotnet format --verify-no-changes` 通過；Android Debug 構建通過（3 個既有 XA0033 警告），未在設備上回歸。Release / AOT 發布包本輪未重新生成。**
 
 ---
 
@@ -161,7 +161,10 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
     - IPC / Service：`QuietPeriodSummary`、`ServiceStatus.last_quiet_period`、`DismissQuietPeriod`、`LogQuery.reason` 篩選。
     - 桌面：`QuietPeriodNotifier` Toast，查看時跳轉到按原因篩選的連線記錄並清除摘要；Android 總覽卡片顯示摘要。
     - **驗證**：單元測試、存儲 reason 篩選測試、Fake 探針（勿擾中拒絕 1 條 → 摘要和原因篩選正確 → Dismiss 清除）。**未驗證**：桌面 Toast / Android 界面。
-  - [ ] M3-08 入站連線控制（Windows WFP）
+  - [~] (claude, 2026-11-14) M3-08 入站連線控制（Windows WFP）
+    - `RuleCompiler` 把 `Direction.Inbound` 編到 `ALE_AUTH_RECV_ACCEPT`，雙向規則編兩層；`FilterSpec.Inbound` 參與差異比較；WFP 事件按 `MsFwpDirection` 標記方向。
+    - `UserSettings.InboundDefault`（Allow / Deny）+ 設定頁開關；默認入站阻止時加內置回環 / DHCP / ICMP 放行；入站默認阻斷只記日誌，不詢問（`FlowOrigin.InboundBlocked`）。
+    - **驗證**：RuleCompiler 測試（入站、雙向、默認入站過濾器）；構建 / 測試通過。**待用戶以管理員驗證**局域網 ping / 共享訪問。
   - [ ] M3-09 Android 快速設定磁貼
   - [ ] M3-10 Android 通知文本跟隨應用內語言
   - [ ] M3-11 Android 診斷資訊導出
@@ -173,7 +176,9 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
     - `AppIconCache` 用 shell32 / gdi32 在後台提取大圖標，轉成 `WriteableBitmap`，按路徑緩存最多 512 項；應用頁顯示圖標；失敗或非 Windows 返回 null。
     - **驗證**：構建通過；**未驗證**：界面圖標效果（需要用戶確認）。目前只接入應用頁，即時連線 / 排行榜 / 詢問彈窗尚未接入。
   - [ ] M3-15 svchost 服務與 MSIX 應用的規則下發（Windows，含預研）
-  - [ ] M3-16 目錄簽名（catalog）校驗（Windows）
+  - [~] (claude, 2026-11-14) M3-16 目錄簽名（catalog）校驗（Windows）
+    - 嵌入式簽名不存在時，用 `CryptCATAdminAcquireContext2` + SHA-256 / SHA-1 查目錄，`WinVerifyTrust(WTD_CHOICE_CATALOG)` 驗證，目錄簽名者取自已簽名的目錄文件；`WINTRUST_CATALOG_INFO` 佈局測試。
+    - **驗證**：本機 `notepad.exe` 識別為 Microsoft 目錄簽名；未驗證其他系統文件。
   - [ ] M3-17 WFP 管理員集成測試（Windows）
   - [ ] M3-18 安裝程序繁體中文界面（Windows）
   - [~] (codex, 2026-11-14) M3-19 界面小修：指標卡換行、連線記錄的本地端點（桌面）
