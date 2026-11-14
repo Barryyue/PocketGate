@@ -56,6 +56,8 @@
 
 ### M4 — v1.0：轉發模式 + 上游代理（約 2–2.5 個月）
 
+> **狀態：未開始（2026-11-15）。** Phase 0 需要 Go 1.22+、gomobile、Android NDK（r27+）與真機吞吐 / 耗電測試；目前開發機沒有 Go 與 NDK，且模擬器不能代替真機驗證。Phase 0 的驗收門檻與步驟見 [android-forwarding-research.md](android-forwarding-research.md) §0、§5；在工具鏈與真機就緒前不以任何「假轉發」代替。
+
 1. **K-051 Phase 0 spike**：gVisor netstack + 最小 TCP 轉發 + SOCKS5；判定點；真機吞吐 / 耗電 / FlClash 共存。
 2. **K-052 轉發引擎**：TCP/UDP、域名、上游排除、防環路、上游不可用提示。
 3. **K-053 黑名單 / 域名 / IP / 端口規則在轉發模式生效**；允許連接日誌與流量。
