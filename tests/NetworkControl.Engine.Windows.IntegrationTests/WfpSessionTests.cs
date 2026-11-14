@@ -46,6 +46,13 @@ public class WfpSessionTests
                 Assert.Equal(1, WfpTestNative.CountFilters(providerKey, subLayerKey));
             }
 
+            // 動態會話關閉後 BFE 可能非同步清理；給一個短暫的寬限時間再斷言
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+            while (WfpTestNative.CountFilters(providerKey, subLayerKey) != 0 && DateTime.UtcNow < deadline)
+            {
+                Thread.Sleep(50);
+            }
+
             Assert.Equal(0, WfpTestNative.CountFilters(providerKey, subLayerKey));
         }
     }
