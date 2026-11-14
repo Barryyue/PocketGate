@@ -1209,3 +1209,7 @@ M0 骨架已按本文檔實現。以下是實現過程中對原設計的調整�
 | 規則導入導出與恢復 | §13.4 | `Rules.Export / Import / ListBackups / RestoreBackup`；佔位符目錄由界面按當前用戶傳入；恢復 = 用備份中的規則覆蓋，先建立恢復前快照（保留 3 份）；備份先複製並遷移後再讀取 | 服務以 SYSTEM 運行，自己的用戶目錄不是用戶的；按規則恢復而不是替換數據庫文件，服務無需重啟，設置和應用信息不受影響 |
 | 頁面導航 | — | `NavigationService` 帶參數跳轉（例如從排行榜跳到篩選好的連線記錄）；頁面有 `ApplyNavigation` / `OnDeactivated` | 頁面不依賴主窗口視圖模型，避免循環依賴 |
 | 單實例 | 第二次啟動直接退出 | 第一個實例在本地命名管道（`CurrentUserOnly`）上監聽，第二次啟動時喚起主窗口 | 用戶雙擊圖標後沒有任何反應會以為程序壞了 |
+| Android 平台 | 未規劃 | 不需要 root 的黑洞式分流 VPN（`Engine.Vpn` 平台無關 + `Engine.Android`），單進程：界面直接調用進程內的 Core / Storage，不運行 gRPC 服務；設計見 [android.md](android.md) | Android 上第三方應用只能用 VpnService 控制其他應用的網絡；Android 工作負載沒有 ASP.NET Core（Kestrel），同一進程內也不需要 IPC 和對端鑒權 |
+| Android 應用身份 | 可執行文件路徑 | 合成路徑 `android-app://<包名>`，簽名者 = 簽名證書 SHA-256，文件戳 = (versionCode, lastUpdateTime) | 復用 Core 以路徑為主鍵的應用身份、規則匹配和篡改檢測，不改領域模型 |
+| Android 詢問觸發 | — | 假 DNS：虛擬網卡宣告 DNS 服務器，引擎用 198.18.0.0/15 中的地址回答並能反查域名 | 不宣告 DNS 時被阻斷應用在本機解析失敗、不發起連接，無法按 UID 歸屬，也就無法詢問（設備驗證中發現） |
+| 只能按應用分流的引擎 | — | `RuleSet.FindAppRule(app, filter)`：按優先級查找作用於應用的第一條規則，帶連接條件的規則由引擎篩掉並報告為「此平台不生效」 | 讓 Android 引擎與 WFP 引擎共用同一套規則優先級和篡改檢測 |

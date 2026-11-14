@@ -5,7 +5,7 @@ namespace NetworkControl.Core.Matching;
 
 /// <summary>
 /// 可執行文件路徑模式：<c>*</c> 匹配單個路徑段內的任意字符，<c>**</c> 匹配任意層級。
-/// Windows 和 macOS 默認不區分大小寫，Linux 區分大小寫。
+/// Windows 和 macOS 默認不區分大小寫，Linux 和 Android 區分大小寫。
 /// </summary>
 public sealed class PathPattern
 {
@@ -40,7 +40,8 @@ public sealed class PathPattern
     /// <summary>無通配符的模式可以用於精確索引。</summary>
     public string? Literal => _literal;
 
-    public static bool DefaultIgnoreCase => !OperatingSystem.IsLinux();
+    /// <summary>Linux 和 Android（包名）區分大小寫；注意 Android 上 <see cref="OperatingSystem.IsLinux"/> 返回 false。</summary>
+    public static bool DefaultIgnoreCase => !(OperatingSystem.IsLinux() || OperatingSystem.IsAndroid());
 
     public static PathPattern Parse(string pattern, bool? ignoreCase = null) => new(pattern, ignoreCase ?? DefaultIgnoreCase);
 

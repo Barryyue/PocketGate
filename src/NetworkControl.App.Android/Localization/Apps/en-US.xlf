@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.AppsLangResourceKind">
+    <unit id="Count">
+      <segment>
+        <source>{0} apps</source>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>No apps</source>
+      </segment>
+    </unit>
+    <unit id="FilterAll">
+      <segment>
+        <source>All</source>
+      </segment>
+    </unit>
+    <unit id="FilterAllowed">
+      <segment>
+        <source>Allowed</source>
+      </segment>
+    </unit>
+    <unit id="FilterBlocked">
+      <segment>
+        <source>Blocked</source>
+      </segment>
+    </unit>
+    <unit id="FilterUnset">
+      <segment>
+        <source>Not set</source>
+      </segment>
+    </unit>
+    <unit id="FollowsMode">
+      <segment>
+        <source>Not set · {0}</source>
+      </segment>
+    </unit>
+    <unit id="NowAllowed">
+      <segment>
+        <source>can connect</source>
+      </segment>
+    </unit>
+    <unit id="NowAsk">
+      <segment>
+        <source>will ask</source>
+      </segment>
+    </unit>
+    <unit id="NowBlocked">
+      <segment>
+        <source>blocked</source>
+      </segment>
+    </unit>
+    <unit id="Search">
+      <segment>
+        <source>Search apps</source>
+      </segment>
+    </unit>
+    <unit id="ShowSystem">
+      <segment>
+        <source>System apps</source>
+      </segment>
+    </unit>
+    <unit id="System">
+      <segment>
+        <source>System</source>
+      </segment>
+    </unit>
+    <unit id="Tampered">
+      <segment>
+        <source>Signature changed</source>
+      </segment>
+    </unit>
+    <unit id="Until">
+      <segment>
+        <source>until {0}</source>
+      </segment>
+    </unit>
+    <unit id="UntilRestart">
+      <segment>
+        <source>until restart</source>
+      </segment>
+    </unit>
+  </file>
+</xliff>

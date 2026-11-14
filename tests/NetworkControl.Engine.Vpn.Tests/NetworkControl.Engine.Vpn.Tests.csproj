@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\NetworkControl.Core\NetworkControl.Core.csproj" />
+    <ProjectReference Include="..\..\src\NetworkControl.Engine.Vpn\NetworkControl.Engine.Vpn.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 復用 Core 場景測試的內存倉儲 -->
+    <Compile Include="..\NetworkControl.Core.Tests\Scenarios\InMemoryRepositories.cs" Link="Shared\InMemoryRepositories.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

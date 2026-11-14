@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.OverviewLangResourceKind">
+    <unit id="BlockAll">
+      <segment>
+        <source>Block all apps</source>
+        <target state="translated">封鎖所有應用程式</target>
+      </segment>
+    </unit>
+    <unit id="BlockAllActive">
+      <segment>
+        <source>All apps are blocked. Tap Restore to return to the previous mode.</source>
+        <target state="translated">所有應用程式都已封鎖。點「恢復」回到之前的模式。</target>
+      </segment>
+    </unit>
+    <unit id="BlockedToday">
+      <segment>
+        <source>Blocked today</source>
+        <target state="translated">今天阻擋</target>
+      </segment>
+    </unit>
+    <unit id="EnableNotifications">
+      <segment>
+        <source>Turn on</source>
+        <target state="translated">開啟</target>
+      </segment>
+    </unit>
+    <unit id="HintNeedsConsent">
+      <segment>
+        <source>Allow NetworkControl to create a local VPN. Traffic never leaves your device.</source>
+        <target state="translated">請允許 NetworkControl 建立本機 VPN。流量不會離開你的裝置。</target>
+      </segment>
+    </unit>
+    <unit id="HintOff">
+      <segment>
+        <source>All apps can connect to the network.</source>
+        <target state="translated">所有應用程式都可以連線網路。</target>
+      </segment>
+    </unit>
+    <unit id="HintOn">
+      <segment>
+        <source>Apps without permission cannot connect to the network.</source>
+        <target state="translated">未獲允許的應用程式無法連線網路。</target>
+      </segment>
+    </unit>
+    <unit id="HintRevoked">
+      <segment>
+        <source>Another VPN may have been turned on. Turn protection on again to resume.</source>
+        <target state="translated">可能啟用了其他 VPN。重新開啟保護即可恢復。</target>
+      </segment>
+    </unit>
+    <unit id="Mode">
+      <segment>
+        <source>Mode</source>
+        <target state="translated">模式</target>
+      </segment>
+    </unit>
+    <unit id="NotificationsOff">
+      <segment>
+        <source>Notifications are off: connection requests are only shown inside the app.</source>
+        <target state="translated">通知已關閉：連線詢問只會在應用程式內顯示。</target>
+      </segment>
+    </unit>
+    <unit id="PendingPrompts">
+      <segment>
+        <source>Waiting for you</source>
+        <target state="translated">等待你決定</target>
+      </segment>
+    </unit>
+    <unit id="Protection">
+      <segment>
+        <source>Protection</source>
+        <target state="translated">保護</target>
+      </segment>
+    </unit>
+    <unit id="Restore">
+      <segment>
+        <source>Restore</source>
+        <target state="translated">恢復</target>
+      </segment>
+    </unit>
+    <unit id="ShowPrompt">
+      <segment>
+        <source>Review</source>
+        <target state="translated">查看</target>
+      </segment>
+    </unit>
+    <unit id="SkippedRules">
+      <segment>
+        <source>{0} rules have no effect on Android (they use domain, IP or port conditions).</source>
+        <target state="translated">{0} 條規則在 Android 上不生效（帶有網域、IP 或連接埠條件）。</target>
+      </segment>
+    </unit>
+    <unit id="StatusFailed">
+      <segment>
+        <source>Protection failed</source>
+        <target state="translated">保護發生錯誤</target>
+      </segment>
+    </unit>
+    <unit id="StatusNeedsConsent">
+      <segment>
+        <source>Permission needed</source>
+        <target state="translated">需要授權</target>
+      </segment>
+    </unit>
+    <unit id="StatusOff">
+      <segment>
+        <source>Protection is off</source>
+        <target state="translated">保護已關閉</target>
+      </segment>
+    </unit>
+    <unit id="StatusOn">
+      <segment>
+        <source>Protection is on</source>
+        <target state="translated">保護已開啟</target>
+      </segment>
+    </unit>
+    <unit id="StatusRevoked">
+      <segment>
+        <source>Stopped by the system</source>
+        <target state="translated">已被系統停止</target>
+      </segment>
+    </unit>
+    <unit id="StatusStarting">
+      <segment>
+        <source>Starting protection…</source>
+        <target state="translated">正在開啟保護…</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

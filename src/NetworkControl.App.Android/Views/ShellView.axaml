@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.Android.ViewModels"
+             xmlns:views="using:NetworkControl.Android.Views"
+             xmlns:loc="using:NetworkControl.Android.Localization"
+             x:Class="NetworkControl.Android.Views.ShellView"
+             x:DataType="vm:MainViewModel">
+  <Border Classes="page">
+    <Grid RowDefinitions="*,Auto">
+      <!-- 頁面：保持各頁面存活，切換時只改變可見性 -->
+      <Panel Grid.Row="0">
+        <views:OverviewView DataContext="{Binding Overview}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsOverview}" />
+        <views:AppsView DataContext="{Binding Apps}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsApps}" />
+        <views:LogView DataContext="{Binding Log}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsLog}" />
+        <views:SettingsView DataContext="{Binding Settings}" IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).IsSettings}" />
+
+        <!-- 啟動中 / 啟動失敗 -->
+        <Border Classes="page" IsVisible="{Binding IsLoading}">
+          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+            <atom:Spin IsSpinning="True" HorizontalAlignment="Center" />
+            <TextBlock Classes="secondary" Text="{loc:ShellLangResource Starting}" HorizontalAlignment="Center" />
+          </StackPanel>
+        </Border>
+        <Border Classes="page" IsVisible="{Binding StartError, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <StackPanel VerticalAlignment="Center" Margin="24" Spacing="16">
+            <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding StartError}" />
+            <atom:Button ButtonType="Primary" HorizontalAlignment="Center" Command="{Binding RetryCommand}" Content="{loc:CommonLangResource Retry}" />
+          </StackPanel>
+        </Border>
+      </Panel>
+
+      <!-- 底部導航 -->
+      <Border Grid.Row="1" Classes="bottom-nav">
+        <UniformGrid Columns="4">
+          <Button Classes="nav" Classes.active="{Binding IsOverview}" Command="{Binding NavigateCommand}" CommandParameter="0">
+            <StackPanel Spacing="2">
+              <atom:IconPresenter Icon="{antdicons:AntDesignIconProvider Kind=SafetyOutlined}" Width="22" Height="22" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:ShellLangResource NavOverview}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" Classes.active="{Binding IsApps}" Command="{Binding NavigateCommand}" CommandParameter="1">
+            <StackPanel Spacing="2">
+              <atom:IconPresenter Icon="{antdicons:AntDesignIconProvider Kind=AppstoreOutlined}" Width="22" Height="22" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:ShellLangResource NavApps}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" Classes.active="{Binding IsLog}" Command="{Binding NavigateCommand}" CommandParameter="2">
+            <StackPanel Spacing="2">
+              <atom:IconPresenter Icon="{antdicons:AntDesignIconProvider Kind=StopOutlined}" Width="22" Height="22" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:ShellLangResource NavLog}" />
+            </StackPanel>
+          </Button>
+          <Button Classes="nav" Classes.active="{Binding IsSettings}" Command="{Binding NavigateCommand}" CommandParameter="3">
+            <StackPanel Spacing="2">
+              <atom:IconPresenter Icon="{antdicons:AntDesignIconProvider Kind=SettingOutlined}" Width="22" Height="22" HorizontalAlignment="Center" />
+              <TextBlock Text="{loc:ShellLangResource NavSettings}" />
+            </StackPanel>
+          </Button>
+        </UniformGrid>
+      </Border>
+
+      <!-- 詢問覆蓋層（覆蓋整個界面，包括底部導航） -->
+      <views:PromptOverlay Grid.Row="0" Grid.RowSpan="2" DataContext="{Binding Prompt}"
+                           IsVisible="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Prompt.IsVisible, FallbackValue=False}" />
+    </Grid>
+  </Border>
+</UserControl>

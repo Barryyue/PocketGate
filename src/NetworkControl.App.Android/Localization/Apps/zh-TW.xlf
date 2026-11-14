@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.AppsLangResourceKind">
+    <unit id="Count">
+      <segment>
+        <source>{0} apps</source>
+        <target state="translated">{0} 個應用程式</target>
+      </segment>
+    </unit>
+    <unit id="Empty">
+      <segment>
+        <source>No apps</source>
+        <target state="translated">沒有應用程式</target>
+      </segment>
+    </unit>
+    <unit id="FilterAll">
+      <segment>
+        <source>All</source>
+        <target state="translated">全部</target>
+      </segment>
+    </unit>
+    <unit id="FilterAllowed">
+      <segment>
+        <source>Allowed</source>
+        <target state="translated">已允許</target>
+      </segment>
+    </unit>
+    <unit id="FilterBlocked">
+      <segment>
+        <source>Blocked</source>
+        <target state="translated">已拒絕</target>
+      </segment>
+    </unit>
+    <unit id="FilterUnset">
+      <segment>
+        <source>Not set</source>
+        <target state="translated">未設定</target>
+      </segment>
+    </unit>
+    <unit id="FollowsMode">
+      <segment>
+        <source>Not set · {0}</source>
+        <target state="translated">未設定・{0}</target>
+      </segment>
+    </unit>
+    <unit id="NowAllowed">
+      <segment>
+        <source>can connect</source>
+        <target state="translated">可以連線</target>
+      </segment>
+    </unit>
+    <unit id="NowAsk">
+      <segment>
+        <source>will ask</source>
+        <target state="translated">將會詢問</target>
+      </segment>
+    </unit>
+    <unit id="NowBlocked">
+      <segment>
+        <source>blocked</source>
+        <target state="translated">已阻擋</target>
+      </segment>
+    </unit>
+    <unit id="Search">
+      <segment>
+        <source>Search apps</source>
+        <target state="translated">搜尋應用程式</target>
+      </segment>
+    </unit>
+    <unit id="ShowSystem">
+      <segment>
+        <source>System apps</source>
+        <target state="translated">系統應用程式</target>
+      </segment>
+    </unit>
+    <unit id="System">
+      <segment>
+        <source>System</source>
+        <target state="translated">系統</target>
+      </segment>
+    </unit>
+    <unit id="Tampered">
+      <segment>
+        <source>Signature changed</source>
+        <target state="translated">簽章已變更</target>
+      </segment>
+    </unit>
+    <unit id="Until">
+      <segment>
+        <source>until {0}</source>
+        <target state="translated">至 {0}</target>
+      </segment>
+    </unit>
+    <unit id="UntilRestart">
+      <segment>
+        <source>until restart</source>
+        <target state="translated">直到重新啟動</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

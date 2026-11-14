@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.Android.ViewModels"
+             xmlns:loc="using:NetworkControl.Android.Localization"
+             x:Class="NetworkControl.Android.Views.PromptOverlay"
+             x:DataType="vm:PromptViewModel">
+  <!-- 應用內詢問：底部彈出的卡片，遮罩層攔截其他操作。不使用窗口類對話框（Android 上只有單一視圖）。 -->
+  <Border Classes="scrim">
+    <atom:Card VerticalAlignment="Bottom" Margin="12,12,12,24">
+      <StackPanel Spacing="12">
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+          <Image Width="48" Height="48" Source="{Binding Icon}" VerticalAlignment="Top" />
+          <StackPanel Grid.Column="1" Spacing="2">
+            <TextBlock Classes="title" TextWrapping="Wrap" Text="{Binding Title}" />
+            <TextBlock Classes="caption" Text="{Binding PackageName}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </Grid>
+
+        <atom:Alert Type="Error" IsShowIcon="True" Message="{loc:PromptLangResource TamperHint}" IsVisible="{Binding IsTamper}" />
+
+        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" RowDefinitions="Auto,Auto">
+          <TextBlock Classes="secondary" Text="{loc:PromptLangResource Target}" />
+          <TextBlock Grid.Column="1" Text="{Binding TargetText}" TextWrapping="Wrap" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Classes="caption" Text="{Binding MoreText}" />
+        </Grid>
+
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:PromptLangResource Hint}" />
+
+        <StackPanel Spacing="6">
+          <TextBlock Classes="secondary" Text="{loc:PromptLangResource Duration}" />
+          <atom:Segmented SelectedIndex="{Binding DurationIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+            <atom:SegmentedItem Content="{loc:PromptLangResource Forever}" />
+            <atom:SegmentedItem Content="{loc:PromptLangResource OneHour}" />
+            <atom:SegmentedItem Content="{loc:PromptLangResource UntilRestart}" />
+          </atom:Segmented>
+        </StackPanel>
+
+        <!-- 防誤觸：出現後 1 秒內按鈕不可用；默認焦點不在「允許」上 -->
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsEnabled="{Binding IsInteractive}">
+          <atom:Button ButtonType="Primary" IsDanger="True" HorizontalAlignment="Stretch" SizeType="Large"
+                       Icon="{antdicons:AntDesignIconProvider Kind=StopOutlined}"
+                       Command="{Binding BlockCommand}" IsLoading="{Binding IsBusy}" Content="{loc:CommonLangResource Block}" />
+          <atom:Button Grid.Column="1" ButtonType="Primary" HorizontalAlignment="Stretch" SizeType="Large"
+                       Icon="{antdicons:AntDesignIconProvider Kind=CheckOutlined}"
+                       Command="{Binding AllowCommand}" IsLoading="{Binding IsBusy}" Content="{loc:CommonLangResource Allow}" />
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding QueueText}" />
+          <atom:Button Grid.Column="1" ButtonType="Text" Command="{Binding LaterCommand}" Content="{loc:PromptLangResource Later}" />
+        </Grid>
+      </StackPanel>
+    </atom:Card>
+  </Border>
+</UserControl>

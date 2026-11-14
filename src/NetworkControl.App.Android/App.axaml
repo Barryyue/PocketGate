@@ -1,0 +1,11 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="NetworkControl.Android.App">
+  <!-- 主題（Ant Design 令牌、淺色 / 深色）由 AtomUI 在 Initialize 之前提交（見 AndroidApp.CustomizeAppBuilder）。
+       FluentTheme 只為 Avalonia 基礎控件（ListBox、ScrollViewer 等 AtomUI 沒有提供主題的類型）兜底，與桌面版相同；
+       AtomUI 的框架資源優先於 FluentTheme。 -->
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://NetworkControl.Android/Styles/AppStyles.axaml" />
+  </Application.Styles>
+</Application>

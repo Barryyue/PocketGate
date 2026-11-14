@@ -43,6 +43,8 @@
   <ItemGroup Label="UI">
     <PackageVersion Include="Avalonia" Version="12.1.6" />
     <PackageVersion Include="Avalonia.Desktop" Version="12.1.6" />
+    <!-- Android 版界面宿主（docs/android.md）；版本必須與 Avalonia 一致 -->
+    <PackageVersion Include="Avalonia.Android" Version="12.1.6" />
     <!-- 只為 Avalonia 基礎控件（托盤菜單、普通窗口）提供主題；AtomUI 的框架資源優先級更高 -->
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.6" />
     <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />

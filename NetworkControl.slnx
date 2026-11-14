@@ -14,12 +14,15 @@
     <File Path="docs/design.md" />
     <File Path="docs/development.md" />
     <File Path="docs/progress.md" />
+    <File Path="docs/progress-android.md" />
+    <File Path="docs/android.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/NetworkControl.App/NetworkControl.App.csproj" />
     <Project Path="src/NetworkControl.Core/NetworkControl.Core.csproj" />
     <Project Path="src/NetworkControl.Engine.Fake/NetworkControl.Engine.Fake.csproj" />
     <Project Path="src/NetworkControl.Engine.Linux/NetworkControl.Engine.Linux.csproj" />
+    <Project Path="src/NetworkControl.Engine.Vpn/NetworkControl.Engine.Vpn.csproj" />
     <Project Path="src/NetworkControl.Engine.Windows/NetworkControl.Engine.Windows.csproj" />
     <Project Path="src/NetworkControl.Ipc/NetworkControl.Ipc.csproj" />
     <Project Path="src/NetworkControl.Service/NetworkControl.Service.csproj" />
@@ -27,6 +30,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NetworkControl.Core.Tests/NetworkControl.Core.Tests.csproj" />
+    <Project Path="tests/NetworkControl.Engine.Vpn.Tests/NetworkControl.Engine.Vpn.Tests.csproj" />
     <Project Path="tests/NetworkControl.Engine.Windows.Tests/NetworkControl.Engine.Windows.Tests.csproj" />
     <Project Path="tests/NetworkControl.Engine.Linux.Tests/NetworkControl.Engine.Linux.Tests.csproj" />
     <Project Path="tests/NetworkControl.Ipc.Tests/NetworkControl.Ipc.Tests.csproj" />

@@ -76,6 +76,8 @@
   - 驗證：`PortableLayout` 單元測試；Debug 佈局 + Fake 引擎端到端已驗證（服務從 `Service` 啟動、數據寫入 `data`、端點為 `pipe:NetworkControl.portable.v1`、界面診斷包中 `Launcher=Portable` 且成功連上服務）；AOT zip 的離線和在線診斷包均已驗證（`Native AOT=True`、`Launcher=Portable`；非管理員啟動時 WFP 按預期故障、服務存活且界面可連接）。
   - 待用戶驗證：可攜版首次啟動的 UAC 提權和真實 WFP 攔截（需要管理員權限）；從 zip 安裝 / 升級 / 卸載的回歸。
 
+**合併 main（Android 版）後（2026-11-14）：Windows 解決方案 292 個測試，291 通過、1 個跳過；`NetworkControl.Android.slnx` **未驗證 Android 構建**（本機沒有 android 工作負載，安裝需要管理員權限，由 CI 的 Android 任務兜底）。本輪改動了 Core（`IActivityQuery` 新增兩個方法、判決後補充解析應用身份）和 Storage（遷移 `Activity/0002`、備份 / 導入導出），均為追加式修改。**
+
 **測試現狀（2026-11-14）：233 個，232 通過、1 個跳過（Linux /proc 符號鏈接測試，Windows 非開發者模式不能建立符號鏈接）；完整解決方案 Debug 構建零警告零錯誤；`dotnet format --verify-no-changes` 通過。Release / AOT 發布包本輪未重新生成。**
 
 ---
@@ -108,6 +110,12 @@
   - 已完成：各頁統一「標題 + 一句說明 + 右側操作」頁頭；托盤菜單新增「應用程式」；狀態欄在有待回應連線時顯示橙色標籤；規則頁按來源篩選（使用者 / 彈窗 / 導入 / 內置）並顯示條數；連線記錄「詳情」對話框（全部字段可選中複製，並用一句話解釋判決原因）；信息類對話框只顯示「確定」；**修復**停用 / 全部阻斷等模式下連線記錄沒有應用信息（判決後補充解析，見 design §22）。
   - 待做：應用圖標（從可執行文件提取，需要 Win32 互操作）、窄窗口下指標卡自動換行、連線記錄的本地端點（目前 `LogEntry` 沒有該字段）。
 - [ ] **L6 後續候選**（按價值排序）：流量統計（ETW Kernel-Network → `traffic_*` 表，已有表結構）；實時連線視圖；配置文件 Profiles 及按網絡自動切換；勿擾期間阻斷彙總通知；黑名單訂閱。
+
+---
+
+## 📱 Android 版
+
+MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗證記錄和待辦見 [progress-android.md](progress-android.md)，設計見 [android.md](android.md)。
 
 ---
 
@@ -176,6 +184,7 @@
   - 已有：`NetworkControl.Engine.Linux`——nftables 腳本（冪等：先 add 再 delete 表；`queue num 0 [bypass]`）、`NfqueueAdapter`（專用收包線程，poll + eventfd 停止，先等線程退出再釋放句柄；ENOBUFS / EINTR 繼續，致命錯誤上報 `OnEngineFault` 並銷毀隊列讓 bypass 生效；`LibraryImport` + `UnmanagedCallersOnly`；按 `.so.1` 解析庫名）、`NfqueuePacketHandler`（判決異步完成，掛起的彈窗不阻塞其他報文；解析失敗、判決失敗、掛起過多都按失效策略處理；64 位 FlowId）、IPv6 擴展頭和分片解析、`/proc` 進程信息（UID 按 Tab 解析）、`LinuxAppInspector`（SHA-256）、`LinuxProcessExitWatcher`（輪詢啟動時間）。
   - 2026-11-13 審查：codex 版本把引擎接入了服務的 Auto，但缺 `IAppInspector` / `IProcessExitWatcher` 註冊（Linux 上服務啟動即失敗）、收包線程同步等待彈窗（全機斷網）等，已修正；**服務接入已撤回**。
   - 待做：eBPF 進程歸屬（沒有 PID 時應用規則無法匹配）、DNS 採集（域名規則）、運行時切換失效策略後重新下發、服務接入（只允許顯式配置 `NfQueue`，完成歸屬前不進入 Auto）、在 Linux 虛擬機上用 root 驗證 `nft -c -f` 和真實攔截。
+- [x] (claude, 2026-11-14) Android 版 MVP —— 見 [progress-android.md](progress-android.md)
 - [ ] M4 macOS 引擎（NE 系統擴展，Swift）—— 需提前申請 Apple 開發者帳號和 NE 權限
 - [ ] 限速、黑名單訂閱、時間段規則、地圖 / ASN、密碼保護、ncctl
 - [ ] Windows WFP Callout 驅動（掛起連接，需 EV 證書）

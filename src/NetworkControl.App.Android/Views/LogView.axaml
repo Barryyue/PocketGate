@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.Android.ViewModels"
+             xmlns:loc="using:NetworkControl.Android.Localization"
+             x:Class="NetworkControl.Android.Views.LogView"
+             x:DataType="vm:LogViewModel">
+  <Grid RowDefinitions="Auto,*">
+    <Grid Margin="16,16,16,8" ColumnDefinitions="*,Auto">
+      <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavLog}" />
+      <atom:Button Grid.Column="1" ButtonType="Text" Icon="{antdicons:AntDesignIconProvider Kind=ReloadOutlined}"
+                   Command="{Binding RefreshCommand}" IsLoading="{Binding IsLoading}" Content="{loc:CommonLangResource Refresh}" />
+    </Grid>
+
+    <ListBox Grid.Row="1" Classes="plain" ItemsSource="{Binding Items}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:LogItemViewModel">
+          <Border Classes="row">
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+              <TextBlock Classes="title" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
+              <TextBlock Grid.Column="1" Classes="caption" VerticalAlignment="Center" Text="{Binding Time}" />
+              <TextBlock Grid.Row="1" Classes="secondary" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
+              <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding CountText}" />
+                <atom:Tag Text="{Binding ReasonText}" />
+              </StackPanel>
+              <atom:Button Grid.Row="2" ButtonType="Link" HorizontalAlignment="Left" Padding="0" IsVisible="{Binding CanAllow}"
+                           Command="{Binding AllowAppCommand}" Content="{loc:LogLangResource AllowApp}" />
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <TextBlock Grid.Row="1" Classes="secondary" HorizontalAlignment="Center" VerticalAlignment="Center"
+               Text="{loc:LogLangResource Empty}" IsVisible="{Binding IsEmpty}" />
+  </Grid>
+</UserControl>

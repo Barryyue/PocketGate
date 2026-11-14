@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    黑洞式分流 VPN 的 Android 平台實現（docs/android.md §5）：VpnService、PackageManager 應用目錄、
+    ConnectivityManager UID 查詢、保護開關。需要 .NET Android 工作負載，不在主解決方案中。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
+    <ProjectReference Include="..\NetworkControl.Engine.Vpn\NetworkControl.Engine.Vpn.csproj" />
+  </ItemGroup>
+</Project>

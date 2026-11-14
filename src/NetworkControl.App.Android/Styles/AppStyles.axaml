@@ -1,0 +1,97 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:atom="https://atomui.net">
+  <!-- 手機界面的排版補充：顏色和尺寸一律引用 AtomUI 設計令牌，深淺色自動適配。 -->
+
+  <Style Selector="TextBlock.page-title">
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeHeading3}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorText}" />
+  </Style>
+
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeLG}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorText}" />
+  </Style>
+
+  <Style Selector="TextBlock.secondary">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextSecondary}" />
+  </Style>
+
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeSM}" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextTertiary}" />
+  </Style>
+
+  <Style Selector="TextBlock.metric">
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeHeading3}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorText}" />
+  </Style>
+
+  <Style Selector="TextBlock.success">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorSuccess}" />
+  </Style>
+
+  <Style Selector="TextBlock.warning">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorWarning}" />
+  </Style>
+
+  <Style Selector="TextBlock.error">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorError}" />
+  </Style>
+
+  <Style Selector="Border.page">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgLayout}" />
+  </Style>
+
+  <!-- 底部導航 -->
+  <Style Selector="Border.bottom-nav">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgContainer}" />
+    <Setter Property="BorderBrush" Value="{atom:SharedTokenResource ColorBorderSecondary}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+  </Style>
+
+  <Style Selector="Button.nav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="MinHeight" Value="56" />
+    <Setter Property="Padding" Value="0,6" />
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextSecondary}" />
+  </Style>
+
+  <Style Selector="Button.nav.active">
+    <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorPrimary}" />
+  </Style>
+
+  <Style Selector="Button.nav TextBlock">
+    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeSM}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+
+  <!-- 列表行 -->
+  <Style Selector="ListBox.plain">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
+  <Style Selector="ListBox.plain ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+
+  <Style Selector="Border.row">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgContainer}" />
+    <Setter Property="BorderBrush" Value="{atom:SharedTokenResource ColorBorderSecondary}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="16,10" />
+  </Style>
+
+  <!-- 詢問覆蓋層 -->
+  <Style Selector="Border.scrim">
+    <Setter Property="Background" Value="#73000000" />
+  </Style>
+</Styles>

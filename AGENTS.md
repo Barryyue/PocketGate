@@ -7,7 +7,7 @@
 
 ## 1. 開始工作前（必讀）
 
-1. **先讀 [docs/progress.md](docs/progress.md)**：當前階段、阻塞項、待辦、可分派任務、待驗證事項都在那裡。
+1. **先讀 [docs/progress.md](docs/progress.md)**：當前階段、阻塞項、待辦、可分派任務、待驗證事項都在那裡。Android 版的任務看 [docs/progress-android.md](docs/progress-android.md)。
 2. 需要背景時再讀：
    - [docs/requirements.md](docs/requirements.md)：需求，編號為 FR-xxx / NFR-xxx。
    - [docs/design.md](docs/design.md)：設計；§22 記錄了實現與原設計的差異。
@@ -23,7 +23,8 @@
   1. `dotnet build NetworkControl.slnx` 零錯誤零警告（倉庫開啟了警告即錯誤）。
   2. `dotnet test --solution NetworkControl.slnx` 全部通過，新功能需附帶測試。
   3. `dotnet format NetworkControl.slnx --verify-no-changes` 通過。
-  4. 更新 `docs/progress.md`：任務標為 `[x]`，寫明完成內容；有沒驗證到的部分要如實寫明。設計有變化時同步更新 `docs/design.md` §22；發現新的坑就補充到本文件第 6 節。
+  4. **改動了 Core 或 Storage**（Android 版共用它們）：本機有 Android 工具鏈時，再構建一次 `NetworkControl.Android.slnx`（見 docs/development.md §11）；沒有工具鏈時在進度文件中註明「未驗證 Android 構建」，CI 的 Android 任務會兜底。盡量以追加的方式修改公開接口（新增方法、可選參數），不要直接改已有的簽名。
+  5. 更新 `docs/progress.md`（Android 任務更新 `docs/progress-android.md`）：任務標為 `[x]`，寫明完成內容；有沒驗證到的部分要如實寫明。設計有變化時同步更新 `docs/design.md` §22；發現新的坑就補充到本文件第 6 節。
 - **提交信息**：使用 Conventional Commits 格式，例如 `feat(storage): daily backup of config.db`，正文可以用中文。
 - **禁止事項**：
   - 不要修改已發布的數據庫遷移腳本，也不要修改 proto 中已有的字段編號。
@@ -105,3 +106,14 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 - **System.Text.Json 源生成會覆蓋 init 屬性的初始值**：`public bool Enabled { get; init; } = true;` 在 JSON 缺少該字段時反序列化為 `false`。需要「缺省為 true」時用可空類型並在映射時 `?? true`。
 - **開發機的透明加密（tipray）**：倉庫中已有的文件對部分進程是密文——Claude Code 的 Read / Edit 工具讀到亂碼並報「NUL bytes」，而 git、dotnet、Git Bash、Python 讀到的是明文。遇到這種情況用 Python（`-X utf8`，保留 BOM 和換行）或 Git Bash 修改；新建文件不受影響。
 - **可攜版與安裝版目錄結構相同**：可攜模式只能靠根目錄的 `portable.txt` 判斷，不能靠 `App\` / `Service\` 目錄；安裝程序不得複製這個文件。可攜版使用獨立管道 `NetworkControl.portable.v1` 和 `<根目錄>\data`，不要和安裝版同時運行服務。
+- **Android 版**（設計見 docs/android.md，構建見 docs/development.md §11）：
+  - Android 項目需要 .NET Android 工作負載，只放在 `NetworkControl.Android.slnx`；主解決方案只包含平台無關的 `Engine.Vpn`，不要把 Android 項目加進 `NetworkControl.slnx`。
+  - 開發機用的是 `D:\tools\android-dev` 下的用戶級工具鏈；下載工作負載 / NuGet 時用 `HTTPS_PROXY=http://127.0.0.1:9` + `NO_PROXY=*` 臨時繞過 Reqable（只對當前終端）。`-t:InstallAndroidDependencies` 不支持這種繞過，SDK 要手動安裝。
+  - 模擬器 37.x 在本機 Windows 10 的 WHPX 下無法啟動（宿主崩潰或客戶機卡住），用 `D:\tools\android-dev\emu34\emulator\emulator.exe`（33.1.24）；adb 只用 SDK 自帶的版本，`D:\tools\platform-tools` 的舊 adb 會讓設備一直顯示 offline。
+  - 黑洞式 VPN 必須宣告 DNS 服務器並用假 DNS 回答，否則被阻斷的應用在本機解析失敗、根本不發起連接，引擎無法按 UID 歸屬，也就不會詢問。
+  - `getConnectionOwnerUid` 是 Binder 調用，不能在主線程上執行；引擎的後台循環要用 `Task.Run` 啟動，不能繼承調用方（界面線程）的同步上下文。
+  - 系統核心 UID（< 10000，例如 DNS 解析服務 1051）沒有軟件包、無法按包排除在 VPN 之外：只計數，不上報、不詢問。
+  - Android 的隱式 using 包含 `Android.App`：`Application` 與 Avalonia 的同名，Avalonia 的要寫 `Avalonia.Application`；項目命名空間是 `NetworkControl.Android`，引用 Android SDK 類型一律用頂層 `using global::Android...`。
+  - AtomUI 在 Android 上：`Segmented` 不響應觸控（由 `TouchAdapters` 補上）；默認字體沒有中文字形且不回退，必須 `atom.WithDefaultFontFamily("sans-serif")`；ListBox 等基礎控件需要 `FluentTheme`。
+  - Avalonia 12.1 在 Android 上已經把內容限制在系統欄內，`InsetsManager.SafeAreaPadding` 還是以物理像素報告：不要再手動按它留邊。
+  - 通知文本在 `Resources/values*/strings.xml`（沒有界面時也要可用），界面文本由 `tools/android-strings.py` 生成 XLIFF；兩處都要維護三種語言。

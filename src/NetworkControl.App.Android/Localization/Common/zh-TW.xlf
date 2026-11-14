@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.Android.Localization.CommonLangResourceKind">
+    <unit id="Allow">
+      <segment>
+        <source>Allow</source>
+        <target state="translated">允許</target>
+      </segment>
+    </unit>
+    <unit id="Block">
+      <segment>
+        <source>Block</source>
+        <target state="translated">拒絕</target>
+      </segment>
+    </unit>
+    <unit id="Cancel">
+      <segment>
+        <source>Cancel</source>
+        <target state="translated">取消</target>
+      </segment>
+    </unit>
+    <unit id="ModeAsk">
+      <segment>
+        <source>Ask</source>
+        <target state="translated">詢問</target>
+      </segment>
+    </unit>
+    <unit id="ModeAskDescription">
+      <segment>
+        <source>Ask when an app without a rule connects</source>
+        <target state="translated">沒有規則的應用程式連線時詢問</target>
+      </segment>
+    </unit>
+    <unit id="ModeBlacklist">
+      <segment>
+        <source>Blocklist</source>
+        <target state="translated">黑名單</target>
+      </segment>
+    </unit>
+    <unit id="ModeBlacklistDescription">
+      <segment>
+        <source>All apps can connect except blocked ones</source>
+        <target state="translated">除已拒絕的應用程式外都可以連線</target>
+      </segment>
+    </unit>
+    <unit id="ModeBlockAll">
+      <segment>
+        <source>Block all</source>
+        <target state="translated">全部封鎖</target>
+      </segment>
+    </unit>
+    <unit id="ModeBlockAllDescription">
+      <segment>
+        <source>No app can connect</source>
+        <target state="translated">所有應用程式都無法連線</target>
+      </segment>
+    </unit>
+    <unit id="ModeDisabled">
+      <segment>
+        <source>Filtering off</source>
+        <target state="translated">停用過濾</target>
+      </segment>
+    </unit>
+    <unit id="ModeDisabledDescription">
+      <segment>
+        <source>All apps can connect</source>
+        <target state="translated">所有應用程式都可以連線</target>
+      </segment>
+    </unit>
+    <unit id="ModeWhitelist">
+      <segment>
+        <source>Allowlist</source>
+        <target state="translated">白名單</target>
+      </segment>
+    </unit>
+    <unit id="ModeWhitelistDescription">
+      <segment>
+        <source>Only allowed apps can connect</source>
+        <target state="translated">只有已允許的應用程式可以連線</target>
+      </segment>
+    </unit>
+    <unit id="Refresh">
+      <segment>
+        <source>Refresh</source>
+        <target state="translated">重新整理</target>
+      </segment>
+    </unit>
+    <unit id="Retry">
+      <segment>
+        <source>Retry</source>
+        <target state="translated">重試</target>
+      </segment>
+    </unit>
+    <unit id="Unset">
+      <segment>
+        <source>Not set</source>
+        <target state="translated">未設定</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>
