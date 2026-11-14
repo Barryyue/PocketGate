@@ -151,30 +151,37 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
     - 桌面：設定頁配置文件卡片（新增 / 編輯 / 刪除 / 設為當前）、總覽下拉、托盤子選單、狀態欄、規則編輯器「適用於」、規則頁配置文件列與篩選、三語文本。
     - Android：`IBackend` 配置文件 API、總覽下拉、設定頁增刪改、`tools/android-strings.py` 生成文本；Debug 構建通過。
     - **驗證**：356 個測試 355 通過、1 跳過；隔離管道 + Fake 引擎探針驗證建立 / 切換 / 改名 / 刪除、專屬規則切換後生效（生效規則 16→1）、刪除後規則歸零。**未驗證**：桌面和 Android 界面效果、Android 真機。
-  - [~] (claude, 2026-11-14) M3-03R 配置文件審查修正（R1–R10）
+  - [x] (claude, 2026-11-14) M3-03R 配置文件審查修正（R1–R10）
     - **背景**：Claude 審查 M3-03 時發現 10 個問題，詳細驗收見 [m3-tasks.md](m3-tasks.md#m3-03r-配置文件審查修正依賴-m3-03)。此任務之前漏列在進度看板，現在補上。
-    - 已完成：R8（導入未知配置文件的規則改為略過並回報）、R3（編輯規則保留未知 / 載入失敗的 ProfileId）、R1（規則頁配置文件篩選即時生效）。
-    - 待完成：R7（啟用 / 刪除競態）、R9（profiles_revision + 狀態推送）、R10（複製規則來源驗證 / 過期 / 原子性 / List 效率）、R4（模式回寫與 BlockAll / Disabled 同步）、R2（ProfileCatalog，載入失敗不拖垮頁面）、R5（托盤勾選用狀態推送）、R6（Android 總覽選擇跟隨核心）。
+    - 全部完成並合入 `main`：R8 `6a7714d`、R3+R1 `0e20bd7`、R7 `666d77d`、R9 `7a4401b`、R10 `ed36027`、R4 `71581b6`、R2+R5 `b581339`、R6 `90808b5`。
+    - **驗證**：完整構建 / 462 個測試（456 通過、6 跳過）/ 格式檢查通過；Android Debug 構建與格式檢查通過。**待用戶驗證**：桌面和 Android 配置文件界面、托盤勾選、舊版服務下隱藏配置文件 UI（可以用探針模擬 `Unimplemented`）。
   - [~] (claude, 2026-11-14) M3-04 按網絡自動切換配置文件（依賴 M3-03）
     - Core：`NetworkContext` / `INetworkMonitor` / `AutoActivateCondition`；`ProfileAutoSwitcher` 去抖 3 秒、按 SortOrder 匹配、無匹配保持當前、用戶手動切換後同一網絡不再自動切換。
     - 平台：Fake 網絡監視器 + `Simulator.SimulateNetwork`；Windows 用 `NetworkInterface` 判斷有線 / Wi-Fi / 蜂窩和網絡 ID（SSID 暫未接入 WlanAPI）；Android `registerDefaultNetworkCallback`，SSID 需要定位權限。
     - 界面：桌面配置文件編輯器加入自動切換類型 / SSID；`Profiles.GetNetwork` 和 `ServiceStatus.network_display_name`。
-    - **驗證**：單元測試和 Fake 探針（Wi-Fi CorpNet 自動切到公司、無匹配保持、手動覆蓋）。**未驗證**：Windows 真實 Wi-Fi 切換、Android 真機。
+    - Android（`e8e20fd`）：設定頁配置文件編輯器可編輯自動切換類型 / SSID（含「使用目前的 Wi-Fi」），自動切換時發低優先級通知。
+    - **驗證**：單元測試和 Fake 探針（Wi-Fi CorpNet 自動切到公司、無匹配保持、手動覆蓋）；Android 構建 / 格式通過。**未驗證**：Windows 真實 Wi-Fi 切換、Android 真機。
     - 2026-11-14：修正場景測試的時序依賴（提交 `91102ac`）——整套測試並行時偶發失敗（Core 單獨連跑 5 次均通過），改為等待期間持續推進虛擬時間。
-  - [ ] M3-05 Android 阻斷快速失敗（TCP RST / ICMP 不可達）
-  - [ ] M3-06 Android 規則導入導出
+  - [~] (deepseek, 2026-11-14) M3-05 Android 阻斷快速失敗（TCP RST / ICMP 不可達）
+    - 明確拒絕時回 TCP RST（IPv4 / IPv6）與 ICMP 端口不可達；詢問中保持黑洞；每個（UID, 遠端）每秒最多一次；`FastFail` 開關與計數器。提交 `d58565a`，已合併。測試：報文構造、校驗和、限速。**待真機驗證**：Chrome 對被拒絕網站立即報錯。
+  - [~] (deepseek, 2026-11-14) M3-06 Android 規則導入導出
+    - SAF 導入導出 `netcontrol-rules`，合併 / 覆寫預覽，統計 Android 上不生效的規則。提交 `8b28be3`，已合併。測試：不生效規則純函數。**待真機驗證**：手機 ↔ 桌面往返。
   - [~] (claude, 2026-11-14) M3-07 勿擾期間阻斷彙總通知（Core + 桌面 + Android）
     - Core：`QuietPeriodTracker` 只統計 `DoNotDisturb` 判決，手動關閉和到期兩條結束路徑，`SummaryReady` 事件；無事件不生成。
     - IPC / Service：`QuietPeriodSummary`、`ServiceStatus.last_quiet_period`、`DismissQuietPeriod`、`LogQuery.reason` 篩選。
     - 桌面：`QuietPeriodNotifier` Toast，查看時跳轉到按原因篩選的連線記錄並清除摘要；Android 總覽卡片顯示摘要。
-    - **驗證**：單元測試、存儲 reason 篩選測試、Fake 探針（勿擾中拒絕 1 條 → 摘要和原因篩選正確 → Dismiss 清除）。**未驗證**：桌面 Toast / Android 界面。
+    - Android（`e8e20fd`）：新增低優先級「勿擾摘要」通知頻道，點擊打開阻擋記錄頁並清除摘要。
+    - **驗證**：單元測試、存儲 reason 篩選測試、Fake 探針（勿擾中拒絕 1 條 → 摘要和原因篩選正確 → Dismiss 清除）；Android 構建 / 格式通過。**未驗證**：桌面 Toast / Android 真機通知。
   - [~] (claude, 2026-11-14) M3-08 入站連線控制（Windows WFP）
     - `RuleCompiler` 把 `Direction.Inbound` 編到 `ALE_AUTH_RECV_ACCEPT`，雙向規則編兩層；`FilterSpec.Inbound` 參與差異比較；WFP 事件按 `MsFwpDirection` 標記方向。
     - `UserSettings.InboundDefault`（Allow / Deny）+ 設定頁開關；默認入站阻止時加內置回環 / DHCP / ICMP 放行；入站默認阻斷只記日誌，不詢問（`FlowOrigin.InboundBlocked`）。
     - **驗證**：RuleCompiler 測試（入站、雙向、默認入站過濾器）；構建 / 測試通過。**待用戶以管理員驗證**局域網 ping / 共享訪問。
-  - [ ] M3-09 Android 快速設定磁貼
-  - [ ] M3-10 Android 通知文本跟隨應用內語言
-  - [ ] M3-11 Android 診斷資訊導出
+  - [~] (deepseek, 2026-11-14) M3-09 Android 快速設定磁貼
+    - `TileService` 顯示保護狀態、點按切換、未授權時打開應用、長按進設定；狀態變化節流刷新。提交 `e934acc`，已合併。**待真機驗證**。
+  - [~] (deepseek, 2026-11-14) M3-10 Android 通知文本跟隨應用內語言
+    - 通知文本改用 XLIFF Catalog（`NotificationText`，不依賴 Avalonia），同步 `LocaleManager` 並在語言切換時刷新頻道 / 前台通知。提交 `7265643`，已合併。**待真機驗證**。
+  - [~] (deepseek, 2026-11-14) M3-11 Android 診斷資訊導出
+    - 診斷寫入 / 脫敏移到 `NetworkControl.Diagnostics`（`fc2f929`）；設定頁用 SAF 導出 zip，包含摘要、日誌、規則統計和使用情況授權（`f3902ed`）。已合併。**待真機驗證**：zip 可打開、IP 已脫敏。
   - [~] (claude, 2026-11-14) M3-12 權限分級提示（桌面）
     - `ServiceConnection.CanModify`；`PageViewModel.RunAsync` 把 `PermissionDenied` 轉為本地化提示；規則 / 應用 / 配置文件 / 服務設置的寫操作禁用，頁頭顯示說明。
     - **未驗證**：`TreatAllClientsAsAdmin=false` + 普通用戶的界面效果（需要用戶確認）。
@@ -185,19 +192,20 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
   - [~] (claude, 2026-11-14) M3-14 應用圖標（桌面）
     - `AppIconCache` 用 shell32 / gdi32 在後台提取大圖標，轉成 `WriteableBitmap`，按路徑緩存最多 512 項；應用頁顯示圖標；失敗或非 Windows 返回 null。
     - **驗證**：構建通過；**未驗證**：界面圖標效果（需要用戶確認）。目前只接入應用頁，即時連線 / 排行榜 / 詢問彈窗尚未接入。
-    - **待修復（代碼審查發現，2026-11-14，提交 `f4ee5e2`「連線頁顯示應用圖標」）**：修復時附帶測試，修完逐項標註。
-    - **M3-14R（待開始）**：見下方 5 個複選項；完成後把 M3-14R 狀態改為代碼完成待驗證，並補測試。
-      - [ ] **圖標永遠提取不出來（必須修，已核實）**：`AppIconCache.cs:64` 寫的是 `Marshal.SizeOf<Bitmap>()`，這裡的 `Bitmap` 是 Avalonia 的位圖類，對它調用會拋 `ArgumentException`；第 48 行的 `catch` 沒有捕獲這個異常，失敗的任務還被緩存（第 27 行）。結果是應用頁和連線頁的圖標一直空白。改為 `Marshal.SizeOf<NativeBitmap>()`，並把提取過程中的意外異常記入日誌後返回 null，不讓失敗的任務留在緩存裡。
-      - [ ] **舊式圖標顯示為全透明**（`AppIconCache.cs:99`）：沒有 Alpha 通道的老圖標，所有像素的 Alpha 都是 0。Alpha 全為 0 時改用掩碼位圖（`hbmMask`）生成透明度。
-      - [ ] **一次讀取失敗就永久沒有圖標**（`AppIconCache.cs:26`）：null 結果和成功結果一樣被緩存，文件暫時被鎖（例如被 tipray 攔住）時就再也不重試。失敗結果不緩存，或者只緩存一段時間（例如 5 分鐘）。
-      - [ ] **連線頁的行對象不同步**（`ConnectionsViewModel.cs` 第 205、279、319 行，同一個根源）：`ApplyFilter` 復用界面上已有的行對象，只替換連線數據，而語言切換（`RefreshText`）和「能否斷開」的更新（`UpdateKillSupported`）只作用在 `_all` 中新建的對象上。結果是可見行的文字停留在舊語言、「斷開」按鈕的可用狀態不更新；而且每 2 秒為所有新建對象發起的圖標加載都白做了（300 條連線就是 300 次）。改為：更新已有行時同步全部狀態，只在真正插入新行時加載圖標，語言切換時刷新可見行。
-      - [ ] **圖標加載邏輯重複**：`ConnectionsViewModel.cs:34` 複製了 `AppsViewModel.cs` 中 `AppItemViewModel` 的 `Icon` 和 `LoadIconAsync`，抽成共用的小類，上面的修復只改一處。
-      - [ ] **補測試**：圖標提取（對 Windows 自帶的 exe 提取出非空且非全透明的位圖）、緩存的失敗重試，以及連線頁行對象的狀態同步。
-  - [ ] M3-15 svchost 服務與 MSIX 應用的規則下發（Windows，含預研）
+    - **M3-14R（已完成，deepseek，2026-11-14）**：`771f73a` 原生佈局、`423f5c8` 舊式掩碼、`9fc3778` 失敗重試、`7fe7e6b` 共用圖標邏輯、`1cbb5f7` 連線行同步、`f9d419c` 排行榜 / 詢問彈窗、`c4b7733` 清理。新增 `tests/NetworkControl.App.Tests`（9 個測試，notepad / write 提取、失敗重試、行同步）；說明見 `docs/handoff-m3-14r.md`。
+      - [x] **圖標永遠提取不出來（必須修，已核實）**：`AppIconCache.cs:64` 寫的是 `Marshal.SizeOf<Bitmap>()`，這裡的 `Bitmap` 是 Avalonia 的位圖類，對它調用會拋 `ArgumentException`；第 48 行的 `catch` 沒有捕獲這個異常，失敗的任務還被緩存（第 27 行）。結果是應用頁和連線頁的圖標一直空白。改為 `Marshal.SizeOf<NativeBitmap>()`，並把提取過程中的意外異常記入日誌後返回 null，不讓失敗的任務留在緩存裡。
+      - [x] **舊式圖標顯示為全透明**（`AppIconCache.cs:99`）：沒有 Alpha 通道的老圖標，所有像素的 Alpha 都是 0。Alpha 全為 0 時改用掩碼位圖（`hbmMask`）生成透明度。
+      - [x] **一次讀取失敗就永久沒有圖標**（`AppIconCache.cs:26`）：null 結果和成功結果一樣被緩存，文件暫時被鎖（例如被 tipray 攔住）時就再也不重試。失敗結果不緩存，或者只緩存一段時間（例如 5 分鐘）。
+      - [x] **連線頁的行對象不同步**（`ConnectionsViewModel.cs` 第 205、279、319 行，同一個根源）：`ApplyFilter` 復用界面上已有的行對象，只替換連線數據，而語言切換（`RefreshText`）和「能否斷開」的更新（`UpdateKillSupported`）只作用在 `_all` 中新建的對象上。結果是可見行的文字停留在舊語言、「斷開」按鈕的可用狀態不更新；而且每 2 秒為所有新建對象發起的圖標加載都白做了（300 條連線就是 300 次）。改為：更新已有行時同步全部狀態，只在真正插入新行時加載圖標，語言切換時刷新可見行。
+      - [x] **圖標加載邏輯重複**：`ConnectionsViewModel.cs:34` 複製了 `AppsViewModel.cs` 中 `AppItemViewModel` 的 `Icon` 和 `LoadIconAsync`，抽成共用的小類，上面的修復只改一處。
+      - [x] **補測試**：圖標提取（對 Windows 自帶的 exe 提取出非空且非全透明的位圖）、緩存的失敗重試，以及連線頁行對象的狀態同步。
+  - [~] (deepseek, 2026-11-14) M3-15 svchost 服務與 MSIX 應用的規則下發（Windows，含預研）
+    - 預研完成（`286572f`，`docs/m3-15-research.md`）：`ALE_PACKAGE_ID` 只匹配 AppContainer，本機 26 個 WindowsApps 進程中 24 個是 full-trust；`ALE_USER_ID` + 服務 SID 只適用 UNRESTRICTED / RESTRICTED 服務，共享 svchost 仍無法精確區分。**待用戶確認預研結論後再實現**。
   - [~] (claude, 2026-11-14) M3-16 目錄簽名（catalog）校驗（Windows）
     - 嵌入式簽名不存在時，用 `CryptCATAdminAcquireContext2` + SHA-256 / SHA-1 查目錄，`WinVerifyTrust(WTD_CHOICE_CATALOG)` 驗證，目錄簽名者取自已簽名的目錄文件；`WINTRUST_CATALOG_INFO` 佈局測試。
     - **驗證**：本機 `notepad.exe` 識別為 Microsoft 目錄簽名；未驗證其他系統文件。
-  - [ ] M3-17 WFP 管理員集成測試（Windows）
+  - [~] (deepseek, 2026-11-14) M3-17 WFP 管理員集成測試（Windows）
+    - 新增 `tests/NetworkControl.Engine.Windows.IntegrationTests`（5 個用例，隨機獨立 provider / sublayer，只用 127.0.0.2）。提交 `25b1e02`，已合併；普通用戶運行 5 個全部 Skip、0 失敗。**待用戶以管理員運行**：全量通過且無殘留過濾器。
   - [~] (claude, 2026-11-14) M3-18 安裝程序繁體中文界面（Windows）
     - 取得 Inno Setup 6.5.0+ 官方繁體中文翻譯（維護者 GoneTone，來源 `jrsoftware/issrc` 的 `Files/Languages/ChineseTraditional.isl`）；核對 Inno Setup License：允許再散布源碼文件，條件是保留著作權聲明和授權條文，已在 `installer/Languages/ChineseTraditional.isl` 文件頭注明來源、版本、取得日期並附完整授權條文，翻譯正文未修改，UTF-8 BOM。
     - `NetworkControl.iss` 的 `[Languages]` 追加 `chinesetraditional`、`[CustomMessages]` 補四條繁中文本、明確 `LanguageDetectionMethod=uilanguage`；`AppId` 未改。
