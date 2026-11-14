@@ -22,7 +22,7 @@
 - **完成標準**（全部滿足才算完成）：
   1. `dotnet build NetworkControl.slnx` 零錯誤零警告（倉庫開啟了警告即錯誤）。
   2. `dotnet test --solution NetworkControl.slnx` 全部通過，新功能需附帶測試。
-  3. `dotnet format NetworkControl.slnx --verify-no-changes` 通過。
+  3. `dotnet format NetworkControl.slnx --verify-no-changes --exclude src/NetworkControl.App.Android src/NetworkControl.Engine.Android` 通過（Android 項目沒有工作負載時無法分析，必須排除；它們的格式由 `NetworkControl.Android.slnx` 檢查）。
   4. **改動了 Core 或 Storage**（Android 版共用它們）：本機有 Android 工具鏈時，再構建一次 `NetworkControl.Android.slnx`（見 docs/development.md §11）；沒有工具鏈時在進度文件中註明「未驗證 Android 構建」，CI 的 Android 任務會兜底。盡量以追加的方式修改公開接口（新增方法、可選參數），不要直接改已有的簽名。
   5. 更新 `docs/progress.md`（Android 任務更新 `docs/progress-android.md`）：任務標為 `[x]`，寫明完成內容；有沒驗證到的部分要如實寫明。設計有變化時同步更新 `docs/design.md` §22；發現新的坑就補充到本文件第 6 節。
 - **提交信息**：使用 Conventional Commits 格式，例如 `feat(storage): daily backup of config.db`，正文可以用中文。
@@ -59,7 +59,7 @@
 ```bash
 dotnet build NetworkControl.slnx
 dotnet test --solution NetworkControl.slnx            # Microsoft.Testing.Platform 語法，不是 dotnet test xxx.sln
-dotnet format NetworkControl.slnx --verify-no-changes
+dotnet format NetworkControl.slnx --verify-no-changes --exclude src/NetworkControl.App.Android src/NetworkControl.Engine.Android
 dotnet run --project src/NetworkControl.App           # 調試構建會自動拉起開發服務（模擬引擎）
 .\scripts\publish-release.ps1                          # 發布包（Native AOT）+ 安裝程序，見 docs/development.md §8
 ```
@@ -107,7 +107,7 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 - **開發機的透明加密（tipray）**：倉庫中已有的文件對部分進程是密文——Claude Code 的 Read / Edit 工具讀到亂碼並報「NUL bytes」，而 git、dotnet、Git Bash、Python 讀到的是明文。遇到這種情況用 Python（`-X utf8`，保留 BOM 和換行）或 Git Bash 修改；新建文件不受影響。
 - **可攜版與安裝版目錄結構相同**：可攜模式只能靠根目錄的 `portable.txt` 判斷，不能靠 `App\` / `Service\` 目錄；安裝程序不得複製這個文件。可攜版使用獨立管道 `NetworkControl.portable.v1` 和 `<根目錄>\data`，不要和安裝版同時運行服務。
 - **Android 版**（設計見 docs/android.md，構建見 docs/development.md §11）：
-  - Android 項目需要 .NET Android 工作負載，只放在 `NetworkControl.Android.slnx`；主解決方案只包含平台無關的 `Engine.Vpn`，不要把 Android 項目加進 `NetworkControl.slnx`。
+  - Android 項目需要 .NET Android 工作負載。主解決方案 `NetworkControl.slnx` 中的 Android 項目（`/android/` 文件夾）只用於 IDE 瀏覽，標記為不參與解決方案構建（`<Build Project="false" />`），新增 Android 項目時也要這樣標記；`dotnet format` 主解決方案時要用 `--exclude` 排除它們，否則在沒有工作負載的機器上會失敗。Android 的構建、格式檢查用 `NetworkControl.Android.slnx`（或 `scripts/android.ps1`）。IDE 要能編譯和分析這些項目，IDE 使用的 dotnet 必須裝有 android 工作負載。
   - 開發機用的是 `D:\tools\android-dev` 下的用戶級工具鏈；下載工作負載 / NuGet 時用 `HTTPS_PROXY=http://127.0.0.1:9` + `NO_PROXY=*` 臨時繞過 Reqable（只對當前終端）。`-t:InstallAndroidDependencies` 不支持這種繞過，SDK 要手動安裝。
   - 模擬器 37.x 在本機 Windows 10 的 WHPX 下無法啟動（宿主崩潰或客戶機卡住），用 `D:\tools\android-dev\emu34\emulator\emulator.exe`（33.1.24）；adb 只用 SDK 自帶的版本，`D:\tools\platform-tools` 的舊 adb 會讓設備一直顯示 offline。
   - 黑洞式 VPN 必須宣告 DNS 服務器並用假 DNS 回答，否則被阻斷的應用在本機解析失敗、根本不發起連接，引擎無法按 UID 歸屬，也就不會詢問。

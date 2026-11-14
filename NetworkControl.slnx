@@ -17,6 +17,14 @@
     <File Path="docs/progress-android.md" />
     <File Path="docs/android.md" />
   </Folder>
+  <Folder Name="/android/">
+    <Project Path="src/NetworkControl.App.Android/NetworkControl.App.Android.csproj">
+      <Build Project="false" />
+    </Project>
+    <Project Path="src/NetworkControl.Engine.Android/NetworkControl.Engine.Android.csproj">
+      <Build Project="false" />
+    </Project>
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/NetworkControl.App/NetworkControl.App.csproj" />
     <Project Path="src/NetworkControl.Core/NetworkControl.Core.csproj" />
