@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using AtomUI.Desktop.Controls;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,7 +13,7 @@ using Proto = NetworkControl.Ipc.V1;
 
 namespace NetworkControl.App.ViewModels;
 
-public sealed partial class ConnectionItemViewModel : ObservableObject
+public sealed partial class ConnectionItemViewModel : IconRowViewModel
 {
     private readonly DisplayText _text;
     private readonly AppIconCache _icons;
@@ -22,6 +21,7 @@ public sealed partial class ConnectionItemViewModel : ObservableObject
     private bool _killSupported;
 
     public ConnectionItemViewModel(Proto.LiveConnection connection, DisplayText text, bool killSupported, AppIconCache icons)
+        : base(icons)
     {
         _connection = connection;
         _text = text;
@@ -29,16 +29,7 @@ public sealed partial class ConnectionItemViewModel : ObservableObject
         _icons = icons;
     }
 
-    public Bitmap? Icon { get; private set; }
-
-    public async Task LoadIconAsync()
-    {
-        if (AppPath.Length > 0 && await _icons.GetAsync(AppPath) is { } icon)
-        {
-            Icon = icon;
-            OnPropertyChanged(nameof(Icon));
-        }
-    }
+    public Task LoadIconAsync() => LoadIconAsync(AppPath);
 
     public Proto.LiveConnection Connection
     {

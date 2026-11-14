@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using AtomUI.Desktop.Controls;
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Google.Protobuf.WellKnownTypes;
@@ -12,7 +11,7 @@ using Proto = NetworkControl.Ipc.V1;
 namespace NetworkControl.App.ViewModels;
 
 /// <summary>應用頁中的一行。</summary>
-public sealed class AppItemViewModel(Proto.AppSummary summary, DisplayText text, Func<DateTimeOffset> now, AppIconCache icons) : ObservableObject
+public sealed class AppItemViewModel(Proto.AppSummary summary, DisplayText text, Func<DateTimeOffset> now, AppIconCache icons) : IconRowViewModel(icons)
 {
     private LocalizationService Loc => text.Localization;
 
@@ -20,16 +19,7 @@ public sealed class AppItemViewModel(Proto.AppSummary summary, DisplayText text,
 
     public string Key => Summary.Key;
 
-    public Bitmap? Icon { get; private set; }
-
-    public async Task LoadIconAsync()
-    {
-        if (await icons.GetAsync(Path) is { } icon)
-        {
-            Icon = icon;
-            OnPropertyChanged(nameof(Icon));
-        }
-    }
+    public Task LoadIconAsync() => LoadIconAsync(Path);
 
     public string Name => Summary.DisplayName.Length > 0 ? Summary.DisplayName : Loc.Get(AppsLangResourceKind.TrustUnknown);
 
