@@ -10,6 +10,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>NetworkControl</AssemblyName>
     <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- 界面文本使用 AtomUI 的 XLIFF Catalog（Localization/*），不使用 resx 衛星程序集 -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>

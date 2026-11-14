@@ -47,11 +47,14 @@
           <atom:DataGridTemplateColumn Header="{loc:AppsLangResource ColumnApp}" Width="3*">
             <atom:DataGridTemplateColumn.CellTemplate>
               <DataTemplate x:DataType="vm:AppItemViewModel">
-                <StackPanel VerticalAlignment="Center" Spacing="2" Margin="0,6">
-                  <TextBlock Classes="rank-label" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Classes="caption" Text="{Binding Path}" IsVisible="{Binding HasPath}"
-                             TextTrimming="PrefixCharacterEllipsis" ToolTip.Tip="{Binding Path}" />
-                </StackPanel>
+                <Grid ColumnDefinitions="24,*" ColumnSpacing="8" VerticalAlignment="Center" Margin="0,6">
+                  <Image Width="20" Height="20" Source="{Binding Icon}" VerticalAlignment="Top" Margin="0,4,0,0" />
+                  <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBlock Classes="rank-label" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="caption" Text="{Binding Path}" IsVisible="{Binding HasPath}"
+                               TextTrimming="PrefixCharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+                  </StackPanel>
+                </Grid>
               </DataTemplate>
             </atom:DataGridTemplateColumn.CellTemplate>
           </atom:DataGridTemplateColumn>

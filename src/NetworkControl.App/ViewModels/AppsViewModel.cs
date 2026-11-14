@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using AtomUI.Desktop.Controls;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Google.Protobuf.WellKnownTypes;
@@ -11,13 +12,24 @@ using Proto = NetworkControl.Ipc.V1;
 namespace NetworkControl.App.ViewModels;
 
 /// <summary>應用頁中的一行。</summary>
-public sealed class AppItemViewModel(Proto.AppSummary summary, DisplayText text, Func<DateTimeOffset> now)
+public sealed class AppItemViewModel(Proto.AppSummary summary, DisplayText text, Func<DateTimeOffset> now, AppIconCache icons) : ObservableObject
 {
     private LocalizationService Loc => text.Localization;
 
     public Proto.AppSummary Summary { get; } = summary;
 
     public string Key => Summary.Key;
+
+    public Bitmap? Icon { get; private set; }
+
+    public async Task LoadIconAsync()
+    {
+        if (await icons.GetAsync(Path) is { } icon)
+        {
+            Icon = icon;
+            OnPropertyChanged(nameof(Icon));
+        }
+    }
 
     public string Name => Summary.DisplayName.Length > 0 ? Summary.DisplayName : Loc.Get(AppsLangResourceKind.TrustUnknown);
 
@@ -84,11 +96,12 @@ public sealed partial class AppsViewModel : PageViewModel
 
     private readonly ServiceConnection _connection;
     private readonly RuleEditing _editing;
+    private readonly AppIconCache _icons;
     private readonly NavigationService _navigation;
     private readonly List<AppItemViewModel> _all = [];
     private DataGridLocalSource<AppItemViewModel>? _source;
 
-    public AppsViewModel(ServiceConnection connection, RuleEditing editing, NavigationService navigation, DisplayText text)
+    public AppsViewModel(ServiceConnection connection, RuleEditing editing, NavigationService navigation, AppIconCache icons, DisplayText text)
         : base(text)
     {
         _connection = connection;
@@ -101,6 +114,7 @@ public sealed partial class AppsViewModel : PageViewModel
         };
         _editing = editing;
         _navigation = navigation;
+        _icons = icons;
     }
 
     public override string Key => "apps";
@@ -142,7 +156,12 @@ public sealed partial class AppsViewModel : PageViewModel
                 Limit = 1000,
             });
             _all.Clear();
-            _all.AddRange(response.Apps.Select(a => new AppItemViewModel(a, Text, () => DateTimeOffset.Now)));
+            var items = response.Apps.Select(a => new AppItemViewModel(a, Text, () => DateTimeOffset.Now, _icons)).ToArray();
+            _all.AddRange(items);
+            foreach (var item in items)
+            {
+                _ = item.LoadIconAsync();
+            }
         }
         finally
         {
@@ -196,7 +215,7 @@ public sealed partial class AppsViewModel : PageViewModel
         Items.Clear();
         foreach (var item in _all.Where(a => a.Matches(keyword)))
         {
-            Items.Add(new AppItemViewModel(item.Summary, Text, () => DateTimeOffset.Now));
+            Items.Add(item);
         }
 
         OnPropertyChanged(nameof(IsEmpty));

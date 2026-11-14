@@ -95,6 +95,7 @@ public sealed partial class App : Application
         services.AddSingleton<ShellActivator>();
         services.AddSingleton<NavigationService>();
         services.AddSingleton<ToastService>();
+        services.AddSingleton<AppIconCache>();
 
         // 與服務交互
         services.AddSingleton<ServiceConnection>();
