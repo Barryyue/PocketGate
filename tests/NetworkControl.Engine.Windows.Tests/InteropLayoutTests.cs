@@ -28,6 +28,7 @@ public class InteropLayoutTests
     [InlineData(typeof(FwpmNetEventSubscription0), 32)]
     [InlineData(typeof(WindowsAppInspector.WinTrustData), 88)]
     [InlineData(typeof(WindowsAppInspector.WinTrustFileInfo), 32)]
+    [InlineData(typeof(CatalogSignature.WinTrustCatalogInfo), 72)]
     public void Struct_sizes_match_sdk(Type type, int expected)
     {
         Assert.SkipUnless(Environment.Is64BitProcess, "Layouts are asserted for 64-bit processes.");

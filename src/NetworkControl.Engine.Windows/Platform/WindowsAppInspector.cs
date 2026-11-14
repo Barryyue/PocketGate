@@ -12,8 +12,8 @@ namespace NetworkControl.Engine.Windows.Platform;
 /// 未簽名或簽名不可信時計算 SHA-256。結果由核心按文件戳緩存。
 /// </summary>
 /// <remarks>
-/// M1 限制：只校驗嵌入式簽名；系統目錄中大量通過目錄（catalog）簽名的文件會被視為未簽名並按哈希綁定，
-/// 但標記為平台程序。目錄簽名的校驗在後續版本補充。
+/// 先校驗嵌入式 Authenticode 簽名；沒有時再查 Windows 目錄（catalog）簽名，
+/// 這樣系統更新後目錄簽名文件不會因哈希變化而觸發篡改檢測。
 /// </remarks>
 internal sealed partial class WindowsAppInspector : IAppInspector
 {
@@ -42,7 +42,7 @@ internal sealed partial class WindowsAppInspector : IAppInspector
 
         var displayName = ReadDisplayName(path);
         var isPlatform = path.StartsWith(WindowsDirectory, StringComparison.OrdinalIgnoreCase);
-        var signer = VerifySigner(path);
+        var signer = VerifySigner(path) ?? CatalogSignature.VerifySigner(path);
         if (signer is not null)
         {
             return new AppInspection(stamp, displayName, new CodeSignature(signer, IsPlatformBinary: isPlatform), null);
