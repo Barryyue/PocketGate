@@ -16,6 +16,7 @@ namespace NetworkControl.Android;
     Exported = true,
     LaunchMode = LaunchMode.SingleTask,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode | ConfigChanges.Locale | ConfigChanges.LayoutDirection)]
+[IntentFilter(["android.service.quicksettings.action.QS_TILE_PREFERENCES"], Categories = [Intent.CategoryDefault])]
 public sealed class MainActivity : AvaloniaMainActivity
 {
     /// <summary>從詢問通知打開時攜帶的詢問 ID。</summary>

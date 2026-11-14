@@ -2,4 +2,5 @@
 <resources>
   <!-- 系統在應用進程外讀取的文本（應用名、磁貼標籤）。通知等進程內文本由 AtomUI Catalog 提供（Infrastructure/NotificationText.cs）。 -->
   <string name="app_name">NetworkControl</string>
+  <string name="tile_label">Protection</string>
 </resources>
