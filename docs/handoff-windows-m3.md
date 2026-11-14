@@ -8,7 +8,9 @@
 - 提交：
   1. `25b1e02` `test(windows): add WFP administrator integration tests`（M3-17）
   2. `286572f` `docs(m3-15): research svchost service and MSIX rule delivery`（M3-15 預研）
-  3. 本文件的提交（見 `git log`）
+  3. `aa1f533` `docs(handoff): record M3-17 verification and M3-15 research`
+  4. `6c90866` `test(windows): tolerate asynchronous dynamic-session cleanup`（M3-17 穩定性）
+  5. 本文件的後續修正（見 `git log`）
 
 ## M3-17 WFP 管理員集成測試
 
