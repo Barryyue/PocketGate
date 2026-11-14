@@ -26,14 +26,104 @@
         <source>Some phones stop background apps aggressively. Exclude NetworkControl from battery optimization if protection turns off by itself.</source>
       </segment>
     </unit>
+    <unit id="Data">
+      <segment>
+        <source>Data</source>
+      </segment>
+    </unit>
     <unit id="DefaultAction">
       <segment>
         <source>If not answered</source>
       </segment>
     </unit>
+    <unit id="Diagnostics">
+      <segment>
+        <source>Diagnostics</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsHint">
+      <segment>
+        <source>Export a zip with the app version, device model, engine counters, recent logs and rule statistics. Connection addresses are redacted.</source>
+      </segment>
+    </unit>
+    <unit id="ExportCanceled">
+      <segment>
+        <source>Export cancelled</source>
+      </segment>
+    </unit>
+    <unit id="ExportDiagnostics">
+      <segment>
+        <source>Export diagnostics</source>
+      </segment>
+    </unit>
+    <unit id="ExportFailed">
+      <segment>
+        <source>Export failed: {0}</source>
+      </segment>
+    </unit>
+    <unit id="ExportRules">
+      <segment>
+        <source>Export rules</source>
+      </segment>
+    </unit>
+    <unit id="ExportSaved">
+      <segment>
+        <source>Saved {0}</source>
+      </segment>
+    </unit>
     <unit id="FollowSystem">
       <segment>
         <source>System</source>
+      </segment>
+    </unit>
+    <unit id="ImportApply">
+      <segment>
+        <source>Import</source>
+      </segment>
+    </unit>
+    <unit id="ImportDone">
+      <segment>
+        <source>Imported: {0} new, {1} updated, {2} deleted, {3} unchanged</source>
+      </segment>
+    </unit>
+    <unit id="ImportFailed">
+      <segment>
+        <source>Import failed: {0}</source>
+      </segment>
+    </unit>
+    <unit id="ImportIneffective">
+      <segment>
+        <source>{0} rules do not take effect on Android (desktop app paths or connection conditions). They will still be imported so you can export them back to a desktop.</source>
+      </segment>
+    </unit>
+    <unit id="ImportMerge">
+      <segment>
+        <source>Merge</source>
+      </segment>
+    </unit>
+    <unit id="ImportMode">
+      <segment>
+        <source>Import mode</source>
+      </segment>
+    </unit>
+    <unit id="ImportPreview">
+      <segment>
+        <source>{0} rules in file: {1} new, {2} updated, {3} deleted, {4} unchanged</source>
+      </segment>
+    </unit>
+    <unit id="ImportReplace">
+      <segment>
+        <source>Replace</source>
+      </segment>
+    </unit>
+    <unit id="ImportRules">
+      <segment>
+        <source>Import rules</source>
+      </segment>
+    </unit>
+    <unit id="IncludeAppList">
+      <segment>
+        <source>Include app list</source>
       </segment>
     </unit>
     <unit id="Language">
@@ -134,6 +224,11 @@
     <unit id="Prompts">
       <segment>
         <source>Connection requests</source>
+      </segment>
+    </unit>
+    <unit id="RuleTransferHint">
+      <segment>
+        <source>Rules use the netcontrol-rules format and can be moved between Android and desktop. Temporary rules are not exported; desktop app paths and connection conditions do not take effect on Android.</source>
       </segment>
     </unit>
     <unit id="Seconds">

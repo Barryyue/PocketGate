@@ -9,8 +9,8 @@ using NetworkControl.Core.Engine;
 using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
+using NetworkControl.Diagnostics;
 using NetworkControl.Ipc;
-using NetworkControl.Ipc.Diagnostics;
 
 namespace NetworkControl.Service.Diagnostics;
 

@@ -1,8 +1,9 @@
-using System.Globalization;
 using global::Android.App;
 using global::Android.Content;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NetworkControl.Android.Infrastructure;
+using NetworkControl.Android.Localization;
 using NetworkControl.Core.Domain;
 using NetworkControl.Core.Prompts;
 
@@ -11,6 +12,7 @@ namespace NetworkControl.Android.Platform;
 /// <summary>
 /// 把詢問推送為系統通知（docs/android.md §6.1）。核心啟動時即訂閱，因此界面沒有打開時判決管線也認為有用戶會話。
 /// 通知上的「允許 / 拒絕」按鈕生成此應用任意連線的永久規則；點擊通知正文打開應用內的完整詢問。
+/// 文本來自 AtomUI Catalog（與界面同源），語言切換後由 <see cref="RefreshPending"/> 刷新已顯示的通知。
 /// </summary>
 public sealed partial class PromptNotifier(Context context, PromptBroker prompts, ILogger<PromptNotifier> logger) : BackgroundService
 {
@@ -65,6 +67,22 @@ public sealed partial class PromptNotifier(Context context, PromptBroker prompts
 
     internal static int NotificationIdFor(Guid promptId) => 1000 + (promptId.GetHashCode() & 0x0FFFFFFF);
 
+    /// <summary>語言切換後用新文本重新顯示所有待決詢問的通知。</summary>
+    public void RefreshPending()
+    {
+        foreach (var prompt in prompts.GetPending())
+        {
+            try
+            {
+                Show(prompt);
+            }
+            catch (Java.Lang.Exception ex)
+            {
+                LogNotifyFailed(logger, ex);
+            }
+        }
+    }
+
     private void Cancel(Guid promptId) => Cancel(_context, promptId);
 
     private void Show(PromptSnapshot prompt)
@@ -74,15 +92,16 @@ public sealed partial class PromptNotifier(Context context, PromptBroker prompts
             return;
         }
 
-        var appName = prompt.App?.Name ?? prompt.ExecutablePath ?? _context.GetString(Resource.String.unknown_app);
+        var localizer = NotificationText.Current;
+        var appName = prompt.App?.Name ?? prompt.ExecutablePath ?? localizer.Get(_context, CommonLangResourceKind.UnknownApp);
         var title = prompt.IsTamperAlert
-            ? string.Format(CultureInfo.CurrentCulture, _context.GetString(Resource.String.prompt_title_tampered)!, appName)
-            : string.Format(CultureInfo.CurrentCulture, _context.GetString(Resource.String.prompt_title)!, appName);
+            ? localizer.Format(_context, PromptLangResourceKind.TamperTitle, appName)
+            : localizer.Format(_context, PromptLangResourceKind.Title, appName);
         var flow = prompt.Flows.Count > 0 ? prompt.Flows[^1] : null;
         var host = flow is null ? "" : flow.Domains.Count > 0 ? flow.Domains[0] : FormatAddress(flow.Remote.Address);
         var target = flow is null ? "" : $"{host}:{flow.Remote.Port} {Protocol(flow.Protocol)}";
         var text = prompt.Flows.Count > 1
-            ? string.Format(CultureInfo.CurrentCulture, _context.GetString(Resource.String.prompt_text_multiple)!, target, prompt.Flows.Count)
+            ? localizer.Format(_context, PromptLangResourceKind.NotificationMultiple, target, prompt.Flows.Count)
             : target;
 
         // 界面在前台時界面自己顯示詢問：通知放到靜默渠道，不懸浮打擾；更新已有通知時不重複提醒（SetOnlyAlertOnce）
@@ -91,14 +110,14 @@ public sealed partial class PromptNotifier(Context context, PromptBroker prompts
             .SetSmallIcon(Resource.Drawable.ic_stat_shield)
             .SetContentTitle(title)
             .SetContentText(text)
-            .SetStyle(new Notification.BigTextStyle().BigText(text + "\n" + _context.GetString(Resource.String.prompt_hint)))
+            .SetStyle(new Notification.BigTextStyle().BigText(text + "\n" + localizer.Get(_context, PromptLangResourceKind.Hint)))
             .SetContentIntent(NotificationChannels.OpenApp(_context, prompt.Id))
             .SetCategory(Notification.CategoryRecommendation)
             .SetAutoCancel(true)
             .SetOnlyAlertOnce(true)
             .SetWhen(prompt.CreatedAt.ToUnixTimeMilliseconds())
-            .AddAction(new Notification.Action.Builder(null, _context.GetString(Resource.String.action_block), ActionIntent(prompt.Id, VerdictAction.Deny)).Build())
-            .AddAction(new Notification.Action.Builder(null, _context.GetString(Resource.String.action_allow), ActionIntent(prompt.Id, VerdictAction.Allow)).Build());
+            .AddAction(new Notification.Action.Builder(null, localizer.Get(_context, CommonLangResourceKind.Block), ActionIntent(prompt.Id, VerdictAction.Deny)).Build())
+            .AddAction(new Notification.Action.Builder(null, localizer.Get(_context, CommonLangResourceKind.Allow), ActionIntent(prompt.Id, VerdictAction.Allow)).Build());
 
         manager.Notify(prompt.Id.ToString(), NotificationIdFor(prompt.Id), builder.Build());
     }

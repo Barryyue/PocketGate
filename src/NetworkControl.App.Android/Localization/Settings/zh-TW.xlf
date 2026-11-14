@@ -31,16 +31,124 @@
         <target state="translated">部分手機會積極停止背景應用程式。若保護會自行關閉，請將 NetworkControl 排除在電池最佳化之外。</target>
       </segment>
     </unit>
+    <unit id="Data">
+      <segment>
+        <source>Data</source>
+        <target state="translated">資料</target>
+      </segment>
+    </unit>
     <unit id="DefaultAction">
       <segment>
         <source>If not answered</source>
         <target state="translated">未回應時</target>
       </segment>
     </unit>
+    <unit id="Diagnostics">
+      <segment>
+        <source>Diagnostics</source>
+        <target state="translated">診斷資訊</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsHint">
+      <segment>
+        <source>Export a zip with the app version, device model, engine counters, recent logs and rule statistics. Connection addresses are redacted.</source>
+        <target state="translated">導出包含版本、裝置型號、引擎計數器、最近日誌和規則統計的 zip。連線位址會先脫敏。</target>
+      </segment>
+    </unit>
+    <unit id="ExportCanceled">
+      <segment>
+        <source>Export cancelled</source>
+        <target state="translated">已取消導出</target>
+      </segment>
+    </unit>
+    <unit id="ExportDiagnostics">
+      <segment>
+        <source>Export diagnostics</source>
+        <target state="translated">導出診斷資訊</target>
+      </segment>
+    </unit>
+    <unit id="ExportFailed">
+      <segment>
+        <source>Export failed: {0}</source>
+        <target state="translated">導出失敗：{0}</target>
+      </segment>
+    </unit>
+    <unit id="ExportRules">
+      <segment>
+        <source>Export rules</source>
+        <target state="translated">導出規則</target>
+      </segment>
+    </unit>
+    <unit id="ExportSaved">
+      <segment>
+        <source>Saved {0}</source>
+        <target state="translated">已儲存 {0}</target>
+      </segment>
+    </unit>
     <unit id="FollowSystem">
       <segment>
         <source>System</source>
         <target state="translated">跟隨系統</target>
+      </segment>
+    </unit>
+    <unit id="ImportApply">
+      <segment>
+        <source>Import</source>
+        <target state="translated">導入</target>
+      </segment>
+    </unit>
+    <unit id="ImportDone">
+      <segment>
+        <source>Imported: {0} new, {1} updated, {2} deleted, {3} unchanged</source>
+        <target state="translated">已導入：新增 {0}、更新 {1}、刪除 {2}、不變 {3}</target>
+      </segment>
+    </unit>
+    <unit id="ImportFailed">
+      <segment>
+        <source>Import failed: {0}</source>
+        <target state="translated">導入失敗：{0}</target>
+      </segment>
+    </unit>
+    <unit id="ImportIneffective">
+      <segment>
+        <source>{0} rules do not take effect on Android (desktop app paths or connection conditions). They will still be imported so you can export them back to a desktop.</source>
+        <target state="translated">{0} 條規則在 Android 上不生效（桌面應用程式路徑或連線條件），仍會導入，以便再導出到桌面。</target>
+      </segment>
+    </unit>
+    <unit id="ImportMerge">
+      <segment>
+        <source>Merge</source>
+        <target state="translated">合併</target>
+      </segment>
+    </unit>
+    <unit id="ImportMode">
+      <segment>
+        <source>Import mode</source>
+        <target state="translated">導入方式</target>
+      </segment>
+    </unit>
+    <unit id="ImportPreview">
+      <segment>
+        <source>{0} rules in file: {1} new, {2} updated, {3} deleted, {4} unchanged</source>
+        <target state="translated">文件中有 {0} 條規則：新增 {1}、更新 {2}、刪除 {3}、不變 {4}</target>
+      </segment>
+    </unit>
+    <unit id="ImportReplace">
+      <segment>
+        <source>Replace</source>
+        <target state="translated">覆寫</target>
+      </segment>
+    </unit>
+    <unit id="ImportRules">
+      <segment>
+        <source>Import rules</source>
+        <target state="translated">導入規則</target>
+      </segment>
+    </unit>
+    <unit id="IncludeAppList">
+      <segment>
+        <source>Include app list</source>
+        <target state="translated">包含應用程式清單</target>
       </segment>
     </unit>
     <unit id="Language">
@@ -161,6 +269,12 @@
       <segment>
         <source>Connection requests</source>
         <target state="translated">連線詢問</target>
+      </segment>
+    </unit>
+    <unit id="RuleTransferHint">
+      <segment>
+        <source>Rules use the netcontrol-rules format and can be moved between Android and desktop. Temporary rules are not exported; desktop app paths and connection conditions do not take effect on Android.</source>
+        <target state="translated">規則使用 netcontrol-rules 格式，可在 Android 與桌面之間轉移。臨時規則不會導出；桌面應用程式路徑和連線條件在 Android 上不生效。</target>
       </segment>
     </unit>
     <unit id="Seconds">

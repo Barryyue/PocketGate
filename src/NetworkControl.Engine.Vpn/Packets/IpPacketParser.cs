@@ -23,13 +23,15 @@ public enum TcpFlags : byte
 /// <param name="TcpFlags">TCP 標誌（其他協議為 None）。</param>
 /// <param name="PayloadOffset">UDP 載荷在報文中的偏移（其他協議為 0）。</param>
 /// <param name="PayloadLength">UDP 載荷的長度（其他協議為 0）。</param>
+/// <param name="TcpSequence">TCP 序號（其他協議為 0）；快速失敗回 RST 時用它計算 ack。</param>
 public readonly record struct PacketInfo(
     L4Protocol Protocol,
     IPEndPoint Source,
     IPEndPoint Destination,
     TcpFlags TcpFlags,
     int PayloadOffset = 0,
-    int PayloadLength = 0)
+    int PayloadLength = 0,
+    uint TcpSequence = 0)
 {
     /// <summary>
     /// 是否表示一次新的聯網嘗試：TCP 只看 SYN（不帶 ACK），UDP 每個報文都可能是新的流（由上報器按五元組去重）。
@@ -187,6 +189,7 @@ public static class IpPacketParser
 
         ushort sourcePort = 0, destinationPort = 0;
         int payloadOffset = 0, payloadLength = 0;
+        uint sequence = 0;
         var flags = TcpFlags.None;
         switch (protocol)
         {
@@ -198,6 +201,7 @@ public static class IpPacketParser
 
                 sourcePort = BinaryPrimitives.ReadUInt16BigEndian(segment);
                 destinationPort = BinaryPrimitives.ReadUInt16BigEndian(segment[2..]);
+                sequence = BinaryPrimitives.ReadUInt32BigEndian(segment[4..]);
                 flags = (TcpFlags)(segment[13] & 0x1F);
                 break;
             case L4Protocol.Udp:
@@ -219,7 +223,7 @@ public static class IpPacketParser
                 break;
         }
 
-        info = new PacketInfo(protocol, new IPEndPoint(source, sourcePort), new IPEndPoint(destination, destinationPort), flags, payloadOffset, payloadLength);
+        info = new PacketInfo(protocol, new IPEndPoint(source, sourcePort), new IPEndPoint(destination, destinationPort), flags, payloadOffset, payloadLength, sequence);
         return true;
     }
 }

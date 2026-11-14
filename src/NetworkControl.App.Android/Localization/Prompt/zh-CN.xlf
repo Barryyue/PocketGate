@@ -1,6 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xliff version="2.1" srcLang="en-US" trgLang="zh-CN" xmlns="urn:oasis:names:tc:xliff:document:2.0">
   <file id="NetworkControl.Android.Localization.PromptLangResourceKind">
+    <unit id="ChannelAlerts">
+      <segment>
+        <source>Alerts</source>
+        <target state="translated">提醒</target>
+      </segment>
+    </unit>
+    <unit id="ChannelPrompts">
+      <segment>
+        <source>Connection requests</source>
+        <target state="translated">联网询问</target>
+      </segment>
+    </unit>
+    <unit id="ChannelPromptsDescription">
+      <segment>
+        <source>Asks whether an app may connect to the network</source>
+        <target state="translated">询问应用是否可以联网</target>
+      </segment>
+    </unit>
+    <unit id="ChannelService">
+      <segment>
+        <source>Protection status</source>
+        <target state="translated">保护状态</target>
+      </segment>
+    </unit>
+    <unit id="ChannelServiceDescription">
+      <segment>
+        <source>Shown while protection is on</source>
+        <target state="translated">保护开启时显示</target>
+      </segment>
+    </unit>
     <unit id="Duration">
       <segment>
         <source>Remember</source>
@@ -29,6 +59,12 @@
       <segment>
         <source>{0} connections</source>
         <target state="translated">共 {0} 个连接</target>
+      </segment>
+    </unit>
+    <unit id="NotificationMultiple">
+      <segment>
+        <source>{0} and {1} connections in total</source>
+        <target state="translated">{0}，共 {1} 个连接</target>
       </segment>
     </unit>
     <unit id="OneHour">

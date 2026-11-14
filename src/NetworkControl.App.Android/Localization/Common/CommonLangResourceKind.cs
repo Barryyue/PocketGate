@@ -22,4 +22,5 @@ public enum CommonLangResourceKind
     Cancel,
     Retry,
     Refresh,
+    UnknownApp,
 }

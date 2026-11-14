@@ -1,6 +1,6 @@
 using System.IO.Compression;
 using System.Text;
-using NetworkControl.Ipc.Diagnostics;
+using NetworkControl.Diagnostics;
 
 namespace NetworkControl.Ipc.Tests;
 

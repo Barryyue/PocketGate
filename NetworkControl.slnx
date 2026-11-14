@@ -28,6 +28,7 @@
   <Folder Name="/src/">
     <Project Path="src/NetworkControl.App/NetworkControl.App.csproj" />
     <Project Path="src/NetworkControl.Core/NetworkControl.Core.csproj" />
+    <Project Path="src/NetworkControl.Diagnostics/NetworkControl.Diagnostics.csproj" />
     <Project Path="src/NetworkControl.Engine.Fake/NetworkControl.Engine.Fake.csproj" />
     <Project Path="src/NetworkControl.Engine.Linux/NetworkControl.Engine.Linux.csproj" />
     <Project Path="src/NetworkControl.Engine.Vpn/NetworkControl.Engine.Vpn.csproj" />

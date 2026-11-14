@@ -76,6 +76,11 @@
         <source>Retry</source>
       </segment>
     </unit>
+    <unit id="UnknownApp">
+      <segment>
+        <source>Unknown app</source>
+      </segment>
+    </unit>
     <unit id="Unset">
       <segment>
         <source>Not set</source>

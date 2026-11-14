@@ -23,9 +23,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
+    <ProjectReference Include="..\NetworkControl.Diagnostics\NetworkControl.Diagnostics.csproj" />
     <ProjectReference Include="..\NetworkControl.Storage\NetworkControl.Storage.csproj" />
     <ProjectReference Include="..\NetworkControl.Engine.Vpn\NetworkControl.Engine.Vpn.csproj" />
     <ProjectReference Include="..\NetworkControl.Engine.Android\NetworkControl.Engine.Android.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 通知文本在沒有 Avalonia 界面時也要可用（開機啟動）：直接嵌入同一組 XLIFF，由 NotificationText 解析 -->
+    <EmbeddedResource Include="Localization\**\*.xlf" />
   </ItemGroup>
 
   <ItemGroup>

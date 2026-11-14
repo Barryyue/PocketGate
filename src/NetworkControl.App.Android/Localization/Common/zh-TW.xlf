@@ -91,6 +91,12 @@
         <target state="translated">重試</target>
       </segment>
     </unit>
+    <unit id="UnknownApp">
+      <segment>
+        <source>Unknown app</source>
+        <target state="translated">未知的應用程式</target>
+      </segment>
+    </unit>
     <unit id="Unset">
       <segment>
         <source>Not set</source>

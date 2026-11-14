@@ -16,6 +16,7 @@ namespace NetworkControl.Android;
     Exported = true,
     LaunchMode = LaunchMode.SingleTask,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode | ConfigChanges.Locale | ConfigChanges.LayoutDirection)]
+[IntentFilter(["android.service.quicksettings.action.QS_TILE_PREFERENCES"], Categories = [Intent.CategoryDefault])]
 public sealed class MainActivity : AvaloniaMainActivity
 {
     /// <summary>從詢問通知打開時攜帶的詢問 ID。</summary>
@@ -23,10 +24,13 @@ public sealed class MainActivity : AvaloniaMainActivity
 
     private const int VpnConsentRequest = 1001;
     private const int NotificationPermissionRequest = 1002;
+    private const int CreateDocumentRequest = 1003;
+    private const int OpenDocumentRequest = 1004;
     private const string NotificationPermission = "android.permission.POST_NOTIFICATIONS";
 
     private TaskCompletionSource<bool>? _vpnConsent;
     private TaskCompletionSource<bool>? _notificationPermission;
+    private TaskCompletionSource<global::Android.Net.Uri?>? _documentRequest;
 
     /// <summary>從通知打開了某個詢問（UI 線程）。</summary>
     public static event EventHandler<Guid>? PromptRequested;
@@ -49,6 +53,29 @@ public sealed class MainActivity : AvaloniaMainActivity
         _vpnConsent = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         StartActivityForResult(consentIntent, VpnConsentRequest);
         return _vpnConsent.Task;
+    }
+
+    /// <summary>SAF：讓用戶選擇保存位置（導出規則、診斷包）。取消時返回 null。</summary>
+    public Task<global::Android.Net.Uri?> RequestCreateDocumentAsync(string fileName, string mimeType, CancellationToken cancellationToken = default)
+    {
+        var intent = new Intent(Intent.ActionCreateDocument)
+            .SetType(mimeType)
+            .PutExtra(Intent.ExtraTitle, fileName);
+        return RequestDocumentAsync(intent, CreateDocumentRequest, cancellationToken);
+    }
+
+    /// <summary>SAF：讓用戶選擇要打開的文件（導入規則）。取消時返回 null。</summary>
+    public Task<global::Android.Net.Uri?> RequestOpenDocumentAsync(string[] mimeTypes, CancellationToken cancellationToken = default)
+    {
+        var intent = new Intent(Intent.ActionOpenDocument)
+            .AddCategory(Intent.CategoryOpenable)
+            .SetType(mimeTypes.Length == 1 ? mimeTypes[0] : "*/*");
+        if (mimeTypes.Length > 1)
+        {
+            intent.PutExtra(Intent.ExtraMimeTypes, mimeTypes);
+        }
+
+        return RequestDocumentAsync(intent, OpenDocumentRequest, cancellationToken);
     }
 
     /// <summary>Android 13+ 請求通知權限；更低版本或已授權時直接返回當前狀態。</summary>
@@ -116,6 +143,11 @@ public sealed class MainActivity : AvaloniaMainActivity
             _vpnConsent?.TrySetResult(resultCode == Result.Ok);
             _vpnConsent = null;
         }
+        else if (requestCode is CreateDocumentRequest or OpenDocumentRequest)
+        {
+            _documentRequest?.TrySetResult(resultCode == Result.Ok ? data?.Data : null);
+            _documentRequest = null;
+        }
     }
 
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Permission[] grantResults)
@@ -126,6 +158,20 @@ public sealed class MainActivity : AvaloniaMainActivity
             _notificationPermission?.TrySetResult(grantResults.Length > 0 && grantResults[0] == Permission.Granted);
             _notificationPermission = null;
         }
+    }
+
+    private Task<global::Android.Net.Uri?> RequestDocumentAsync(Intent intent, int requestCode, CancellationToken cancellationToken)
+    {
+        _documentRequest?.TrySetResult(null);
+        var completion = new TaskCompletionSource<global::Android.Net.Uri?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _documentRequest = completion;
+        if (cancellationToken.CanBeCanceled)
+        {
+            cancellationToken.Register(() => completion.TrySetCanceled(cancellationToken));
+        }
+
+        StartActivityForResult(intent, requestCode);
+        return completion.Task;
     }
 
     private void HandleIntent(Intent? intent)

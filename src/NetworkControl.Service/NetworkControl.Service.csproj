@@ -31,6 +31,7 @@
     <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
     <ProjectReference Include="..\NetworkControl.Storage\NetworkControl.Storage.csproj" />
     <ProjectReference Include="..\NetworkControl.Ipc\NetworkControl.Ipc.csproj" />
+    <ProjectReference Include="..\NetworkControl.Diagnostics\NetworkControl.Diagnostics.csproj" />
     <ProjectReference Include="..\NetworkControl.Engine.Windows\NetworkControl.Engine.Windows.csproj" />
   </ItemGroup>
 
