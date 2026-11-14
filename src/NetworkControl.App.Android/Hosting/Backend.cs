@@ -13,6 +13,7 @@ using NetworkControl.Engine.Android;
 using NetworkControl.Engine.Vpn;
 using NetworkControl.Engine.Vpn.Platform;
 using NetworkControl.Engine.Vpn.Routing;
+using NetworkControl.Storage.Serialization;
 
 namespace NetworkControl.Android.Hosting;
 
@@ -52,6 +53,11 @@ public sealed record AppEntry(
     DateTimeOffset? ExpiresAt,
     bool IsTemporary,
     bool IsTampered);
+
+/// <summary>規則導入預覽 / 結果（docs/m3-tasks.md M3-06）。</summary>
+/// <param name="Total">文件中有效規則數（已排除過期規則）。</param>
+/// <param name="Ineffective">其中在 Android 上不生效的規則數（桌面應用路徑或帶連線條件）。</param>
+public sealed record RuleImportPreview(int Total, int Added, int Updated, int Removed, int Unchanged, int Ineffective);
 
 /// <summary>一段時間內的流量：總計和按包名的用量（FR-STA-01）。</summary>
 public sealed record TrafficUsage(long BytesIn, long BytesOut, IReadOnlyDictionary<string, (long In, long Out)> ByPackage)
@@ -141,6 +147,15 @@ public interface IBackend
 
     /// <summary>當前生效規則的快照（診斷統計用；可能包含其他配置文件與已過期的規則）。</summary>
     IReadOnlyList<Rule> Rules { get; }
+
+    /// <summary>導出全部可導出規則（netcontrol-rules JSON，與桌面版互通）。</summary>
+    Task<string> ExportRulesAsync(CancellationToken cancellationToken);
+
+    /// <summary>解析導入文件並計算差異；不修改任何規則。拋出 <see cref="FormatException"/> 表示文件無效。</summary>
+    RuleImportPreview PreviewImport(string json, RuleImportMode mode);
+
+    /// <summary>按 <see cref="RuleImportMode"/> 執行導入：先新增、再更新，最後刪除。</summary>
+    Task<RuleImportPreview> ApplyImportAsync(string json, RuleImportMode mode, CancellationToken cancellationToken);
 }
 
 internal sealed class Backend : IBackend
@@ -258,6 +273,35 @@ internal sealed class Backend : IBackend
     public IReadOnlyList<Profile> Profiles => _profiles.All;
 
     public IReadOnlyList<Rule> Rules => [.. _rules.Current.Rules];
+
+    public Task<string> ExportRulesAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(RuleExportSerializer.Export(_ruleService.All, PathPlaceholderMapper.None));
+    }
+
+    public RuleImportPreview PreviewImport(string json, RuleImportMode mode) => CreateImportPlan(json, mode).Preview;
+
+    public async Task<RuleImportPreview> ApplyImportAsync(string json, RuleImportMode mode, CancellationToken cancellationToken)
+    {
+        var (plan, preview) = CreateImportPlan(json, mode);
+        foreach (var rule in plan.ToAdd)
+        {
+            await _ruleService.AddAsync(rule, cancellationToken);
+        }
+
+        foreach (var rule in plan.ToUpdate)
+        {
+            await _ruleService.UpdateAsync(rule, cancellationToken);
+        }
+
+        if (plan.ToRemove.Count > 0)
+        {
+            await _ruleService.RemoveAsync(plan.ToRemove.Select(r => r.Id).ToArray(), RuleEndReason.Replaced, cancellationToken);
+        }
+
+        return preview;
+    }
 
     public Profile ActiveProfile => _profiles.Active;
 
@@ -438,6 +482,32 @@ internal sealed class Backend : IBackend
 
     public Task UpdateSettingsAsync(Func<UserSettings, UserSettings> update, CancellationToken cancellationToken) =>
         _settings.UpdateAsync(update, cancellationToken);
+
+    /// <summary>
+    /// 解析導入文件並計算差異。與 RulesGrpcService 一致：丟棄已過期的限時規則，
+    /// 目標機器上不存在的配置文件降級為共享規則（ProfileId = null）。
+    /// </summary>
+    private (RuleImportPlan Plan, RuleImportPreview Preview) CreateImportPlan(string json, RuleImportMode mode)
+    {
+        var imported = RuleExportSerializer.Import(json, PathPlaceholderMapper.None);
+        var now = _time.GetUtcNow();
+        var knownProfiles = _profiles.All.Select(p => p.Id).ToHashSet();
+        var current = imported
+            .Where(r => r.Lifetime != RuleLifetime.Timed || r.ExpiresAt > now)
+            .Select(r => r.ProfileId is { } profileId && !knownProfiles.Contains(profileId)
+                ? r with { ProfileId = null }
+                : r)
+            .ToArray();
+        var plan = RuleImportPlanner.Plan(_ruleService.All, current, mode);
+        var preview = new RuleImportPreview(
+            current.Length,
+            plan.ToAdd.Count,
+            plan.ToUpdate.Count,
+            plan.ToRemove.Count,
+            plan.Unchanged,
+            AndroidRuleCompatibility.CountIneffective(current));
+        return (plan, preview);
+    }
 
     /// <summary>按優先級找到該應用的第一條專屬、可在 Android 上執行的規則。</summary>
     private static Rule? FindOwnRule(IReadOnlyList<Rule> rules, string packageName)

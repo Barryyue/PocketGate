@@ -1,11 +1,12 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:atom="https://atomui.net"
              xmlns:vm="using:NetworkControl.Android.ViewModels"
              xmlns:loc="using:NetworkControl.Android.Localization"
              x:Class="NetworkControl.Android.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
-  <ScrollViewer>
+  <Grid>
+    <ScrollViewer>
     <StackPanel Margin="16" Spacing="16">
       <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavSettings}" />
 
@@ -74,6 +75,20 @@
         </StackPanel>
       </atom:Card>
 
+      <atom:Card Header="{loc:SettingsLangResource Data}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource RuleTransferHint}" />
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+            <atom:Button HorizontalAlignment="Stretch" Command="{Binding ExportRulesCommand}" IsLoading="{Binding IsExportingRules}"
+                         Content="{loc:SettingsLangResource ExportRules}" />
+            <atom:Button Grid.Column="1" HorizontalAlignment="Stretch" Command="{Binding ImportRulesCommand}"
+                         Content="{loc:SettingsLangResource ImportRules}" />
+          </Grid>
+          <TextBlock Classes="caption" TextWrapping="Wrap" Text="{Binding RuleTransferStatus}"
+                     IsVisible="{Binding RuleTransferStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </StackPanel>
+      </atom:Card>
+
       <atom:Card Header="{loc:SettingsLangResource About}">
         <StackPanel Spacing="6">
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
@@ -98,5 +113,33 @@
         </StackPanel>
       </atom:Card>
     </StackPanel>
-  </ScrollViewer>
+    </ScrollViewer>
+
+    <!-- 導入預覽：合併 / 覆寫，顯示增改刪數量和 Android 上不生效的規則 -->
+    <Border Classes="scrim" IsVisible="{Binding IsImportDialogOpen}">
+      <atom:Card VerticalAlignment="Bottom" Margin="12,12,12,24">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="title" Text="{loc:SettingsLangResource ImportRules}" />
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding ImportSummary}" />
+          <TextBlock Classes="warning" TextWrapping="Wrap" Text="{Binding ImportIneffective}"
+                     IsVisible="{Binding ImportIneffective, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <StackPanel Spacing="6">
+            <TextBlock Classes="secondary" Text="{loc:SettingsLangResource ImportMode}" />
+            <atom:Segmented SelectedIndex="{Binding ImportModeIndex}" IsEnabled="{Binding !IsImportingRules}"
+                            HorizontalAlignment="Stretch" IsExpanding="True">
+              <atom:SegmentedItem Content="{loc:SettingsLangResource ImportMerge}" />
+              <atom:SegmentedItem Content="{loc:SettingsLangResource ImportReplace}" />
+            </atom:Segmented>
+          </StackPanel>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+            <atom:Button HorizontalAlignment="Stretch" Command="{Binding CancelImportCommand}"
+                         Content="{loc:CommonLangResource Cancel}" />
+            <atom:Button Grid.Column="1" ButtonType="Primary" HorizontalAlignment="Stretch"
+                         Command="{Binding ConfirmImportCommand}" IsLoading="{Binding IsImportingRules}"
+                         Content="{loc:SettingsLangResource ImportApply}" />
+          </Grid>
+        </StackPanel>
+      </atom:Card>
+    </Border>
+  </Grid>
 </UserControl>

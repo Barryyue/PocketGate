@@ -170,6 +170,18 @@ CATALOGS = {
         ('ExportSaved', 'Saved {0}', '已儲存 {0}', '已保存 {0}'),
         ('ExportCanceled', 'Export cancelled', '已取消導出', '已取消导出'),
         ('ExportFailed', 'Export failed: {0}', '導出失敗：{0}', '导出失败：{0}'),
+        ('Data', 'Data', '資料', '数据'),
+        ('RuleTransferHint', 'Rules use the netcontrol-rules format and can be moved between Android and desktop. Temporary rules are not exported; desktop app paths and connection conditions do not take effect on Android.', '規則使用 netcontrol-rules 格式，可在 Android 與桌面之間轉移。臨時規則不會導出；桌面應用程式路徑和連線條件在 Android 上不生效。', '规则使用 netcontrol-rules 格式，可在 Android 与桌面之间转移。临时规则不会导出；桌面应用路径和连接条件在 Android 上不生效。'),
+        ('ExportRules', 'Export rules', '導出規則', '导出规则'),
+        ('ImportRules', 'Import rules', '導入規則', '导入规则'),
+        ('ImportPreview', '{0} rules in file: {1} new, {2} updated, {3} deleted, {4} unchanged', '文件中有 {0} 條規則：新增 {1}、更新 {2}、刪除 {3}、不變 {4}', '文件中有 {0} 条规则：新增 {1}、更新 {2}、删除 {3}、不变 {4}'),
+        ('ImportIneffective', '{0} rules do not take effect on Android (desktop app paths or connection conditions). They will still be imported so you can export them back to a desktop.', '{0} 條規則在 Android 上不生效（桌面應用程式路徑或連線條件），仍會導入，以便再導出到桌面。', '{0} 条规则在 Android 上不生效（桌面应用路径或连接条件），仍会导入，以便再导出到桌面。'),
+        ('ImportMode', 'Import mode', '導入方式', '导入方式'),
+        ('ImportMerge', 'Merge', '合併', '合并'),
+        ('ImportReplace', 'Replace', '覆寫', '覆盖'),
+        ('ImportApply', 'Import', '導入', '导入'),
+        ('ImportDone', 'Imported: {0} new, {1} updated, {2} deleted, {3} unchanged', '已導入：新增 {0}、更新 {1}、刪除 {2}、不變 {3}', '已导入：新增 {0}、更新 {1}、删除 {2}、不变 {3}'),
+        ('ImportFailed', 'Import failed: {0}', '導入失敗：{0}', '导入失败：{0}'),
     ],
 }
 

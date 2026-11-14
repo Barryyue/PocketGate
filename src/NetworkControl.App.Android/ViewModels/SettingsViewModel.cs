@@ -1,12 +1,15 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
+using System.Text;
 using AtomUI.Localization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using NetworkControl.Android.Hosting;
 using NetworkControl.Android.Infrastructure;
 using NetworkControl.Android.Localization;
 using NetworkControl.Android.Platform;
 using NetworkControl.Core.Domain;
+using NetworkControl.Storage.Serialization;
 
 namespace NetworkControl.Android.ViewModels;
 
@@ -18,6 +21,8 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 
     private bool _syncing;
     private bool _syncingProfiles;
+    private string? _importJson;
+    private RuleImportPreview? _importPreview;
 
     public SettingsViewModel(UiContext context)
         : base(context)
@@ -68,6 +73,28 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 
     [ObservableProperty]
     public partial string? DiagnosticsStatus { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsExportingRules { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsImportingRules { get; set; }
+
+    [ObservableProperty]
+    public partial string? RuleTransferStatus { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsImportDialogOpen { get; set; }
+
+    /// <summary>0 合併、1 覆寫。</summary>
+    [ObservableProperty]
+    public partial int ImportModeIndex { get; set; }
+
+    [ObservableProperty]
+    public partial string? ImportSummary { get; set; }
+
+    [ObservableProperty]
+    public partial string? ImportIneffective { get; set; }
 
     public bool HasProfiles => Profiles.Count > 0;
 
@@ -284,6 +311,181 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         _ => FilterMode.Ask,
     };
 
+
+    private RuleImportMode ImportMode => ImportModeIndex == 1 ? RuleImportMode.Replace : RuleImportMode.Merge;
+
+    partial void OnImportModeIndexChanged(int value)
+    {
+        if (IsImportDialogOpen)
+        {
+            TryRefreshImportPreview();
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportRulesAsync()
+    {
+        if (IsExportingRules)
+        {
+            return;
+        }
+
+        IsExportingRules = true;
+        RuleTransferStatus = null;
+        try
+        {
+            var json = await Backend.ExportRulesAsync(CancellationToken.None);
+            if (MainActivity.Current is not { } activity)
+            {
+                return;
+            }
+
+            var fileName = $"networkcontrol-rules-{DateTime.Now:yyyyMMdd}.json";
+            var uri = await activity.RequestCreateDocumentAsync(fileName, "application/json", CancellationToken.None);
+            if (uri is null)
+            {
+                return;
+            }
+
+            var context = global::Android.App.Application.Context;
+            await using var output = context.ContentResolver?.OpenOutputStream(uri, "w")
+                ?? throw new IOException("Cannot open the selected file.");
+            await using var writer = new StreamWriter(output, new UTF8Encoding(false));
+            await writer.WriteAsync(json.AsMemory(), CancellationToken.None);
+            RuleTransferStatus = Loc.Format(SettingsLangResourceKind.ExportSaved, fileName);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            RuleTransferStatus = Loc.Format(SettingsLangResourceKind.ExportFailed, ex.Message);
+        }
+        finally
+        {
+            IsExportingRules = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ImportRulesAsync()
+    {
+        RuleTransferStatus = null;
+        if (MainActivity.Current is not { } activity)
+        {
+            return;
+        }
+
+        try
+        {
+            var uri = await activity.RequestOpenDocumentAsync(["application/json", "*/*"], CancellationToken.None);
+            if (uri is null)
+            {
+                return;
+            }
+
+            _importJson = await ReadTextAsync(uri, 20 * 1024 * 1024, CancellationToken.None);
+            ImportModeIndex = 0;
+            if (!TryRefreshImportPreview())
+            {
+                _importJson = null;
+                return;
+            }
+
+            IsImportDialogOpen = true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _importJson = null;
+            RuleTransferStatus = Loc.Format(SettingsLangResourceKind.ImportFailed, ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ConfirmImportAsync()
+    {
+        if (_importJson is null || _importPreview is null || IsImportingRules)
+        {
+            return;
+        }
+
+        IsImportingRules = true;
+        try
+        {
+            var result = await Backend.ApplyImportAsync(_importJson, ImportMode, CancellationToken.None);
+            RuleTransferStatus = Loc.Format(SettingsLangResourceKind.ImportDone, result.Added, result.Updated, result.Removed, result.Unchanged);
+            IsImportDialogOpen = false;
+            _importJson = null;
+            _importPreview = null;
+            RefreshProfiles();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            RuleTransferStatus = Loc.Format(SettingsLangResourceKind.ImportFailed, ex.Message);
+        }
+        finally
+        {
+            IsImportingRules = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CancelImport()
+    {
+        IsImportDialogOpen = false;
+        _importJson = null;
+        _importPreview = null;
+    }
+
+    private bool TryRefreshImportPreview()
+    {
+        if (_importJson is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            _importPreview = Backend.PreviewImport(_importJson, ImportMode);
+            ImportSummary = Loc.Format(
+                SettingsLangResourceKind.ImportPreview,
+                _importPreview.Total,
+                _importPreview.Added,
+                _importPreview.Updated,
+                _importPreview.Removed,
+                _importPreview.Unchanged);
+            ImportIneffective = _importPreview.Ineffective > 0
+                ? Loc.Format(SettingsLangResourceKind.ImportIneffective, _importPreview.Ineffective)
+                : null;
+            return true;
+        }
+        catch (FormatException ex)
+        {
+            _importPreview = null;
+            ImportSummary = null;
+            ImportIneffective = null;
+            RuleTransferStatus = Loc.Format(SettingsLangResourceKind.ImportFailed, ex.Message);
+            return false;
+        }
+    }
+
+    private static async Task<string> ReadTextAsync(global::Android.Net.Uri uri, int maxLength, CancellationToken cancellationToken)
+    {
+        var context = global::Android.App.Application.Context;
+        await using var input = context.ContentResolver?.OpenInputStream(uri)
+            ?? throw new IOException("Cannot open the selected file.");
+        using var reader = new StreamReader(input, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        var builder = new StringBuilder();
+        var buffer = new char[8192];
+        int read;
+        while ((read = await reader.ReadAsync(buffer.AsMemory(), cancellationToken)) > 0)
+        {
+            builder.Append(buffer, 0, read);
+            if (builder.Length > maxLength)
+            {
+                throw new IOException("The selected file is too large.");
+            }
+        }
+
+        return builder.ToString();
+    }
 
     [RelayCommand]
     private async Task ExportDiagnosticsAsync()
