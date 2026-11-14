@@ -1,0 +1,104 @@
+package com.networkcontrol.android.kotlin.ui
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import com.networkcontrol.android.kotlin.AppContainer
+import com.networkcontrol.android.kotlin.ui.apps.AppsScreen
+import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
+import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
+import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
+import com.networkcontrol.android.kotlin.ui.settings.SettingsScreen
+
+private data class Tab(val label: S, val icon: ImageVector)
+
+private val tabs = listOf(
+    Tab(S.Overview, Icons.Filled.Home),
+    Tab(S.Apps, Icons.AutoMirrored.Filled.List),
+    Tab(S.Logs, Icons.Filled.Notifications),
+    Tab(S.Settings, Icons.Filled.Settings),
+)
+
+@Composable
+fun AppRoot(container: AppContainer) {
+    val s = rememberUiStrings()
+    var ready by remember { mutableStateOf(false) }
+    var selected by rememberSaveable { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        container.awaitStarted()
+        ready = true
+    }
+
+    if (!ready) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+            Text(
+                s[S.Loading],
+                modifier = Modifier.padding(top = 72.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
+    val backend = container.backend
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    tabs.forEachIndexed { index, tab ->
+                        NavigationBarItem(
+                            selected = selected == index,
+                            onClick = { selected = index },
+                            icon = { Icon(tab.icon, contentDescription = null) },
+                            label = { Text(s[tab.label]) },
+                        )
+                    }
+                }
+            },
+        ) { padding ->
+            Box(Modifier.fillMaxSize().padding(padding)) {
+                when (selected) {
+                    0 -> OverviewScreen(backend)
+                    1 -> AppsScreen(backend)
+                    2 -> LogsScreen(backend)
+                    else -> SettingsScreen(backend)
+                }
+            }
+        }
+        PromptOverlay(
+            backend = backend,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 76.dp),
+        )
+    }
+}

@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">NetworkControl KT</string>
+    <string name="tile_label">NetworkControl</string>
+    <string name="tile_protection">Protection</string>
+    <string name="notification_channel_prompt">Connection prompts</string>
+    <string name="notification_channel_protection">Protection status</string>
+    <string name="notification_channel_quiet">Quiet period summary</string>
+    <string name="protection_active">Protection is on</string>
+    <string name="protection_off">Protection is off</string>
+    <string name="protection_starting">Protection is starting</string>
+    <string name="protection_notification_text">Tap to open NetworkControl KT</string>
+    <string name="prompt_title">%1$s wants to connect</string>
+    <string name="prompt_blocked_hint">This connection was temporarily blocked. Allow it and retry.</string>
+    <string name="prompt_allow">Allow</string>
+    <string name="prompt_deny">Deny</string>
+    <string name="nav_overview">Overview</string>
+    <string name="nav_apps">Apps</string>
+    <string name="nav_logs">Records</string>
+    <string name="nav_settings">Settings</string>
+</resources>

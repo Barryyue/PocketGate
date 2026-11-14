@@ -1,0 +1,342 @@
+# Android Kotlin 對照版：長期任務規劃
+
+> 建立日期：2026-11-14
+> 目標：用 Kotlin + Jetpack Compose 完整重寫 Android 版，先追平 2026-11-14 的 Avalonia 版功能，再產出可安裝的 **v0.1 APK**。
+> 用途：保留兩套 Android 實現並行維護，作為後期技術選型（APK 體積、冷啟動、流暢度、內存、耗電、開發效率、平台整合成本）的實測對照。
+> 本文件是執行計劃和狀態看板；`docs/progress.md` / `docs/progress-android.md` 只保留入口連結，避免三處狀態不一致。
+>
+> **目前狀態（2026-11-14）：v0.1 已完成並打包。** K0–K9 全部走通；Release APK 3.1 MB（雙 ABI，Debug 簽名），模擬器冷啟動約 2.1 秒。已驗證 VPN、假 DNS、應用識別、詢問通知/卡片、允許後規則生成與 VPN 重建、應用三態、流量統計、三語切換、配置文件頁、診斷導出。真機、Chrome 加載和部分界面細節待後續回歸，詳見 §10。
+
+---
+
+## 1. 邊界與硬性約定
+
+| 項目 | 約定 |
+|---|---|
+| 代碼位置 | 倉庫根目錄的 `android-kotlin/`，獨立 Gradle 構建，**不加入** `NetworkControl.slnx` / `NetworkControl.Android.slnx` |
+| 應用 ID | `com.networkcontrol.android.kotlin`，可與 Avalonia 版同時安裝、同時授權 VPN（系統一次只允許一個 VPN 生效，切換時會撤銷另一個，屬預期） |
+| 顯示名稱 | `NetworkControl KT`（暫定，正式名稱確定後統一改） |
+| 共用邊界 | **不引用** .NET Core / Storage；規則語義、SQLite schema、導入導出格式以現有 C# 實作為參考，兩邊透過測試向量和格式保持對齊 |
+| 功能範圍 | 先追平 Avalonia 版**已實現**功能（MVP + M3 Android 批次）；Avalonia 版尚未實現的（轉發模式、懸浮詢問面板、專注模式、時間表等）不列入 v0.1 |
+| 最低版本 | Android 10（API 29）；compileSdk / targetSdk 36 |
+| 語言 | 界面文本跟隨系統，支援 zh-TW / zh-CN / en-US；應用內切換語言 |
+| 版本 | Kotlin 版獨立版本號，起點 `0.1.0`；產物在 `artifacts/kotlin-android/` |
+| 完成標準 | 每階段：Gradle build 通過 + 單元測試通過；最終：Release APK 可安裝、核心流程在模擬器或真機上可運行並記錄驗證結果 |
+| 不影響現有版本 | 不改 `src/NetworkControl.*`、不改現有 Android 專案；需要參考時只讀 |
+
+### 1.1 為什麼用獨立 applicationId
+
+兩套實現要能並排安裝、並排比較。VPN 授權、always-on、通知權限、使用情況權限都按包名授予，獨立包名可以避免互相覆蓋；代價是兩邊的規則/設定不能直接共享，導入導出用 JSON 格式互通。
+
+---
+
+## 2. 功能對齊清單（v0.1 的 Definition of Done）
+
+以下以 2026-11-14 的 Avalonia Android 版為基準。每項在 Kotlin 版完成後打勾；「對照」列記錄驗證方式。
+
+### 2.1 核心與存儲
+
+| 功能 | Avalonia 版現狀 | Kotlin v0.1 目標 |
+|---|---|---|
+| SQLite `config.db` / `activity.db` | 與桌面同一套 schema / 遷移 | 相同 schema 與 `PRAGMA user_version`，移植 4 個遷移腳本 |
+| 規則模型 | 應用匹配器、條件、動作、時效、來源、配置文件、啟用狀態、命中統計 | 等價 Kotlin data model |
+| 規則優先級 | 具體度計分；同具體度拒絕優先 | 相同計分規則與測試向量 |
+| 篡改檢測 | 簽名者 / 平台程序 / 路徑匹配 | 等價；Android 用簽名證書 SHA-256 |
+| 規則時效 | 永久 / 限時 / 直到重啟 / 直到進程退出（Once） | 等價；Android 的「直到進程退出」映射為應用會話（v0.1 先支援永久 / 限時 / 直到重啟） |
+| 判決管線 | 停用 → 內置放行 → 全部阻斷 → 規則 → 兜底 | 等價階段鏈 |
+| 詢問代理 | 合併、排隊、超時、暫停、稍後、撤銷 | 等價；通知 + 應用內卡片 |
+| 模式 | 詢問 / 白名單 / 黑名單 / 全部阻斷 / 停用 | 等價 |
+| 配置文件 | 建立 / 改名 / 刪除 / 切換 / 專屬規則 / 模式回寫 | 等價 |
+| 運行時狀態 | 當前模式、全部阻斷恢復、勿擾摘要 | 等價（勿擾摘要 v0.1 可只保留資料與總覽卡片） |
+| 設置 | 語言、主題、詢問超時 / 默認動作、通知、always-on 入口 | 等價 |
+| 連接記錄 | 阻擋記錄聚合、篩選、詳情、原因 | 等價 |
+| 流量統計 | NetworkStatsManager + UID 增量，今日 / 應用用量 | 等價 |
+| 規則導入導出 | `netcontrol-rules` v1，SAF，合併 / 覆蓋預覽 | 等價；與 Avalonia 版格式互通 |
+| 診斷導出 | zip：概況、日誌、規則統計、授權狀態、脫敏 | 等價（可先簡化條目，格式固定） |
+| 每日備份 | 與桌面共用 Storage 備份 | v0.1 做 config.db 每日備份（保留 7 份） |
+
+### 2.2 VPN 引擎
+
+| 功能 | Avalonia 版現狀 | Kotlin v0.1 目標 |
+|---|---|---|
+| 黑洞式分流 | `VpnService` + `addDisallowedApplication` | 等價 |
+| 假 DNS | 198.18.0.0/15、A 記錄、TTL 1、反查域名 | 等價 |
+| 報文解析 | IPv4 / IPv6、TCP / UDP、SYN / UDP 去重 | 等價 |
+| UID 歸屬 | `getConnectionOwnerUid` 後台執行 | 等價 |
+| 系統 UID | < 10000 只計數、不上報 | 等價 |
+| 快速失敗 | TCP RST / ICMP 不可達，每目標限流 | 等價 |
+| 保護開關 | 用戶意圖與系統模式分離 | 等價 |
+| 開機恢復 / always-on | BOOT_COMPLETED + 系統啟動服務 | 等價 |
+| 撤銷處理 | `onRevoke` 通知 + 狀態 | 等價 |
+| 網絡監控 | 默認網絡回調、Wi-Fi / 蜂窩、按網絡自動切換配置文件 | 等價（SSID 需定位權限，沒有權限時按類型） |
+| 應用目錄 | 有 INTERNET 權限的應用、簽名 SHA-256、安裝廣播 | 等價 |
+| 上游代理 / 轉發模式 | 未實現 | **不做**（v0.2+） |
+
+### 2.3 平台與界面
+
+| 功能 | Avalonia 版現狀 | Kotlin v0.1 目標 |
+|---|---|---|
+| 總覽 | 保護開關、模式、配置文件、一鍵斷網、勿擾摘要、今日流量、待決詢問 | 等價（Compose） |
+| 應用頁 | 搜索、篩選、三態、圖標、規則摘要、用量 | 等價 |
+| 記錄頁 | 阻擋記錄、篩選、詳情 | 等價 |
+| 設定頁 | 語言、主題、詢問、通知、always-on、電池、數據用量、配置文件、導入導出、診斷、關於 | 等價 |
+| 詢問 | 系統通知（允許 / 拒絕）、應用內底部卡片、合併、超時、稍後 | 等價；懸浮窗面板不做 |
+| 快捷設定磁貼 | TileService 開關保護 / 一鍵斷網 | 等價 |
+| 通知語言 | 跟隨應用內語言 | 等價 |
+| 前台服務通知 | 保護中狀態、斷開入口 | 等價 |
+| 三語 | zh-TW / zh-CN / en-US | 等價 |
+| 明暗主題 | 跟隨系統 / 淺色 / 深色 | 等價 |
+| 應用圖標 | PackageManager + 緩存 | 等價 |
+| 平板 / 大字體 / TalkBack | 未專門驗證 | v0.1 做基本自適應和語義標籤，不做完整驗收 |
+
+---
+
+## 3. 技術架構
+
+```
+android-kotlin/app/src/main/java/com/networkcontrol/android/kotlin/
+├── App.kt                     # Application：AppContainer 初始化、語言/主題、通知渠道
+├── MainActivity.kt            # 單 Activity，Compose 導航
+├── core/
+│   ├── model/                 # Rule、AppIdentity、Profile、Settings、Verdict…
+│   ├── rules/                 # RuleSet、匹配器、具體度、篡改檢測、生命週期
+│   ├── pipeline/              # 判決階段鏈
+│   ├── prompt/                # PromptBroker、合併、超時、會話
+│   └── profile/               # ProfileService、自動切換
+├── data/
+│   ├── db/                    # SQLiteOpenHelper、遷移、DAO
+│   ├── repository/            # RuleRepository、ActivityRepository、TrafficRepository…
+│   └── transfer/              # netcontrol-rules 導入導出
+├── engine/
+│   ├── vpn/                   # VpnService、Tunnel、PacketParser、FakeDns、FastFail、Planner
+│   ├── apps/                  # AppCatalog、UID 解析
+│   ├── network/               # NetworkMonitor、TrafficSource
+│   └── protection/            # ProtectionController（保護狀態機）
+├── platform/                  # 通知、Tile、開機廣播、前台服務、診斷、語言
+└── ui/
+    ├── theme/                 # Material3 主題、顏色、字體
+    ├── components/            # 共用卡片、指標、空狀態、開關
+    ├── overview/              # 總覽
+    ├── apps/                  # 應用
+    ├── logs/                  # 記錄
+    ├── settings/              # 設定
+    └── prompt/                # 詢問卡片
+```
+
+- **語言/框架**：Kotlin 2.4.x、Jetpack Compose（BOM 2026.09）、Material 3、Coroutines + Flow。
+- **存儲**：原生 `SQLiteOpenHelper`（不用 Room），直接沿用現有 schema / `user_version`，降低遷移和對照成本。
+- **依賴注入**：手動 `AppContainer`（Application 級單例），不引入 Hilt，減少依賴和啟動成本。
+- **偏好**：`SharedPreferences`（少量鍵），不引入 DataStore。
+- **導航**：單 Activity + Compose 狀態導航（4 個底部頁），避免 navigation-compose 的額外依賴；需要深連結時再引入。
+- **日誌**：`android.util.Log` 包裝 + 文件日誌（私有目錄，7 天輪轉）。
+- **測試**：JUnit 4 + `kotlin.test`；純邏輯（規則、報文、DNS、計劃器）全部可在 JVM 測試；平台代碼用模擬器/真機驗證。
+
+---
+
+## 4. 階段計劃
+
+> 時間是單人投入的粗略估計，實際以構建和驗證結果為準。每個階段都是可獨立提交的檢查點。
+
+### K0 工具鏈與骨架（0.5 天）
+- [ ] Gradle wrapper（8.14.4）、AGP 8.13.2、Kotlin 2.4.21、compileSdk 36、minSdk 29
+- [ ] `android-kotlin/` 專案、Manifest、主題、空白 Compose Activity
+- [ ] `scripts/android-kotlin.ps1`（build / install / logcat / publish）
+- [ ] 首次 `assembleDebug` 通過
+- 驗收：APK 能安裝啟動，顯示佔位頁
+
+### K1 資料層（2 天）
+- [ ] 移植 `Config/0001`、`Activity/0001~0003` schema 與 `user_version`
+- [ ] DAO：profiles、settings、apps、rules、rule_history、activity、traffic
+- [ ] 遷移與往返測試
+- 驗收：JVM 測試用臨時 SQLite 建庫、寫入、讀取、升級
+
+### K2 規則引擎（2 天）
+- [ ] 領域模型、應用匹配器、條件、具體度、優先級
+- [ ] 篡改檢測、生命週期（永久 / 限時 / 直到重啟）
+- [ ] `RuleSet` 不可變快照與 `FindAppRule`
+- [ ] 測試向量（與 C# 行為對照）
+- 驗收：規則衝突、優先級、篡改、過期測試全部通過
+
+### K3 判決管線與詢問代理（2 天）
+- [ ] 階段鏈（停用 / 內置 / 全部阻斷 / 規則 / 兜底）
+- [ ] PromptBroker：合併、排隊、超時、暫停、稍後、撤銷
+- [ ] 規則生成（詢問回答 → 規則）
+- [ ] 模式與運行時狀態
+- 驗收：場景測試（首次聯網、允許、拒絕、超時、合併、勿擾）
+
+### K4 VPN 引擎（3 天）
+- [ ] `NcVpnService`、`VpnTunnel`、前台通知
+- [ ] 報文解析、假 DNS、UID 歸屬、阻斷上報去重
+- [ ] 路由規劃、模式 / 規則 / 應用變化時重建（300 ms 防抖）
+- [ ] 快速失敗 RST / ICMP
+- [ ] 撤銷、開機、always-on
+- 驗收：模擬器/真機上 Chrome 被攔截 → 詢問 → 允許 → 恢復
+
+### K5 應用目錄、流量、網絡、配置文件（2 天）
+- [ ] AppCatalog（INTERNET 權限、簽名、安裝廣播）
+- [ ] NetworkStatsManager 流量 + UID 增量
+- [ ] NetworkMonitor（Wi-Fi / 蜂窩 / 以太網）
+- [ ] ProfileService + 按網絡自動切換
+- 驗收：應用列表、用量、配置文件切換
+
+### K6 界面（4 天）
+- [ ] 總覽、應用、記錄、設定、詢問卡片
+- [ ] 三語、明暗主題、圖標、空狀態
+- [ ] 導入導出預覽、診斷導出入口
+- 驗收：五個頁面可操作，數據與核心一致
+
+### K7 平台整合（2 天）
+- [ ] 通知渠道、詢問通知（允許 / 拒絕）、前台服務通知
+- [ ] TileService、BOOT_COMPLETED、PACKAGE_ADDED/REMOVED
+- [ ] 應用內語言、主題持久化
+- 驗收：通知、磁貼、重啟恢復
+
+### K8 診斷、導入導出、備份（1.5 天）
+- [ ] `netcontrol-rules` v1 導入導出（SAF）
+- [ ] 診斷 zip（概況、日誌、規則統計、脫敏）
+- [ ] config.db 每日備份（7 份）
+- 驗收：導入導出往返、zip 可打開
+
+### K9 測試、打包 v0.1（1.5 天）
+- [ ] 單元測試全綠、Release 構建、R8 規則
+- [ ] `artifacts/kotlin-android/NetworkControl-KT-0.1.0.apk`
+- [ ] 對照記錄：APK 大小、冷啟動、PSS（模擬器/真機）
+- [ ] 文檔：功能對照、已知限制、後續迭代
+
+---
+
+## 5. 驗證與對照方法
+
+1. **功能對照**：第 2 節清單逐項打勾；Avalonia 版有、Kotlin 版沒有的列為 v0.1 已知缺口（原則上不允許核心功能缺口）。
+2. **行為對照**：同一組規則 / 應用 / 模式，兩個版本在模擬器上執行相同操作，比較詢問、規則、記錄、模式結果。
+3. **性能對照**：Release + 只打 arm64；`am start -W -S` 冷啟動 10 次取中位數；`dumpsys meminfo` PSS；APK 大小；列表滾動用 Macrobenchmark/Perfetto（有時間再做）。
+4. **設備**：本機目前沒有連接真機；模擬器 33.1.24 可嘗試。若模擬器無法啟動，至少完成構建、JVM 測試和靜態檢查，並在進度中如實註明「未在設備運行」。
+5. **不截電腦桌面**；設備驗證如需截圖用 `adb exec-out screencap`。
+
+---
+
+## 6. 風險與應對
+
+| 風險 | 影響 | 應對 |
+|---|---|---|
+| 沒有真機 / 模擬器無法啟動 | VPN、通知、磁貼無法端到端驗證 | 先完成純邏輯測試和構建；設備項目標記待驗證，交給用戶 |
+| 兩套規則語義漂移 | 對照結果不可信 | 以 C# 測試向量為基準寫 Kotlin 等價測試；導入導出格式互通 |
+| Gradle / AGP / Kotlin 版本不相容 | 構建失敗 | 固定版本並提交 wrapper；先用最小模板驗證，再逐層加依賴 |
+| Compose 啟動優化不足 | 達不到對照目的 | v0.1 先保證功能；基線配置、Baseline Profiles 留到 v0.2 |
+| 重複實現工作量大 | 周期長 | 嚴格按階段提交；界面和平台代碼可在核心穩定後並行 |
+| 與 Avalonia 版同時運行兩個 VPN | 互相撤銷 | 文檔和 App 內提示；對照測試時只開一個 |
+
+---
+
+## 7. 狀態看板
+
+| 階段 | 狀態 | 提交 | 備註 |
+|---|---|---|---|
+| K0 工具鏈與骨架 | 完成 | — | Gradle 8.14.4 / AGP 8.13.2 / Kotlin 2.2.21；Debug / Release 均可構建 |
+| K1 資料層 | 完成 | — | 相同 schema / `user_version`；規則、設定、配置文件、應用、日誌、流量倉儲；每日備份 |
+| K2 規則引擎 | 完成 | — | 匹配器、條件、具體度、優先級、篡改、時效；30+ 單元測試 |
+| K3 判決與詢問 | 完成 | — | 階段鏈、PromptBroker 合併/超時/暫停/稍後、規則生成 |
+| K4 VPN 引擎 | 完成 | — | 黑洞分流、假 DNS、UID、快速失敗、開機/always-on/撤銷 |
+| K5 應用 / 流量 / 網絡 / 配置文件 | 完成 | — | AppCatalog、NetworkStatsManager、NetworkMonitor、ProfileService |
+| K6 界面 | 完成 | — | 總覽 / 應用 / 記錄 / 設定 / 詢問卡片；三語、明暗主題 |
+| K7 平台整合 | 完成 | — | 通知渠道、通知按鈕、前景服務、Tile、開機廣播、應用安裝廣播、通知權限 |
+| K8 診斷 / 導入導出 / 備份 | 完成 | — | `netcontrol-rules` v1、SAF、zip 診斷包、7 份每日備份 |
+| K9 測試與 v0.1 | 完成 | — | 30 個 JVM 測試；Release 3.1 MB；冷啟動約 2.1 秒（模擬器） |
+
+---
+
+## 8. 每階段執行模板
+
+1. 更新本文件狀態為「進行中」，在 `docs/progress.md` 的入口任務下寫明分支和下一步。
+2. 從最新 `main` 建分支 `agent/opencode/android-kotlin-<階段>`（或在當前長期分支上按階段提交）。
+3. 先寫純邏輯和測試，再接平台和界面。
+4. 跑 `android-kotlin/gradlew assembleDebug` + `testDebugUnitTest`；有設備時跑 `scripts/android-kotlin.ps1 install`。
+5. 更新本文件清單和狀態表；提交（Conventional Commits）。
+6. 階段完成後把 `main` 保持可構建；未完成工作留在分支並寫明下一步。
+
+---
+
+## 9. v0.1 之後的迭代方向（不在本次範圍）
+
+- 轉發模式 + 上游 SOCKS5/HTTP 代理（與 Avalonia 版中期主線對齊）
+- 懸浮詢問面板、專注模式、時間表、鎖屏斷網、新應用提醒
+- 「允許一次」會話綁定（UsageStats）
+- 應用詳情頁、CSV 導出、工作資料夾、應用鎖
+- Baseline Profiles、AAB、簽名與更新渠道
+- 與 Avalonia 版的差分測試和性能對照報告
+
+---
+
+## 10. v0.1 執行結果（2026-11-14）
+
+### 10.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.1.0.apk` |
+| 大小 | 3,124,646 bytes（約 3.0 MB，雙 ABI；R8 + 資源壓縮） |
+| SHA-256 | `1CDDE077C78246F1C4AE619561395CF6687417C37538E448FF54654A6155654C` |
+| applicationId | `com.networkcontrol.android.kotlin` |
+| versionName / Code | `0.1.0` / `1` |
+| min / target / compile SDK | 29 / 36 / 36 |
+| 簽名 | Android Debug（與 Avalonia 0.3.0 的試用包一致；正式分發前需換正式密鑰） |
+| 構建命令 | `.\scripts\android-kotlin.ps1 publish` |
+
+Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
+
+```powershell
+# Debug 包
+.\scripts\android-kotlin.ps1 build
+.\scripts\android-kotlin.ps1 install
+
+# Release 包（目前調試簽名）
+.\scripts\android-kotlin.ps1 publish
+```
+
+### 10.2 驗證記錄
+
+環境：Android 15（API 35）模擬器 `nc35`，x86_64，軟件渲染，Android SDK 36。
+
+| 項目 | 結果 |
+|---|---|
+| Debug / Release 構建 | 通過；Release R8 + 資源壓縮後 3.0 MB |
+| JVM 單元測試 | 30 個通過（規則、報文、DNS、路由規劃、導入導出） |
+| 首次啟動 | Release 冷啟動 5 次：2197 / 2061 / 2108 / 2090 / 2156 ms（`am start -W -S`，總時間中位數約 2.1 秒） |
+| VPN 建立 | `dumpsys connectivity` 確認 `tun0`、`10.111.222.1/32`、`fd00:6e63::1/128`、DNS `10.111.222.2`、`1.0.0.0/0` / `::/0` 路由 |
+| 分流名單 | `Uids` 排除自身、系統 UID 與已允許應用；Google Play 服務允許後從名單消失並重建 VPN |
+| 假 DNS + 應用識別 | 被阻斷的 Google Play 服務 / Chrome 觸發詢問，目標顯示 `android.googleapis.com` / `example.com`（而不是假 IP） |
+| 詢問 | 通知（允許/拒絕）+ 應用內底部卡片；合併顯示「113 個連線」；「稍後」與永久 / 1 小時 / 直到重啟選項可用 |
+| 允許後行為 | 生成 1 條永久規則；規則數 1 → 2；VPN 重建；待決詢問清空；被允許 UID 離開 VPN |
+| 應用頁 | 63 個應用，搜索 / 篩選 / 三態 / 圖標 / 今日用量 / 最近連線；系統應用標記 |
+| 記錄頁 | 阻擋記錄按應用 / 目標 / 協議 / 原因聚合，詳情可查看遠端與本地端點 |
+| 流量 | 今日下載 / 上傳總量與前三名應用；`GET_USAGE_STATS` 授權後可用 |
+| 語言 | 系統英文 → 設定切換繁體中文，Activity 重建後界面即時變為台灣用語 |
+| 配置檔案 | 設定頁顯示默認配置、模式與當前標記；新增 / 編輯 / 刪除入口 |
+| 診斷 | 設定頁導出 zip 並打開系統分享面板；`summary.txt` / `rules.json` / `plan.txt` 已確認 |
+| 三語資源 | 通知/App 名稱使用 `values` / `values-b+zh+Hans` / `values-b+zh+Hant`；界面文案由 `UiStrings` 提供 |
+
+**未驗證 / 環境限制**：
+
+- **Chrome 網頁加載**：模擬器的宿主網絡沒有可用的外網 DNS（關閉 NetworkControl 後 Chrome 仍 `DNS_PROBE_FINISHED_BAD_CONFIG`），因此不能把 Chrome 加載失敗歸因於本應用；VPN/DNS/詢問鏈路本身已由提示中的 `example.com` 目標和記錄證明。
+- **真機**：沒有連接真機；OEM ROM、always-on VPN、開機恢復、Tile、通知權限實際彈窗、私人 DNS 需要真機回歸。
+- **界面視覺**：作者只做功能截圖檢查；正式驗收請用戶看界面。
+- **規則導入導出 UI**：SAF 文件選擇與預覽對話框已編譯並有單元測試，但未在模擬器上完成一次文件往返。
+- **勿擾摘要**：Tracker 已接入，但沒有勿擾入口，暫無端到端路徑。
+
+### 10.3 與 Avalonia 版的量化對照
+
+| 指標 | Avalonia 版（0.3.0） | Kotlin v0.1 | 備註 |
+|---|---|---|---|
+| Release APK | 45.9 MB（雙 ABI）/ 24 MB（arm64） | **3.0 MB**（雙 ABI） | Kotlin 版未含 Avalonia / AtomUI / Skia / HarfBuzz / .NET 運行時 |
+| 冷啟動（模擬器） | 約 7.5 秒 | **約 2.1 秒** | 同一模擬器、軟件渲染；真機待測 |
+| 共用核心 | Core + Storage（一份 C#） | 無，Kotlin 重寫 | 規則/存儲語義靠測試向量與導入導出格式對齊 |
+| 平台整合 | 需要 TouchAdapters、字體/安全區補丁 | Compose 原生 | 通知、Tile、懸浮窗、語言等更直接 |
+| 維護成本 | 一套核心 + 兩個外殼 | 兩套完整實現 | 長期最大代價 |
+
+### 10.4 下一輪建議
+
+1. 在真機上回歸：VPN 授權、always-on、開機恢復、Tile、通知權限、OEM ROM 保活、私人 DNS、純 IPv6。
+2. 補完 Avalonia 版已規劃但兩邊都未做的：懸浮詢問面板、專注模式 / 時間表、鎖屏斷網、按網絡自動切換、應用詳情頁、CSV 導出。
+3. 規則導入導出做一次端到端設備驗證，並與 Avalonia 版的 `netcontrol-rules` 文件互導。
+4. 若正式採用 Kotlin：換正式簽名、加 Baseline Profiles、補 Macrobenchmark / 耗電測試、建立 CI APK 大小與冷啟動基線。
+5. 維持與 Avalonia 版的 conformance fixtures（規則優先級、超時、導入導出邊界），避免語義漂移。

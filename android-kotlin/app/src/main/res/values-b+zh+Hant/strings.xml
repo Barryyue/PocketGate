@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">NetworkControl KT</string>
+    <string name="tile_label">NetworkControl</string>
+    <string name="tile_protection">保護</string>
+    <string name="notification_channel_prompt">連線詢問</string>
+    <string name="notification_channel_protection">保護狀態</string>
+    <string name="notification_channel_quiet">勿擾摘要</string>
+    <string name="protection_active">保護已開啟</string>
+    <string name="protection_off">保護已關閉</string>
+    <string name="protection_starting">保護正在啟動</string>
+    <string name="protection_notification_text">點擊開啟 NetworkControl KT</string>
+    <string name="prompt_title">%1$s 想要連線網路</string>
+    <string name="prompt_blocked_hint">此連線已被暫時阻止，允許後應用重新連線即可上網。</string>
+    <string name="prompt_allow">允許</string>
+    <string name="prompt_deny">拒絕</string>
+    <string name="nav_overview">總覽</string>
+    <string name="nav_apps">應用程式</string>
+    <string name="nav_logs">記錄</string>
+    <string name="nav_settings">設定</string>
+</resources>

@@ -4,6 +4,12 @@ obj/
 artifacts/
 publish/
 
+# Android Kotlin build (independent Gradle project)
+android-kotlin/.gradle/
+android-kotlin/local.properties
+android-kotlin/**/build/
+android-kotlin/.kotlin/
+
 # IDE
 .vs/
 .vscode/*
