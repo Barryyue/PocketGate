@@ -83,7 +83,7 @@
 
 **合併 main（Android 版）後（2026-11-14）：Windows 解決方案 292 個測試，291 通過、1 個跳過；Android Debug APK 用用戶級工具鏈（`D:\tools\android-dev`，`scripts/android.ps1 build`）構建通過（0 錯誤；3 個 XA0033 是工具鏈解析 JDK 版本號的既有警告），**未在設備上回歸**。本輪改動了 Core（`IActivityQuery` 新增兩個方法、判決後補充解析應用身份）和 Storage（遷移 `Activity/0002`、備份 / 導入導出），均為追加式修改。**
 
-**測試現狀（2026-11-14）：356 個，355 通過、1 個跳過（Linux /proc 符號鏈接測試，Windows 非開發者模式不能建立符號鏈接）；完整解決方案構建零警告零錯誤；`dotnet format --verify-no-changes` 通過；Android Debug 構建通過（3 個既有 XA0033 警告），未在設備上回歸。Release / AOT 發布包本輪未重新生成。**
+**測試現狀（2026-11-14）：362 個，361 通過、1 個跳過（Linux /proc 符號鏈接測試，Windows 非開發者模式不能建立符號鏈接）；完整解決方案構建零警告零錯誤；`dotnet format --verify-no-changes` 通過；Android Debug 構建通過（3 個既有 XA0033 警告），未在設備上回歸。Release / AOT 發布包本輪未重新生成。**
 
 ---
 
@@ -149,17 +149,29 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
     - 桌面：設定頁配置文件卡片（新增 / 編輯 / 刪除 / 設為當前）、總覽下拉、托盤子選單、狀態欄、規則編輯器「適用於」、規則頁配置文件列與篩選、三語文本。
     - Android：`IBackend` 配置文件 API、總覽下拉、設定頁增刪改、`tools/android-strings.py` 生成文本；Debug 構建通過。
     - **驗證**：356 個測試 355 通過、1 跳過；隔離管道 + Fake 引擎探針驗證建立 / 切換 / 改名 / 刪除、專屬規則切換後生效（生效規則 16→1）、刪除後規則歸零。**未驗證**：桌面和 Android 界面效果、Android 真機。
-  - [ ] M3-04 按網絡自動切換配置文件（依賴 M3-03）
+  - [~] (claude, 2026-11-14) M3-04 按網絡自動切換配置文件（依賴 M3-03）
+    - Core：`NetworkContext` / `INetworkMonitor` / `AutoActivateCondition`；`ProfileAutoSwitcher` 去抖 3 秒、按 SortOrder 匹配、無匹配保持當前、用戶手動切換後同一網絡不再自動切換。
+    - 平台：Fake 網絡監視器 + `Simulator.SimulateNetwork`；Windows 用 `NetworkInterface` 判斷有線 / Wi-Fi / 蜂窩和網絡 ID（SSID 暫未接入 WlanAPI）；Android `registerDefaultNetworkCallback`，SSID 需要定位權限。
+    - 界面：桌面配置文件編輯器加入自動切換類型 / SSID；`Profiles.GetNetwork` 和 `ServiceStatus.network_display_name`。
+    - **驗證**：單元測試和 Fake 探針（Wi-Fi CorpNet 自動切到公司、無匹配保持、手動覆蓋）。**未驗證**：Windows 真實 Wi-Fi 切換、Android 真機。
   - [ ] M3-05 Android 阻斷快速失敗（TCP RST / ICMP 不可達）
   - [ ] M3-06 Android 規則導入導出
-  - [ ] M3-07 勿擾期間阻斷彙總通知（Core + 桌面 + Android）
+  - [~] (claude, 2026-11-14) M3-07 勿擾期間阻斷彙總通知（Core + 桌面 + Android）
+    - Core：`QuietPeriodTracker` 只統計 `DoNotDisturb` 判決，手動關閉和到期兩條結束路徑，`SummaryReady` 事件；無事件不生成。
+    - IPC / Service：`QuietPeriodSummary`、`ServiceStatus.last_quiet_period`、`DismissQuietPeriod`、`LogQuery.reason` 篩選。
+    - 桌面：`QuietPeriodNotifier` Toast，查看時跳轉到按原因篩選的連線記錄並清除摘要；Android 總覽卡片顯示摘要。
+    - **驗證**：單元測試、存儲 reason 篩選測試、Fake 探針（勿擾中拒絕 1 條 → 摘要和原因篩選正確 → Dismiss 清除）。**未驗證**：桌面 Toast / Android 界面。
   - [ ] M3-08 入站連線控制（Windows WFP）
   - [ ] M3-09 Android 快速設定磁貼
   - [ ] M3-10 Android 通知文本跟隨應用內語言
   - [ ] M3-11 Android 診斷資訊導出
-  - [ ] M3-12 權限分級提示（桌面）
+  - [~] (claude, 2026-11-14) M3-12 權限分級提示（桌面）
+    - `ServiceConnection.CanModify`；`PageViewModel.RunAsync` 把 `PermissionDenied` 轉為本地化提示；規則 / 應用 / 配置文件 / 服務設置的寫操作禁用，頁頭顯示說明。
+    - **未驗證**：`TreatAllClientsAsAdmin=false` + 普通用戶的界面效果（需要用戶確認）。
   - [ ] M3-13 檢查更新（桌面，**需要用戶先決定發布源**）
-  - [ ] M3-14 應用圖標（桌面）
+  - [~] (claude, 2026-11-14) M3-14 應用圖標（桌面）
+    - `AppIconCache` 用 shell32 / gdi32 在後台提取大圖標，轉成 `WriteableBitmap`，按路徑緩存最多 512 項；應用頁顯示圖標；失敗或非 Windows 返回 null。
+    - **驗證**：構建通過；**未驗證**：界面圖標效果（需要用戶確認）。目前只接入應用頁，即時連線 / 排行榜 / 詢問彈窗尚未接入。
   - [ ] M3-15 svchost 服務與 MSIX 應用的規則下發（Windows，含預研）
   - [ ] M3-16 目錄簽名（catalog）校驗（Windows）
   - [ ] M3-17 WFP 管理員集成測試（Windows）
