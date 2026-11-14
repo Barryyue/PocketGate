@@ -213,4 +213,4 @@ $env:HTTPS_PROXY='http://127.0.0.1:9'; $env:HTTP_PROXY='http://127.0.0.1:9'; $en
 
 ### 11.3 模擬器
 
-開發機（Windows 10 19045）上，模擬器 37.x 在 WHPX 下無法啟動虛擬機（`-gpu swiftshader_indirect` 時宿主進程訪問衝突崩潰或客戶機卡住不輸出內核日誌，`-gpu guest` 時靜默退出）。處理過程和結論見 progress.md 的「Android MVP」一節。真機驗證（USB 調試）最可靠。
+開發機（Windows 10 19045）上，模擬器 37.x 在 WHPX 下無法啟動虛擬機（`-gpu swiftshader_indirect` 時宿主進程訪問衝突崩潰或客戶機卡住不輸出內核日誌，`-gpu guest` 時靜默退出）。處理過程和結論見 progress-android.md。真機驗證（USB 調試）最可靠。

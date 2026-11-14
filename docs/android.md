@@ -1,6 +1,6 @@
 # NetworkControl Android 版設計
 
-> 狀態：M-A（Android MVP）已實現並在模擬器上端到端驗證，2026-11-14。實現進度見 [progress.md](progress.md) 的「Android MVP」一節。
+> 狀態：M-A（Android MVP）已完成：模擬器端到端驗證、用戶真機確認，2026-11-14。實現進度見 [progress-android.md](progress-android.md)。
 > 本文只描述 Android 特有的部分；領域模型、規則引擎、判決管線、詢問代理沿用 [design.md](design.md)。
 
 ---
@@ -432,7 +432,7 @@ public interface IBackend
 | 中文字體 | ⚠️ AtomUI 默認字體（Alibaba Sans + Microsoft YaHei）在 Android 上沒有中文字形且不回退，中文顯示為方框；`atom.WithDefaultFontFamily("sans-serif")` 後由系統 Noto Sans CJK 回退，正常 |
 | 系統欄安全區域 | Avalonia 12.1 默認把內容限制在系統欄內；`SafeAreaPadding` 以物理像素報告，不要再手動留邊 |
 | 語言 Catalog 運行時切換 | ✅ zh-TW / zh-CN / en-US 即時切換；明暗主題即時切換 |
-| APK 大小 | Debug（含兩個 ABI、未裁剪）見 progress.md；Release 待測 |
+| APK 大小 | Release 45.8 MB（arm64-v8a + x86_64，裁剪後；只發 arm64 可再減少約一半） |
 | 冷啟動時間 | 模擬器（軟件渲染）上從啟動到核心就緒約 3 秒（數據庫遷移、規則加載）；真機待測 |
 
 ---

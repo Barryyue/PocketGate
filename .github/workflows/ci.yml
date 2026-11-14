@@ -44,3 +44,40 @@ jobs:
 
       - name: Test
         run: dotnet test --solution NetworkControl.slnx --configuration Release --no-build
+
+  # Android 版（docs/android.md）：Core / Storage 被 Android 共用，改動它們可能讓 Android 項目編譯失敗，
+  # 而主解決方案不包含 Android 項目，因此單獨構建 NetworkControl.Android.slnx 及早發現。
+  android:
+    name: Build (Android)
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      CI: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: microsoft
+          java-version: '17'
+
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      - name: Install Android SDK components
+        run: >-
+          dotnet build src/NetworkControl.App.Android/NetworkControl.App.Android.csproj
+          -t:InstallAndroidDependencies -f net10.0-android
+          -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME" -p:AcceptAndroidSDKLicenses=true
+
+      - name: Verify formatting
+        run: dotnet format NetworkControl.Android.slnx --verify-no-changes
+
+      - name: Build
+        run: dotnet build NetworkControl.Android.slnx --configuration Debug -p:AndroidSdkDirectory="$ANDROID_HOME" -p:JavaSdkDirectory="$JAVA_HOME"

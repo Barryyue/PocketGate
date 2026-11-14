@@ -7,7 +7,7 @@
 
 ## 1. 開始工作前（必讀）
 
-1. **先讀 [docs/progress.md](docs/progress.md)**：當前階段、阻塞項、待辦、可分派任務、待驗證事項都在那裡。
+1. **先讀 [docs/progress.md](docs/progress.md)**：當前階段、阻塞項、待辦、可分派任務、待驗證事項都在那裡。Android 版的任務看 [docs/progress-android.md](docs/progress-android.md)。
 2. 需要背景時再讀：
    - [docs/requirements.md](docs/requirements.md)：需求，編號為 FR-xxx / NFR-xxx。
    - [docs/design.md](docs/design.md)：設計；§22 記錄了實現與原設計的差異。
@@ -23,7 +23,8 @@
   1. `dotnet build NetworkControl.slnx` 零錯誤零警告（倉庫開啟了警告即錯誤）。
   2. `dotnet test --solution NetworkControl.slnx` 全部通過，新功能需附帶測試。
   3. `dotnet format NetworkControl.slnx --verify-no-changes` 通過。
-  4. 更新 `docs/progress.md`：任務標為 `[x]`，寫明完成內容；有沒驗證到的部分要如實寫明。設計有變化時同步更新 `docs/design.md` §22；發現新的坑就補充到本文件第 6 節。
+  4. **改動了 Core 或 Storage**（Android 版共用它們）：本機有 Android 工具鏈時，再構建一次 `NetworkControl.Android.slnx`（見 docs/development.md §11）；沒有工具鏈時在進度文件中註明「未驗證 Android 構建」，CI 的 Android 任務會兜底。盡量以追加的方式修改公開接口（新增方法、可選參數），不要直接改已有的簽名。
+  5. 更新 `docs/progress.md`（Android 任務更新 `docs/progress-android.md`）：任務標為 `[x]`，寫明完成內容；有沒驗證到的部分要如實寫明。設計有變化時同步更新 `docs/design.md` §22；發現新的坑就補充到本文件第 6 節。
 - **提交信息**：使用 Conventional Commits 格式，例如 `feat(storage): daily backup of config.db`，正文可以用中文。
 - **禁止事項**：
   - 不要修改已發布的數據庫遷移腳本，也不要修改 proto 中已有的字段編號。
