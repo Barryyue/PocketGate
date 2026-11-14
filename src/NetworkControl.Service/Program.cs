@@ -66,6 +66,7 @@ try
     builder.Services.AddConfiguredEngine(serviceOptions);
 
     // 診斷包：服務概況和日誌；存儲、引擎各自註冊自己的收集者
+    builder.Services.AddSingleton<ServiceStatusBuilder>();
     builder.Services.AddSingleton<ServiceDiagnosticsBuilder>();
     builder.Services.AddDiagnosticsContributor<ServiceSummaryContributor>();
     builder.Services.AddDiagnosticsContributor<ServiceLogsContributor>();
@@ -78,6 +79,7 @@ try
     app.MapGrpcService<ControlGrpcService>();
     app.MapGrpcService<PromptsGrpcService>();
     app.MapGrpcService<RulesGrpcService>();
+    app.MapGrpcService<ProfilesGrpcService>();
     app.MapGrpcService<ActivityGrpcService>();
     app.MapGrpcService<ConnectionsGrpcService>();
     app.MapGrpcService<AppsGrpcService>();

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using NetworkControl.Core.Apps;
 using NetworkControl.Core.Domain;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
 
@@ -33,6 +34,26 @@ internal sealed class InMemoryRuleRepository : IRuleRepository
     }
 
     public Task RecordHitsAsync(IReadOnlyCollection<RuleHitDelta> hits, CancellationToken cancellationToken) => Task.CompletedTask;
+}
+
+internal sealed class InMemoryProfileRepository : IProfileRepository
+{
+    public ConcurrentDictionary<Guid, Profile> Profiles { get; } = new();
+
+    public Task<IReadOnlyList<Profile>> LoadAllAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<Profile>>(Profiles.Values.OrderBy(p => p.SortOrder).ToArray());
+
+    public Task UpsertAsync(Profile profile, CancellationToken cancellationToken)
+    {
+        Profiles[profile.Id] = profile;
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        Profiles.TryRemove(id, out _);
+        return Task.CompletedTask;
+    }
 }
 
 internal sealed class InMemorySettingsRepository : ISettingsRepository

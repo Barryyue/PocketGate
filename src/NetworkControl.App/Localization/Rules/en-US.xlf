@@ -241,5 +241,9 @@
         <source>{0} rules</source>
       </segment>
     </unit>
+    <unit id="EditorProfile"><segment><source>Applies to</source></segment></unit>
+    <unit id="ColumnProfile"><segment><source>Profile</source></segment></unit>
+    <unit id="ProfileFilterAll"><segment><source>All profiles</source></segment></unit>
+    <unit id="ProfileFilterShared"><segment><source>Shared rules</source></segment></unit>
   </file>
 </xliff>

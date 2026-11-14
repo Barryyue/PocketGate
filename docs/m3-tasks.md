@@ -50,6 +50,7 @@ D:\tools\android-dev\dotnet\dotnet.exe format NetworkControl.Android.slnx --veri
 | M3-01 | 實時連線視圖 | 桌面 | 中 | — |
 | M3-02 | 斷開連線 | 桌面 | 小 | M3-01 |
 | M3-03 | 配置文件管理 | Core + 桌面 + Android | 大 | — |
+| M3-03R | 配置文件審查修正（R1–R10） | Core + 桌面 + Android | 中 | M3-03 |
 | M3-04 | 按網絡自動切換配置文件 | Core + 桌面 + Android | 中 | M3-03 |
 | M3-05 | 阻斷快速失敗（TCP RST / ICMP 不可達） | Android | 小 | — |
 | M3-06 | 規則導入導出 | Android | 小 | — |
@@ -71,7 +72,7 @@ D:\tools\android-dev\dotnet\dotnet.exe format NetworkControl.Android.slnx --veri
 
 - **只有桌面（Windows）**：M3-01、M3-02、M3-08、M3-12、M3-13、M3-14、M3-15、M3-16、M3-17、M3-18、M3-19。
 - **只有 Android**：M3-05、M3-06、M3-09、M3-10、M3-11。
-- **兩端都要做**（Core / Storage 共用，兩端各自做界面）：M3-03、M3-04、M3-07。
+- **兩端都要做**（Core / Storage 共用，兩端各自做界面）：M3-03（含 M3-03R）、M3-04、M3-07。
 - **只有桌面、Android 不適用**：M3-01 / M3-02（Android 10+ 不能讀取其他應用的連線表），M3-08（Android 黑洞方案只處理出站）。
 
 不需要編碼、由用戶完成：代碼簽名證書（Windows 安裝程序 / 可執行文件、Android 正式密鑰庫），見 progress.md。
@@ -326,6 +327,157 @@ message ActivateProfileRequest { string id = 1; }
 
 - 新建「公司」，在其中建一條拒絕規則；切到「默認」後該規則不生效（模擬器驗證），切回後生效。
 - Android 構建通過；切換配置文件後分流重建（日誌）。
+
+---
+
+## M3-03R 配置文件審查修正（依賴 M3-03）
+
+**背景**：主 agent（claude）2026-11-14 審查 M3-03 的實現（分支 `agent/claude/m3-03-profiles`）時發現 10 個問題，本任務逐條修正。每條都寫了**問題**、**修改建議**和**驗收**；審查時按「驗收」逐條核對。建議的實現方式不是唯一解，換一種做法可以，但要在進度文件中說明理由，而且必須滿足同一條驗收。
+
+**分支**：從 `agent/claude/m3-03-profiles` 建 `agent/<agent名>/m3-03r-review-fixes`（M3-03 還沒合入 `main`，不要從 `main` 建）。
+
+### 範圍
+
+- Core：`Profiles/ProfileService.cs`、`Settings/RuntimeStateService.cs`（只追加或修正 M3-03 新增的 `ActivateProfileAsync`）、`Rules/RuleService.cs`（只追加方法）
+- Ipc：`control.proto`（`ServiceStatus` 追加字段 11）、`rules.proto`（`ImportResult` 追加字段 6）
+- Service：`Grpc/ControlGrpcService.cs`、`Grpc/ProfilesGrpcService.cs`、`Grpc/RulesGrpcService.cs`、`Grpc/ServiceStatusBuilder.cs`
+- 桌面：`ViewModels/RulesViewModel.cs`、`ViewModels/RuleEditorViewModel.cs`、`ViewModels/SettingsViewModel.cs`、`Services/RuleEditing.cs`、`Services/TrayService.cs`、可新建 `Services/ProfileCatalog.cs`、相關的 `.axaml` 和界面文本
+- Android：`ViewModels/OverviewViewModel.cs`、`Hosting/Backend.cs`（如需要）、`tools/android-strings.py`
+- 測試：`tests/NetworkControl.Core.Tests/Profiles/`、`tests/NetworkControl.Core.Tests/Scenarios/`，以及導入相關的現有測試
+
+### 優先級
+
+先做 **R3、R8、R7**（會擴大規則的作用範圍或破壞資料一致性），再做 R1、R2（使用者直接可見的功能失效），最後做 R4、R5、R6、R9、R10（狀態不同步）。每條修正單獨一個提交（`fix(profiles): ...`），方便逐條審查。
+
+---
+
+### R1 規則頁的配置文件篩選不起作用
+
+- **問題**：`RulesViewModel.ProfileFilter` 沒有 `OnProfileFilterChanged`，選擇後不會重新篩選；只有 `Keyword`、`ActionFilter`、`SourceFilter` 會呼叫 `ApplyFilter`。
+- **修改建議**：
+  1. 追加 `partial void OnProfileFilterChanged(Choice<string?>? value) => ApplyFilter();`。
+  2. 確認 `ApplyFilter` 的三種語義：`null` = 全部、`""` = 只看共享規則（`ProfileId` 為空）、其他 = 只看該配置文件的專屬規則。**不要**把共享規則算進某個配置文件的篩選結果裡（否則「共享」選項就沒有意義了）；如果要改成包含共享規則，需要在進度文件中說明。
+  3. `LoadProfilesAsync` 中 `ProfileFilters.Clear()` 會讓 `ProfileFilter` 暫時變成 `null` 並觸發篩選，屬於正常情況，不需要特別處理，但不要因此觸發第二次 `RefreshAsync`。
+- **驗收**：代碼審查；界面效果由用戶確認（選「共享」只剩共享規則，選某個配置文件只剩它的專屬規則）。
+
+### R2 配置文件列表載入失敗會連帶規則頁、設定頁一起失敗
+
+- **問題**：`RulesViewModel.LoadProfilesAsync` 和 `SettingsViewModel` 的 `LoadProfilesAsync` 沒有捕獲異常，而且在 `OnActivatedAsync` 中排在 `RefreshAsync` / 載入備份之前。連到沒有 `Profiles` 服務的舊版服務（`Unimplemented`）、短暫斷線時，整頁都載入不出來。托盤和總覽已經會捕獲 `RpcException`，這兩頁沒有。
+- **修改建議**：
+  1. 新建桌面端單例 `Services/ProfileCatalog.cs`，統一管理配置文件列表（R5、R9 也會用到它），避免四個地方各自呼叫 `Profiles.ListAsync`、各自處理錯誤：
+     - 屬性：`IReadOnlyList<Proto.ProfileInfo> Profiles`、`bool IsAvailable`（服務支持且載入成功）、`bool HasMultiple`（`Profiles.Count > 1`，界面用它決定是否顯示選擇器）。
+     - 事件：`Changed`（在界面線程觸發）。
+     - `Task RefreshAsync()`：捕獲 `RpcException`，`StatusCode.Unimplemented` 時 `IsAvailable = false` 並記一次 Information 日誌（舊版服務），其他錯誤時保留上一次的列表並記 Warning 日誌，**不往外拋**。
+     - 觸發刷新的時機：連線建立、R9 的 `profiles_revision` 變化、本程序內增刪改配置文件之後。
+  2. `RulesViewModel`、`SettingsViewModel`、`TrayService`、總覽頁改用 `ProfileCatalog`，不再直接呼叫 `Profiles.ListAsync`。
+  3. `OnActivatedAsync` 中配置文件的載入失敗不能影響後續步驟：規則列表、備份、設定照常載入。`IsAvailable == false` 時隱藏規則頁的配置文件列和篩選、設定頁的配置文件卡片。
+- **驗收**：在探針或單元測試中模擬 `Profiles.List` 回傳 `Unimplemented`，規則列表仍然正常載入（如果桌面端沒有測試項目，在進度文件中寫明用什麼方式驗證：例如用隔離管道起一個舊版服務）。
+
+### R3 編輯規則時可能被默默改成共享規則（優先）
+
+- **問題**：`RuleEditorViewModel` 在規則的 `ProfileId` 不在已載入的列表中時（例如 `RuleEditing.LoadProfilesAsync` 遇到 `RpcException` 回傳 `[]`），會回退到 `Profiles[0]`（`null`），`ToDefinition` 隨即呼叫 `ClearProfileId()`。使用者只改了備註，存檔後一條只在「公司」生效的封鎖規則就變成在所有配置文件生效。另外編輯器同時提供「全部」（`null`）和「共享」（`""`），兩者在編輯器裡的意思完全一樣。
+- **修改建議**：
+  1. 編輯器的「適用於」只保留一個共享選項：「所有配置文件」（`null`），加上各個配置文件。「全部 / 共享」的區分只屬於規則頁的篩選，不要沿用到編輯器（必要時新增一個界面文本鍵，按 AGENTS.md 第 6 節在三個 xlf 末尾追加）。
+  2. 編輯已有規則時，如果 `_original.ProfileId` 不在列表中，**追加一個佔位選項**並選中它，例如「未知配置文件（3f2a9c1e…）」，`Value` 保持原來的 ID。這樣存檔時 `ProfileId` 原樣保留。
+  3. `RuleEditing.LoadProfilesAsync`（或改用 R2 的 `ProfileCatalog`）要區分「載入失敗」和「真的沒有配置文件」：載入失敗時編輯器把「適用於」下拉設為不可用，並顯示提示「無法載入配置文件，保留原有設定」；`ToDefinition` 在這種情況下必須原樣寫回 `_original.ProfileId`。
+  4. 新建規則且載入失敗時，默認「所有配置文件」可以接受（與設計一致）。
+- **驗收**：
+  - 代碼中不存在「`ProfileId` 不在列表裡 → 回退到 `null`」的路徑；審查時找到 `SelectedProfile = ... ?? Profiles[0]` 一類的寫法即判為未修。
+  - 用隔離管道 + 模擬引擎做一次探針：建一條專屬規則，以「列表為空」的方式構造編輯器並直接呼叫 `ToDefinition()`，`ProfileId` 不變。
+
+### R4 模式與配置文件的同步
+
+- **問題**：
+  1. `ProfileService.UpdateAsync` 修改當前配置文件時，如果正處於 BlockAll，只跳過了模式切換，**沒有更新 `ModeBeforeBlockAll`**。例如「家裡」是詢問模式並且開啟了全部阻斷，把「家裡」改為白名單後恢復網路，套用的還是詢問模式，與 `ActivateProfileAsync` 實現的 FR-MOD-04 行為不一致。
+  2. 不在 BlockAll 時，只是重新命名當前配置文件也會呼叫 `SetModeAsync(profile.Mode)`，把使用者在總覽手動選的模式改回去。根本原因是 M3-03 設計中的「**模式跟隨配置文件**」（總覽切換模式時回寫當前配置文件的 `Mode`）沒有實現。
+  3. `RuntimeStateService.ActivateProfileAsync` 的短路條件：`ActiveProfileId` 相同、`ModeBeforeBlockAll is null`、而 `Mode == BlockAll` 時直接回傳，`ModeBeforeBlockAll` 一直是 `null`，恢復時落到 `?? FilterMode.Ask`。
+- **修改建議**：
+  1. **實現模式回寫**，推薦用顯式方法而不是在 `RuntimeStateService.Changed` 裡非同步回寫（事件處理器中的 fire-and-forget 難以測試，出錯也看不到）：`ProfileService` 追加 `Task SetActiveModeAsync(FilterMode mode, CancellationToken ct)`：
+     - `Ask / Whitelist / Blacklist`：在 `_writeGate` 內更新當前配置文件的 `Mode` 並持久化，然後呼叫 `state.SetModeAsync(mode)`，觸發 `Changed`。
+     - `BlockAll / Disabled`（臨時狀態）：只呼叫 `state.SetModeAsync`，不回寫配置文件。
+     - `ControlGrpcService.SetMode` 和 Android `Backend` 中設置模式的地方改呼叫這個方法；托盤、總覽走的都是 `SetMode`，不需要另外改。
+     - 這與 M3-03 設計中的「訂閱 `RuntimeStateService.Changed` 回寫」不同，要寫進 `docs/design.md` §22。
+  2. `UpdateAsync` 只在**模式真的改變**時才同步運行狀態：
+     - 不是當前配置文件，或模式沒變：不碰 `state`。
+     - 是當前配置文件、模式改變、處於 BlockAll：呼叫 `state.ActivateProfileAsync(id, newMode)`（會寫入 `ModeBeforeBlockAll`）。
+     - 是當前配置文件、模式改變、處於 Disabled：只更新配置文件，不改運行狀態（不要因為改了配置文件的模式就把保護重新打開）。
+     - 其他情況：`state.SetModeAsync(newMode)`。
+  3. 修正 `ActivateProfileAsync` 的短路條件：只有「不在 BlockAll 且 `Mode == mode`」或「在 BlockAll 且 `ModeBeforeBlockAll == mode`」時才不需要更新。
+  4. 順便確認 Disabled 狀態下 `ActivateAsync` 的行為（現在會把 `Mode` 設為配置文件的模式，相當於重新打開保護）；建議與 BlockAll 同樣處理（保持 Disabled），並寫進 design §22。
+- **驗收**（`ProfileServiceTests` 新增用例）：
+  - BlockAll 下把當前配置文件從詢問改為白名單 → `RestoreFromBlockAllAsync` 後 `Mode == Whitelist`。
+  - 手動把模式設為黑名單（經 `SetActiveModeAsync`）→ 當前配置文件的 `Mode` 變為黑名單；再重新命名當前配置文件 → 模式仍是黑名單。
+  - 設為 BlockAll / Disabled 不會改變配置文件的 `Mode`。
+  - 切到另一個配置文件再切回來，模式恢復為回寫後的值。
+
+### R5 托盤配置文件菜單的勾選狀態過時
+
+- **問題**：`TrayService` 的勾選來自快取 `_profiles[].IsActive`，快取只在連線狀態變化和托盤自己切換之後才重新載入。在總覽或設定頁切換、新增、改名、刪除配置文件後，托盤仍勾選舊的配置文件，新增的不顯示，刪除的還在。
+- **修改建議**：
+  1. 勾選狀態改用狀態推送：`item.IsChecked = profile.Id == status?.ActiveProfileId;`（`IsActive` 只是載入時的快照，不要再用）。
+  2. 列表改用 R2 的 `ProfileCatalog`，在 `ProfileCatalog.Changed` 時重建菜單。
+- **驗收**：代碼審查（狀態推送裡不再讀 `IsActive`）；托盤效果由用戶確認。
+
+### R6 Android 總覽的配置文件選擇不跟隨外部切換
+
+- **問題**：`OverviewViewModel.Refresh` 優先按「之前選中的 ID」重新選擇，`?? IsActive` 只在舊 ID 消失時才生效，所以在設定頁（以及之後 M3-04 的自動切換）切換配置文件後，下拉仍顯示舊的。`OnSelectedProfileChanged` 中的 `_ = Backend.ActivateProfileAsync(...)` 沒有錯誤處理，失敗時異常沒人處理，選擇也不會還原。
+- **修改建議**：
+  1. `Refresh` 一律選中 `Backend.ActiveProfile` 對應的項：`SelectedProfile = Profiles.FirstOrDefault(p => p.IsActive);`，刪掉 `selectedProfile` 變量。當前配置文件以核心為準，界面不保留自己的選擇。
+  2. 切換改為 `private async Task ActivateProfileAsync(ProfileChoice choice)`：`try { await Backend.ActivateProfileAsync(...); } catch (Exception ex) { 記錄日誌、用頁面現有的錯誤提示方式提示使用者; } finally { Refresh(); }`。`Refresh` 會把選擇還原到實際的當前配置文件。
+  3. 確認 `Backend.Changed` 在 `ProfileService.Changed` 時觸發後，總覽頁會在界面線程呼叫 `Refresh`（`Backend.cs` 已經訂閱了 `_profiles.Changed`，只需要確認總覽的處理有切到界面線程）。
+- **驗收**：Android 構建通過；代碼審查。真機或模擬器上的效果標為「待用戶驗證」。
+
+### R7 同時啟用和刪除同一個配置文件（優先）
+
+- **問題**：`DeleteAsync` 在 `_writeGate` 之外檢查「是否為當前配置文件」，`ActivateAsync` 完全不加鎖。客戶端 A 啟用 X、客戶端 B 同時刪除 X 時：刪除的檢查通過（X 還不是當前配置文件）→ 啟用的 `Find(X)` 成功並寫入 `ActiveProfileId = X` → X 和它的規則被刪除。結果 `ActiveProfileId` 指向不存在的配置文件，只有共享規則生效，`ActiveProfileName` 為空，`Active` 默默回退到默認配置文件。
+- **修改建議**：
+  1. `ActivateAsync` 在 `_writeGate` 內完成「`Find` → `state.ActivateProfileAsync`」。
+  2. `DeleteAsync` 把「是否為當前配置文件」的檢查移到 `_writeGate` 之內（默認配置文件的檢查可以留在外面）。
+  3. R4 的 `SetActiveModeAsync`、`UpdateAsync` 中對 `state` 的操作也要在鎖內進行，保證「配置文件列表」和「當前配置文件 / 模式」一起變化。注意 `_writeGate` 不可重入，鎖內不要呼叫其他會再次取鎖的公開方法；`Changed` 事件在釋放鎖之後觸發。
+  4. 防禦：`InitializeAsync` 已經會修復指向不存在配置文件的 `ActiveProfileId`，保留；另外在 `ProfileService.Active` 回退時記一次 Warning 日誌（只記一次，避免刷屏）。
+- **驗收**（新增測試）：用一個可控的假 `IProfileRepository`（在 `DeleteAsync` 中等待 `TaskCompletionSource`）構造交錯：刪除進行到一半時發起啟用；結果要麼啟用失敗（`KeyNotFoundException`），要麼刪除失敗（「不能刪除當前配置文件」），**不能兩個都成功**。
+
+### R8 導入時找不到配置文件的規則被放寬為共享規則（優先，改變設計）
+
+- **問題**：`RulesGrpcService.ApplyAsync` 把 `ProfileId` 在本機不存在的規則改為共享（`ProfileId = null`），作用範圍擴大到所有配置文件。例如從另一台電腦導入的備份中，「咖啡店」配置文件（GUID 不同）的一條「允許全部」規則，導入後在「公司」也生效。這是 M3-03 設計中寫明的行為，但它會在使用者不知情時放寬過濾，**這裡改變設計**。
+- **修改建議**：
+  1. 這類規則**不導入**，計入新的統計字段：`rules.proto` 的 `ImportResult` 追加 `int32 skipped_unknown_profile = 6;`。
+  2. 預覽（`previewOnly`）也要回傳這個數字，界面在導入確認和結果提示中顯示「N 條規則屬於本機不存在的配置文件，已略過」（桌面三個 xlf、Android 的 `android-strings.py` 都要加文本）。
+  3. 恢復**本機**備份時，配置文件 ID 都存在，不受影響；不要因此改導出格式（`RuleExportFormat` 已帶 `ProfileId`）。
+  4. 更新 `docs/m3-tasks.md` 中 M3-03「範圍 / 導入導出」的那句說明，以及 `docs/design.md` §22。
+  5. 進一步的「按名稱匹配配置文件」或「導入時一併建立配置文件」不在本任務範圍，需要時另開任務。
+- **驗收**：導入測試新增用例：導入含未知 `ProfileId` 的規則 → 這些規則不在 `rules.All` 中，`SkippedUnknownProfile` 等於它們的數量，預覽和實際導入的數字一致。
+
+### R9 重新命名當前配置文件不會即時推送狀態
+
+- **問題**：`ServiceStatus` 現在帶 `active_profile_name`，但 `ControlGrpcService.WatchStatus` 沒有訂閱 `ProfileService.Changed`。重新命名當前配置文件既不改運行狀態也不改規則集，狀態列要等 5 秒的定期推送才更新。
+- **修改建議**：
+  1. `WatchStatus` 訂閱並在 `finally` 中退訂 `profiles.Changed`。
+  2. `control.proto` 的 `ServiceStatus` 追加 `int64 profiles_revision = 11;`：`ProfileService` 每次觸發 `Changed` 時遞增一個計數（`Interlocked.Increment`，只存在記憶體裡，服務重啟歸零即可；客戶端只比較是否變化）。桌面 `ProfileCatalog` 在收到的值與上次不同時重新載入列表（R2、R5 依賴這一點）。
+  3. 新字段要在 `ServiceStatusBuilder` 中填寫。
+- **驗收**：探針（隔離管道 + 模擬引擎）：開著 `WatchStatus` 串流時呼叫 `Profiles.Update` 重新命名當前配置文件，1 秒內收到 `active_profile_name` 為新名稱、`profiles_revision` 增加的推送。
+
+### R10 新建配置文件時複製規則的問題
+
+- **問題**：
+  1. `copy_rules_from` 指向不存在的配置文件時默默成功，複製了 0 條。
+  2. 已過期的 Timed 規則（在 `rules.All` 中尚未被清理）也被複製，在新配置文件中立刻失效。
+  3. 複製在 `_writeGate` 之外逐條 `AddAsync`，沒有回滾：中途失敗時新配置文件只有部分規則，而且客戶端收到錯誤，但配置文件其實已經建立。
+  4. （效率）`ProfilesGrpcService.ToInfo` 每個配置文件都掃描一遍全部規則，`List` 是 O(配置文件數 × 規則數)。
+- **修改建議**：
+  1. 在建立配置文件**之前**驗證來源存在，不存在時拋 `KeyNotFoundException`（gRPC 層映射為 `InvalidArgument` 或 `NotFound`，和現有的映射方式一致）。
+  2. 只複製 `Permanent`，以及 `ExpiresAt > now` 的 `Timed`。
+  3. 原子性：`RuleService` 追加 `Task AddRangeAsync(IReadOnlyCollection<Rule> rules, CancellationToken ct)`（只追加，不改已有簽名；最後只 `Republish` 一次）。複製失敗時刪除剛建立的配置文件（`repository.DeleteAsync`，外鍵級聯會刪除已複製的規則），**同時把 `RuleService` 記憶體中已加入的規則移除**，然後把原始異常往外拋。如果 `IRuleRepository` 沒有批量寫入的事務接口，用「失敗時補償刪除」即可，不要為此修改存儲接口的已有簽名。
+  4. `ToInfo`：`List` 中先算一次 `rules.All.Where(r => r.ProfileId is not null).GroupBy(r => r.ProfileId!.Value).ToDictionary(g => g.Key, g => g.Count())`，再傳給 `ToInfo`。
+- **驗收**（新增測試）：來源不存在 → 異常且沒有建立配置文件；過期的 Timed 規則不被複製；用會在第 N 條寫入時拋錯的假 `IRuleRepository` 模擬失敗 → 配置文件不存在、`rules.All` 中沒有殘留的複製規則。
+
+---
+
+### 自檢與交付
+
+- 按 0.3 自檢，**包括 Android 構建和 Android 格式檢查**（Core 有改動）。
+- `docs/progress.md` 中逐條寫明 R1–R10 的完成情況和沒有驗證到的部分；`docs/design.md` §22 記錄 R4（模式回寫的實現方式、Disabled 下切換的行為）和 R8（導入不再降級為共享規則）兩處設計變化。
+- 交付時附上：每條修正對應的提交、新增測試的名稱、探針的輸出摘要。
 
 ---
 

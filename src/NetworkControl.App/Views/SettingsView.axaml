@@ -5,7 +5,8 @@
              xmlns:vm="using:NetworkControl.App.ViewModels"
              xmlns:loc="using:NetworkControl.App.Localization"
              x:Class="NetworkControl.App.Views.SettingsView"
-             x:DataType="vm:SettingsViewModel">
+             x:DataType="vm:SettingsViewModel"
+             x:Name="Root">
 
   <UserControl.Resources>
     <DataTemplate x:Key="ChoiceTemplate" x:DataType="vm:Choice">
@@ -40,6 +41,50 @@
           <TextBlock Grid.Row="2" VerticalAlignment="Center" IsVisible="{Binding IsAutoStartSupported}" Text="{loc:SettingsLangResource LaunchAtLogin}" />
           <atom:ToggleSwitch Grid.Row="2" Grid.Column="1" IsVisible="{Binding IsAutoStartSupported}" HorizontalAlignment="Left" IsChecked="{Binding LaunchAtLogin}" />
         </Grid>
+      </atom:Card>
+
+      <!-- 配置文件（FR-MOD-02）：每組有自己的模式和專屬規則 -->
+      <atom:Card Header="{loc:ProfilesLangResource CardTitle}" IsEnabled="{Binding IsConnected}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" Text="{loc:ProfilesLangResource CardDescription}" TextWrapping="Wrap" />
+          <atom:Button ButtonType="Primary" HorizontalAlignment="Left"
+                       Icon="{antdicons:AntDesignIconProvider Kind=PlusOutlined}"
+                       Command="{Binding AddProfileCommand}" Content="{loc:ProfilesLangResource AddProfile}" />
+          <ItemsControl ItemsSource="{Binding Profiles}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ProfileItemViewModel">
+                <Border BorderBrush="{atom:SharedTokenResource ColorBorderSecondary}" BorderThickness="0,0,0,1" Padding="0,8">
+                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                      <TextBlock Classes="rank-label" Text="{Binding Name}" />
+                      <atom:Tag Text="{loc:ProfilesLangResource Active}" TagColor="processing" IsVisible="{Binding IsActive}" />
+                      <atom:Tag Text="{loc:ProfilesLangResource Default}" TagColor="default" IsVisible="{Binding IsDefault}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                      <atom:Button ButtonType="Link" SizeType="Small" IsVisible="{Binding CanActivate}"
+                                   Content="{loc:ProfilesLangResource SetCurrent}"
+                                   Command="{Binding #Root.((vm:SettingsViewModel)DataContext).ActivateProfileCommand}"
+                                   CommandParameter="{Binding}" />
+                      <atom:Button ButtonType="Link" SizeType="Small" Content="{loc:ProfilesLangResource Edit}"
+                                   Command="{Binding #Root.((vm:SettingsViewModel)DataContext).EditProfileCommand}"
+                                   CommandParameter="{Binding}" />
+                      <atom:PopupConfirm IsVisible="{Binding CanDelete}" Title="{loc:ProfilesLangResource DeleteConfirmTitle}"
+                                         ConfirmContent="{loc:ProfilesLangResource DeleteConfirmContent}"
+                                         OkButtonType="Primary" Confirmed="OnDeleteProfileConfirmed">
+                        <atom:Button ButtonType="Link" SizeType="Small" IsDanger="True" Content="{loc:ProfilesLangResource Delete}" />
+                      </atom:PopupConfirm>
+                    </StackPanel>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+                      <TextBlock Classes="caption" Text="{Binding ModeText}" />
+                      <TextBlock Classes="caption" Text="{Binding RuleCountText}" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Classes="secondary" IsVisible="{Binding !HasProfiles}" Text="{loc:ProfilesLangResource Empty}" />
+        </StackPanel>
       </atom:Card>
 
       <!-- 服務設置：保存在核心服務中，對本機所有用戶生效 -->

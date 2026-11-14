@@ -47,6 +47,24 @@ public sealed class RuntimeStateService(ISettingsRepository repository, TimeProv
             ? s with { Mode = s.ModeBeforeBlockAll ?? FilterMode.Ask, ModeBeforeBlockAll = null }
             : s, cancellationToken);
 
+    /// <summary>
+    /// 切換配置文件並同時套用它的模式。處於「全部阻斷」時保持阻斷，
+    /// 只記住新配置文件的模式，恢復時使用（FR-MOD-04）。
+    /// </summary>
+    public Task ActivateProfileAsync(Guid profileId, FilterMode mode, CancellationToken cancellationToken) =>
+        UpdateAsync(s =>
+        {
+            if (s.ActiveProfileId == profileId && s.ModeBeforeBlockAll is null
+                && (s.Mode == mode || s.Mode == FilterMode.BlockAll))
+            {
+                return s;
+            }
+
+            return s.Mode == FilterMode.BlockAll
+                ? s with { ActiveProfileId = profileId, ModeBeforeBlockAll = mode }
+                : s with { ActiveProfileId = profileId, Mode = mode, ModeBeforeBlockAll = null };
+        }, cancellationToken);
+
     /// <summary>設置勿擾截止時間；傳 null 關閉勿擾。</summary>
     public Task SetDoNotDisturbAsync(DateTimeOffset? until, CancellationToken cancellationToken) =>
         UpdateAsync(s => s with { DoNotDisturbUntil = until }, cancellationToken);

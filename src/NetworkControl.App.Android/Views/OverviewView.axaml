@@ -36,6 +36,16 @@
       <!-- 模式 -->
       <atom:Card Header="{loc:OverviewLangResource Mode}">
         <StackPanel Spacing="12">
+          <StackPanel Spacing="8" IsVisible="{Binding ShowProfiles}">
+            <TextBlock Classes="secondary" Text="{loc:OverviewLangResource Profiles}" />
+            <atom:ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" HorizontalAlignment="Stretch">
+              <atom:ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:ProfileChoice">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </atom:ComboBox.ItemTemplate>
+            </atom:ComboBox>
+          </StackPanel>
           <atom:Segmented SelectedIndex="{Binding ModeIndex}" IsEnabled="{Binding !IsBlockAll}" HorizontalAlignment="Stretch" IsExpanding="True">
             <atom:SegmentedItem Content="{loc:CommonLangResource ModeAsk}" />
             <atom:SegmentedItem Content="{loc:CommonLangResource ModeWhitelist}" />

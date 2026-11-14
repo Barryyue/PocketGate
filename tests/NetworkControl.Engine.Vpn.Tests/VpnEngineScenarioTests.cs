@@ -8,6 +8,7 @@ using NetworkControl.Core.Apps;
 using NetworkControl.Core.Domain;
 using NetworkControl.Core.Engine;
 using NetworkControl.Core.Hosting;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
@@ -53,6 +54,7 @@ public sealed class VpnEngineScenarioTests : IAsyncDisposable
         builder.Services.AddMetrics();
         builder.Services.AddSingleton<TimeProvider>(new FakeTimeProvider(T0));
         builder.Services.AddNetworkControlCore(builder.Configuration);
+        builder.Services.AddSingleton<IProfileRepository, InMemoryProfileRepository>();
         builder.Services.AddSingleton<IRuleRepository, InMemoryRuleRepository>();
         builder.Services.AddSingleton<ISettingsRepository, InMemorySettingsRepository>();
         builder.Services.AddSingleton<IAppRepository, InMemoryAppRepository>();

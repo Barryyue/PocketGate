@@ -71,6 +71,11 @@
         <source>Waiting for you</source>
       </segment>
     </unit>
+    <unit id="Profiles">
+      <segment>
+        <source>Profile</source>
+      </segment>
+    </unit>
     <unit id="Protection">
       <segment>
         <source>Protection</source>

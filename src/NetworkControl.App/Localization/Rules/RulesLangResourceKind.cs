@@ -54,4 +54,8 @@ public enum RulesLangResourceKind
     Subtitle,
     SourceAll,
     CountSummary,
+    EditorProfile,
+    ColumnProfile,
+    ProfileFilterAll,
+    ProfileFilterShared,
 }

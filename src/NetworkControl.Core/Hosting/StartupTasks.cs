@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
 
@@ -22,6 +23,7 @@ public static class StartupOrder
     public const int Storage = 0;
     public const int Settings = 100;
     public const int RuntimeState = 110;
+    public const int Profiles = 120;
     public const int Rules = 200;
 }
 
@@ -55,6 +57,13 @@ internal sealed class LoadRuntimeStateTask(RuntimeStateService state) : IStartup
     public int Order => StartupOrder.RuntimeState;
 
     public Task ExecuteAsync(CancellationToken cancellationToken) => state.InitializeAsync(cancellationToken);
+}
+
+internal sealed class LoadProfilesTask(ProfileService profiles) : IStartupTask
+{
+    public int Order => StartupOrder.Profiles;
+
+    public Task ExecuteAsync(CancellationToken cancellationToken) => profiles.InitializeAsync(cancellationToken);
 }
 
 internal sealed class LoadRulesTask(RuleService rules) : IStartupTask

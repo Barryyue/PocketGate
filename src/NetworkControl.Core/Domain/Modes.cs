@@ -39,4 +39,7 @@ public sealed record Profile
     public FilterMode Mode { get; init; } = FilterMode.Ask;
 
     public int SortOrder { get; init; }
+
+    /// <summary>自動切換條件的 JSON（M3-04 使用）；null 表示不自動切換。</summary>
+    public string? AutoActivate { get; init; }
 }

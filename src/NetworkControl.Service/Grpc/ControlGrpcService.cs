@@ -1,10 +1,8 @@
-using System.Reflection;
 using System.Threading.Channels;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using NetworkControl.Core.Engine;
-using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
 using NetworkControl.Ipc;
@@ -19,17 +17,14 @@ internal sealed class ControlGrpcService(
     SettingsService settings,
     EngineStatus engine,
     RuleEngine rules,
-    PromptBroker prompts,
+    ServiceStatusBuilder statusBuilder,
     IHostApplicationLifetime lifetime,
     TimeProvider time) : Proto.Control.ControlBase
 {
-    private static readonly string ServiceVersion =
-        typeof(ControlGrpcService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
-
     private static readonly TimeSpan StatusRefreshInterval = TimeSpan.FromSeconds(5);
 
     public override Task<Proto.ServiceStatus> GetStatus(Empty request, ServerCallContext context) =>
-        Task.FromResult(BuildStatus(context));
+        Task.FromResult(statusBuilder.Build(context.GetHttpContext().User));
 
     public override async Task WatchStatus(Empty request, IServerStreamWriter<Proto.ServiceStatus> responseStream, ServerCallContext context)
     {
@@ -53,10 +48,10 @@ internal sealed class ControlGrpcService(
                 }
             }, ct);
 
-            await responseStream.WriteAsync(BuildStatus(context), ct);
+            await responseStream.WriteAsync(statusBuilder.Build(context.GetHttpContext().User), ct);
             await foreach (var _ in signal.Reader.ReadAllAsync(ct))
             {
-                await responseStream.WriteAsync(BuildStatus(context), ct);
+                await responseStream.WriteAsync(statusBuilder.Build(context.GetHttpContext().User), ct);
             }
         }
         catch (OperationCanceledException) when (streaming.IsCancellationRequested)
@@ -75,14 +70,14 @@ internal sealed class ControlGrpcService(
     public override async Task<Proto.ServiceStatus> SetMode(Proto.SetModeRequest request, ServerCallContext context)
     {
         await state.SetModeAsync(request.Mode.ToDomain(), context.CancellationToken);
-        return BuildStatus(context);
+        return statusBuilder.Build(context.GetHttpContext().User);
     }
 
     [Authorize(Policy = IpcPolicies.Admin)]
     public override async Task<Proto.ServiceStatus> RestoreFromBlockAll(Empty request, ServerCallContext context)
     {
         await state.RestoreFromBlockAllAsync(context.CancellationToken);
-        return BuildStatus(context);
+        return statusBuilder.Build(context.GetHttpContext().User);
     }
 
     public override async Task<Proto.ServiceStatus> SetDoNotDisturb(Proto.SetDoNotDisturbRequest request, ServerCallContext context)
@@ -90,7 +85,7 @@ internal sealed class ControlGrpcService(
         var duration = request.Duration?.ToTimeSpan();
         DateTimeOffset? until = duration is { } d && d > TimeSpan.Zero ? time.GetUtcNow() + d : null;
         await state.SetDoNotDisturbAsync(until, context.CancellationToken);
-        return BuildStatus(context);
+        return statusBuilder.Build(context.GetHttpContext().User);
     }
 
     public override Task<Proto.UserSettings> GetSettings(Empty request, ServerCallContext context) =>
@@ -113,49 +108,5 @@ internal sealed class ControlGrpcService(
             lifetime.StopApplication();
         });
         return Task.FromResult(new Empty());
-    }
-
-    private Proto.ServiceStatus BuildStatus(ServerCallContext context)
-    {
-        var snapshot = state.Snapshot;
-        var user = context.GetHttpContext().User;
-
-        var engineInfo = new Proto.EngineInfo
-        {
-            Name = engine.Name,
-            State = (Proto.EngineState)(int)engine.State,
-            HoldsConnections = engine.Capabilities.HasFlag(EngineCapabilities.PendingVerdict),
-        };
-        engineInfo.Capabilities.AddRange(System.Enum.GetValues<EngineCapabilities>()
-            .Where(c => c != EngineCapabilities.None && engine.Capabilities.HasFlag(c))
-            .Select(c => c.ToString()));
-        if (engine.LastFault is { } fault)
-        {
-            engineInfo.FaultMessage = fault.Message;
-        }
-
-        var client = new Proto.ClientInfo { IsAdmin = user.IsPeerAdmin() };
-        if (user.GetPeerProcessId() is { } pid)
-        {
-            client.Pid = pid;
-        }
-
-        if (user.GetPeerUserId() is { } userId)
-        {
-            client.UserId = userId;
-        }
-
-        return new Proto.ServiceStatus
-        {
-            ProtocolVersion = IpcEndpoint.ProtocolVersion,
-            ServiceVersion = ServiceVersion,
-            Mode = snapshot.Mode.ToProto(),
-            ActiveProfileId = snapshot.ActiveProfileId.ToString(),
-            DoNotDisturbUntil = state.IsDoNotDisturb ? snapshot.DoNotDisturbUntil.ToProto() : null,
-            Engine = engineInfo,
-            ActiveRuleCount = rules.Current.Count,
-            PendingPromptFlows = prompts.PendingFlowCount,
-            Client = client,
-        };
     }
 }

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.ProfilesLangResourceKind">
+    <unit id="CardTitle"><segment><source>Profiles</source></segment></unit>
+    <unit id="CardDescription"><segment><source>Each profile has its own mode and dedicated rules. Shared rules apply to every profile.</source></segment></unit>
+    <unit id="AddProfile"><segment><source>New profile</source></segment></unit>
+    <unit id="AddTitle"><segment><source>New profile</source></segment></unit>
+    <unit id="EditTitle"><segment><source>Edit profile</source></segment></unit>
+    <unit id="NameLabel"><segment><source>Name</source></segment></unit>
+    <unit id="NamePlaceholder"><segment><source>e.g. Office, Home, Cafe</source></segment></unit>
+    <unit id="ModeLabel"><segment><source>Mode</source></segment></unit>
+    <unit id="CopyRulesLabel"><segment><source>Copy dedicated rules from</source></segment></unit>
+    <unit id="CopyRulesNone"><segment><source>Do not copy</source></segment></unit>
+    <unit id="RuleCount"><segment><source>{0} rules</source></segment></unit>
+    <unit id="Active"><segment><source>Current</source></segment></unit>
+    <unit id="SetCurrent"><segment><source>Set as current</source></segment></unit>
+    <unit id="Edit"><segment><source>Edit</source></segment></unit>
+    <unit id="Delete"><segment><source>Delete</source></segment></unit>
+    <unit id="DeleteConfirmTitle"><segment><source>Delete this profile?</source></segment></unit>
+    <unit id="DeleteConfirmContent"><segment><source>Its dedicated rules will be deleted too. Shared rules are not affected.</source></segment></unit>
+    <unit id="Default"><segment><source>Default</source></segment></unit>
+    <unit id="Empty"><segment><source>No profiles.</source></segment></unit>
+    <unit id="ProfileCreated"><segment><source>Profile created.</source></segment></unit>
+    <unit id="ProfileUpdated"><segment><source>Profile updated.</source></segment></unit>
+    <unit id="ProfileDeleted"><segment><source>Profile deleted.</source></segment></unit>
+    <unit id="ProfileActivated"><segment><source>Profile switched.</source></segment></unit>
+    <unit id="NameInvalid"><segment><source>The name must be 1–40 characters.</source></segment></unit>
+  </file>
+</xliff>

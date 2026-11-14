@@ -61,6 +61,71 @@
         <source>Open</source>
       </segment>
     </unit>
+    <unit id="ProfileActivate">
+      <segment>
+        <source>Set current</source>
+      </segment>
+    </unit>
+    <unit id="ProfileAdd">
+      <segment>
+        <source>Add</source>
+      </segment>
+    </unit>
+    <unit id="ProfileCurrent">
+      <segment>
+        <source>Current</source>
+      </segment>
+    </unit>
+    <unit id="ProfileDefault">
+      <segment>
+        <source>Default</source>
+      </segment>
+    </unit>
+    <unit id="ProfileDelete">
+      <segment>
+        <source>Delete</source>
+      </segment>
+    </unit>
+    <unit id="ProfileDeleteConfirmContent">
+      <segment>
+        <source>Its dedicated rules will also be deleted. Shared rules are not affected.</source>
+      </segment>
+    </unit>
+    <unit id="ProfileDeleteConfirmTitle">
+      <segment>
+        <source>Delete this profile?</source>
+      </segment>
+    </unit>
+    <unit id="ProfileHint">
+      <segment>
+        <source>Each profile has its own mode and rules. Shared rules apply to every profile.</source>
+      </segment>
+    </unit>
+    <unit id="ProfileName">
+      <segment>
+        <source>Name</source>
+      </segment>
+    </unit>
+    <unit id="ProfileNamePlaceholder">
+      <segment>
+        <source>e.g. Office, Home</source>
+      </segment>
+    </unit>
+    <unit id="ProfileRuleCount">
+      <segment>
+        <source>{0} rules</source>
+      </segment>
+    </unit>
+    <unit id="ProfileSave">
+      <segment>
+        <source>Save</source>
+      </segment>
+    </unit>
+    <unit id="Profiles">
+      <segment>
+        <source>Profiles</source>
+      </segment>
+    </unit>
     <unit id="PromptTimeout">
       <segment>
         <source>Answer within</source>

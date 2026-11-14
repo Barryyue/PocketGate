@@ -62,5 +62,6 @@
       </segment>
     </unit>
     <unit id="NavConnections"><segment><source>Live connections</source></segment></unit>
+    <unit id="StatusProfile"><segment><source>Profile: {0}</source></segment></unit>
   </file>
 </xliff>

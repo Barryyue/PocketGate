@@ -73,6 +73,10 @@
       <!-- 備註 -->
       <TextBlock Grid.Row="8" VerticalAlignment="Center" Text="{loc:RulesLangResource EditorNote}" />
       <atom:LineEdit Grid.Row="8" Grid.Column="1" Text="{Binding Note}" />
+      <!-- 適用於哪個配置文件 -->
+      <TextBlock Grid.Row="9" VerticalAlignment="Center" IsVisible="{Binding !IsBuiltin}" Text="{loc:RulesLangResource EditorProfile}" />
+      <atom:ComboBox Grid.Row="9" Grid.Column="1" IsVisible="{Binding !IsBuiltin}" HorizontalAlignment="Stretch"
+                     ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" ItemTemplate="{StaticResource ChoiceTemplate}" />
     </Grid>
 
     <!-- 啟用狀態：內置規則也可以修改 -->

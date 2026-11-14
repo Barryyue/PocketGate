@@ -8,6 +8,7 @@ using NetworkControl.Core.Activity;
 using NetworkControl.Core.Apps;
 using NetworkControl.Core.Domain;
 using NetworkControl.Core.Hosting;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
@@ -42,6 +43,8 @@ internal sealed class ScenarioHost : IAsyncDisposable
 
     public RuntimeStateService State => Services.GetRequiredService<RuntimeStateService>();
 
+    public ProfileService Profiles => Services.GetRequiredService<ProfileService>();
+
     public InMemoryRuleRepository RuleRepository => (InMemoryRuleRepository)Services.GetRequiredService<IRuleRepository>();
 
     public List<ConnectionEvent> Activity { get; } = [];
@@ -58,6 +61,7 @@ internal sealed class ScenarioHost : IAsyncDisposable
         builder.Services.AddMetrics();
         builder.Services.AddSingleton<TimeProvider>(new FakeTimeProvider(TestData.T0));
         builder.Services.AddNetworkControlCore(builder.Configuration);
+        builder.Services.AddSingleton<IProfileRepository, InMemoryProfileRepository>();
         builder.Services.AddSingleton<IRuleRepository, InMemoryRuleRepository>();
         builder.Services.AddSingleton<ISettingsRepository, InMemorySettingsRepository>();
         builder.Services.AddSingleton<IAppRepository, InMemoryAppRepository>();

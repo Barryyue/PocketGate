@@ -8,6 +8,7 @@ using NetworkControl.Core.Activity;
 using NetworkControl.Core.Apps;
 using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Hosting;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
 using NetworkControl.Storage.Activity;
@@ -30,6 +31,7 @@ public static class StorageServiceCollectionExtensions
         services.TryAddSingleton<ConfigDatabase>();
         services.TryAddSingleton<ActivityDatabase>();
 
+        services.TryAddSingleton<IProfileRepository, SqliteProfileRepository>();
         services.TryAddSingleton<IRuleRepository, SqliteRuleRepository>();
         services.TryAddSingleton<ISettingsRepository, SqliteSettingsRepository>();
         services.TryAddSingleton<IAppRepository, SqliteAppRepository>();

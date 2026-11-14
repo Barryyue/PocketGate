@@ -6,6 +6,7 @@ using Google.Protobuf.WellKnownTypes;
 using NetworkControl.App.Infrastructure;
 using NetworkControl.App.Localization;
 using NetworkControl.App.Services;
+using NetworkControl.App.Views;
 using Proto = NetworkControl.Ipc.V1;
 
 namespace NetworkControl.App.ViewModels;
@@ -22,6 +23,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     private readonly FeedbackService _feedback;
     private readonly DiagnosticsExportFlow _diagnostics;
     private readonly RuleTransferFlow _transfer;
+    private readonly DialogService _dialogs;
     private Proto.UserSettings? _loaded;
     private bool _loading;
 
@@ -32,9 +34,11 @@ public sealed partial class SettingsViewModel : PageViewModel
         FeedbackService feedback,
         DiagnosticsExportFlow diagnostics,
         RuleTransferFlow transfer,
+        DialogService dialogs,
         DisplayText text)
         : base(text)
     {
+        _dialogs = dialogs;
         _transfer = transfer;
         _diagnostics = diagnostics;
         _connection = connection;
@@ -136,6 +140,11 @@ public sealed partial class SettingsViewModel : PageViewModel
     /// <summary>每日備份和恢復前快照，最新的在前。</summary>
     public ObservableCollection<Choice<Proto.BackupInfo>> Backups { get; } = [];
 
+    /// <summary>配置文件列表（只在連上服務後加載）。</summary>
+    public ObservableCollection<ProfileItemViewModel> Profiles { get; } = [];
+
+    public bool HasProfiles => Profiles.Count > 0;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RestoreBackupCommand))]
     public partial Choice<Proto.BackupInfo>? SelectedBackup { get; set; }
@@ -173,6 +182,62 @@ public sealed partial class SettingsViewModel : PageViewModel
         OnPropertyChanged(nameof(HasBackups));
     }
 
+    private async Task LoadProfilesAsync()
+    {
+        var response = await _connection.RequireClients().Profiles.ListAsync(new Empty());
+        Profiles.Clear();
+        foreach (var profile in response.Profiles)
+        {
+            Profiles.Add(new ProfileItemViewModel(profile, Text));
+        }
+
+        OnPropertyChanged(nameof(HasProfiles));
+    }
+
+    [RelayCommand]
+    private Task AddProfileAsync() => RunAsync(async () =>
+    {
+        var editor = new ProfileEditorViewModel(Text, profiles: Profiles.Select(p => p.Info).ToArray());
+        if (!await _dialogs.ShowFormAsync<ProfileEditorView, ProfileEditorViewModel>(editor, Loc.Get(ProfilesLangResourceKind.AddTitle)))
+        {
+            return;
+        }
+
+        await _connection.RequireClients().Profiles.CreateAsync(editor.ToCreateRequest());
+        _feedback.Success(Loc.Get(ProfilesLangResourceKind.ProfileCreated));
+        await LoadProfilesAsync();
+    });
+
+    [RelayCommand]
+    private Task EditProfileAsync(ProfileItemViewModel item) => RunAsync(async () =>
+    {
+        var editor = new ProfileEditorViewModel(Text, item.Info, Profiles.Select(p => p.Info).ToArray());
+        if (!await _dialogs.ShowFormAsync<ProfileEditorView, ProfileEditorViewModel>(editor, Loc.Get(ProfilesLangResourceKind.EditTitle)))
+        {
+            return;
+        }
+
+        await _connection.RequireClients().Profiles.UpdateAsync(editor.ToUpdateInfo());
+        _feedback.Success(Loc.Get(ProfilesLangResourceKind.ProfileUpdated));
+        await LoadProfilesAsync();
+    });
+
+    [RelayCommand]
+    private Task ActivateProfileAsync(ProfileItemViewModel item) => RunAsync(async () =>
+    {
+        await _connection.RequireClients().Profiles.ActivateAsync(new Proto.ActivateProfileRequest { Id = item.Info.Id });
+        _feedback.Success(Loc.Get(ProfilesLangResourceKind.ProfileActivated));
+        await LoadProfilesAsync();
+    });
+
+    [RelayCommand]
+    private Task DeleteProfileAsync(ProfileItemViewModel item) => RunAsync(async () =>
+    {
+        await _connection.RequireClients().Profiles.DeleteAsync(new Proto.DeleteProfileRequest { Id = item.Info.Id });
+        _feedback.Success(Loc.Get(ProfilesLangResourceKind.ProfileDeleted));
+        await LoadProfilesAsync();
+    });
+
     private string BackupTitle(Proto.BackupInfo backup)
     {
         var time = backup.CreatedAt.ToDateTimeOffset().ToLocalTime().ToString("g", Loc.Culture);
@@ -181,6 +246,7 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     public override Task OnActivatedAsync() => RunAsync(async () =>
     {
+        await LoadProfilesAsync();
         await LoadBackupsAsync();
         _loaded = await _connection.RequireClients().Control.GetSettingsAsync(new Empty());
         PromptTimeoutSeconds = (decimal)_loaded.PromptTimeout.ToTimeSpan().TotalSeconds;
@@ -234,6 +300,11 @@ public sealed partial class SettingsViewModel : PageViewModel
         foreach (var choice in Languages.Concat<Choice>(DefaultActions).Concat(FailPolicies).Concat(Backups))
         {
             choice.Refresh();
+        }
+
+        foreach (var profile in Profiles)
+        {
+            profile.Refresh();
         }
 
         base.OnLanguageChanged();

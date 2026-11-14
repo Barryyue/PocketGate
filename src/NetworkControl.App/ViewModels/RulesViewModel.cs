@@ -18,10 +18,13 @@ public sealed partial class RuleItemViewModel : ViewModelBase
     private readonly Func<RuleItemViewModel, bool, Task> _setEnabled;
     private bool _suppressToggle;
 
-    public RuleItemViewModel(Proto.RuleInfo info, DisplayText text, Func<RuleItemViewModel, bool, Task> setEnabled)
+    private readonly IReadOnlyDictionary<string, string> _profileNames;
+
+    public RuleItemViewModel(Proto.RuleInfo info, DisplayText text, Func<RuleItemViewModel, bool, Task> setEnabled, IReadOnlyDictionary<string, string> profileNames)
     {
         _text = text;
         _setEnabled = setEnabled;
+        _profileNames = profileNames;
         Info = info;
         Update(info);
     }
@@ -53,6 +56,10 @@ public sealed partial class RuleItemViewModel : ViewModelBase
 
     public string SourceText => _text.Source(Info.Source);
 
+    public string ProfileText => Info.Definition.ProfileId is { } profileId
+        ? _profileNames.TryGetValue(profileId, out var name) ? name : profileId
+        : _text.Localization.Get(RulesLangResourceKind.ProfileFilterShared);
+
     public string HitCount => Info.HitCount.ToString("N0", _text.Localization.Culture);
 
     public string UpdatedText => _text.DateTime(Info.UpdatedAt, "g");
@@ -61,6 +68,7 @@ public sealed partial class RuleItemViewModel : ViewModelBase
         AppPath.Contains(keyword, StringComparison.OrdinalIgnoreCase)
         || AppName.Contains(keyword, StringComparison.OrdinalIgnoreCase)
         || ConditionsText.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+        || ProfileText.Contains(keyword, StringComparison.OrdinalIgnoreCase)
         || (Info.Definition.HasNote && Info.Definition.Note.Contains(keyword, StringComparison.OrdinalIgnoreCase));
 
     public void Update(Proto.RuleInfo info)
@@ -89,6 +97,7 @@ public sealed partial class RulesViewModel : PageViewModel
     private readonly ServiceConnection _connection;
     private readonly RuleEditing _editing;
     private readonly List<RuleItemViewModel> _all = [];
+    private readonly Dictionary<string, string> _profileNames = [];
     private CancellationTokenSource? _watch;
 
     public RulesViewModel(ServiceConnection connection, RuleEditing editing, DisplayText text)
@@ -138,11 +147,21 @@ public sealed partial class RulesViewModel : PageViewModel
     [ObservableProperty]
     public partial Choice<Proto.RuleSource?>? SourceFilter { get; set; }
 
+    /// <summary>配置文件篩選：null 全部，空字串共享規則，其餘為配置文件 ID。</summary>
+    public ObservableCollection<Choice<string?>> ProfileFilters { get; } = [];
+
+    [ObservableProperty]
+    public partial Choice<string?>? ProfileFilter { get; set; }
+
     public string CountSummary => Loc.Format(RulesLangResourceKind.CountSummary, Rules.Count);
 
     public string CountText => Rules.Count.ToString(CultureInfo.CurrentCulture);
 
-    public override Task OnActivatedAsync() => RefreshAsync();
+    public override async Task OnActivatedAsync()
+    {
+        await LoadProfilesAsync();
+        await RefreshAsync();
+    }
 
     public override bool ApplyNavigation(object parameter)
     {
@@ -153,6 +172,7 @@ public sealed partial class RulesViewModel : PageViewModel
 
         ActionFilter = 0;
         SourceFilter = null;
+        ProfileFilter = ProfileFilters.FirstOrDefault();
         Keyword = navigation.Keyword;
         return false; // 仍由主窗口調用 OnActivatedAsync 刷新規則列表，刷新後按關鍵字篩選
     }
@@ -162,7 +182,7 @@ public sealed partial class RulesViewModel : PageViewModel
     {
         var response = await _connection.RequireClients().Rules.ListAsync(new Proto.ListRulesRequest());
         _all.Clear();
-        _all.AddRange(response.Rules.Select(r => new RuleItemViewModel(r, Text, SetEnabledAsync)));
+        _all.AddRange(response.Rules.Select(r => new RuleItemViewModel(r, Text, SetEnabledAsync, _profileNames)));
         ApplyFilter();
     });
 
@@ -191,11 +211,33 @@ public sealed partial class RulesViewModel : PageViewModel
             source.Refresh();
         }
 
+        foreach (var profile in ProfileFilters)
+        {
+            profile.Refresh();
+        }
+
         base.OnLanguageChanged();
     }
 
     private Task SetEnabledAsync(RuleItemViewModel item, bool enabled) => RunAsync(async () =>
         await _connection.RequireClients().Rules.SetEnabledAsync(new Proto.SetRuleEnabledRequest { Id = item.Id, Enabled = enabled }));
+
+    private async Task LoadProfilesAsync()
+    {
+        var response = await _connection.RequireClients().Profiles.ListAsync(new Google.Protobuf.WellKnownTypes.Empty());
+        _profileNames.Clear();
+        var selected = ProfileFilter?.Value;
+        ProfileFilters.Clear();
+        ProfileFilters.Add(new Choice<string?>(null, () => Loc.Get(RulesLangResourceKind.ProfileFilterAll)));
+        ProfileFilters.Add(new Choice<string?>("", () => Loc.Get(RulesLangResourceKind.ProfileFilterShared)));
+        foreach (var profile in response.Profiles)
+        {
+            _profileNames[profile.Id] = profile.Name;
+            ProfileFilters.Add(new Choice<string?>(profile.Id, () => profile.Name));
+        }
+
+        ProfileFilter = ProfileFilters.FirstOrDefault(c => c.Value == selected) ?? ProfileFilters[0];
+    }
 
     private void ApplyFilter()
     {
@@ -208,6 +250,9 @@ public sealed partial class RulesViewModel : PageViewModel
                 _ => true,
             })
             .Where(r => SourceFilter?.Value is not { } source || r.Info.Source == source)
+            .Where(r => ProfileFilter?.Value is not { } profile || (profile.Length == 0
+                ? !r.Info.Definition.HasProfileId
+                : r.Info.Definition.ProfileId == profile))
             .Where(r => keyword.Length == 0 || r.Matches(keyword))
             .OrderBy(r => r.IsBuiltin)
             .ThenByDescending(r => r.Info.UpdatedAt?.ToDateTimeOffset() ?? DateTimeOffset.MinValue)
@@ -257,7 +302,7 @@ public sealed partial class RulesViewModel : PageViewModel
         switch (change.Kind)
         {
             case Proto.RuleChangeKind.Added when existing is null:
-                _all.Add(new RuleItemViewModel(change.Rule, Text, SetEnabledAsync));
+                _all.Add(new RuleItemViewModel(change.Rule, Text, SetEnabledAsync, _profileNames));
                 break;
             case Proto.RuleChangeKind.Added or Proto.RuleChangeKind.Updated when existing is not null:
                 existing.Update(change.Rule);

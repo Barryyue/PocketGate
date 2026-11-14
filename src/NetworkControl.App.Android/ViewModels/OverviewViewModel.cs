@@ -10,12 +10,16 @@ namespace NetworkControl.Android.ViewModels;
 /// <summary>今日用量排行中的一行。</summary>
 public sealed record UsageRow(string Label, string Bytes);
 
+/// <summary>總覽頁配置文件下拉中的一行。</summary>
+public sealed record ProfileChoice(Guid Id, string Name, bool IsActive);
+
 public sealed partial class OverviewViewModel : LocalizedViewModel
 {
     private static readonly FilterMode[] SelectableModes = [FilterMode.Ask, FilterMode.Whitelist, FilterMode.Blacklist];
 
     private readonly Action _showPrompt;
     private bool _syncing;
+    private bool _syncingProfile;
 
     public OverviewViewModel(UiContext context, Action showPrompt)
         : base(context)
@@ -50,6 +54,14 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
     public bool HasPendingPrompts => PendingPrompts > 0;
 
     public bool IsBlockAll => Mode == FilterMode.BlockAll;
+
+    /// <summary>配置文件；只有一個時隱藏選擇器。</summary>
+    public System.Collections.ObjectModel.ObservableCollection<ProfileChoice> Profiles { get; } = [];
+
+    public bool ShowProfiles => Profiles.Count > 1;
+
+    [ObservableProperty]
+    public partial ProfileChoice? SelectedProfile { get; set; }
 
     public string StatusText => Loc.Get(Status switch
     {
@@ -118,6 +130,18 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
             IsProtectionOn = Status is not (ProtectionStatus.Off or ProtectionStatus.Revoked);
             ModeIndex = Array.IndexOf(SelectableModes, Mode);
             NotificationsOff = MainActivity.Current is { AreNotificationsEnabled: false };
+            var selectedProfile = SelectedProfile?.Id;
+            _syncingProfile = true;
+            Profiles.Clear();
+            foreach (var profile in Backend.Profiles.OrderBy(p => p.SortOrder))
+            {
+                Profiles.Add(new ProfileChoice(profile.Id, profile.Name, profile.Id == Backend.ActiveProfile.Id));
+            }
+
+            SelectedProfile = Profiles.FirstOrDefault(p => p.Id == selectedProfile)
+                ?? Profiles.FirstOrDefault(p => p.IsActive);
+            _syncingProfile = false;
+            OnPropertyChanged(nameof(ShowProfiles));
         }
         finally
         {
@@ -134,6 +158,16 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
         {
             _ = SetProtectionAsync(value);
         }
+    }
+
+    partial void OnSelectedProfileChanged(ProfileChoice? value)
+    {
+        if (_syncingProfile || value is null || value.Id == Backend.ActiveProfile.Id)
+        {
+            return;
+        }
+
+        _ = Backend.ActivateProfileAsync(value.Id, CancellationToken.None);
     }
 
     partial void OnModeIndexChanged(int value)

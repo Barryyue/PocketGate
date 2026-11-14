@@ -33,4 +33,5 @@ public enum OverviewLangResourceKind
     UsageAccessNeeded,
     GrantUsageAccess,
     NoUsage,
+    Profiles,
 }

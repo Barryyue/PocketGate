@@ -70,6 +70,10 @@ public sealed partial class ShellViewModel : LocalizedViewModel
 
     public string EngineText => Connection.Status?.Engine is { } engine ? Loc.Format(ShellLangResourceKind.StatusEngine, engine.Name) : "";
 
+    public string ProfileText => Connection.Status is { ActiveProfileName.Length: > 0 } status
+        ? Loc.Format(ShellLangResourceKind.StatusProfile, status.ActiveProfileName)
+        : "";
+
     /// <summary>按導航鍵切換頁面（導航菜單、托盤、通知都通過它跳轉）。</summary>
     [RelayCommand]
     public void Navigate(string key)
@@ -134,6 +138,7 @@ public sealed partial class ShellViewModel : LocalizedViewModel
         OnPropertyChanged(nameof(ConnectionText));
         OnPropertyChanged(nameof(ModeText));
         OnPropertyChanged(nameof(EngineText));
+        OnPropertyChanged(nameof(ProfileText));
         OnPropertyChanged(nameof(HasPendingPrompts));
         OnPropertyChanged(nameof(PendingPromptsText));
     }

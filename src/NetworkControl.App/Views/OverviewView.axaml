@@ -196,6 +196,16 @@
       <!-- 模式切換與快捷操作 -->
       <atom:Card Header="{loc:OverviewLangResource QuickActions}" IsEnabled="{Binding IsConnected}">
         <StackPanel Spacing="16">
+          <StackPanel Spacing="8" IsVisible="{Binding ShowProfiles}">
+            <TextBlock Classes="caption" Text="{loc:ProfilesLangResource CardTitle}" />
+            <atom:ComboBox Width="240" HorizontalAlignment="Left" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}">
+              <atom:ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="proto:ProfileInfo">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </atom:ComboBox.ItemTemplate>
+            </atom:ComboBox>
+          </StackPanel>
           <DockPanel>
             <atom:Statistic DockPanel.Dock="Right" Header="{loc:OverviewLangResource ActiveRules}" Value="{Binding ActiveRuleCount}" />
             <StackPanel Spacing="8">

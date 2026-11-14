@@ -70,6 +70,7 @@ CATALOGS = {
         ('UsageAccessNeeded', 'Allow usage access so NetworkControl can show how much data each app uses.', '允許「使用情況存取權」後，即可查看每個應用程式的數據用量。', '允许“使用情况访问权限”后，即可查看每个应用的数据用量。'),
         ('GrantUsageAccess', 'Allow usage access', '允許存取', '允许访问'),
         ('NoUsage', 'No data used today', '今天還沒有數據用量', '今天还没有数据用量'),
+        ('Profiles', 'Profile', '設定檔', '配置文件'),
     ],
     'Apps': [
         ('Search', 'Search apps', '搜尋應用程式', '搜索应用'),
@@ -140,6 +141,19 @@ CATALOGS = {
         ('TrafficHint', "Per-app data usage is read from Android's network statistics, which requires usage access.", '各應用程式的數據用量來自 Android 的網路統計，需要「使用情況存取權」。', '各应用的数据用量来自 Android 的网络统计，需要“使用情况访问权限”。'),
         ('TrafficGranted', 'Usage access granted', '已允許使用情況存取權', '已允许使用情况访问权限'),
         ('TrafficNotGranted', 'Usage access not granted', '尚未允許使用情況存取權', '尚未允许使用情况访问权限'),
+        ('Profiles', 'Profiles', '設定檔', '配置文件'),
+        ('ProfileHint', 'Each profile has its own mode and rules. Shared rules apply to every profile.', '每個設定檔有自己的模式和規則；共用規則對所有設定檔生效。', '每个配置文件有自己的模式和规则；共享规则对所有配置文件生效。'),
+        ('ProfileName', 'Name', '名稱', '名称'),
+        ('ProfileNamePlaceholder', 'e.g. Office, Home', '例如：公司、家裡', '例如：公司、家里'),
+        ('ProfileAdd', 'Add', '新增', '添加'),
+        ('ProfileSave', 'Save', '儲存', '保存'),
+        ('ProfileDelete', 'Delete', '刪除', '删除'),
+        ('ProfileActivate', 'Set current', '設為目前', '设为当前'),
+        ('ProfileCurrent', 'Current', '目前', '当前'),
+        ('ProfileDefault', 'Default', '預設', '默认'),
+        ('ProfileRuleCount', '{0} rules', '{0} 條規則', '{0} 条规则'),
+        ('ProfileDeleteConfirmTitle', 'Delete this profile?', '刪除這個設定檔？', '删除这个配置文件？'),
+        ('ProfileDeleteConfirmContent', 'Its dedicated rules will also be deleted. Shared rules are not affected.', '它的專屬規則也會被刪除；共用規則不受影響。', '它的专属规则也会被删除；共享规则不受影响。'),
     ],
 }
 

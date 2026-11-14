@@ -20,6 +20,7 @@ public sealed partial class OverviewViewModel : PageViewModel
     private readonly ServiceConnection _connection;
     private readonly ServiceLifecycle _lifecycle;
     private bool _syncingMode;
+    private bool _syncingProfile;
 
     public OverviewViewModel(ServiceConnection connection, ServiceLifecycle lifecycle, ActivityDashboardViewModel dashboard, DisplayText text)
         : base(text)
@@ -29,7 +30,11 @@ public sealed partial class OverviewViewModel : PageViewModel
         Dashboard = dashboard;
         connection.PropertyChanged += OnConnectionChanged;
         // 每次重新連接都重新判斷：引擎可能已經從模擬切換為 WFP，模擬器接口只在模擬引擎下存在
-        connection.Connected += (_, _) => _ = LoadSimulatorAppsAsync(reload: true);
+        connection.Connected += (_, _) =>
+        {
+            _ = LoadSimulatorAppsAsync(reload: true);
+            _ = LoadProfilesAsync();
+        };
     }
 
     public override string Key => "overview";
@@ -40,6 +45,14 @@ public sealed partial class OverviewViewModel : PageViewModel
     public ObservableCollection<Proto.SimulatorApp> SimulatorApps { get; } = [];
 
     public ObservableCollection<string> SimulationResults { get; } = [];
+
+    /// <summary>配置文件列表；只有一個時界面隱藏選擇器。</summary>
+    public ObservableCollection<Proto.ProfileInfo> Profiles { get; } = [];
+
+    public bool ShowProfiles => Profiles.Count > 1;
+
+    [ObservableProperty]
+    public partial Proto.ProfileInfo? SelectedProfile { get; set; }
 
     /// <summary>分段選擇器的選中項；-1 表示當前模式不在可選列表中（全部封鎖）。</summary>
     [ObservableProperty]
@@ -120,6 +133,7 @@ public sealed partial class OverviewViewModel : PageViewModel
     public override Task OnActivatedAsync()
     {
         Dashboard.Activate();
+        _ = LoadProfilesAsync();
         return LoadSimulatorAppsAsync(reload: false);
     }
 
@@ -260,6 +274,60 @@ public sealed partial class OverviewViewModel : PageViewModel
     private Task ExitAppAsync() => RunAsync(async () =>
         await _connection.RequireClients().Simulator.ExitAppAsync(new Proto.ExitAppRequest { AppKey = SelectedApp!.Key }));
 
+    partial void OnSelectedProfileChanged(Proto.ProfileInfo? value)
+    {
+        if (_syncingProfile || value is null || !_connection.IsConnected)
+        {
+            return;
+        }
+
+        if (_connection.Status?.ActiveProfileId == value.Id)
+        {
+            return;
+        }
+
+        _ = RunAsync(async () =>
+        {
+            await _connection.RequireClients().Profiles.ActivateAsync(
+                new Proto.ActivateProfileRequest { Id = value.Id });
+            await LoadProfilesAsync();
+        });
+    }
+
+    private async Task LoadProfilesAsync()
+    {
+        if (_connection.Clients is not { } clients)
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await clients.Profiles.ListAsync(new Empty());
+            Profiles.Clear();
+            foreach (var profile in response.Profiles)
+            {
+                Profiles.Add(profile);
+            }
+
+            OnPropertyChanged(nameof(ShowProfiles));
+            SyncProfile();
+        }
+        catch (RpcException)
+        {
+            // 舊版服務沒有配置文件接口；保持空列表並隱藏選擇器
+        }
+    }
+
+    private void SyncProfile()
+    {
+        _syncingProfile = true;
+        SelectedProfile = Profiles.FirstOrDefault(p => p.Id == Status?.ActiveProfileId)
+            ?? Profiles.FirstOrDefault(p => p.IsActive)
+            ?? Profiles.FirstOrDefault();
+        _syncingProfile = false;
+    }
+
     private async Task LoadSimulatorAppsAsync(bool reload)
     {
         if (reload)
@@ -301,6 +369,7 @@ public sealed partial class OverviewViewModel : PageViewModel
         }
 
         SyncSelectors();
+        SyncProfile();
         OnPropertyChanged(string.Empty);
     }
 }

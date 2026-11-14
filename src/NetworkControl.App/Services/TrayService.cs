@@ -28,6 +28,8 @@ public sealed class TrayService : IDisposable
     private readonly DisplayText _text;
     private readonly TrayIcon _trayIcon;
     private bool _refreshQueued;
+    private IReadOnlyList<Proto.ProfileInfo> _profiles = [];
+    private bool _loadingProfiles;
 
     public TrayService(ServiceConnection connection, DisplayText text)
     {
@@ -61,7 +63,15 @@ public sealed class TrayService : IDisposable
         _trayIcon.Dispose();
     }
 
-    private void OnConnectionChanged(object? sender, PropertyChangedEventArgs e) => QueueRefresh();
+    private void OnConnectionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ServiceConnection.State) && _connection.IsConnected)
+        {
+            _ = LoadProfilesAsync();
+        }
+
+        QueueRefresh();
+    }
 
     private void OnLanguageChanged(object? sender, EventArgs e) => QueueRefresh();
 
@@ -93,6 +103,48 @@ public sealed class TrayService : IDisposable
         _trayIcon.Menu = BuildMenu(status);
     }
 
+    private async Task LoadProfilesAsync()
+    {
+        if (_loadingProfiles || _connection.Clients is not { } clients)
+        {
+            return;
+        }
+
+        _loadingProfiles = true;
+        try
+        {
+            var response = await clients.Profiles.ListAsync(new Empty());
+            _profiles = response.Profiles;
+            QueueRefresh();
+        }
+        catch (RpcException)
+        {
+            // 舊版服務沒有配置文件接口
+        }
+        finally
+        {
+            _loadingProfiles = false;
+        }
+    }
+
+    private async Task ActivateProfileAsync(string id)
+    {
+        if (_connection.Clients is not { } clients)
+        {
+            return;
+        }
+
+        try
+        {
+            await clients.Profiles.ActivateAsync(new Proto.ActivateProfileRequest { Id = id });
+            await LoadProfilesAsync();
+        }
+        catch (RpcException)
+        {
+            // 狀態推送會讓菜單回到服務端的真實狀態
+        }
+    }
+
     private NativeMenu BuildMenu(Proto.ServiceStatus? status)
     {
         var loc = _text.Localization;
@@ -117,6 +169,21 @@ public sealed class TrayService : IDisposable
         }
 
         menu.Items.Add(new NativeMenuItem(loc.Get(TrayLangResourceKind.Mode)) { Menu = modeMenu, IsEnabled = connected });
+
+        // 配置文件
+        if (_profiles.Count > 1)
+        {
+            var profileMenu = new NativeMenu();
+            foreach (var profile in _profiles)
+            {
+                var item = Item(profile.Name, () => _ = ActivateProfileAsync(profile.Id), connected);
+                item.ToggleType = MenuItemToggleType.Radio;
+                item.IsChecked = profile.IsActive;
+                profileMenu.Items.Add(item);
+            }
+
+            menu.Items.Add(new NativeMenuItem(loc.Get(ProfilesLangResourceKind.CardTitle)) { Menu = profileMenu, IsEnabled = connected });
+        }
 
         // 一鍵斷網 / 恢復網路
         if (status?.Mode == Proto.FilterMode.BlockAll)

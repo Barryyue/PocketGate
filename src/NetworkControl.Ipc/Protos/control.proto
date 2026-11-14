@@ -62,6 +62,7 @@ message ServiceStatus {
   int32 active_rule_count = 7;
   int32 pending_prompt_flows = 8;
   ClientInfo client = 9;
+  string active_profile_name = 10;
 }
 
 message SetModeRequest {

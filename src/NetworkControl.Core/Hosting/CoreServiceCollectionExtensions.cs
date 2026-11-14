@@ -8,6 +8,7 @@ using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Dns;
 using NetworkControl.Core.Engine;
 using NetworkControl.Core.Pipeline;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
@@ -33,6 +34,7 @@ public static class CoreServiceCollectionExtensions
         // 狀態與設置
         services.TryAddSingleton<SettingsService>();
         services.TryAddSingleton<RuntimeStateService>();
+        services.TryAddSingleton<ProfileService>();
 
         // 規則
         services.TryAddSingleton<RuleEngine>();
@@ -70,6 +72,7 @@ public static class CoreServiceCollectionExtensions
         // 啟動任務
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupTask, LoadSettingsTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupTask, LoadRuntimeStateTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupTask, LoadProfilesTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupTask, LoadRulesTask>());
 
         // 托管服務：註冊順序即啟動順序 —— 先執行啟動任務，再啟動生命週期管理和引擎

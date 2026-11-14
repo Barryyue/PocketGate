@@ -73,6 +73,84 @@
         <target state="translated">開啟</target>
       </segment>
     </unit>
+    <unit id="ProfileActivate">
+      <segment>
+        <source>Set current</source>
+        <target state="translated">設為目前</target>
+      </segment>
+    </unit>
+    <unit id="ProfileAdd">
+      <segment>
+        <source>Add</source>
+        <target state="translated">新增</target>
+      </segment>
+    </unit>
+    <unit id="ProfileCurrent">
+      <segment>
+        <source>Current</source>
+        <target state="translated">目前</target>
+      </segment>
+    </unit>
+    <unit id="ProfileDefault">
+      <segment>
+        <source>Default</source>
+        <target state="translated">預設</target>
+      </segment>
+    </unit>
+    <unit id="ProfileDelete">
+      <segment>
+        <source>Delete</source>
+        <target state="translated">刪除</target>
+      </segment>
+    </unit>
+    <unit id="ProfileDeleteConfirmContent">
+      <segment>
+        <source>Its dedicated rules will also be deleted. Shared rules are not affected.</source>
+        <target state="translated">它的專屬規則也會被刪除；共用規則不受影響。</target>
+      </segment>
+    </unit>
+    <unit id="ProfileDeleteConfirmTitle">
+      <segment>
+        <source>Delete this profile?</source>
+        <target state="translated">刪除這個設定檔？</target>
+      </segment>
+    </unit>
+    <unit id="ProfileHint">
+      <segment>
+        <source>Each profile has its own mode and rules. Shared rules apply to every profile.</source>
+        <target state="translated">每個設定檔有自己的模式和規則；共用規則對所有設定檔生效。</target>
+      </segment>
+    </unit>
+    <unit id="ProfileName">
+      <segment>
+        <source>Name</source>
+        <target state="translated">名稱</target>
+      </segment>
+    </unit>
+    <unit id="ProfileNamePlaceholder">
+      <segment>
+        <source>e.g. Office, Home</source>
+        <target state="translated">例如：公司、家裡</target>
+      </segment>
+    </unit>
+    <unit id="ProfileRuleCount">
+      <segment>
+        <source>{0} rules</source>
+        <target state="translated">{0} 條規則</target>
+      </segment>
+    </unit>
+    <unit id="ProfileSave">
+      <segment>
+        <source>Save</source>
+        <target state="translated">儲存</target>
+      </segment>
+    </unit>
+    <unit id="Profiles">
+      <segment>
+        <source>Profiles</source>
+        <target state="translated">設定檔</target>
+      </segment>
+    </unit>
     <unit id="PromptTimeout">
       <segment>
         <source>Answer within</source>

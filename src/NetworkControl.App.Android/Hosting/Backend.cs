@@ -4,6 +4,7 @@ using NetworkControl.Android.Platform;
 using NetworkControl.Core.Activity;
 using NetworkControl.Core.Apps;
 using NetworkControl.Core.Domain;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
@@ -116,6 +117,20 @@ public interface IBackend
 
     /// <summary>[from, to) 的流量。先從系統採集一次最新數據。</summary>
     Task<TrafficUsage> GetTrafficAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken);
+
+    IReadOnlyList<Profile> Profiles { get; }
+
+    Profile ActiveProfile { get; }
+
+    Task ActivateProfileAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<Profile> CreateProfileAsync(string name, FilterMode mode, CancellationToken cancellationToken);
+
+    Task<Profile> UpdateProfileAsync(Guid id, string name, FilterMode mode, CancellationToken cancellationToken);
+
+    Task DeleteProfileAsync(Guid id, CancellationToken cancellationToken);
+
+    int GetRuleCount(Guid profileId);
 }
 
 internal sealed class Backend : IBackend
@@ -126,6 +141,7 @@ internal sealed class Backend : IBackend
     private readonly IInstalledAppCatalog _catalog;
     private readonly RuntimeStateService _state;
     private readonly SettingsService _settings;
+    private readonly ProfileService _profiles;
     private readonly RuleEngine _rules;
     private readonly RuleService _ruleService;
     private readonly PromptBroker _prompts;
@@ -148,6 +164,7 @@ internal sealed class Backend : IBackend
         IInstalledAppCatalog catalog,
         RuntimeStateService state,
         SettingsService settings,
+        ProfileService profiles,
         RuleEngine rules,
         RuleService ruleService,
         PromptBroker prompts,
@@ -172,6 +189,7 @@ internal sealed class Backend : IBackend
         _catalog = catalog;
         _state = state;
         _settings = settings;
+        _profiles = profiles;
         _rules = rules;
         _ruleService = ruleService;
         _prompts = prompts;
@@ -183,6 +201,7 @@ internal sealed class Backend : IBackend
         _protection.Changed += Raise;
         _state.Changed += Raise;
         _settings.Changed += Raise;
+        _profiles.Changed += Raise;
         notifier.PromptsChanged += Raise;
     }
 
@@ -220,6 +239,27 @@ internal sealed class Backend : IBackend
     public UserSettings Settings => _settings.Current;
 
     public VpnEngineCounters Counters => _engine.Counters;
+
+    public IReadOnlyList<Profile> Profiles => _profiles.All;
+
+    public Profile ActiveProfile => _profiles.Active;
+
+    public Task ActivateProfileAsync(Guid id, CancellationToken cancellationToken) =>
+        _profiles.ActivateAsync(id, ProfileSwitchReason.User, cancellationToken);
+
+    public Task<Profile> CreateProfileAsync(string name, FilterMode mode, CancellationToken cancellationToken) =>
+        _profiles.CreateAsync(name, mode, copyRulesFrom: null, cancellationToken);
+
+    public Task<Profile> UpdateProfileAsync(Guid id, string name, FilterMode mode, CancellationToken cancellationToken)
+    {
+        var existing = _profiles.Find(id) ?? throw new KeyNotFoundException($"配置文件 {id} 不存在。");
+        return _profiles.UpdateAsync(existing with { Name = name, Mode = mode }, cancellationToken);
+    }
+
+    public Task DeleteProfileAsync(Guid id, CancellationToken cancellationToken) =>
+        _profiles.DeleteAsync(id, cancellationToken);
+
+    public int GetRuleCount(Guid profileId) => _ruleService.All.Count(r => r.ProfileId == profileId);
 
     public Intent? CreateVpnConsentIntent() => _tunnel.CreatePrepareIntent();
 

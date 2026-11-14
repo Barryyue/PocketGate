@@ -85,6 +85,12 @@
         <target state="translated">等待你決定</target>
       </segment>
     </unit>
+    <unit id="Profiles">
+      <segment>
+        <source>Profile</source>
+        <target state="translated">設定檔</target>
+      </segment>
+    </unit>
     <unit id="Protection">
       <segment>
         <source>Protection</source>

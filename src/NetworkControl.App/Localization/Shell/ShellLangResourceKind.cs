@@ -19,4 +19,5 @@ public enum ShellLangResourceKind
     NavApps,
     StatusPendingPrompts,
     NavConnections,
+    StatusProfile,
 }

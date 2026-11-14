@@ -2,6 +2,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using NetworkControl.Core.Domain;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Rules;
 using NetworkControl.Service.Security;
 using NetworkControl.Storage.Backup;
@@ -11,7 +12,7 @@ using Proto = NetworkControl.Ipc.V1;
 namespace NetworkControl.Service.Grpc;
 
 [Authorize(Policy = IpcPolicies.Viewer)]
-internal sealed class RulesGrpcService(RuleService rules, ConfigBackup backups, TimeProvider time) : Proto.Rules.RulesBase
+internal sealed class RulesGrpcService(RuleService rules, ProfileService profiles, ConfigBackup backups, TimeProvider time) : Proto.Rules.RulesBase
 {
     public override Task<Proto.ListRulesResponse> List(Proto.ListRulesRequest request, ServerCallContext context)
     {
@@ -29,6 +30,7 @@ internal sealed class RulesGrpcService(RuleService rules, ConfigBackup backups, 
     {
         var now = time.GetUtcNow();
         var rule = request.ToRule(Guid.CreateVersion7(now), RuleSource.User, now);
+        ValidateProfile(rule);
         return ToInfo(await Execute(() => rules.AddAsync(rule, context.CancellationToken)));
     }
 
@@ -38,6 +40,7 @@ internal sealed class RulesGrpcService(RuleService rules, ConfigBackup backups, 
         var id = ProtoMapper.ParseGuid(request.Id, "id");
         var existing = rules.Find(id) ?? throw NotFound(id);
         var rule = request.Definition.ToRule(id, existing.Source, time.GetUtcNow());
+        ValidateProfile(rule);
         return ToInfo(await Execute(() => rules.UpdateAsync(rule, context.CancellationToken)));
     }
 
@@ -158,12 +161,26 @@ internal sealed class RulesGrpcService(RuleService rules, ConfigBackup backups, 
         }
     }
 
+    private void ValidateProfile(Rule rule)
+    {
+        if (rule.ProfileId is { } profileId && profiles.Find(profileId) is null)
+        {
+            throw ProtoMapper.Invalid($"配置文件 {profileId} 不存在。");
+        }
+    }
+
     /// <summary>計算並（非預覽時）執行導入計劃：先新增和更新，最後刪除，中途出錯時少刪不多刪。</summary>
     private async Task<Proto.ImportResult> ApplyAsync(IReadOnlyList<Rule> imported, RuleImportMode mode, bool previewOnly, string? snapshot, bool markNewAsImported, CancellationToken cancellationToken)
     {
         var now = time.GetUtcNow();
-        // 已過期的限時規則沒有導入的意義
-        var current = imported.Where(r => r.Lifetime != RuleLifetime.Timed || r.ExpiresAt > now).ToArray();
+        var knownProfiles = profiles.All.Select(p => p.Id).ToHashSet();
+        // 已過期的限時規則沒有導入的意義；目標機器上不存在的配置文件降級為共享規則
+        var current = imported
+            .Where(r => r.Lifetime != RuleLifetime.Timed || r.ExpiresAt > now)
+            .Select(r => r.ProfileId is { } profileId && !knownProfiles.Contains(profileId)
+                ? r with { ProfileId = null }
+                : r)
+            .ToArray();
         var plan = RuleImportPlanner.Plan(rules.All, current, mode, markNewAsImported);
         if (!previewOnly)
         {

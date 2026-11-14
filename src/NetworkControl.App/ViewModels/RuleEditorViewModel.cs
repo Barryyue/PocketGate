@@ -34,7 +34,7 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
 {
     private readonly Proto.RuleDefinition? _original;
 
-    public RuleEditorViewModel(DisplayText text, Proto.RuleInfo? existing = null, RulePrefill? prefill = null)
+    public RuleEditorViewModel(DisplayText text, Proto.RuleInfo? existing = null, RulePrefill? prefill = null, IReadOnlyList<Proto.ProfileInfo>? profiles = null)
         : base(text)
     {
         _original = existing?.Definition;
@@ -73,6 +73,12 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
             Option(Proto.Lifetime.UntilRestart, CommonLangResourceKind.LifetimeUntilRestart),
             Option(Proto.Lifetime.Timed, CommonLangResourceKind.LifetimeTimed),
         ];
+        Profiles =
+        [
+            new Choice<string?>(null, () => Loc.Get(RulesLangResourceKind.ProfileFilterAll)),
+            new Choice<string?>("", () => Loc.Get(RulesLangResourceKind.ProfileFilterShared)),
+            .. (profiles ?? []).Select(p => new Choice<string?>(p.Id, () => p.Name)),
+        ];
 
         SelectedAction = Actions[0];
         SelectedDirection = Directions[1];
@@ -80,10 +86,12 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
         SelectedRemoteKind = RemoteKinds[0];
         SelectedZone = Zones[0];
         SelectedLifetime = Lifetimes[0];
+        SelectedProfile = Profiles[0];
 
         if (_original is not null)
         {
             Load(_original);
+            SelectedProfile = Profiles.FirstOrDefault(p => p.Value == _original.ProfileId) ?? Profiles[0];
         }
         else if (prefill is not null)
         {
@@ -109,6 +117,8 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
     public IReadOnlyList<Choice<Proto.NetworkZone>> Zones { get; }
 
     public IReadOnlyList<Choice<Proto.Lifetime>> Lifetimes { get; }
+
+    public IReadOnlyList<Choice<string?>> Profiles { get; }
 
     [ObservableProperty]
     public partial bool AnyApp { get; set; }
@@ -149,6 +159,9 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
     public partial decimal? ExpiresInMinutes { get; set; } = 60;
 
     [ObservableProperty]
+    public partial Choice<string?> SelectedProfile { get; set; }
+
+    [ObservableProperty]
     public partial string Note { get; set; } = "";
 
     [ObservableProperty]
@@ -179,6 +192,15 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
         {
             definition.Enabled = Enabled;
             return definition;
+        }
+
+        if (SelectedProfile.Value is { Length: > 0 } profileId)
+        {
+            definition.ProfileId = profileId;
+        }
+        else
+        {
+            definition.ClearProfileId();
         }
 
         definition.Action = SelectedAction.Value;
@@ -243,7 +265,7 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
 
     protected override void OnLanguageChanged()
     {
-        foreach (var choice in Actions.Concat<Choice>(Directions).Concat(Protocols).Concat(RemoteKinds).Concat(Zones).Concat(Lifetimes))
+        foreach (var choice in Actions.Concat<Choice>(Directions).Concat(Protocols).Concat(RemoteKinds).Concat(Zones).Concat(Lifetimes).Concat(Profiles))
         {
             choice.Refresh();
         }

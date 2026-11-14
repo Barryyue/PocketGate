@@ -74,5 +74,6 @@
       </segment>
     </unit>
     <unit id="NavConnections"><segment><source>Live connections</source><target state="translated">即時連線</target></segment></unit>
+    <unit id="StatusProfile"><segment><source>Profile: {0}</source><target state="translated">設定檔：{0}</target></segment></unit>
   </file>
 </xliff>

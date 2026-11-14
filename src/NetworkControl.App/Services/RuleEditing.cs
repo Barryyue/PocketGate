@@ -20,7 +20,7 @@ public sealed class RuleEditing(
 
     public async Task<bool> CreateAsync(RulePrefill? prefill = null)
     {
-        var editor = new RuleEditorViewModel(text, prefill: prefill);
+        var editor = new RuleEditorViewModel(text, prefill: prefill, profiles: await LoadProfilesAsync());
         if (!await dialogs.ShowFormAsync<RuleEditorView, RuleEditorViewModel>(editor, Loc.Get(RulesLangResourceKind.EditorCreateTitle)))
         {
             return false;
@@ -33,7 +33,7 @@ public sealed class RuleEditing(
 
     public async Task<bool> EditAsync(Proto.RuleInfo rule)
     {
-        var editor = new RuleEditorViewModel(text, existing: rule);
+        var editor = new RuleEditorViewModel(text, existing: rule, profiles: await LoadProfilesAsync());
         if (!await dialogs.ShowFormAsync<RuleEditorView, RuleEditorViewModel>(editor, Loc.Get(RulesLangResourceKind.EditorEditTitle)))
         {
             return false;
@@ -49,6 +49,19 @@ public sealed class RuleEditing(
         var request = new Proto.DeleteRulesRequest();
         request.Ids.Add(ruleId);
         return SubmitAsync(clients => clients.Rules.DeleteAsync(request).ResponseAsync, RulesLangResourceKind.Deleted);
+    }
+
+    private async Task<IReadOnlyList<Proto.ProfileInfo>> LoadProfilesAsync()
+    {
+        try
+        {
+            var response = await connection.RequireClients().Profiles.ListAsync(new Google.Protobuf.WellKnownTypes.Empty());
+            return response.Profiles.ToArray();
+        }
+        catch (RpcException)
+        {
+            return [];
+        }
     }
 
     private async Task<bool> SubmitAsync<T>(Func<IpcClients, Task<T>> call, RulesLangResourceKind successMessage)

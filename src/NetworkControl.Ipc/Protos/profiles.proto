@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package netcontrol.v1;
+
+option csharp_namespace = "NetworkControl.Ipc.V1";
+
+import "google/protobuf/empty.proto";
+import "common.proto";
+import "control.proto";
+
+// 配置文件管理（FR-MOD-02）。寫操作需要管理員權限。
+service Profiles {
+  rpc List (google.protobuf.Empty) returns (ListProfilesResponse);
+  rpc Create (CreateProfileRequest) returns (ProfileInfo);
+  rpc Update (ProfileInfo) returns (ProfileInfo);
+  rpc Delete (DeleteProfileRequest) returns (google.protobuf.Empty);
+  rpc Activate (ActivateProfileRequest) returns (ServiceStatus);
+}
+
+message ProfileInfo {
+  string id = 1;
+  string name = 2;
+  FilterMode mode = 3;
+  int32 sort_order = 4;
+  int32 rule_count = 5;
+  bool is_default = 6;
+  bool is_active = 7;
+}
+
+message ListProfilesResponse {
+  repeated ProfileInfo profiles = 1;
+}
+
+message CreateProfileRequest {
+  string name = 1;
+  FilterMode mode = 2;
+  optional string copy_rules_from = 3;
+}
+
+message DeleteProfileRequest {
+  string id = 1;
+}
+
+message ActivateProfileRequest {
+  string id = 1;
+}

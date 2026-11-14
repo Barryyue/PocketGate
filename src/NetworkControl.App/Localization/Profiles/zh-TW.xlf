@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="2.1" srcLang="en-US" trgLang="zh-TW" xmlns="urn:oasis:names:tc:xliff:document:2.0">
+  <file id="NetworkControl.App.Localization.ProfilesLangResourceKind">
+    <unit id="CardTitle"><segment><source>Profiles</source><target state="translated">設定檔</target></segment></unit>
+    <unit id="CardDescription"><segment><source>Each profile has its own mode and dedicated rules. Shared rules apply to every profile.</source><target state="translated">每個設定檔有自己的模式和專屬規則；共用規則對所有設定檔生效。</target></segment></unit>
+    <unit id="AddProfile"><segment><source>New profile</source><target state="translated">新增設定檔</target></segment></unit>
+    <unit id="AddTitle"><segment><source>New profile</source><target state="translated">新增設定檔</target></segment></unit>
+    <unit id="EditTitle"><segment><source>Edit profile</source><target state="translated">編輯設定檔</target></segment></unit>
+    <unit id="NameLabel"><segment><source>Name</source><target state="translated">名稱</target></segment></unit>
+    <unit id="NamePlaceholder"><segment><source>e.g. Office, Home, Cafe</source><target state="translated">例如：公司、家裡、咖啡店</target></segment></unit>
+    <unit id="ModeLabel"><segment><source>Mode</source><target state="translated">模式</target></segment></unit>
+    <unit id="CopyRulesLabel"><segment><source>Copy dedicated rules from</source><target state="translated">複製專屬規則自</target></segment></unit>
+    <unit id="CopyRulesNone"><segment><source>Do not copy</source><target state="translated">不複製</target></segment></unit>
+    <unit id="RuleCount"><segment><source>{0} rules</source><target state="translated">{0} 條規則</target></segment></unit>
+    <unit id="Active"><segment><source>Current</source><target state="translated">目前</target></segment></unit>
+    <unit id="SetCurrent"><segment><source>Set as current</source><target state="translated">設為目前</target></segment></unit>
+    <unit id="Edit"><segment><source>Edit</source><target state="translated">編輯</target></segment></unit>
+    <unit id="Delete"><segment><source>Delete</source><target state="translated">刪除</target></segment></unit>
+    <unit id="DeleteConfirmTitle"><segment><source>Delete this profile?</source><target state="translated">刪除這個設定檔？</target></segment></unit>
+    <unit id="DeleteConfirmContent"><segment><source>Its dedicated rules will be deleted too. Shared rules are not affected.</source><target state="translated">它的專屬規則也會被刪除；共用規則不受影響。</target></segment></unit>
+    <unit id="Default"><segment><source>Default</source><target state="translated">預設</target></segment></unit>
+    <unit id="Empty"><segment><source>No profiles.</source><target state="translated">沒有設定檔。</target></segment></unit>
+    <unit id="ProfileCreated"><segment><source>Profile created.</source><target state="translated">設定檔已建立。</target></segment></unit>
+    <unit id="ProfileUpdated"><segment><source>Profile updated.</source><target state="translated">設定檔已更新。</target></segment></unit>
+    <unit id="ProfileDeleted"><segment><source>Profile deleted.</source><target state="translated">設定檔已刪除。</target></segment></unit>
+    <unit id="ProfileActivated"><segment><source>Profile switched.</source><target state="translated">已切換設定檔。</target></segment></unit>
+    <unit id="NameInvalid"><segment><source>The name must be 1–40 characters.</source><target state="translated">名稱必須是 1–40 個字元。</target></segment></unit>
+  </file>
+</xliff>
