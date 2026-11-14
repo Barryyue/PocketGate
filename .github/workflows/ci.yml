@@ -37,7 +37,8 @@ jobs:
 
       - name: Verify formatting
         if: runner.os == 'Linux'
-        run: dotnet format NetworkControl.slnx --verify-no-changes --no-restore
+        # Android 項目在解決方案中只用於 IDE 瀏覽（不參與構建），沒有 Android 工作負載時無法分析，格式由 android 任務檢查
+        run: dotnet format NetworkControl.slnx --verify-no-changes --no-restore --exclude src/NetworkControl.App.Android src/NetworkControl.Engine.Android
 
       - name: Build
         run: dotnet build NetworkControl.slnx --configuration Release --no-restore

@@ -178,7 +178,9 @@ M1 已知限制：
 
 ## 11. Android
 
-設計見 [android.md](android.md)。Android 項目（`Engine.Android`、`App.Android`）需要 .NET Android 工作負載，因此放在獨立的 `NetworkControl.Android.slnx` 中；主解決方案只包含平台無關的 `Engine.Vpn` 及其測試，日常的 `dotnet build / test / format NetworkControl.slnx` 不受影響。
+設計見 [android.md](android.md)。Android 項目（`Engine.Android`、`App.Android`）需要 .NET Android 工作負載。它們出現在主解決方案的 `/android/` 文件夾中，方便在 IDE 裡瀏覽，但標記為不參與解決方案構建；日常的 `dotnet build / test NetworkControl.slnx` 不受影響，`dotnet format NetworkControl.slnx` 需要加 `--exclude src/NetworkControl.App.Android src/NetworkControl.Engine.Android`。構建、格式檢查 Android 代碼用 `NetworkControl.Android.slnx`（或 `scripts/android.ps1`）。
+
+在 IDE 中編譯、補全 Android 代碼：IDE 使用的 dotnet 需要裝有 android 工作負載。Visual Studio 用安裝程序添加「.NET Multi-platform App UI 開發」（需要管理員權限，由你自己操作）；Rider 可以在設定中把 .NET CLI 路徑指向 `D:\tools\android-dev\dotnet\dotnet.exe`。沒有工作負載時 IDE 會把這兩個項目顯示為無法加載，不影響其他項目。
 
 ### 11.1 工具鏈（不需要管理員權限）
 

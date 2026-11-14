@@ -81,7 +81,7 @@
   - 驗證：`PortableLayout` 單元測試；Debug 佈局 + Fake 引擎端到端已驗證（服務從 `Service` 啟動、數據寫入 `data`、端點為 `pipe:NetworkControl.portable.v1`、界面診斷包中 `Launcher=Portable` 且成功連上服務）；AOT zip 的離線和在線診斷包均已驗證（`Native AOT=True`、`Launcher=Portable`；非管理員啟動時 WFP 按預期故障、服務存活且界面可連接）。
   - 待用戶驗證：可攜版首次啟動的 UAC 提權和真實 WFP 攔截（需要管理員權限）；從 zip 安裝 / 升級 / 卸載的回歸。
 
-**合併 main（Android 版）後（2026-11-14）：Windows 解決方案 292 個測試，291 通過、1 個跳過；Android Debug APK 用用戶級工具鏈（`D:	oolsndroid-dev`，`scripts/android.ps1 build`）構建通過（0 錯誤；3 個 XA0033 是工具鏈解析 JDK 版本號的既有警告），**未在設備上回歸**。本輪改動了 Core（`IActivityQuery` 新增兩個方法、判決後補充解析應用身份）和 Storage（遷移 `Activity/0002`、備份 / 導入導出），均為追加式修改。**
+**合併 main（Android 版）後（2026-11-14）：Windows 解決方案 292 個測試，291 通過、1 個跳過；Android Debug APK 用用戶級工具鏈（`D:\tools\android-dev`，`scripts/android.ps1 build`）構建通過（0 錯誤；3 個 XA0033 是工具鏈解析 JDK 版本號的既有警告），**未在設備上回歸**。本輪改動了 Core（`IActivityQuery` 新增兩個方法、判決後補充解析應用身份）和 Storage（遷移 `Activity/0002`、備份 / 導入導出），均為追加式修改。**
 
 **測試現狀（2026-11-14）：233 個，232 通過、1 個跳過（Linux /proc 符號鏈接測試，Windows 非開發者模式不能建立符號鏈接）；完整解決方案 Debug 構建零警告零錯誤；`dotnet format --verify-no-changes` 通過。Release / AOT 發布包本輪未重新生成。**
 
@@ -205,10 +205,15 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
 - [ ] 單實例：第二次啟動時喚起已有實例的主窗口（目前直接退出）
 
 ### P1
+- [ ] **按可信發布者批量允許**（設計見 [design.md §24](design.md#24-減輕首次使用的詢問負擔可信發布者規則與詢問批量處理規劃2026-11-14)，2026-11-14 從 Android 待辦借鑒）：例如「Microsoft Corporation 簽名的程序一律允許」，減輕首次使用的詢問負擔；首次運行引導（L4）中提供勾選項。Core 追加「發布者條件」（不能復用篡改檢測用的 `RequiredSignerId`），發布者規則的具體度低於指定路徑的規則；Android 的「系統應用默認允許」共用這套實現。
+- [ ] **詢問隊列批量處理**（同上 §24）：「待決詢問」列表，多選後一次允許 / 拒絕 / 稍後；Core 的 `PromptBroker` 追加批量回應（只發布一次規則集），`prompts.proto` 追加對應接口。Android 共用 Core 部分。
 - [ ] 入站連接控制（ALE_AUTH_RECV_ACCEPT 層）
 - [ ] 流量統計（ETW Kernel-Network → traffic_* 表 → 統計頁圖表）
 - [ ] 實時連接視圖（GetExtendedTcpTable）
 - [ ] 配置文件 Profiles + 按網絡自動切換
+  - 首要場景（2026-11-14，對應 Android 的「Wi-Fi / 行動網路分別允許」和需求中的「流量敏感用戶」）：**連上計量網絡或手機熱點時自動進入「省流量」情境**，只放行必要的應用；Windows 可以讀到網絡是否按流量計費。作為 Core「情境」能力（design.md §23）的第一批用例。
+- [ ] **Core：情境 + 時間表**（設計見 [design.md §23](design.md#23-情境時間表與專注模式規劃2026-11-14)，需求 FR-MOD-05 / 06）：在 Profile 上擴展情境（帶到期恢復）、運行時狀態記錄當前情境、調度組件按時段切換；桌面版和 Android 共用。與上一項「配置文件 Profiles」一起實現。
+- [ ] **專注模式（桌面界面）**：總覽頁和托盤菜單一鍵進入，提前結束需要確認 + 倒計時，結束小結。產品定位是自律工具，不做家長管控（需求 §1.3）。
 - [ ] 規則導入導出、每日備份
 - [ ] svchost 服務名細分、目錄簽名（catalog）校驗
 - [ ] 勿擾期間阻斷彙總通知、全屏自動勿擾
@@ -225,6 +230,8 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
 - [x] (claude, 2026-11-14) Android 版 MVP —— 見 [progress-android.md](progress-android.md)
 - [ ] M4 macOS 引擎（NE 系統擴展，Swift）—— 需提前申請 Apple 開發者帳號和 NE 權限
 - [ ] 限速、黑名單訂閱、時間段規則、地圖 / ASN、密碼保護、ncctl
+- [ ] **應用頁：程序連過 / 嘗試過的域名列表**（2026-11-14 從 Android 待辦借鑒）：在 L2 應用頁的詳情中按域名聚合顯示次數和時間，便於識別遙測和廣告服務。
+- [ ] **DoH 提示**（2026-11-14 從 Android 待辦借鑒）：偵測到系統或瀏覽器啟用加密 DNS（DoH）導致域名規則不生效時，在界面上提示（目前只寫在「已知限制」中）。
 - [ ] Windows WFP Callout 驅動（掛起連接，需 EV 證書）
 
 ---
@@ -235,8 +242,15 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
 
 ## 📝 待決問題（需要用戶決定）
 
-- 開源協議（MIT / Apache-2.0 / GPL-3.0）—— 影響能否復用 GPL 項目代碼
-- 正式產品名稱和圖標
+- 開源協議（MIT / Apache-2.0 / GPL-3.0）—— 影響能否復用 GPL 項目代碼。**正式分發前必須確定**（2026-11-14 補充）：
+  - 防火牆類軟件開源有助於建立信任。
+  - **AtomUI 是 LGPL-3.0**：LGPL 一般要求用戶能夠替換該庫，而桌面版用 Native AOT 把它靜態編譯進可執行文件、Android Release 做了裁剪，是否滿足要求需要評估（非法律意見），必要時調整發布方式或通過開源本項目滿足。桌面版和 Android 都受影響。
+- 正式產品名稱和圖標，以及 Android 應用 ID。**正式分發前必須確定**（2026-11-14 補充）：
+  - Android 應用 ID 發出後不能修改（改了等於另一個應用：不能原地升級，規則、VPN 授權、「永久連線的 VPN」設定都要重來）；目前的 `com.networkcontrol.android` 是臨時值，`NcVpnService` 的組件名中也寫死了它。
+  - 建議格式 `<自有域名倒寫>.<應用名>`，沒有域名時用 `io.github.<GitHub 用戶名>.<應用名>`；不帶 `.android` 後綴；Debug 構建加 `.debug` 後綴，與正式版並存。
+  - 命名方向：體現「守門 / 安靜 / 自主」，避開「控制、監管」的感覺（產品定位是隱私 + 自律，見 requirements.md §1.3）；中英文都好讀；避開 Little Snitch、NetGuard、GlassWire、Portmaster、OpenSnitch、RethinkDNS、LuLu。
+  - 候選（均未查重，確定前要查應用商店、GitHub 和商標）：**靜網 / QuietNet**（推薦：讓後台「噪音」安靜下來，貼合隱私 + 專注）、守門 / Warden（略偏管控）、網哨 / NetSentry（Sentry 撞名風險高）、保留 NetworkControl（太通用，像管控工具）。
+  - 只改用戶可見的名稱、應用 ID、圖標和發布物文件名；代碼中的項目名和命名空間（`NetworkControl.*`）不需要改；桌面安裝程序的 `AppId` 不能改（AGENTS.md），顯示名稱可以改。
 - zh-TW 用語：目前用台灣用語（網路、應用程式、設定），如需「繁體字 + 大陸用語」只需改 zh-TW.xlf
 - 遠端倉庫：本地已 `git init`（分支 main），尚未配置遠端
 - `site/` 目錄：用戶已自行提交（`2b0e59b`、`64bba9e`），工作區中有一批 `site/` 臨時文件的刪除尚未提交，由用戶處理。注意 `2b0e59b` 中同時帶入了本輪診斷功能的前一半代碼。
