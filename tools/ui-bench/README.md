@@ -72,6 +72,16 @@ APK 輸出在 `tools/ui-bench/artifacts/<variant>-<abi>/`（`artifacts/` 已被 
 | Fluent | 13.45 MB | 6,852 ms | 6,809 ms | 0 ms | 38.5 ms | 60 FPS / 0 掉幀 | 109.1 MB | 10.7 MB |
 | Material | 14.93 MB | 8,256 ms | 8,196 ms | 0 ms | 51.7 ms | 60 FPS / 1 掉幀 | 119.2 MB | 13.3 MB |
 
+### AOT 對照（同一台 x64 模擬器，Release，AOT 開 / 關）
+
+| 變體 | 冷啟動（關 AOT） | 冷啟動（AOT） | 變化 | APK（關 → 開） | PSS（關 → 開） |
+|---|---|---|---|---|---|
+| AtomUI | 10,197 ms | 8,599 ms | −15.7% | 18.72 → 22.20 MB | 160.3 → 178.9 MB |
+| Fluent | 6,852 ms | 5,522 ms | −19.4% | 13.45 → 15.29 MB | 109.1 → 117.8 MB |
+| Material | 8,256 ms | 6,961 ms | −15.7% | 14.93 → 16.47 MB | 119.2 → 126.1 MB |
+
+AOT 能減少 JIT，但在這台模擬器上只帶來約 16–19% 的改善；剩餘時間主要花在 Mono 運行時、Activity 建立、首幀渲染和模擬器本身的開銷。AOT 會**增加** APK 和 PSS（原生代碼頁），不是減少。Avalonia 官方 460 ms 是 **NativeAOT** 的最佳化樣本，與這裡的 Mono + Profiled AOT、模擬器、完整儀表板不是同一量測口徑。
+
 **初步結論**（模擬器 + 關閉 AOT，數字只作相對比較）：
 
 - **Fluent 比 AtomUI 冷啟動快約 33%**（6.85 s vs 10.20 s，少 3.3 s），APK 小 **5.3 MB**，PSS 少 **51 MB**，託管堆少 **6.4 MB**，300 行布局快約 30%。
