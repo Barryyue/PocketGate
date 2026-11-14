@@ -7,6 +7,7 @@ import com.networkcontrol.android.kotlin.R
 
 object NotificationChannels {
     const val PROMPT = "prompts"
+    const val PROMPT_SOFT = "prompts_soft"
     const val PROTECTION = "protection"
     const val QUIET = "quiet"
 
@@ -19,6 +20,15 @@ object NotificationChannels {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = context.getString(R.string.notification_channel_prompt)
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                PROMPT_SOFT,
+                context.getString(R.string.notification_channel_prompt_soft),
+                NotificationManager.IMPORTANCE_DEFAULT,
+            ).apply {
+                description = context.getString(R.string.notification_channel_prompt_soft)
             },
         )
         manager.createNotificationChannel(

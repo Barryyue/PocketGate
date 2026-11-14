@@ -3,6 +3,7 @@
     <string name="tile_label">NetworkControl</string>
     <string name="tile_protection">Protection</string>
     <string name="notification_channel_prompt">Connection prompts</string>
+    <string name="notification_channel_prompt_soft">Connection prompts (quiet)</string>
     <string name="notification_channel_protection">Protection status</string>
     <string name="notification_channel_quiet">Quiet period summary</string>
     <string name="protection_active">Protection is on</string>

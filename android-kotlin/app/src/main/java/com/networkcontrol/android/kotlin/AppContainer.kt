@@ -61,6 +61,7 @@ class AppContainer(context: Context) {
     val appCatalog = AppCatalog(appContext)
     val owners = ConnectionOwnerResolver(appContext)
     val network = NetworkMonitor(appContext)
+    val screenState = com.networkcontrol.android.kotlin.engine.network.ScreenStateMonitor(appContext)
     val profileAutoSwitcher = com.networkcontrol.android.kotlin.core.profiles.ProfileAutoSwitcher(
         profiles = profiles,
         runtime = runtime,
@@ -99,6 +100,8 @@ class AppContainer(context: Context) {
         protection = protection,
         tunnel = vpnTunnel,
         network = network,
+        screenState = screenState,
+        blockOnLockScreen = { preferences.blockOnLockScreen },
         notifier = vpnNotifier,
         selfPackage = appContext.packageName,
     )
@@ -106,7 +109,20 @@ class AppContainer(context: Context) {
     val trafficCollector = TrafficCollector(appContext, appCatalog, appStore, trafficStore)
     val speedMonitor = com.networkcontrol.android.kotlin.engine.traffic.SpeedMonitor()
     val ruleLifetime = RuleLifetimeManager(rules, scope)
-    val promptNotifier = com.networkcontrol.android.kotlin.platform.PromptNotifier(appContext, prompts, scope, preferences)
+    val promptNotifier = com.networkcontrol.android.kotlin.platform.PromptNotifier(appContext, preferences)
+    val appUiVisibility = com.networkcontrol.android.kotlin.platform.prompt.AppUiVisibility(appContext)
+    val foregroundTracker = com.networkcontrol.android.kotlin.platform.prompt.PromptForegroundTracker(appContext)
+    val promptOverlay = com.networkcontrol.android.kotlin.platform.prompt.PromptOverlayController(appContext, preferences)
+    val promptRouter = com.networkcontrol.android.kotlin.platform.prompt.PromptRouter(
+        scope = scope,
+        broker = prompts,
+        notifier = promptNotifier,
+        overlay = promptOverlay,
+        uiVisibility = appUiVisibility,
+        tracker = foregroundTracker,
+        protection = protection,
+        preferences = preferences,
+    )
     val backend = AppBackend(this)
     val configBackup = ConfigBackup(appContext, configDatabase)
     val diagnostics = DiagnosticsExporter(appContext, this)
@@ -129,12 +145,13 @@ class AppContainer(context: Context) {
                 .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "backup failed", it) }
             runCatching { ruleLifetime.start() }
             runCatching { network.start() }
+            runCatching { screenState.start() }
             runCatching { vpnEngine.start() }
                 .onFailure {
                     protection.setEnabled(false)
                     com.networkcontrol.android.kotlin.platform.AppLog.e("core", "VPN engine start failed; protection disabled", it)
                 }
-            runCatching { promptNotifier.start() }
+            runCatching { promptRouter.start() }
             runCatching { quietNotifier.start() }
             runCatching { speedMonitor.start(scope) }
             scope.launch {

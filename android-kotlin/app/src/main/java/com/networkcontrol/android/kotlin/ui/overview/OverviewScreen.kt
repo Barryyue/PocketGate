@@ -478,6 +478,11 @@ private fun BatchPromptDialog(
                 Text(s[S.BatchPromptsHint], style = MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(
+                        lifetime == RuleLifetime.Once,
+                        { lifetime = RuleLifetime.Once },
+                        { Text(s[S.PromptOnce]) },
+                    )
+                    FilterChip(
                         lifetime == RuleLifetime.Permanent,
                         { lifetime = RuleLifetime.Permanent },
                         { Text(s[S.PromptPermanent]) },

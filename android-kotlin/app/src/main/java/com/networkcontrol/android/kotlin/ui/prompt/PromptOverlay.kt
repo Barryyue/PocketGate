@@ -46,6 +46,7 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
     val s = rememberUiStrings()
     val prompts by backend.prompts.collectAsStateWithLifecycle()
     val prompt = prompts.firstOrNull() ?: return
+    val prefs = backend.container.preferences
     var lifetime by remember(prompt.id) { mutableStateOf(RuleLifetime.Permanent) }
 
     LaunchedEffect(prompt.id) {
@@ -81,26 +82,30 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                     val target = first?.let {
                         it.domains.firstOrNull() ?: "${it.remote.address.hostAddress}:${it.remote.port}"
                     } ?: ""
-                    Text(
-                        "${s[S.PromptTarget]}：$target · ${first?.let { protocolLabel(it.protocol) }.orEmpty()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (prompt.flows.size > 1) {
+                    if (prefs.promptShowDetails) {
                         Text(
-                            s.format(S.PromptFlows, prompt.flows.size),
+                            "${s[S.PromptTarget]}：$target · ${first?.let { protocolLabel(it.protocol) }.orEmpty()}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        if (prompt.flows.size > 1) {
+                            Text(
+                                s.format(S.PromptFlows, prompt.flows.size),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
 
-            Text(
-                s[S.PromptBlockedHint],
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (prefs.promptShowExplanation) {
+                Text(
+                    s[S.PromptBlockedHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (prompt.isTamperAlert) {
                 Text(
                     s[S.PromptTamper],
@@ -110,6 +115,11 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(
+                    lifetime == RuleLifetime.Once,
+                    { lifetime = RuleLifetime.Once },
+                    { Text(s[S.PromptOnce]) },
+                )
                 FilterChip(
                     lifetime == RuleLifetime.Permanent,
                     { lifetime = RuleLifetime.Permanent },

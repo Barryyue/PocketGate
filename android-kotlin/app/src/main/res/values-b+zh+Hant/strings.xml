@@ -3,6 +3,7 @@
     <string name="tile_label">NetworkControl</string>
     <string name="tile_protection">保護</string>
     <string name="notification_channel_prompt">連線詢問</string>
+    <string name="notification_channel_prompt_soft">連線詢問（安靜）</string>
     <string name="notification_channel_protection">保護狀態</string>
     <string name="notification_channel_quiet">勿擾摘要</string>
     <string name="protection_active">保護已開啟</string>

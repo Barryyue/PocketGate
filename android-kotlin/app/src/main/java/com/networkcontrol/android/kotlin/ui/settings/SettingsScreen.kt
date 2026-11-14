@@ -75,6 +75,15 @@ fun SettingsScreen(backend: AppBackend) {
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val plan by backend.plan.collectAsStateWithLifecycle()
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
+    var overlayKey by remember { mutableIntStateOf(0) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { overlayKey++ }
+    val canDrawOverlays = remember(overlayKey) { backend.canDrawOverlays() }
+    var promptMode by remember { mutableStateOf(backend.promptPresentationMode()) }
+    var promptPosition by remember { mutableStateOf(backend.promptOverlayPosition()) }
+    var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
+    var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
+    var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
+    var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
 
     var timeoutText by remember(settings.promptTimeoutSeconds) {
         mutableStateOf(settings.promptTimeoutSeconds.toString())
@@ -235,6 +244,108 @@ fun SettingsScreen(backend: AppBackend) {
         }
 
         item {
+            SectionCard(s[S.PromptPresentation]) {
+                val autoOverlay = promptMode == "auto"
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        autoOverlay,
+                        {
+                            promptMode = "auto"
+                            backend.setPromptPresentationMode("auto")
+                        },
+                        { Text(s[S.PromptPresentationAuto]) },
+                    )
+                    FilterChip(
+                        !autoOverlay,
+                        {
+                            promptMode = "notification"
+                            backend.setPromptPresentationMode("notification")
+                        },
+                        { Text(s[S.PromptPresentationNotification]) },
+                    )
+                }
+                Text(
+                    s[S.PromptPresentationHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (autoOverlay) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            s[S.OverlayPermission],
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            if (canDrawOverlays) s[S.OverlayGranted] else s[S.OverlayDenied],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (canDrawOverlays) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                        )
+                        if (!canDrawOverlays) {
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedButton(onClick = { context.startActivity(backend.overlayPermissionIntent()) }) {
+                                Text(s[S.OverlayGrant])
+                            }
+                        }
+                    }
+                    Text(s[S.OverlayPosition], style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            promptPosition != "bottom",
+                            {
+                                promptPosition = "top"
+                                backend.setPromptOverlayPosition("top")
+                            },
+                            { Text(s[S.OverlayTop]) },
+                        )
+                        FilterChip(
+                            promptPosition == "bottom",
+                            {
+                                promptPosition = "bottom"
+                                backend.setPromptOverlayPosition("bottom")
+                            },
+                            { Text(s[S.OverlayBottom]) },
+                        )
+                    }
+                    Text(
+                        s[S.OverlayOemHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(s[S.PromptContentSettings], style = MaterialTheme.typography.bodyMedium)
+                SwitchRow(
+                    title = s[S.ShowPromptDetails],
+                    checked = promptDetails,
+                    onCheckedChange = {
+                        promptDetails = it
+                        backend.setPromptShowDetails(it)
+                    },
+                )
+                SwitchRow(
+                    title = s[S.ShowPromptExplanation],
+                    checked = promptExplanation,
+                    onCheckedChange = {
+                        promptExplanation = it
+                        backend.setPromptShowExplanation(it)
+                    },
+                )
+                SwitchRow(
+                    title = s[S.HidePromptDetailsOnLock],
+                    checked = hideOnLock,
+                    onCheckedChange = {
+                        hideOnLock = it
+                        backend.setPromptHideDetailsOnLockScreen(it)
+                    },
+                )
+            }
+        }
+
+        item {
             SectionCard(s[S.TrustSettings]) {
                 SwitchRow(
                     title = s[S.AllowSystemApps],
@@ -274,9 +385,7 @@ fun SettingsScreen(backend: AppBackend) {
                 SwitchRow(
                     title = s[S.NotificationsEnabled],
                     checked = backend.container.preferences.notificationsEnabled,
-                    onCheckedChange = {
-                        backend.container.preferences.notificationsEnabled = it
-                    },
+                    onCheckedChange = { backend.setNotificationsEnabled(it) },
                 )
                 OutlinedButton(onClick = { context.startActivity(backend.openNotificationSettings()) }) {
                     Text(s[S.OpenNotificationSettings])
@@ -286,6 +395,15 @@ fun SettingsScreen(backend: AppBackend) {
 
         item {
             SectionCard(s[S.VpnSettings]) {
+                SwitchRow(
+                    title = s[S.BlockOnLock],
+                    subtitle = s[S.BlockOnLockHint],
+                    checked = blockOnLock,
+                    onCheckedChange = {
+                        blockOnLock = it
+                        backend.setBlockOnLockScreen(it)
+                    },
+                )
                 OutlinedButton(onClick = { context.startActivity(backend.openAlwaysOnVpnSettings()) }) {
                     Text(s[S.AlwaysOnVpn])
                 }

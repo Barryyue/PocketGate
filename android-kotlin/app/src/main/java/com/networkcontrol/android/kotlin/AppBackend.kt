@@ -378,6 +378,69 @@ class AppBackend(val container: AppContainer) {
     fun notificationsAvailable(): Boolean =
         androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
 
+    fun setNotificationsEnabled(enabled: Boolean) {
+        container.preferences.notificationsEnabled = enabled
+        container.promptRouter.refresh()
+    }
+
+    fun promptPresentationMode(): String = container.preferences.promptPresentationMode
+
+    fun setPromptPresentationMode(mode: String) {
+        container.preferences.promptPresentationMode = mode
+        container.promptRouter.refresh()
+    }
+
+    fun promptOverlayPosition(): String = container.preferences.promptOverlayPosition
+
+    fun setPromptOverlayPosition(position: String) {
+        container.preferences.promptOverlayPosition = position
+        container.promptRouter.refresh()
+    }
+
+    fun promptShowDetails(): Boolean = container.preferences.promptShowDetails
+
+    fun setPromptShowDetails(show: Boolean) {
+        container.preferences.promptShowDetails = show
+        container.promptRouter.refresh()
+    }
+
+    fun promptShowExplanation(): Boolean = container.preferences.promptShowExplanation
+
+    fun setPromptShowExplanation(show: Boolean) {
+        container.preferences.promptShowExplanation = show
+        container.promptRouter.refresh()
+    }
+
+    fun promptHideDetailsOnLockScreen(): Boolean = container.preferences.promptHideDetailsOnLockScreen
+
+    fun setPromptHideDetailsOnLockScreen(hide: Boolean) {
+        container.preferences.promptHideDetailsOnLockScreen = hide
+        container.promptRouter.refresh()
+    }
+
+    fun blockOnLockScreen(): Boolean = container.preferences.blockOnLockScreen
+
+    fun setBlockOnLockScreen(enabled: Boolean) {
+        container.preferences.blockOnLockScreen = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun isScreenLocked(): Boolean = container.screenState.locked.value
+
+    fun canDrawOverlays(): Boolean = container.promptOverlay.canDrawOverlays()
+
+    fun overlayPermissionIntent(): Intent {
+        val packageUri = Uri.parse("package:${context.packageName}")
+        val candidates = listOf(
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, packageUri),
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION),
+            openAppSettings(),
+        )
+        return candidates.firstOrNull { intent ->
+            runCatching { intent.resolveActivity(context.packageManager) != null }.getOrDefault(false)
+        } ?: openAppSettings()
+    }
+
     fun appListVisibility(): com.networkcontrol.android.kotlin.engine.apps.AppCatalog.AppListVisibility =
         container.appCatalog.visibility()
 
@@ -480,7 +543,7 @@ class AppBackend(val container: AppContainer) {
 
     fun refreshNotifications() {
         container.vpnEngine.refreshNotification()
-        container.promptNotifier.refreshPending()
+        container.promptRouter.refresh()
     }
 
     fun scheduleTrafficRefresh() {

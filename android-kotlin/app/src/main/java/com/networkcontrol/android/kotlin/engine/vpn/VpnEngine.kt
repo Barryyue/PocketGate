@@ -33,6 +33,8 @@ class VpnEngine(
     private val protection: ProtectionController,
     private val tunnel: VpnTunnelController,
     private val network: com.networkcontrol.android.kotlin.engine.network.NetworkMonitor,
+    private val screenState: com.networkcontrol.android.kotlin.engine.network.ScreenStateMonitor,
+    private val blockOnLockScreen: () -> Boolean,
     private val notifier: VpnForegroundNotifier,
     private val selfPackage: String,
 ) {
@@ -76,6 +78,7 @@ class VpnEngine(
         scope.launch { settings.state.collect { requestReplan() } }
         // 網路類型 / SIM 變更會改變帶網路條件的應用規則，必須重新規劃路由。
         scope.launch { network.state.collect { requestReplan() } }
+        scope.launch { screenState.locked.collect { requestReplan() } }
         scope.launch {
             replanSignal.debounce(300).collect {
                 runCatching { replanNow() }.onFailure { error ->
@@ -95,7 +98,11 @@ class VpnEngine(
     private suspend fun replanNow() {
         val plan = VpnRoutingPlanner.plan(
             rules = rules.ruleSet.value,
-            mode = runtime.mode,
+            mode = if (screenState.locked.value && blockOnLockScreen()) {
+                com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll
+            } else {
+                runtime.mode
+            },
             apps = catalog.getApps(),
             selfPackage = selfPackage,
             network = network.current,
