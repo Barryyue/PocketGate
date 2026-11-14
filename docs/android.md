@@ -527,6 +527,7 @@ public interface IBackend
 |---|---|
 | AtomUI 在 Android 上不可用或部分不可用 | R-A1 首先驗證；回退方案見 §7.3 |
 | 某些廠商 ROM（MIUI / HyperOS 等）限制後台、修改 VPN 行為 | 設定頁提供電池最佳化白名單入口；真機驗證由用戶執行 |
+| **私人 DNS（Private DNS）嚴格模式**：系統把被阻斷應用的 DNS 查詢改為加密 DNS（DoT）發往指定的真實服務器，不經過假 DNS，被阻斷應用解析失敗、不發起連接，引擎無法按 UID 歸屬，**永遠不會詢問**（應用表現為莫名其妙不能上網） | 待真機實測（progress-android.md P0）；偵測到嚴格模式（`LinkProperties.getPrivateDnsServerName()` 非空）時在總覽頁提示並說明處理方法；自動模式下系統只是向假 DNS 地址探測 853 端口，不受影響（模擬器上觀察到的 UID 1051 探測即此） |
 | `getConnectionOwnerUid` 對 UDP / IPv6 偶爾返回 -1 | 只影響詢問的觸發（報文照樣被丟棄）；計數寫入診斷 |
 | 重建 VPN 時已建立的連接被重置 | 只有被移入 / 移出 VPN 的應用受影響；防抖合併頻繁的規則變化 |
 | Mono + AtomUI 冷啟動慢、APK 大 | 預研時測量；Release 啟用裁剪和 `AndroidEnableProfiledAot` |
