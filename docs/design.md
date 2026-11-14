@@ -1215,6 +1215,11 @@ M0 骨架已按本文檔實現。以下是實現過程中對原設計的調整�
 | 配置文件管理 | `Profile` 只有模式和排序 | `ProfileService` + `IProfileRepository`；切換配置文件時原子更新 `ActiveProfileId` 和模式，處於全部阻斷時只記住新模式；刪除配置文件先移除專屬規則；`ServiceStatus` 追加 `active_profile_name`；Android 單進程直接調用同一服務 | 兩端共用同一套配置文件語義；避免只改運行時狀態而規則集沒有重新發布 |
 | 只能按應用分流的引擎 | — | `RuleSet.FindAppRule(app, filter)`：按優先級查找作用於應用的第一條規則，帶連接條件的規則由引擎篩掉並報告為「此平台不生效」 | 讓 Android 引擎與 WFP 引擎共用同一套規則優先級和篡改檢測 |
 | Android 引擎的演進 | §3.1 方案 A 為 MVP | 黑洞式分流保留為默認的「省電模式」；中期新增轉發模式（用戶態協議棧 + 上游 SOCKS5 / HTTP 代理）作為可選的「進階模式」，見 [android.md §3.3](android.md#33-與其他-vpn梯子公司-vpn共存2026-11-14) | Android 同時只允許一個 VPN：黑洞模式不接手允許的流量，無法與梯子、公司 VPN 共存；業界（NetGuard、RethinkDNS）的做法是防火牆作為唯一的 VPN 並轉發給上游代理 |
+| 模式回寫（M3-03R R4） | M3-03 設計為訂閱 `RuntimeStateService.Changed` 異步回寫當前配置文件的 `Mode` | `ProfileService.SetActiveModeAsync`：詢問 / 白名單 / 黑名單在寫入鎖內更新當前配置文件並持久化，再改運行狀態；全部阻斷 / 停用過濾只改運行狀態；`Disabled` 下切換配置文件不再重新打開保護 | 事件處理器中的 fire-and-forget 難以測試、出錯也看不到；避免重新命名或切換配置文件時把用戶手動選的模式改回去 |
+| 導入未知配置文件的規則（M3-03R R8） | 降級為共享規則（`ProfileId = null`），作用範圍擴大到所有配置文件 | 略過並在預覽 / 結果中回報數量（`ImportResult.skipped_unknown_profile`） | 在使用者不知情時放寬過濾是安全問題；本機備份的配置文件 ID 都存在，不受影響 |
+| 桌面配置文件列表（M3-03R R2/R5/R9） | 規則頁、設定頁、托盤、總覽各自呼叫 `Profiles.List` | 新增 `ProfileCatalog` 單例；`ServiceStatus.profiles_revision` 變化時刷新；舊版服務（Unimplemented）隱藏配置文件界面；托盤勾選改用 `ActiveProfileId` | 避免一處失敗拖垮整頁，並讓多個入口看到同一份列表 |
+| Android 配置文件編輯（M3-04A） | M3-03 只做了名稱 / 模式，設定頁卡片漏提交 | 補上設定頁配置文件卡片；可編輯自動切換條件（網路類型 / SSID），提供「使用目前的 Wi-Fi」；自動切換與勿擾摘要使用低優先級通知頻道 | 與桌面 M3-04 / M3-07 對齊；沒有界面時（開機恢復）也能收到通知 |
+
 
 ---
 
