@@ -463,3 +463,48 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 專注模式結束小結、AlarmManager 精確排程、重啟後時間表校正待補強。
 - 批量詢問與通知動作進程回收仍需真機場景驗證。
 - M3 性能、正式簽名 / AAB、工作資料夾、IPv6 / OEM 回歸、冒煙腳本；M4 轉發模式。
+
+---
+
+## 14. v0.5（2026-11-15）
+
+### 14.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 啟動與建置 | 初始化日誌加入耗時；release 維持 R8 + 資源壓縮；新增 AAB 打包命令。 |
+| 簽名 | `NC_ANDROID_KEYSTORE` / `NC_ANDROID_KEYSTORE_PASSWORD` / `NC_ANDROID_KEY_ALIAS` / `NC_ANDROID_KEY_PASSWORD` 存在時使用正式簽名，否則沿用 debug。 |
+| 更新檢查 | 設定 → 關於新增「檢查更新」；讀取 GitHub latest release，版本比較，跟隨系統代理；有新版本可開啟下載頁。 |
+| 工作資料夾 | 設定 → 關於顯示工作資料夾提示：VPN 只作用於目前使用者。 |
+| 診斷 | summary 加入網絡類型 / SSID / SIM / 私人 DNS / IPv6 / 鎖屏斷網 / 專注 / 懸浮權限 / UsageStats。 |
+| 回歸 | 新增 [android-regression-checklist.md](android-regression-checklist.md)：模擬器冒煙、真機網絡、OEM ROM、發版檢查。 |
+| 冒煙腳本 | `scripts/android-kotlin-smoke.ps1`：安裝、授權 appops、啟動、進程存活、FATAL 檢查。 |
+| WireGuard | 決策：不內置 WireGuard VPN；未來作為轉發模式的上游出口。 |
+
+### 14.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.5.0.apk` |
+| APK 大小 | 3,354,142 bytes（約 3.2 MB） |
+| APK SHA-256 | `9E133E782C1A39CA5675424CCAB31698BEE66CCCE11CC90A142D7ABA7315FE9E` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.5.0.aab` |
+| AAB 大小 | 4,298,273 bytes（約 4.1 MB） |
+| AAB SHA-256 | `AADF6170D1CF5D1F6178B9C169FBAF528733893A0BD3F94BAF5A718C9D027EE3` |
+| versionName / Code | `0.5.0` / `5` |
+| 簽名 | Android Debug（正式簽名需設定 `NC_ANDROID_KEYSTORE`） |
+
+### 14.3 驗證
+
+- 60 個 JVM 測試通過；Release APK 與 AAB 構建通過。
+- 模擬器冒煙腳本通過：進程存活、無 FATAL、UsageStats / 懸浮窗 appops 設定成功。
+- 模擬器：專注模式、專注時間表、懸浮面板、詢問內容、應用鎖入口、工作資料夾提示均無閃退。
+- 真機未驗證：正式簽名、純 IPv6、私人 DNS、OEM ROM、微信懸浮面板、鎖屏斷網、應用鎖憑證、新應用通知、更新檢查網絡。
+
+### 14.4 仍待處理
+
+- Baseline Profiles、arm64-only、CI 大小 / 啟動基線。
+- 正式 keystore 簽名與側載更新流程演練（需用戶提供密鑰）。
+- 純 IPv6 / 私人 DNS / OEM ROM 真機回歸（清單已備）。
+- 應用鎖在修改規則 / 模式 / 退出時的即時驗證。
+- 轉發模式 Phase 0 尚未開始；需要 Go / NDK 工具鏈與真機吞吐 / 耗電測試。

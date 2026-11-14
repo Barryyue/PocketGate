@@ -45,12 +45,14 @@
 
 ### M3 — v0.5：性能、發布與平台深化（約 1–2 週）
 
+> **狀態：第一版已完成（2026-11-15，提交 `1db37d1`，APK `NetworkControl-KT-0.5.0.apk` / AAB）。** Baseline Profiles、arm64-only、CI 基線、正式 keystore 演練、純 IPv6 / OEM 真機回歸列為後續；功能記錄見 K-045～K-050。
+
 1. **K-045 性能 P-1…P-9**：啟動埋點、只打 arm64、完整裁剪、R8、Baseline Profiles、啟動畫面、應用目錄增量、並行初始化、CI 大小 / 啟動基線。
 2. **K-046 正式簽名 / AAB / 更新渠道**：用戶提供密鑰庫；`NC_ANDROID_KEYSTORE`；AAB + Play 用途宣告；側載更新檢查。
 3. **K-047 工作資料夾 / 多使用者**：明確限制、狀態提示；可行時支援。
 4. **K-048 純 IPv6 / 私人 DNS / OEM ROM 回歸**：真機清單與診斷。
 5. **K-049 冒煙測試腳本**：adb 安裝、授權、開保護、Chrome / 通知 / 記錄檢查。
-6. **K-050 內置 WireGuard（可選）**：預研後決定。
+6. **K-050 內置 WireGuard（可選）**：預研後決定。**決定：不內置 WireGuard VPN**。Android 同時只能有一個 `VpnService`，內置 WireGuard 會與本應用的黑洞 / 轉發隧道衝突；若未來需要 WireGuard，應作為轉發模式的上游代理（SOCKS5 / WireGuard 出口），由使用者自行安裝的客戶端提供，而不是替換本應用的 VpnService。
 
 ### M4 — v1.0：轉發模式 + 上游代理（約 2–2.5 個月）
 

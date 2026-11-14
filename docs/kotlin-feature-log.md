@@ -77,19 +77,27 @@
 | K-043 | 應用鎖（第一版）：使用系統鎖屏憑證解鎖，離開超過 1 分鐘重新鎖定；未設定鎖屏時阻止啟用 | `AppLockGate`、`AppPreferences`、`SettingsScreen`、`MainActivity` | 構建 + 代碼審查 | 修改規則 / 模式前的即時驗證尚未做 |
 | K-044 | 無障礙與平板：導航圖示加內容描述；內容最大寬度 760dp 居中，改善平板與大字體佈局 | `AppRoot` | 構建 + 模擬器 | TalkBack 全流程待真機 |
 
+### v0.5（2026-11-15，提交 `1db37d1`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-045 | 啟動初始化耗時日誌；release 維持 R8 + 資源壓縮；AAB 打包 | `AppContainer`、`build.gradle.kts`、`scripts/android-kotlin.ps1` | Release APK / AAB 構建 | Baseline Profiles、arm64-only、CI 大小基線尚未做 |
+| K-046 | 正式簽名環境變量（`NC_ANDROID_KEYSTORE` 等）、AAB、GitHub 更新檢查（跟隨系統代理） | `build.gradle.kts`、`UpdateChecker`、`SettingsScreen`、腳本 | 更新版本比較測試；AAB 4.1 MB | 正式 keystore 需用戶提供 |
+| K-047 | 工作資料夾 / 多使用者限制提示 | `AppBackend.isWorkProfile`、`SettingsScreen` | 代碼審查 | 只提示，不支援跨使用者控制 |
+| K-048 | 診斷加入網絡 / SIM / 私人 DNS / IPv6 / 懸浮權限 / 專注狀態；新增真機回歸清單 | `DiagnosticsExporter`、[android-regression-checklist.md](android-regression-checklist.md) | 構建 | 真機 IPv6 / OEM 回歸待做 |
+| K-049 | adb 冒煙腳本：安裝、授權 appops、啟動、進程存活、FATAL 檢查 | `scripts/android-kotlin-smoke.ps1` | 模擬器執行通過 | 需連接裝置 |
+| K-050 | 內置 WireGuard 決策：不內置，避免與單一 VpnService 衝突；未來作為轉發模式上游 | [kotlin-roadmap.md](kotlin-roadmap.md) | 設計決策 | 無代碼改動 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
 |---|---|---|
 | K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 部分完成（應用列表的 SIM 查詢已提升），其餘待做 |
 | K-043b | 應用鎖在修改規則 / 模式前的即時驗證 | 待做（第一版只鎖啟動與背景超過 1 分鐘） |
-| K-045 | 性能：啟動埋點、只打 arm64、R8 / Baseline Profiles、CI 大小基線 | M3 |
-| K-046 | 正式簽名 / AAB / 側載更新檢查 | M3，需用戶提供 keystore |
-| K-047 | 工作資料夾 / 多使用者 | M3 |
-| K-048 | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | M3 |
-| K-049 | adb 冒煙測試腳本 | M3 |
-| K-050 | 內置 WireGuard（可選） | M3 預研 |
-| K-051 | 轉發模式 + 上游代理 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
+| K-045b | Baseline Profiles、arm64-only、CI 大小 / 啟動基線 | 待做 |
+| K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 待用戶提供 keystore |
+| K-048b | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | 待真機 |
+| K-051 | 轉發模式 + 上游代理（Phase 0 起） | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
 
 ## 3. 維護規則
 
