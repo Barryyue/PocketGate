@@ -151,6 +151,76 @@ M3 全部完成需要同時滿足：
 
 ---
 
+## 4.6 剩餘工作重排（2026-11-14 第二輪核對）
+
+第二輪核對發現三類缺口，按下面的批次完成；每批結束都要求 `main` 保持綠色：
+
+1. **M3-03R 審計修正**：R1–R10，之前漏列在進度看板，現在已補上；R8 / R3 / R1 已完成。
+2. **M3-14R 圖標審查修正**：應用圖標目前有 5 個代碼審查缺陷（提取必失敗、透明圖標、失敗緩存、連線行同步、重複加載），列在 progress.md 的 M3-14 條目下。
+3. **M3 之外的 P1 缺口**：連線記錄 CSV 導出（FR-MON-02）、全屏自動勿擾（FR-NTF-03）、托盤懸停實時速率（FR-TRY-03）、規則與應用記錄去重（用戶 2026-11-14 確認要做），以及設計 §23 / §24 的情境、時間表、專注模式、可信發布者、詢問批量處理。
+
+### Batch A — 先清掉審計問題（現在）
+
+1. **R7**（最高優先）`ProfileService.ActivateAsync` / `DeleteAsync` 的「檢查 + 操作」全部放進 `_writeGate`；新增交錯測試，確保啟用和刪除不能同時成功。
+2. **R9** `profiles_revision` + `WatchStatus` 訂閱 `ProfileService.Changed`。`ServiceStatus` 已用 11（network_display_name）、12（last_quiet_period），新字段用 **13**，不要改已用編號。
+3. **R10** 複製規則：來源不存在先報錯；只複製 Permanent 和未過期 Timed；用 `RuleService.AddRangeAsync` 一次發布，失敗時補償刪除；`Profiles.List` 先算一次規則數字典。
+4. **R4** 模式回寫：`ProfileService.SetActiveModeAsync`；`UpdateAsync` 只在模式真的改變時同步狀態；BlockAll / Disabled / 重新命名的行為按 R4 驗收；`ControlGrpcService.SetMode` 改走新方法。
+5. **R2** 新增 `ProfileCatalog`（載入失敗不拋、Unimplemented 時隱藏配置文件 UI）；規則頁、設定頁、托盤、總覽改用；`profiles_revision` 變化時刷新。
+6. **R5** 托盤勾選改用 `status.ActiveProfileId`，不再讀 `IsOpen` 快照。
+7. **R6** Android 總覽選擇以 `Backend.ActiveProfile` 為準，切換失敗要提示並還原；等 Android 批次合併後做。
+
+### Batch B — M3-14R 圖標修復（可與 Batch A 並行）
+
+1. `Marshal.SizeOf<Bitmap>()` 改 `NativeBitmap`，意外異常寫日誌，失敗的 Task 不留在緩存。
+2. 沒有 Alpha 通道的舊圖標用掩碼位圖生成透明度。
+3. 失敗結果不永久緩存（或 5 分鐘後重試）。
+4. 連線頁已有行對象要同步 `Connection` / 語言 / `CanKill`，只在真正插入新行時加載圖標；抽出與應用頁共用的圖標加載小類。
+5. 補測試：對 Windows 自帶 exe 提取非空、非全透明位圖；失敗重試；連線行狀態同步。
+6. 剩餘界面：排行榜、詢問彈窗接入圖標。
+
+### Batch C — 合併並行成果並補 Android 缺口
+
+1. 審查並合併 Android M3-05 / M3-09 / M3-10 / M3-11 / M3-06（目前 M3-06 仍由背景 agent 進行）。
+2. M3-04 Android：配置文件編輯器加入自動切換條件（類型 / SSID），「使用目前的 Wi-Fi」按鈕，切換時普通通知。
+3. M3-07 Android：新增低優先級「勿擾摘要」通知頻道，點擊打開阻擋記錄頁；保留現有總覽摘要卡。
+4. M3-10 / M3-09 在真機上回歸（待用戶）。
+
+### Batch D — Windows 引擎與 M3-15
+
+1. 合併 M3-17 集成測試（背景 agent 已提交 `25b1e02`），非管理員全部 Skip。
+2. 審閱 `docs/m3-15-research.md` 和背景 agent 的預研提交 `286572f`；把結論摘要寫入 design.md §22，等用戶確認後再實現 svchost / MSIX 下發。
+3. 可先實現不依賴預研結論的 MSIX `ALE_PACKAGE_ID` 部分；svchost 的 `ALE_USER_ID` 安全描述符部分等確認。
+4. M3-08 / M3-02 的管理員實機驗證進入用戶隊列。
+
+### Batch E — P1 缺口
+
+按價值排序，M3-03R / M3-14R 完成後再做：
+
+1. **規則與應用記錄去重**（用戶已確認；Core + Storage + 桌面 + Android）：路徑比較鍵、規則「有就更新」、啟動時合併舊數據、規則頁按應用分組。
+2. **連線記錄 CSV 導出**（FR-MON-02）：服務或界面按當前篩選導出 CSV。
+3. **全屏自動勿擾**（FR-NTF-03）：檢測全屏應用，可選自動進入勿擾。
+4. **托盤懸停實時速率**（FR-TRY-03）：狀態推送中提供速率，托盤提示顯示。
+5. 設計 §23 / §24：情境 + 時間表、專注模式、可信發布者批量允許、詢問隊列批量處理。這些不屬於 M3 19 項，但屬於 P1；另開任務/里程碑，不要混進 M3-03R。
+
+### Batch F — 總回歸與發布
+
+- 合併所有分支，跑 Windows build / test / format、Android build / format、AOT 發布腳本。
+- 版本升到 0.4.0，生成候選包；按第 7 節用戶驗證隊列逐項確認。
+- M3-15 / M3-17 的管理員驗證、M3-13 正式 feed URL、M3-18 繁中安裝界面由用戶完成。
+
+### 依賴與順序
+
+```mermaid
+flowchart LR
+    A[Batch A: M3-03R] --> C[Batch C: 合併 Android + 補缺口]
+    B[Batch B: M3-14R] --> C
+    C --> D[Batch D: Windows / M3-15]
+    D --> E[Batch E: P1 缺口]
+    E --> F[Batch F: 回歸與發布]
+```
+
+Batch B 與 Batch A 可以並行（不同文件）；Batch C 依賴 Android agent 完成；Batch D 依賴 Windows agent 完成；M3-15 第二步依賴用戶確認預研結論。
+
 ## 5. 依賴關係
 
 ```mermaid
@@ -191,21 +261,22 @@ flowchart LR
 | M3-02 | 斷開連線 | P0 | 代碼完成待驗證 | `0b273f2` | Fake 探針（能力提示） | 管理員實機斷開 |
 | M3-03 | 配置文件管理 | P1 | 代碼完成待驗證 | `c7a030d` | 356 測試 + Fake 探針 + Android 構建 | 桌面 / Android 界面 |
 | M3-03R | 配置文件審查修正（R1–R10） | P1 | 進行中 | R8/R3/R1 已提交 | 420 測試 | 桌面 / Android 界面 |
+| M3-14R | 應用圖標審查修正（5 項） | P2 | 待開始 | — | 待補 | 圖標視覺效果 |
 | M3-04 | 按網絡自動切換 | P1 | 代碼完成待驗證 | `f0fab65` | 362 測試 + Fake 探針 | Windows Wi-Fi / Android 真機 |
 | M3-07 | 勿擾期間阻斷彙總 | P1 | 代碼完成待驗證 | `8ab0c66` | 362 測試 + Fake 探針 | 桌面 Toast / Android 通知 |
 | M3-12 | 權限分級提示 | P2 | 代碼完成待驗證 | `6d89f01` | 構建 / 測試 | 普通用戶界面效果 |
 | M3-14 | 應用圖標 | P2 | 代碼完成待驗證 | `500307e` | 構建 / 測試 | 圖標視覺效果（目前只有應用頁） |
 | M3-18 | 安裝程序繁體中文 | P2 | 代碼完成待驗證 | `2acb28d` | ISCC 編譯通過 | 繁中系統安裝界面 |
 | M3-13 | 檢查更新 | P2 | 代碼完成待驗證 | `f3bddc0`、`be8dce2` | 420 測試 + 本機 HTTP 端到端 | 正式 feed URL / 界面 |
-| M3-05 | Android 阻斷快速失敗 | P3 | 未開始 | — | 報文構造單元測試 | 真機 Chrome 立即報錯 |
-| M3-10 | Android 通知語言 | P3 | 未開始 | — | 構建 | 真機切換語言 |
-| M3-09 | Android 快速設定磁貼 | P3 | 未開始 | — | 構建 | 真機磁貼 |
-| M3-11 | Android 診斷導出 | P3 | 未開始 | — | 構建 | 真機導出 zip |
-| M3-06 | Android 規則導入導出 | P3 | 未開始 | — | 不生效規則純函數測試 | 與桌面互通 |
+| M3-05 | Android 阻斷快速失敗 | P3 | 背景代碼完成待合併 | `d58565a` | 報文構造單元測試 | 真機 Chrome 立即報錯 |
+| M3-10 | Android 通知語言 | P3 | 背景代碼完成待合併 | `7265643` | 構建 | 真機切換語言 |
+| M3-09 | Android 快速設定磁貼 | P3 | 背景代碼完成待合併 | `e934acc` | 構建 | 真機磁貼 |
+| M3-11 | Android 診斷導出 | P3 | 背景進行中 | `fc2f929` | 構建 | 真機導出 zip |
+| M3-06 | Android 規則導入導出 | P3 | 背景進行中 | — | 不生效規則純函數測試 | 與桌面互通 |
 | M3-08 | 入站連線控制 | P4 | 代碼完成待驗證 | `b552cd2` | RuleCompiler 測試 | 管理員局域網驗證 |
 | M3-16 | 目錄簽名校驗 | P4 | 代碼完成待驗證 | `ef13df7` | notepad 驗證（非管理員） | 系統文件回歸 |
-| M3-15 | svchost / MSIX | P4 | 未開始（先預研） | — | SID / 佈局測試 | 預研結論確認 + 管理員驗證 |
-| M3-17 | WFP 管理員集成測試 | P4 | 未開始 | — | 非管理員全部 Skip | 管理員全量運行 |
+| M3-15 | svchost / MSIX | P4 | 預研完成待確認 | `286572f` | 預研文件 | 預研結論確認 + 管理員驗證 |
+| M3-17 | WFP 管理員集成測試 | P4 | 背景代碼完成待合併 | `25b1e02` | 非管理員全部 Skip | 管理員全量運行 |
 
 ---
 
