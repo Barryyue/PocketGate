@@ -71,6 +71,8 @@
 - [ ] **備份與恢復**（設計見 [android.md §8.1](android.md#81-備份與恢復診斷導出規劃)）：設定頁「資料」卡片導出 / 導入規則和設定，用系統文件選擇器保存到下載目錄或雲盤（不需要存儲權限）；導入前預覽（共幾條、幾條對應的應用尚未安裝、幾條簽名不同）並選擇合併或覆蓋；只導出永久規則和設定，不導出臨時規則和連線記錄。復用 Storage 的 netcontrol-rules 格式、序列化器和導入計劃（`RuleImportPlanner`，桌面版已在用）。**價值**：本應用關閉了 Android 自動備份，卸載重裝、換手機、恢復出廠設置都會讓規則歸零；Storage 的每日自動備份在應用私有目錄中，卸載時一起被刪除。定位是手機之間的備份與恢復，**不宣傳與桌面版互通**（桌面規則綁定可執行文件路徑、手機規則綁定包名，兩邊基本匹配不上）。→ **M3-06**（第一階段只做規則導入導出）
 - [ ] **診斷導出**（設計見 [android.md §8.1](android.md#81-備份與恢復診斷導出規劃)）：設定頁「資料」卡片一鍵導出 zip，經系統分享面板發送或保存為文件。內容：日誌、當前路由計劃（含此平台不生效的規則）、引擎計數器（報文、聯網嘗試、假 DNS 回答、查不到 UID、系統 UID）、VPN 狀態、**私人 DNS 狀態**、通知和電池最佳化授權狀態、設備型號 / Android 版本 / ROM、Storage 收集器提供的數據庫一致性副本；文本統一脫敏。復用桌面版的診斷包機制（`IDiagnosticsContributor`、`DiagnosticsArchive`、`DiagnosticsRedactor`），Android 補一個自己的收集器。**工程前置**：打包和脫敏代碼目前在 `NetworkControl.Ipc`，Android 不使用 gRPC，要先把它們移到不依賴 gRPC 的共享位置（只移動、不改行為）。→ **M3-11**
 
+- [~] (claude, 2026-11-14) **配置文件（M3-03）**：`IBackend` 追加 `Profiles` / `ActiveProfile` / `ActivateProfileAsync` / `CreateProfileAsync` / `UpdateProfileAsync` / `DeleteProfileAsync` / `GetRuleCount`；總覽頁模式卡片上方配置文件下拉（只有一個時隱藏）；設定頁新增配置文件卡片（列表、設為目前、新增 / 改名 / 刪除、模式選擇）；文本由 `tools/android-strings.py` 生成。Debug APK 構建通過，**未在設備上運行**；切換後 VPN 分流重建需真機確認。
+
 ### P2 依賴「使用情況存取權」的功能（打包一起做，一次完成授權引導）
 - [ ] 使用情況存取權（`PACKAGE_USAGE_STATS`）的授權引導，設定頁顯示授權狀態。
 - [ ] **「允許一次」第二步**：離開應用 1 分鐘後失效（有前台服務時不算離開）；設定頁顯示當前生效的方式。

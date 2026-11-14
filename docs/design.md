@@ -1212,6 +1212,7 @@ M0 骨架已按本文檔實現。以下是實現過程中對原設計的調整�
 | Android 平台 | 未規劃 | 不需要 root 的黑洞式分流 VPN（`Engine.Vpn` 平台無關 + `Engine.Android`），單進程：界面直接調用進程內的 Core / Storage，不運行 gRPC 服務；設計見 [android.md](android.md) | Android 上第三方應用只能用 VpnService 控制其他應用的網絡；Android 工作負載沒有 ASP.NET Core（Kestrel），同一進程內也不需要 IPC 和對端鑒權 |
 | Android 應用身份 | 可執行文件路徑 | 合成路徑 `android-app://<包名>`，簽名者 = 簽名證書 SHA-256，文件戳 = (versionCode, lastUpdateTime) | 復用 Core 以路徑為主鍵的應用身份、規則匹配和篡改檢測，不改領域模型 |
 | Android 詢問觸發 | — | 假 DNS：虛擬網卡宣告 DNS 服務器，引擎用 198.18.0.0/15 中的地址回答並能反查域名 | 不宣告 DNS 時被阻斷應用在本機解析失敗、不發起連接，無法按 UID 歸屬，也就無法詢問（設備驗證中發現） |
+| 配置文件管理 | `Profile` 只有模式和排序 | `ProfileService` + `IProfileRepository`；切換配置文件時原子更新 `ActiveProfileId` 和模式，處於全部阻斷時只記住新模式；刪除配置文件先移除專屬規則；`ServiceStatus` 追加 `active_profile_name`；Android 單進程直接調用同一服務 | 兩端共用同一套配置文件語義；避免只改運行時狀態而規則集沒有重新發布 |
 | 只能按應用分流的引擎 | — | `RuleSet.FindAppRule(app, filter)`：按優先級查找作用於應用的第一條規則，帶連接條件的規則由引擎篩掉並報告為「此平台不生效」 | 讓 Android 引擎與 WFP 引擎共用同一套規則優先級和篡改檢測 |
 | Android 引擎的演進 | §3.1 方案 A 為 MVP | 黑洞式分流保留為默認的「省電模式」；中期新增轉發模式（用戶態協議棧 + 上游 SOCKS5 / HTTP 代理）作為可選的「進階模式」，見 [android.md §3.3](android.md#33-與其他-vpn梯子公司-vpn共存2026-11-14) | Android 同時只允許一個 VPN：黑洞模式不接手允許的流量，無法與梯子、公司 VPN 共存；業界（NetGuard、RethinkDNS）的做法是防火牆作為唯一的 VPN 並轉發給上游代理 |
 
