@@ -134,6 +134,7 @@ class AppContainer(context: Context) {
 
     init {
         scope.launch {
+            val startedAt = android.os.SystemClock.elapsedRealtime()
             runCatching { settings.initialize() }
                 .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "settings init failed", it) }
             runCatching { runtime.initialize() }
@@ -167,7 +168,8 @@ class AppContainer(context: Context) {
             }
             com.networkcontrol.android.kotlin.platform.AppLog.i(
                 "core",
-                "initialized rules=${rules.ruleSet.value.count} apps=${appCatalog.getApps().size}",
+                "initialized rules=${rules.ruleSet.value.count} apps=${appCatalog.getApps().size} " +
+                    "in ${android.os.SystemClock.elapsedRealtime() - startedAt}ms",
             )
             started.complete(Unit)
             startTrafficLoop()

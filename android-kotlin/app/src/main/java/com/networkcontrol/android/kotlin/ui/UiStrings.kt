@@ -268,6 +268,13 @@ enum class S {
     AppLockedTitle,
     Unlock,
     AppLockNoCredential,
+    WorkProfile,
+    WorkProfileHint,
+    CheckUpdates,
+    UpdateAvailable,
+    UpToDate,
+    UpdateFailed,
+    UpdateDownload,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -554,6 +561,13 @@ private val EN = mapOf(
     S.AppLockedTitle to "NetworkControl is locked",
     S.Unlock to "Unlock",
     S.AppLockNoCredential to "Set a screen lock (PIN, pattern or password) first.",
+    S.WorkProfile to "Work profile",
+    S.WorkProfileHint to "The VPN applies to the current user only. Apps in other users or work profiles are outside this app's control.",
+    S.CheckUpdates to "Check for updates",
+    S.UpdateAvailable to "New version %1\$s is available",
+    S.UpToDate to "You are up to date",
+    S.UpdateFailed to "Update check failed: %1\$s",
+    S.UpdateDownload to "Download",
 )
 
 private val CN = mapOf(
@@ -820,6 +834,13 @@ private val CN = mapOf(
     S.AppLockedTitle to "NetworkControl 已锁定",
     S.Unlock to "解锁",
     S.AppLockNoCredential to "请先设置锁屏密码、图案或 PIN。",
+    S.WorkProfile to "工作资料夹",
+    S.WorkProfileHint to "VPN 只作用于当前用户；其他用户或工作资料夹中的应用不受本应用控制。",
+    S.CheckUpdates to "检查更新",
+    S.UpdateAvailable to "发现新版本 %1\$s",
+    S.UpToDate to "已是最新版本",
+    S.UpdateFailed to "检查更新失败：%1\$s",
+    S.UpdateDownload to "下载",
 )
 
 private val TW = mapOf(
@@ -1086,4 +1107,11 @@ private val TW = mapOf(
     S.AppLockedTitle to "NetworkControl 已鎖定",
     S.Unlock to "解鎖",
     S.AppLockNoCredential to "請先設定鎖屏密碼、圖案或 PIN。",
+    S.WorkProfile to "工作資料夾",
+    S.WorkProfileHint to "VPN 只作用於目前使用者；其他使用者或工作資料夾中的應用程式不受本應用程式控制。",
+    S.CheckUpdates to "檢查更新",
+    S.UpdateAvailable to "發現新版本 %1\$s",
+    S.UpToDate to "已是最新版本",
+    S.UpdateFailed to "檢查更新失敗：%1\$s",
+    S.UpdateDownload to "下載",
 )

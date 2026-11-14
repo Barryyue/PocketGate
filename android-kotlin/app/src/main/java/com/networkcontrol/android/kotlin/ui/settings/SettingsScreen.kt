@@ -2,6 +2,7 @@ package com.networkcontrol.android.kotlin.ui.settings
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -59,6 +60,8 @@ import com.networkcontrol.android.kotlin.core.model.RuleImportMode
 import com.networkcontrol.android.kotlin.core.model.RuleImportPreview
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
+import com.networkcontrol.android.kotlin.core.update.UpdateChecker
+import com.networkcontrol.android.kotlin.core.update.UpdateInfo
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
@@ -95,6 +98,8 @@ fun SettingsScreen(backend: AppBackend) {
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
     var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
     var showScheduleDialog by remember { mutableStateOf(false) }
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    var checkingUpdate by remember { mutableStateOf(false) }
 
     var timeoutText by remember(settings.promptTimeoutSeconds) {
         mutableStateOf(settings.promptTimeoutSeconds.toString())
@@ -584,9 +589,53 @@ fun SettingsScreen(backend: AppBackend) {
             SectionCard(s[S.About]) {
                 DetailLine(s[S.Version], "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
                 DetailLine(s[S.Engine], "AndroidVpn")
+                if (backend.isWorkProfile()) {
+                    DetailLine(s[S.WorkProfile], "✓")
+                    Text(
+                        s[S.WorkProfileHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 DetailLine(s[S.Status], "${runtime.mode.name} / ${backend.protectionStatus().name}")
                 DetailLine(s[S.SkippedRules], plan.skippedRules.size.toString())
                 DetailLine(s[S.AppsCount], backend.container.appCatalog.getApps().size.toString())
+                OutlinedButton(
+                    onClick = {
+                        if (checkingUpdate) return@OutlinedButton
+                        checkingUpdate = true
+                        scope.launch {
+                            val info = UpdateChecker.check(BuildConfig.VERSION_NAME)
+                            updateInfo = info
+                            checkingUpdate = false
+                            when {
+                                info.error != null -> toast(s.format(S.UpdateFailed, info.error))
+                                info.hasUpdate -> toast(s.format(S.UpdateAvailable, info.latestVersion))
+                                else -> toast(s[S.UpToDate])
+                            }
+                        }
+                    },
+                    enabled = !checkingUpdate,
+                ) {
+                    Text(if (checkingUpdate) s[S.Loading] else s[S.CheckUpdates])
+                }
+                updateInfo?.takeIf { it.hasUpdate }?.let { info ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            s.format(S.UpdateAvailable, info.latestVersion.orEmpty()),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = {
+                            info.downloadUrl?.let {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(it))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        }) { Text(s[S.UpdateDownload]) }
+                    }
+                }
             }
         }
 

@@ -34,6 +34,26 @@ class DiagnosticsExporter(
                     appendLine("profile=${container.profiles.active.name}")
                     appendLine("rules=${container.rules.ruleSet.value.count}")
                     appendLine("apps=${container.appCatalog.getApps().size}")
+                    appendLine("work_profile=${container.backend.isWorkProfile()}")
+                    appendLine("network=${container.network.current.displayName.orEmpty()} " +
+                        "kind=${container.network.current.kind} ssid=${container.network.current.ssid.orEmpty()} " +
+                        "metered=${container.network.current.isMetered}")
+                    appendLine("sim=${container.network.current.subscriptionId ?: -1} " +
+                        "slot=${container.network.current.simSlotIndex ?: -1}")
+                    appendLine("private_dns=${container.backend.privateDnsMode()}")
+                    appendLine("ipv6=" + runCatching {
+                        java.net.NetworkInterface.getNetworkInterfaces().toList()
+                            .filter { it.isUp && !it.isLoopback }
+                            .flatMap { it.inetAddresses.toList() }
+                            .filterIsInstance<java.net.Inet6Address>()
+                            .map { it.hostAddress }
+                            .take(5)
+                            .joinToString(",")
+                    }.getOrDefault(""))
+                    appendLine("lock_screen_block=${container.preferences.blockOnLockScreen}")
+                    appendLine("focus=${container.focus.active() != null}")
+                    appendLine("overlay_allowed=${container.promptOverlay.canDrawOverlays()}")
+                    appendLine("usage_stats=${container.trafficCollector.isAvailable}")
                     appendLine("bypass=${container.vpnEngine.plan.value.bypassPackages.size}")
                     appendLine("skipped_rules=${container.vpnEngine.plan.value.skippedRules.size}")
                     appendLine("traffic_access=${container.trafficCollector.isAvailable}")

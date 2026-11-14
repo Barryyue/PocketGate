@@ -466,6 +466,9 @@ class AppBackend(val container: AppContainer) {
     fun isDeviceSecure(): Boolean =
         (context.getSystemService(android.app.KeyguardManager::class.java))?.isDeviceSecure == true
 
+    fun isWorkProfile(): Boolean =
+        (context.getSystemService(android.os.UserManager::class.java))?.isManagedProfile == true
+
     fun setAppLockEnabled(enabled: Boolean) {
         container.preferences.appLockEnabled = enabled
     }
