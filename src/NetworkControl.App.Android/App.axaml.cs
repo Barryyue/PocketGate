@@ -1,5 +1,9 @@
 using AtomUI;
+using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
+using Avalonia.VisualTree;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +73,23 @@ public sealed partial class App : Avalonia.Application
             _ = _main.InitializeAsync();
         }
 
-        return new ShellView { DataContext = _main };
+        var view = new ShellView { DataContext = _main };
+        // Android 的根 VisualLayerManager 默認不建立 OverlayLayer；AtomUI 的 ComboBox / PopupConfirm
+        // 打開時會拋「Unable to create IPopupImpl and no overlay layer is found」。等視圖掛上後啟用它。
+        Dispatcher.UIThread.Post(() => EnablePopupOverlay(view), DispatcherPriority.Background);
+        return view;
+    }
+
+    private static void EnablePopupOverlay(Visual view)
+    {
+        if (TopLevel.GetTopLevel(view) is not { } topLevel)
+        {
+            return;
+        }
+
+        foreach (var manager in topLevel.GetVisualDescendants().OfType<VisualLayerManager>())
+        {
+            manager.EnableOverlayLayer = true;
+        }
     }
 }
