@@ -38,6 +38,7 @@
     <Project Path="src/NetworkControl.Storage/NetworkControl.Storage.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/NetworkControl.App.Tests/NetworkControl.App.Tests.csproj" />
     <Project Path="tests/NetworkControl.Core.Tests/NetworkControl.Core.Tests.csproj" />
     <Project Path="tests/NetworkControl.Engine.Vpn.Tests/NetworkControl.Engine.Vpn.Tests.csproj" />
     <Project Path="tests/NetworkControl.Engine.Windows.Tests/NetworkControl.Engine.Windows.Tests.csproj" />

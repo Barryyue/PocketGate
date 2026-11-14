@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
 using AtomUI.Desktop.Controls;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -14,31 +13,21 @@ using Proto = NetworkControl.Ipc.V1;
 
 namespace NetworkControl.App.ViewModels;
 
-public sealed partial class ConnectionItemViewModel : ObservableObject
+public sealed partial class ConnectionItemViewModel : IconRowViewModel
 {
     private readonly DisplayText _text;
-    private readonly AppIconCache _icons;
     private Proto.LiveConnection _connection;
     private bool _killSupported;
 
     public ConnectionItemViewModel(Proto.LiveConnection connection, DisplayText text, bool killSupported, AppIconCache icons)
+        : base(icons)
     {
         _connection = connection;
         _text = text;
         _killSupported = killSupported;
-        _icons = icons;
     }
 
-    public Bitmap? Icon { get; private set; }
-
-    public async Task LoadIconAsync()
-    {
-        if (AppPath.Length > 0 && await _icons.GetAsync(AppPath) is { } icon)
-        {
-            Icon = icon;
-            OnPropertyChanged(nameof(Icon));
-        }
-    }
+    public Task LoadIconAsync() => LoadIconAsync(AppPath);
 
     public Proto.LiveConnection Connection
     {
@@ -65,7 +54,14 @@ public sealed partial class ConnectionItemViewModel : ObservableObject
         }
     }
 
-    public string Key => $"{Connection.Protocol}|{Local}|{Remote}|{Connection.Pid}";
+    public string Key => KeyOf(Connection);
+
+    /// <summary>連線的合併鍵；定時刷新時用它復用界面上的行對象。</summary>
+    internal static string KeyOf(Proto.LiveConnection connection) =>
+        $"{connection.Protocol}|{DisplayText.Endpoint(connection.Local)}|{RemoteKey(connection.Remote)}|{connection.Pid}";
+
+    private static string RemoteKey(Proto.IpEndpoint? remote) =>
+        remote is { Address.Length: > 0 } ? DisplayText.Endpoint(remote) : "—";
 
     public string AppName => Connection.AppName.Length > 0 ? Connection.AppName : _text.Localization.Get(CommonLangResourceKind.UnknownApp);
 
@@ -116,6 +112,13 @@ public sealed partial class ConnectionItemViewModel : ObservableObject
 
         _killSupported = supported;
         OnPropertyChanged(nameof(CanKill));
+    }
+
+    /// <summary>更新連線數據和「能否斷開」；語言文本的 getter 會讀取新的 Connection。</summary>
+    public void Update(Proto.LiveConnection connection, bool killSupported)
+    {
+        Connection = connection;
+        SetKillSupported(killSupported);
     }
 
     public void RefreshText()
@@ -201,10 +204,24 @@ public sealed partial class ConnectionsViewModel : PageViewModel
                 IncludeLoopback = IncludeLoopback,
             });
             IsSupported = response.Supported;
+            var created = new List<ConnectionItemViewModel>();
+            var items = ConnectionRowMerger.Merge(
+                response.Connections,
+                _all,
+                static c => ConnectionItemViewModel.KeyOf(c),
+                static item => item.Key,
+                c =>
+                {
+                    var item = new ConnectionItemViewModel(c, Text, _killSupported, _icons);
+                    created.Add(item);
+                    return item;
+                },
+                (item, c) => item.Update(c, _killSupported));
             _all.Clear();
-            var items = response.Connections.Select(c => new ConnectionItemViewModel(c, Text, _killSupported, _icons)).ToArray();
             _all.AddRange(items);
-            foreach (var item in items)
+
+            // 只有新插入的行才需要提取圖標；已有行沿用同一個對象，避免每 2 秒重複請求
+            foreach (var item in created)
             {
                 _ = item.LoadIconAsync();
             }
@@ -345,7 +362,7 @@ public sealed partial class ConnectionsViewModel : PageViewModel
         {
             if (existing.TryGetValue(candidate.Key, out var current))
             {
-                current.Connection = candidate.Connection;
+                current.Update(candidate.Connection, _killSupported);
                 result.Add(current);
             }
             else

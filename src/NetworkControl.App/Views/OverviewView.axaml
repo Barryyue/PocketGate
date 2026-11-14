@@ -15,12 +15,14 @@
     <DataTemplate x:Key="RankItemTemplate" x:DataType="vm:RankItemViewModel">
       <Button Classes="rank-row" ToolTip.Tip="{Binding Tooltip}"
               Command="{Binding #Root.((vm:OverviewViewModel)DataContext).Dashboard.OpenCommand}" CommandParameter="{Binding}">
-        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
-          <TextBlock Classes="rank-label" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-          <TextBlock Grid.Column="1" Classes="rank-count" Text="{Binding CountText}" Margin="12,0,0,0" />
-          <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Classes="caption" Text="{Binding Detail}" IsVisible="{Binding HasDetail}"
+        <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
+          <Image Grid.Column="0" Width="16" Height="16" Source="{Binding Icon}" IsVisible="{Binding HasIcon}"
+                 VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="1" Classes="rank-label" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="2" Classes="rank-count" Text="{Binding CountText}" Margin="12,0,0,0" />
+          <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Classes="caption" Text="{Binding Detail}" IsVisible="{Binding HasDetail}"
                      TextTrimming="PrefixCharacterEllipsis" Margin="0,2,0,0" />
-          <controls:ShareBar Grid.Row="2" Grid.ColumnSpan="2" Margin="0,8,0,0" Height="6"
+          <controls:ShareBar Grid.Row="2" Grid.ColumnSpan="3" Margin="0,8,0,0" Height="6"
                              Allowed="{Binding Allowed}" Blocked="{Binding Blocked}" Maximum="{Binding Maximum}"
                              AllowedBrush="{atom:SharedTokenResource ColorPrimary}"
                              BlockedBrush="{atom:SharedTokenResource ColorError}"
@@ -32,10 +34,12 @@
     <DataTemplate x:Key="TrafficItemTemplate" x:DataType="vm:RankItemViewModel">
       <Button Classes="rank-row" ToolTip.Tip="{Binding Tooltip}"
               Command="{Binding #Root.((vm:OverviewViewModel)DataContext).Dashboard.OpenCommand}" CommandParameter="{Binding}">
-        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-          <TextBlock Classes="rank-label" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-          <TextBlock Grid.Column="1" Classes="rank-count" Text="{Binding CountText}" Margin="12,0,0,0" />
-          <controls:ShareBar Grid.Row="1" Grid.ColumnSpan="2" Margin="0,8,0,0" Height="6"
+        <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto">
+          <Image Grid.Column="0" Width="16" Height="16" Source="{Binding Icon}" IsVisible="{Binding HasIcon}"
+                 VerticalAlignment="Center" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="1" Classes="rank-label" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="2" Classes="rank-count" Text="{Binding CountText}" Margin="12,0,0,0" />
+          <controls:ShareBar Grid.Row="1" Grid.ColumnSpan="3" Margin="0,8,0,0" Height="6"
                              Allowed="{Binding Allowed}" Blocked="{Binding Blocked}" Maximum="{Binding Maximum}"
                              AllowedBrush="{atom:SharedTokenResource ColorPrimary}"
                              BlockedBrush="{atom:SharedTokenResource ColorSuccess}"
