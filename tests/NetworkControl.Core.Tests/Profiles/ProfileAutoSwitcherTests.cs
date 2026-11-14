@@ -34,8 +34,10 @@ public sealed class AutoActivateConditionTests
 
 public sealed class ProfileAutoSwitcherTests
 {
-    private static async Task WaitUntilAsync(Func<bool> predicate, string message)
+    private static async Task SwitchUntilAsync(ScenarioHost host, Func<bool> predicate, string message)
     {
+        // 後台的 PeriodicTimer 使用虛擬時間：並行跑整個解決方案時，單次推進後工作可能還沒輪到執行，
+        // 因此每次等待都再推進一小段虛擬時間，避免對排程速度的依賴。
         for (var attempt = 0; attempt < 100; attempt++)
         {
             if (predicate())
@@ -43,6 +45,7 @@ public sealed class ProfileAutoSwitcherTests
                 return;
             }
 
+            await host.AdvanceAsync(TimeSpan.FromSeconds(1));
             await Task.Delay(20, TestContext.Current.CancellationToken);
         }
 
@@ -62,8 +65,7 @@ public sealed class ProfileAutoSwitcherTests
         }, ct);
 
         monitor.Set(new NetworkContext(NetworkKind.Wifi, "corpnet", null, "CorpNet"));
-        await host.AdvanceAsync(TimeSpan.FromSeconds(5));
-        await WaitUntilAsync(() => host.State.ActiveProfileId == company.Id, "自動切換到公司");
+        await SwitchUntilAsync(host, () => host.State.ActiveProfileId == company.Id, "自動切換到公司");
 
         await host.Profiles.ActivateAsync(Profile.DefaultId, ProfileSwitchReason.User, ct);
         await host.AdvanceAsync(TimeSpan.FromSeconds(5));
@@ -72,7 +74,6 @@ public sealed class ProfileAutoSwitcherTests
         // 換到另一個網絡後，手動覆蓋解除
         monitor.Set(new NetworkContext(NetworkKind.Wifi, "home", null, "Home"));
         monitor.Set(new NetworkContext(NetworkKind.Wifi, "corpnet", null, "CorpNet"));
-        await host.AdvanceAsync(TimeSpan.FromSeconds(5));
-        await WaitUntilAsync(() => host.State.ActiveProfileId == company.Id, "換網絡後重新自動切換");
+        await SwitchUntilAsync(host, () => host.State.ActiveProfileId == company.Id, "換網絡後重新自動切換");
     }
 }
