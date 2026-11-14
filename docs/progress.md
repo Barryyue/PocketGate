@@ -149,6 +149,10 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
     - 桌面：設定頁配置文件卡片（新增 / 編輯 / 刪除 / 設為當前）、總覽下拉、托盤子選單、狀態欄、規則編輯器「適用於」、規則頁配置文件列與篩選、三語文本。
     - Android：`IBackend` 配置文件 API、總覽下拉、設定頁增刪改、`tools/android-strings.py` 生成文本；Debug 構建通過。
     - **驗證**：356 個測試 355 通過、1 跳過；隔離管道 + Fake 引擎探針驗證建立 / 切換 / 改名 / 刪除、專屬規則切換後生效（生效規則 16→1）、刪除後規則歸零。**未驗證**：桌面和 Android 界面效果、Android 真機。
+  - [~] (claude, 2026-11-14) M3-03R 配置文件審查修正（R1–R10）
+    - **背景**：Claude 審查 M3-03 時發現 10 個問題，詳細驗收見 [m3-tasks.md](m3-tasks.md#m3-03r-配置文件審查修正依賴-m3-03)。此任務之前漏列在進度看板，現在補上。
+    - 已完成：R8（導入未知配置文件的規則改為略過並回報）、R3（編輯規則保留未知 / 載入失敗的 ProfileId）、R1（規則頁配置文件篩選即時生效）。
+    - 待完成：R7（啟用 / 刪除競態）、R9（profiles_revision + 狀態推送）、R10（複製規則來源驗證 / 過期 / 原子性 / List 效率）、R4（模式回寫與 BlockAll / Disabled 同步）、R2（ProfileCatalog，載入失敗不拖垮頁面）、R5（托盤勾選用狀態推送）、R6（Android 總覽選擇跟隨核心）。
   - [~] (claude, 2026-11-14) M3-04 按網絡自動切換配置文件（依賴 M3-03）
     - Core：`NetworkContext` / `INetworkMonitor` / `AutoActivateCondition`；`ProfileAutoSwitcher` 去抖 3 秒、按 SortOrder 匹配、無匹配保持當前、用戶手動切換後同一網絡不再自動切換。
     - 平台：Fake 網絡監視器 + `Simulator.SimulateNetwork`；Windows 用 `NetworkInterface` 判斷有線 / Wi-Fi / 蜂窩和網絡 ID（SSID 暫未接入 WlanAPI）；Android `registerDefaultNetworkCallback`，SSID 需要定位權限。
