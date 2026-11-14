@@ -56,7 +56,7 @@
 
 ### M4 — v1.0：轉發模式 + 上游代理（約 2–2.5 個月）
 
-> **狀態：未開始（2026-11-15）。** Phase 0 需要 Go 1.22+、gomobile、Android NDK（r27+）與真機吞吐 / 耗電測試；目前開發機沒有 Go 與 NDK，且模擬器不能代替真機驗證。Phase 0 的驗收門檻與步驟見 [android-forwarding-research.md](android-forwarding-research.md) §0、§5；在工具鏈與真機就緒前不以任何「假轉發」代替。
+> **狀態：Phase 0 spike 已打包（2026-11-15，提交 `fec8da0`）。** 已內建 `hev-socks5-tunnel`、可在設定頁指定本機 SOCKS5；目前只做到「所有流量轉發」，**尚未接入 per-flow 判決 / 規則 / 詢問**。真機需用本機 FlClash 或 SOCKS5 驗證吞吐、UDP/QUIC、耗電與共存；Phase 1 起才做規則接入與域名傳遞。見 [android-forwarding-research.md](android-forwarding-research.md) §0、§5。
 
 1. **K-051 Phase 0 spike**：gVisor netstack + 最小 TCP 轉發 + SOCKS5；判定點；真機吞吐 / 耗電 / FlClash 共存。
 2. **K-052 轉發引擎**：TCP/UDP、域名、上游排除、防環路、上游不可用提示。

@@ -88,6 +88,15 @@
 | K-049 | adb 冒煙腳本：安裝、授權 appops、啟動、進程存活、FATAL 檢查 | `scripts/android-kotlin-smoke.ps1` | 模擬器執行通過 | 需連接裝置 |
 | K-050 | 內置 WireGuard 決策：不內置，避免與單一 VpnService 衝突；未來作為轉發模式上游 | [kotlin-roadmap.md](kotlin-roadmap.md) | 設計決策 | 無代碼改動 |
 
+### v0.6-m4spike（2026-11-15，提交 `fec8da0`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-035c | 一鍵建立「專注」白名單配置文件（複製目前規則）；進行中的專注可保存為長期配置文件（只寫入勾選的允許應用） | `AppBackend.createFocusProfile`、`SettingsScreen`、`OverviewScreen` | 構建 + 代碼審查 | 真機需驗證規則複製與切換 |
+| K-035d / K-036b | 專注時長與時間表改用 Android 原生圓盤 `TimePickerDialog`；可自訂任意分鐘；移除 15/30/60/120 晶片換行問題 | `OverviewScreen`、`SettingsScreen` | 模擬器：專注時長 00:30 圓盤、拖動預覽 | 真機時鐘樣式依 ROM |
+| K-039b | 懸浮面板自訂垂直位置：0–100%，設定頁提供可上下拖動的預覽面板 | `AppPreferences`、`PromptOverlayController`、`SettingsScreen` | 模擬器：15%→82% 拖動並保存 | 真機需驗證實際面板高度/insets |
+| K-051 | **M4 Phase 0 轉發 spike**：內建 `hev-socks5-tunnel`（MIT，arm64-v8a / x86_64），VpnService TUN fd 交給原生隧道；設定頁可啟用實驗轉發、指定本機 SOCKS5 host/port/UDP | `VpnForwardingTransport`、`VpnTunnel`、`VpnEngine`、`SettingsScreen`、`jniLibs/` | 模擬器：原生庫載入、隧道啟動、SOCKS5 握手；實際上網因 Reqable + adb reverse 逾時未通過 | **規則 / 詢問 / 按域名放行尚未接入轉發層**；需真機 + 本機 FlClash/SOCKS5 驗證 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
@@ -97,7 +106,7 @@
 | K-045b | Baseline Profiles、arm64-only、CI 大小 / 啟動基線 | 待做 |
 | K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 待用戶提供 keystore |
 | K-048b | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | 待真機 |
-| K-051 | 轉發模式 + 上游代理（Phase 0 起） | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
+| K-051 | 轉發模式 + 上游代理：Phase 0 spike 已打包（實驗）；Phase 1 起需接入 per-flow 判決、UDP/域名、真機性能 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
 
 ## 3. 維護規則
 

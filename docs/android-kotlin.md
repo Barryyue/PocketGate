@@ -509,3 +509,43 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 純 IPv6 / 私人 DNS / OEM ROM 真機回歸（清單已備）。
 - 應用鎖在修改規則 / 模式 / 退出時的即時驗證。
 - 轉發模式 Phase 0 尚未開始；需要 Go / NDK 工具鏈與真機吞吐 / 耗電測試。
+
+---
+
+## 15. v0.6.0-m4spike（2026-11-15）
+
+### 15.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 專注配置文件 | 設定 → 配置文件新增「建立專注配置文件」：以白名單模式建立並複製目前規則；專注進行中可「保存為配置文件」，只把勾選的允許應用寫入新配置文件。 |
+| 時間選擇 | 專注時長與時間表改用 Android 原生圓盤 `TimePickerDialog`，可自訂任意分鐘；不再使用會換行的 15/30/60/120 晶片。 |
+| 懸浮面板位置 | 位置新增「自訂」：0–100% 垂直比例；設定頁提供可上下拖動的面板預覽，儲存後實際懸浮面板按比例定位。 |
+| M4 Phase 0 | 內建 `hev-socks5-tunnel`（MIT）原生庫（arm64-v8a / x86_64）；VpnService TUN fd 可交給原生隧道；設定頁可啟用實驗轉發模式，指定本機 SOCKS5 host/port/UDP。 |
+
+### 15.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.0-m4spike.apk` |
+| APK 大小 | 4,105,809 bytes（約 3.9 MB） |
+| APK SHA-256 | `3C5DE1BAF063258BF36AA972D178C279A0CE6E2CDE6D27170E33F68BD5C59009` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.0-m4spike.aab` |
+| AAB 大小 | 4,644,928 bytes（約 4.4 MB） |
+| AAB SHA-256 | `FC423C2D2E019A45616AD9E5D35C462CE9552810F5787E3FE9EFB722DC661812` |
+| versionName / Code | `0.6.0-m4spike` / `6` |
+| 簽名 | Android Debug（正式簽名需 `NC_ANDROID_KEYSTORE`） |
+
+### 15.3 驗證
+
+- 60 個 JVM 測試通過；Release APK / AAB 構建通過。
+- 模擬器：自訂懸浮位置拖動 15% → 82% 並保存；專注時長按鈕打開原生圓盤（00:30）；轉發設定頁顯示「原生隧道可用」。
+- 模擬器轉發：`hev-socks5-tunnel` 載入成功、TUN fd 啟動成功、SOCKS5 握手與會話建立；但經 Reqable + `adb reverse` 的實際 TCP/UDP 數據在 3 秒後 `io timeout`，Chrome 回 `ERR_CONNECTION_CLOSED`。**未通過端到端轉發驗證。**
+- 真機未驗證：本機 FlClash/SOCKS5 轉發、UDP/QUIC、吞吐、耗電、與其他 VPN 共存、懸浮自訂位置、專注配置文件。
+
+### 15.4 重要限制
+
+- Phase 0 **不執行規則與詢問**：所有被捕獲的應用流量都會轉發到 SOCKS5；需要規則控制的用戶暫不要開啟。
+- 目前是「所有流量走 SOCKS5」，不是最終 M4；Phase 1 才接入 per-flow 判決、域名傳遞、UDP/QUIC 與按應用控制。
+- 上游建議使用裝置本機的 SOCKS5（例如 FlClash 的 127.0.0.1:7890）；遠端/LAN 上游可能被 VPN 路由環路。
+- 若原生庫載入或啟動失敗，會自動回到黑洞模式並在日誌記錄。
