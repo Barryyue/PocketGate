@@ -1,5 +1,7 @@
+using System.Text.Json;
 using NetworkControl.Core.Domain;
 using NetworkControl.Core.Profiles;
+using NetworkControl.Storage.Serialization;
 using NetworkControl.Storage.Sqlite;
 
 namespace NetworkControl.Storage.Repositories;
@@ -21,7 +23,9 @@ internal sealed class SqliteProfileRepository(ConfigDatabase db) : IProfileRepos
                 Id = Guid.Parse(reader.GetString(0)),
                 Name = reader.GetString(1),
                 Mode = (FilterMode)reader.GetInt32(2),
-                AutoActivate = reader.GetNullableString(3),
+                AutoActivate = reader.GetNullableString(3) is { } auto
+                    ? JsonSerializer.Deserialize(auto, StorageJsonContext.Default.AutoActivateDto)!.ToDomain()
+                    : null,
                 SortOrder = reader.GetInt32(4),
             });
         }
@@ -45,7 +49,9 @@ internal sealed class SqliteProfileRepository(ConfigDatabase db) : IProfileRepos
         cmd.With("$id", profile.Id.ToString())
             .With("$name", profile.Name)
             .With("$mode", (int)profile.Mode)
-            .With("$auto", profile.AutoActivate)
+            .With("$auto", profile.AutoActivate is null
+                ? null
+                : JsonSerializer.Serialize(profile.AutoActivate.ToDto(), StorageJsonContext.Default.AutoActivateDto))
             .With("$sort", profile.SortOrder);
         await cmd.ExecuteNonQueryAsync(cancellationToken);
     }

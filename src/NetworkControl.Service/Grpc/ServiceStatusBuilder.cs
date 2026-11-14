@@ -17,7 +17,8 @@ internal sealed class ServiceStatusBuilder(
     EngineStatus engine,
     RuleEngine rules,
     PromptBroker prompts,
-    ProfileService profiles)
+    ProfileService profiles,
+    IEnumerable<NetworkControl.Core.Profiles.INetworkMonitor> monitors)
 {
     private static readonly string ServiceVersion =
         typeof(ServiceStatusBuilder).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
@@ -58,6 +59,7 @@ internal sealed class ServiceStatusBuilder(
             Mode = snapshot.Mode.ToProto(),
             ActiveProfileId = snapshot.ActiveProfileId.ToString(),
             ActiveProfileName = profiles.Find(snapshot.ActiveProfileId)?.Name ?? "",
+            NetworkDisplayName = monitors.FirstOrDefault()?.Current.DisplayName ?? "",
             DoNotDisturbUntil = state.IsDoNotDisturb ? snapshot.DoNotDisturbUntil.ToProto() : null,
             Engine = engineInfo,
             ActiveRuleCount = rules.Current.Count,

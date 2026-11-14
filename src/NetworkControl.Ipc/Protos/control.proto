@@ -63,6 +63,7 @@ message ServiceStatus {
   int32 pending_prompt_flows = 8;
   ClientInfo client = 9;
   string active_profile_name = 10;
+  string network_display_name = 11;
 }
 
 message SetModeRequest {

@@ -30,4 +30,12 @@ public enum ProfilesLangResourceKind
     ProfileDeleted,
     ProfileActivated,
     NameInvalid,
+    AutoActivate,
+    NetworkKind,
+    NetworkKindAny,
+    NetworkKindWired,
+    NetworkKindWifi,
+    NetworkKindCellular,
+    Ssids,
+    SsidsPlaceholder,
 }

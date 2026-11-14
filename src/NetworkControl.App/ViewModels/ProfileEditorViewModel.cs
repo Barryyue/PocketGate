@@ -25,11 +25,21 @@ public sealed partial class ProfileEditorViewModel : LocalizedViewModel, IValida
             new Choice<string?>(null, () => Loc.Get(ProfilesLangResourceKind.CopyRulesNone)),
             .. (profiles ?? []).Select(p => new Choice<string?>(p.Id, () => p.Name)),
         ];
+        NetworkKinds =
+        [
+            new Choice<Proto.NetworkKindValue?>(null, () => Loc.Get(ProfilesLangResourceKind.NetworkKindAny)),
+            new Choice<Proto.NetworkKindValue?>(Proto.NetworkKindValue.Wired, () => Loc.Get(ProfilesLangResourceKind.NetworkKindWired)),
+            new Choice<Proto.NetworkKindValue?>(Proto.NetworkKindValue.Wifi, () => Loc.Get(ProfilesLangResourceKind.NetworkKindWifi)),
+            new Choice<Proto.NetworkKindValue?>(Proto.NetworkKindValue.Cellular, () => Loc.Get(ProfilesLangResourceKind.NetworkKindCellular)),
+        ];
 
         if (existing is not null)
         {
             Name = existing.Name;
             SelectedMode = Modes.FirstOrDefault(m => m.Value == existing.Mode) ?? Modes[0];
+            AutoActivateEnabled = existing.AutoSsids.Count > 0 || existing.HasAutoKind;
+            SelectedNetworkKind = NetworkKinds.FirstOrDefault(k => existing.HasAutoKind && k.Value == existing.AutoKind) ?? NetworkKinds[0];
+            Ssids = string.Join(", ", existing.AutoSsids);
         }
         else
         {
@@ -37,6 +47,7 @@ public sealed partial class ProfileEditorViewModel : LocalizedViewModel, IValida
         }
 
         SelectedCopySource = CopySources[0];
+        SelectedNetworkKind ??= NetworkKinds[0];
     }
 
     public bool IsEditing => _existing is not null;
@@ -47,6 +58,8 @@ public sealed partial class ProfileEditorViewModel : LocalizedViewModel, IValida
 
     public IReadOnlyList<Choice<string?>> CopySources { get; }
 
+    public IReadOnlyList<Choice<Proto.NetworkKindValue?>> NetworkKinds { get; }
+
     [ObservableProperty]
     public partial string Name { get; set; } = "";
 
@@ -55,6 +68,15 @@ public sealed partial class ProfileEditorViewModel : LocalizedViewModel, IValida
 
     [ObservableProperty]
     public partial Choice<string?>? SelectedCopySource { get; set; }
+
+    [ObservableProperty]
+    public partial bool AutoActivateEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial Choice<Proto.NetworkKindValue?>? SelectedNetworkKind { get; set; }
+
+    [ObservableProperty]
+    public partial string Ssids { get; set; } = "";
 
     [ObservableProperty]
     public partial string? ValidationError { get; set; }
@@ -78,6 +100,19 @@ public sealed partial class ProfileEditorViewModel : LocalizedViewModel, IValida
             request.CopyRulesFrom = copyFrom;
         }
 
+        if (AutoActivateEnabled)
+        {
+            if (SelectedNetworkKind?.Value is { } kind)
+            {
+                request.AutoKind = kind;
+            }
+
+            foreach (var ssid in SplitSsids())
+            {
+                request.AutoSsids.Add(ssid);
+            }
+        }
+
         return request;
     }
 
@@ -86,12 +121,30 @@ public sealed partial class ProfileEditorViewModel : LocalizedViewModel, IValida
         var info = _existing?.Clone() ?? new Proto.ProfileInfo();
         info.Name = Name.Trim();
         info.Mode = SelectedMode.Value;
+        info.AutoSsids.Clear();
+        info.ClearAutoKind();
+        if (AutoActivateEnabled)
+        {
+            if (SelectedNetworkKind?.Value is { } kind)
+            {
+                info.AutoKind = kind;
+            }
+
+            foreach (var ssid in SplitSsids())
+            {
+                info.AutoSsids.Add(ssid);
+            }
+        }
+
         return info;
     }
 
+    private IEnumerable<string> SplitSsids() =>
+        Ssids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
     protected override void OnLanguageChanged()
     {
-        foreach (var choice in Modes.Concat<Choice>(CopySources))
+        foreach (var choice in Modes.Concat<Choice>(CopySources).Concat(NetworkKinds))
         {
             choice.Refresh();
         }

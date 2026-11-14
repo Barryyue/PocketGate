@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json.Serialization;
 using NetworkControl.Core.Domain;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Core.Settings;
 
 namespace NetworkControl.Storage.Serialization;
@@ -16,6 +17,8 @@ internal sealed record AppMatcherDto(
     string? PackageId = null);
 
 internal sealed record PortRangeDto(int From, int To);
+
+internal sealed record AutoActivateDto(NetworkKind? Kind, string[] Ssids, string[] NetworkIds);
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(DomainTargetDto), "domain")]
@@ -56,6 +59,7 @@ internal sealed record RuleSnapshotDto(
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     UseStringEnumConverter = true)]
 [JsonSerializable(typeof(AppMatcherDto))]
+[JsonSerializable(typeof(AutoActivateDto))]
 [JsonSerializable(typeof(RuleConditionsDto))]
 [JsonSerializable(typeof(RuleSnapshotDto))]
 [JsonSerializable(typeof(UserSettings))]
@@ -105,6 +109,14 @@ internal static class DtoMapper
         RemotePort = d.RemotePort is { } rp ? new PortRange((ushort)rp.From, (ushort)rp.To) : null,
         LocalPort = d.LocalPort is { } lp ? new PortRange((ushort)lp.From, (ushort)lp.To) : null,
     };
+
+    public static AutoActivateDto? ToDto(this AutoActivateCondition? condition) => condition is null
+        ? null
+        : new AutoActivateDto(condition.Kind, condition.Ssids.ToArray(), condition.NetworkIds.ToArray());
+
+    public static AutoActivateCondition? ToDomain(this AutoActivateDto? dto) => dto is null
+        ? null
+        : new AutoActivateCondition(dto.Kind, dto.Ssids, dto.NetworkIds);
 
     public static RuleSnapshotDto ToSnapshot(this Rule r) => new(
         r.Id, r.ProfileId, r.App?.ToDto(), r.Conditions.ToDto(), r.Action, r.Lifetime, r.ExpiresAt, r.Source, r.Enabled, r.Note, r.CreatedAt, r.UpdatedAt);

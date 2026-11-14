@@ -15,6 +15,15 @@ service Profiles {
   rpc Update (ProfileInfo) returns (ProfileInfo);
   rpc Delete (DeleteProfileRequest) returns (google.protobuf.Empty);
   rpc Activate (ActivateProfileRequest) returns (ServiceStatus);
+  // 當前主要網絡，用於配置文件編輯器的「使用目前的網絡」。
+  rpc GetNetwork (google.protobuf.Empty) returns (NetworkInfo);
+}
+
+message NetworkInfo {
+  NetworkKindValue kind = 1;
+  optional string ssid = 2;
+  optional string network_id = 3;
+  string display_name = 4;
 }
 
 message ProfileInfo {
@@ -25,6 +34,9 @@ message ProfileInfo {
   int32 rule_count = 5;
   bool is_default = 6;
   bool is_active = 7;
+  repeated string auto_ssids = 8;
+  optional NetworkKindValue auto_kind = 9;
+  repeated string auto_network_ids = 10;
 }
 
 message ListProfilesResponse {
@@ -35,6 +47,9 @@ message CreateProfileRequest {
   string name = 1;
   FilterMode mode = 2;
   optional string copy_rules_from = 3;
+  repeated string auto_ssids = 4;
+  optional NetworkKindValue auto_kind = 5;
+  repeated string auto_network_ids = 6;
 }
 
 message DeleteProfileRequest {

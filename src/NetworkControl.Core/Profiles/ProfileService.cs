@@ -23,6 +23,9 @@ public enum ProfileSwitchReason : byte
     Network = 1,
 }
 
+/// <summary>配置文件被激活的通知，包含切換原因。</summary>
+public sealed record ProfileActivatedEventArgs(Guid ProfileId, ProfileSwitchReason Reason);
+
 /// <summary>
 /// 配置文件的應用服務：維護配置文件列表、切換當前配置文件、複製專屬規則。
 /// 切換會寫入 <see cref="RuntimeStateService"/>，由它通知規則集重新發布。
@@ -38,6 +41,8 @@ public sealed partial class ProfileService(
     private Profile[] _profiles = [];
 
     public event EventHandler? Changed;
+
+    public event EventHandler<ProfileActivatedEventArgs>? Activated;
 
     public IReadOnlyList<Profile> All => Volatile.Read(ref _profiles);
 
@@ -139,6 +144,7 @@ public sealed partial class ProfileService(
                 Name = normalized,
                 Mode = validatedMode,
                 SortOrder = Math.Max(0, profile.SortOrder),
+                AutoActivate = profile.AutoActivate,
             };
             await repository.UpsertAsync(updated, cancellationToken);
             Volatile.Write(ref _profiles, Sort(All.Select(p => p.Id == updated.Id ? updated : p)));
@@ -194,6 +200,7 @@ public sealed partial class ProfileService(
     {
         var profile = Find(id) ?? throw new KeyNotFoundException($"配置文件 {id} 不存在。");
         await state.ActivateProfileAsync(profile.Id, profile.Mode, cancellationToken);
+        Activated?.Invoke(this, new ProfileActivatedEventArgs(profile.Id, reason));
         Changed?.Invoke(this, EventArgs.Empty);
     }
 

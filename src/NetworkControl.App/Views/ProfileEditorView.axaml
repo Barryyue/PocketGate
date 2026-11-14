@@ -16,7 +16,7 @@
     <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding ValidationError}"
                 IsVisible="{Binding ValidationError, Converter={x:Static vm:Converters.HasText}}" />
 
-    <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+    <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
       <TextBlock Grid.Row="0" VerticalAlignment="Center" Text="{loc:ProfilesLangResource NameLabel}" />
       <atom:LineEdit Grid.Row="0" Grid.Column="1" Text="{Binding Name}"
                      PlaceholderText="{loc:ProfilesLangResource NamePlaceholder}" />
@@ -29,6 +29,19 @@
                  Text="{loc:ProfilesLangResource CopyRulesLabel}" />
       <atom:ComboBox Grid.Row="2" Grid.Column="1" IsVisible="{Binding CanCopy}" HorizontalAlignment="Stretch"
                      ItemsSource="{Binding CopySources}" SelectedItem="{Binding SelectedCopySource}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+
+      <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="{loc:ProfilesLangResource AutoActivate}" />
+      <atom:ToggleSwitch Grid.Row="3" Grid.Column="1" HorizontalAlignment="Left" IsChecked="{Binding AutoActivateEnabled}" />
+
+      <TextBlock Grid.Row="4" VerticalAlignment="Center" IsVisible="{Binding AutoActivateEnabled}"
+                 Text="{loc:ProfilesLangResource NetworkKind}" />
+      <atom:ComboBox Grid.Row="4" Grid.Column="1" IsVisible="{Binding AutoActivateEnabled}" HorizontalAlignment="Stretch"
+                     ItemsSource="{Binding NetworkKinds}" SelectedItem="{Binding SelectedNetworkKind}" ItemTemplate="{StaticResource ChoiceTemplate}" />
+
+      <TextBlock Grid.Row="5" VerticalAlignment="Center" IsVisible="{Binding AutoActivateEnabled}"
+                 Text="{loc:ProfilesLangResource Ssids}" />
+      <atom:LineEdit Grid.Row="5" Grid.Column="1" IsVisible="{Binding AutoActivateEnabled}" Text="{Binding Ssids}"
+                     PlaceholderText="{loc:ProfilesLangResource SsidsPlaceholder}" />
     </Grid>
   </StackPanel>
 </UserControl>

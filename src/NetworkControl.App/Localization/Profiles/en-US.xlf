@@ -25,5 +25,13 @@
     <unit id="ProfileDeleted"><segment><source>Profile deleted.</source></segment></unit>
     <unit id="ProfileActivated"><segment><source>Profile switched.</source></segment></unit>
     <unit id="NameInvalid"><segment><source>The name must be 1–40 characters.</source></segment></unit>
+    <unit id="AutoActivate"><segment><source>Switch automatically</source></segment></unit>
+    <unit id="NetworkKind"><segment><source>Network type</source></segment></unit>
+    <unit id="NetworkKindAny"><segment><source>Any network</source></segment></unit>
+    <unit id="NetworkKindWired"><segment><source>Wired</source></segment></unit>
+    <unit id="NetworkKindWifi"><segment><source>Wi-Fi</source></segment></unit>
+    <unit id="NetworkKindCellular"><segment><source>Cellular</source></segment></unit>
+    <unit id="Ssids"><segment><source>Wi-Fi names (comma separated)</source></segment></unit>
+    <unit id="SsidsPlaceholder"><segment><source>e.g. CorpNet, Home</source></segment></unit>
   </file>
 </xliff>

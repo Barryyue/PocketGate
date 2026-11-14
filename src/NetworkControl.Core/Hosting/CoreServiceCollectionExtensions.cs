@@ -35,6 +35,7 @@ public static class CoreServiceCollectionExtensions
         services.TryAddSingleton<SettingsService>();
         services.TryAddSingleton<RuntimeStateService>();
         services.TryAddSingleton<ProfileService>();
+        services.TryAddSingleton<ProfileAutoSwitcher>();
 
         // 規則
         services.TryAddSingleton<RuleEngine>();
@@ -80,6 +81,7 @@ public static class CoreServiceCollectionExtensions
         services.AddHostedService<RuleLifetimeManager>();
         services.AddHostedService<EngineHostedService>();
         services.AddHostedService(sp => sp.GetRequiredService<Traffic.TrafficAggregator>());
+        services.AddHostedService(sp => sp.GetRequiredService<ProfileAutoSwitcher>());
 
         return services;
     }

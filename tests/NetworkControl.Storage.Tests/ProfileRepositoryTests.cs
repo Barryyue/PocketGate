@@ -19,13 +19,19 @@ public sealed class ProfileRepositoryTests
             Name = "公司",
             Mode = FilterMode.Whitelist,
             SortOrder = 2,
-            AutoActivate = "{\"kind\":\"wifi\"}",
+            AutoActivate = new NetworkControl.Core.Profiles.AutoActivateCondition(
+                NetworkControl.Core.Profiles.NetworkKind.Wifi,
+                ["CorpNet"],
+                []),
         };
 
         await profiles.UpsertAsync(profile, ct);
         var loaded = Assert.Single(await profiles.LoadAllAsync(ct), p => p.Id == profile.Id);
-        Assert.Equal((profile.Name, profile.Mode, profile.SortOrder, profile.AutoActivate),
-            (loaded.Name, loaded.Mode, loaded.SortOrder, loaded.AutoActivate));
+        Assert.Equal((profile.Name, profile.Mode, profile.SortOrder),
+            (loaded.Name, loaded.Mode, loaded.SortOrder));
+        Assert.Equal(profile.AutoActivate?.Kind, loaded.AutoActivate?.Kind);
+        Assert.Equal(profile.AutoActivate?.Ssids, loaded.AutoActivate?.Ssids);
+        Assert.Equal(profile.AutoActivate?.NetworkIds, loaded.AutoActivate?.NetworkIds);
         Assert.Contains(await profiles.LoadAllAsync(ct), p => p.Id == Profile.DefaultId);
 
         var rule = new Rule
@@ -44,7 +50,8 @@ public sealed class ProfileRepositoryTests
 
         await profiles.UpsertAsync(profile with { Name = "公司 2", Mode = FilterMode.Blacklist, AutoActivate = null }, ct);
         var updated = Assert.Single(await profiles.LoadAllAsync(ct), p => p.Id == profile.Id);
-        Assert.Equal(("公司 2", FilterMode.Blacklist, (string?)null), (updated.Name, updated.Mode, updated.AutoActivate));
+        Assert.Equal(("公司 2", FilterMode.Blacklist), (updated.Name, updated.Mode));
+        Assert.Null(updated.AutoActivate);
 
         await profiles.DeleteAsync(profile.Id, ct);
         Assert.DoesNotContain(await profiles.LoadAllAsync(ct), p => p.Id == profile.Id);

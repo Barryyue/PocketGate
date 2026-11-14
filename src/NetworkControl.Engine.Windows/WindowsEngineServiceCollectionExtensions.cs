@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using NetworkControl.Core.Apps;
 using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Engine;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Engine.Windows.Platform;
 
 namespace NetworkControl.Engine.Windows;
@@ -18,6 +19,7 @@ public static class WindowsEngineServiceCollectionExtensions
         services.TryAddSingleton<IAppInspector, WindowsAppInspector>();
         services.TryAddSingleton<IProcessExitWatcher, WindowsProcessExitWatcher>();
         services.TryAddSingleton<IConnectionTable, WindowsConnectionTable>();
+        services.TryAddSingleton<INetworkMonitor, WindowsNetworkMonitor>();
 
         services.TryAddSingleton<WfpEngine>();
         services.TryAddSingleton<INetworkEngine>(sp => sp.GetRequiredService<WfpEngine>());

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NetworkControl.Engine.Vpn;
 using NetworkControl.Engine.Vpn.Platform;
+using NetworkControl.Core.Profiles;
 
 namespace NetworkControl.Engine.Android;
 
@@ -23,6 +24,8 @@ public static class AndroidEngineServiceCollectionExtensions
         services.TryAddSingleton<AndroidVpnTunnel>();
         services.TryAddSingleton<IVpnTunnel>(sp => sp.GetRequiredService<AndroidVpnTunnel>());
         services.TryAddSingleton<IProtectionSwitch, SharedPreferencesProtectionSwitch>();
+        services.TryAddSingleton<AndroidNetworkMonitor>();
+        services.TryAddSingleton<INetworkMonitor>(sp => sp.GetRequiredService<AndroidNetworkMonitor>());
 
         // 流量統計：允許的應用不經過 VPN，只能讀取系統的按 UID 統計
         services.TryAddSingleton<AndroidUidTrafficSource>();

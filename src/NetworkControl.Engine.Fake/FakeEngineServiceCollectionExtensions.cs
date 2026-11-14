@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NetworkControl.Core.Apps;
 using NetworkControl.Core.Engine;
+using NetworkControl.Core.Profiles;
 
 namespace NetworkControl.Engine.Fake;
 
@@ -16,6 +17,8 @@ public static class FakeEngineServiceCollectionExtensions
         services.TryAddSingleton<IProcessExitWatcher>(sp => sp.GetRequiredService<FakeProcessTable>());
         services.TryAddSingleton<FakeConnectionTable>();
         services.TryAddSingleton<IConnectionTable>(sp => sp.GetRequiredService<FakeConnectionTable>());
+        services.TryAddSingleton<FakeNetworkMonitor>();
+        services.TryAddSingleton<INetworkMonitor>(sp => sp.GetRequiredService<FakeNetworkMonitor>());
 
         services.TryAddSingleton<FakeNetworkEngine>();
         services.TryAddSingleton<INetworkEngine>(sp => sp.GetRequiredService<FakeNetworkEngine>());

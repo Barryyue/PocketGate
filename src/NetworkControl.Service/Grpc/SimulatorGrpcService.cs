@@ -3,6 +3,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using NetworkControl.Core.Domain;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Engine.Fake;
 using NetworkControl.Service.Security;
 using Proto = NetworkControl.Ipc.V1;
@@ -11,7 +12,7 @@ namespace NetworkControl.Service.Grpc;
 
 /// <summary>開發用模擬器，只在使用模擬引擎時映射。</summary>
 [Authorize(Policy = IpcPolicies.Admin)]
-internal sealed class SimulatorGrpcService(INetworkSimulator simulator) : Proto.Simulator.SimulatorBase
+internal sealed class SimulatorGrpcService(INetworkSimulator simulator, FakeNetworkMonitor networks) : Proto.Simulator.SimulatorBase
 {
     public override Task<Proto.SimulatorApps> ListApps(Empty request, ServerCallContext context)
     {
@@ -71,4 +72,14 @@ internal sealed class SimulatorGrpcService(INetworkSimulator simulator) : Proto.
 
     public override Task<Proto.ExitAppResponse> ExitApp(Proto.ExitAppRequest request, ServerCallContext context) =>
         Task.FromResult(new Proto.ExitAppResponse { Exited = simulator.ExitApp(request.AppKey) });
+
+    public override Task<Empty> SimulateNetwork(Proto.SimulateNetworkRequest request, ServerCallContext context)
+    {
+        networks.Set(new NetworkContext(
+            (NetworkKind)(int)request.Kind,
+            request.HasSsid ? request.Ssid : null,
+            request.HasNetworkId ? request.NetworkId : null,
+            request.HasDisplayName ? request.DisplayName : null));
+        return Task.FromResult(new Empty());
+    }
 }

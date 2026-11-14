@@ -13,6 +13,15 @@ service Simulator {
   // 模擬一次連接，阻塞到判決完成（可能需要等待用戶回應彈窗）。
   rpc Simulate (SimulateRequest) returns (SimulateResponse);
   rpc ExitApp (ExitAppRequest) returns (ExitAppResponse);
+  // 模擬切換主要網絡，用於驗證配置文件自動切換。
+  rpc SimulateNetwork (SimulateNetworkRequest) returns (google.protobuf.Empty);
+}
+
+message SimulateNetworkRequest {
+  NetworkKindValue kind = 1;
+  optional string ssid = 2;
+  optional string network_id = 3;
+  optional string display_name = 4;
 }
 
 message SimulatorApp {

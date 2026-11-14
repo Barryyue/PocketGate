@@ -25,5 +25,13 @@
     <unit id="ProfileDeleted"><segment><source>Profile deleted.</source><target state="translated">設定檔已刪除。</target></segment></unit>
     <unit id="ProfileActivated"><segment><source>Profile switched.</source><target state="translated">已切換設定檔。</target></segment></unit>
     <unit id="NameInvalid"><segment><source>The name must be 1–40 characters.</source><target state="translated">名稱必須是 1–40 個字元。</target></segment></unit>
+    <unit id="AutoActivate"><segment><source>Switch automatically</source><target state="translated">自動切換</target></segment></unit>
+    <unit id="NetworkKind"><segment><source>Network type</source><target state="translated">網路類型</target></segment></unit>
+    <unit id="NetworkKindAny"><segment><source>Any network</source><target state="translated">任意網路</target></segment></unit>
+    <unit id="NetworkKindWired"><segment><source>Wired</source><target state="translated">有線</target></segment></unit>
+    <unit id="NetworkKindWifi"><segment><source>Wi-Fi</source><target state="translated">Wi-Fi</target></segment></unit>
+    <unit id="NetworkKindCellular"><segment><source>Cellular</source><target state="translated">行動網路</target></segment></unit>
+    <unit id="Ssids"><segment><source>Wi-Fi names (comma separated)</source><target state="translated">Wi-Fi 名稱（逗號分隔）</target></segment></unit>
+    <unit id="SsidsPlaceholder"><segment><source>e.g. CorpNet, Home</source><target state="translated">例如：CorpNet、Home</target></segment></unit>
   </file>
 </xliff>
