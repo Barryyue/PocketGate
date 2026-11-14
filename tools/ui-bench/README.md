@@ -77,7 +77,8 @@ APK 輸出在 `tools/ui-bench/artifacts/<variant>-<abi>/`（`artifacts/` 已被 
 - **Fluent 比 AtomUI 冷啟動快約 33%**（6.85 s vs 10.20 s，少 3.3 s），APK 小 **5.3 MB**，PSS 少 **51 MB**，託管堆少 **6.4 MB**，300 行布局快約 30%。
 - **Material 介於兩者之間**：比 AtomUI 快約 19%，APK 小 3.8 MB，PSS 少 41 MB。
 - AtomUI 的 `UI 庫配置`（`UseAtomUI` / `UseDesktopControls`）本身約 372 ms，但其程序集體積和主題初始化也拖慢了 Activity 建立與首幀渲染。
-- 這是**最小應用**、模擬器、關閉 AOT 的結果；真機和 AOT 下的絕對值會不同，但「去掉 AtomUI 能明顯減少啟動、體積和記憶體」的方向一致。正式對比請用 `-Abi arm64 -Aot` 在真機重測。
+- 這是**最小應用**、模擬器、關閉 AOT 的結果；真機和 AOT 下的絕對值會不同，但「去掉 AtomUI 能明顯減少啟動、體積和記憶體」的方向一致。
+- **arm64 + AOT 對比包已生成**（2026-11-15）：`artifacts/ui-bench-arm64-aot/UiBench-{AtomUI,Fluent,Material}-arm64-aot.apk`，大小 21.61 / 14.88 / 16.06 MB，均只含 `arm64-v8a`，AOT 原生庫 108 / 64 / 67 個。真機啟動與幀率數據待補。
 
 ## 完成記錄
 
@@ -86,3 +87,4 @@ APK 輸出在 `tools/ui-bench/artifacts/<variant>-<abi>/`（`artifacts/` 已被 
 | 2026-11-15 | 共用度量庫 + AtomUI 變體 + 應用內面板 | 本次提交 | Release x64 構建、模擬器啟動、布局 / 滾動測試 | arm64 / AOT、真機 |
 | 2026-11-15 | Fluent 變體 | 本次提交 | Release x64 構建、模擬器啟動、布局 / 滾動測試 | arm64 / AOT、真機 |
 | 2026-11-15 | Material 變體 | 本次提交 | Release x64 構建、模擬器啟動、布局 / 滾動測試 | arm64 / AOT、真機 |
+| 2026-11-15 | 三個變體的 arm64 + AOT APK | 建構輸出（git 忽略） | 建構成功；`arm64-v8a` only；AOT 庫 108 / 64 / 67 個 | 真機啟動、FPS、PSS |
