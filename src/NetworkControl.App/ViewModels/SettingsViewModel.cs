@@ -18,6 +18,7 @@ namespace NetworkControl.App.ViewModels;
 public sealed partial class SettingsViewModel : PageViewModel
 {
     private readonly ServiceConnection _connection;
+    private readonly ProfileCatalog _catalog;
     private readonly AppearanceService _appearance;
     private readonly AutoStartService _autoStart;
     private readonly FeedbackService _feedback;
@@ -30,6 +31,7 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     public SettingsViewModel(
         ServiceConnection connection,
+        ProfileCatalog catalog,
         AppearanceService appearance,
         AutoStartService autoStart,
         FeedbackService feedback,
@@ -52,6 +54,8 @@ public sealed partial class SettingsViewModel : PageViewModel
         };
         _diagnostics = diagnostics;
         _connection = connection;
+        _catalog = catalog;
+        catalog.Changed += (_, _) => RebuildProfiles();
         connection.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ServiceConnection.Status))
@@ -181,6 +185,9 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     public bool HasProfiles => Profiles.Count > 0;
 
+    /// <summary>服務支持配置文件時才顯示配置文件卡片（R2）。</summary>
+    public bool ShowProfiles => _catalog.IsAvailable;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RestoreBackupCommand))]
     public partial Choice<Proto.BackupInfo>? SelectedBackup { get; set; }
@@ -220,14 +227,20 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     private async Task LoadProfilesAsync()
     {
-        var response = await _connection.RequireClients().Profiles.ListAsync(new Empty());
+        await _catalog.RefreshAsync();
+        RebuildProfiles();
+    }
+
+    private void RebuildProfiles()
+    {
         Profiles.Clear();
-        foreach (var profile in response.Profiles)
+        foreach (var profile in _catalog.Profiles)
         {
             Profiles.Add(new ProfileItemViewModel(profile, Text));
         }
 
         OnPropertyChanged(nameof(HasProfiles));
+        OnPropertyChanged(nameof(ShowProfiles));
     }
 
     [RelayCommand]

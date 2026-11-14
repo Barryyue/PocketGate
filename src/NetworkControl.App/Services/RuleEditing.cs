@@ -12,6 +12,7 @@ namespace NetworkControl.App.Services;
 /// </summary>
 public sealed class RuleEditing(
     ServiceConnection connection,
+    ProfileCatalog catalog,
     DialogService dialogs,
     FeedbackService feedback,
     DisplayText text)
@@ -51,17 +52,16 @@ public sealed class RuleEditing(
         return SubmitAsync(clients => clients.Rules.DeleteAsync(request).ResponseAsync, RulesLangResourceKind.Deleted);
     }
 
-    private async Task<IReadOnlyList<Proto.ProfileInfo>> LoadProfilesAsync()
+    /// <summary>
+    /// 編輯器的配置文件選項。null 表示無法使用（舊版服務，或從未成功載入過）：
+    /// 編輯器會隱藏「適用於」並原樣保留規則的 ProfileId（R3）。
+    /// </summary>
+    private async Task<IReadOnlyList<Proto.ProfileInfo>?> LoadProfilesAsync()
     {
-        try
-        {
-            var response = await connection.RequireClients().Profiles.ListAsync(new Google.Protobuf.WellKnownTypes.Empty());
-            return response.Profiles.ToArray();
-        }
-        catch (RpcException)
-        {
-            return [];
-        }
+        await catalog.RefreshAsync();
+        return catalog.IsAvailable && !(catalog.LastLoadFailed && catalog.Profiles.Count == 0)
+            ? catalog.Profiles
+            : null;
     }
 
     private async Task<bool> SubmitAsync<T>(Func<IpcClients, Task<T>> call, RulesLangResourceKind successMessage)

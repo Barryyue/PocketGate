@@ -95,15 +95,18 @@ public sealed partial class RuleItemViewModel : ViewModelBase
 public sealed partial class RulesViewModel : PageViewModel
 {
     private readonly ServiceConnection _connection;
+    private readonly ProfileCatalog _catalog;
     private readonly RuleEditing _editing;
     private readonly List<RuleItemViewModel> _all = [];
     private readonly Dictionary<string, string> _profileNames = [];
     private CancellationTokenSource? _watch;
 
-    public RulesViewModel(ServiceConnection connection, RuleEditing editing, DisplayText text)
+    public RulesViewModel(ServiceConnection connection, ProfileCatalog catalog, RuleEditing editing, DisplayText text)
         : base(text)
     {
         _connection = connection;
+        _catalog = catalog;
+        catalog.Changed += OnProfilesChanged;
         connection.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ServiceConnection.Status))
@@ -166,9 +169,13 @@ public sealed partial class RulesViewModel : PageViewModel
 
     public string CountText => Rules.Count.ToString(CultureInfo.CurrentCulture);
 
+    /// <summary>服務支持配置文件時才顯示配置文件列和篩選（R2）。</summary>
+    public bool ShowProfileFilter => _catalog.IsAvailable;
+
     public override async Task OnActivatedAsync()
     {
-        await LoadProfilesAsync();
+        await _catalog.RefreshAsync();
+        RebuildProfileFilters();
         await RefreshAsync();
     }
 
@@ -233,21 +240,39 @@ public sealed partial class RulesViewModel : PageViewModel
     private Task SetEnabledAsync(RuleItemViewModel item, bool enabled) => RunAsync(async () =>
         await _connection.RequireClients().Rules.SetEnabledAsync(new Proto.SetRuleEnabledRequest { Id = item.Id, Enabled = enabled }));
 
-    private async Task LoadProfilesAsync()
+    /// <summary>配置文件列表變化（新增 / 改名 / 刪除、R9 的版本推送）時重建篩選。</summary>
+    private void OnProfilesChanged(object? sender, EventArgs e)
     {
-        var response = await _connection.RequireClients().Profiles.ListAsync(new Google.Protobuf.WellKnownTypes.Empty());
+        RebuildProfileFilters();
+        foreach (var item in _all)
+        {
+            item.Refresh();
+        }
+
+        ApplyFilter();
+    }
+
+    private void RebuildProfileFilters()
+    {
         _profileNames.Clear();
+        foreach (var profile in _catalog.Profiles)
+        {
+            _profileNames[profile.Id] = profile.Name;
+        }
+
         var selected = ProfileFilter?.Value;
         ProfileFilters.Clear();
         ProfileFilters.Add(new Choice<string?>(null, () => Loc.Get(RulesLangResourceKind.ProfileFilterAll)));
         ProfileFilters.Add(new Choice<string?>("", () => Loc.Get(RulesLangResourceKind.ProfileFilterShared)));
-        foreach (var profile in response.Profiles)
+        foreach (var profile in _catalog.Profiles)
         {
-            _profileNames[profile.Id] = profile.Name;
             ProfileFilters.Add(new Choice<string?>(profile.Id, () => profile.Name));
         }
 
-        ProfileFilter = ProfileFilters.FirstOrDefault(c => c.Value == selected) ?? ProfileFilters[0];
+        ProfileFilter = _catalog.IsAvailable
+            ? ProfileFilters.FirstOrDefault(c => c.Value == selected) ?? ProfileFilters[0]
+            : ProfileFilters[0];
+        OnPropertyChanged(nameof(ShowProfileFilter));
     }
 
     private void ApplyFilter()

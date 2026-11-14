@@ -18,14 +18,17 @@ public sealed partial class OverviewViewModel : PageViewModel
         [Proto.FilterMode.Ask, Proto.FilterMode.Whitelist, Proto.FilterMode.Blacklist, Proto.FilterMode.Disabled];
 
     private readonly ServiceConnection _connection;
+    private readonly ProfileCatalog _catalog;
     private readonly ServiceLifecycle _lifecycle;
     private bool _syncingMode;
     private bool _syncingProfile;
 
-    public OverviewViewModel(ServiceConnection connection, ServiceLifecycle lifecycle, ActivityDashboardViewModel dashboard, DisplayText text)
+    public OverviewViewModel(ServiceConnection connection, ProfileCatalog catalog, ServiceLifecycle lifecycle, ActivityDashboardViewModel dashboard, DisplayText text)
         : base(text)
     {
         _connection = connection;
+        _catalog = catalog;
+        catalog.Changed += (_, _) => SyncProfiles();
         connection.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ServiceConnection.Status))
@@ -37,11 +40,7 @@ public sealed partial class OverviewViewModel : PageViewModel
         Dashboard = dashboard;
         connection.PropertyChanged += OnConnectionChanged;
         // 每次重新連接都重新判斷：引擎可能已經從模擬切換為 WFP，模擬器接口只在模擬引擎下存在
-        connection.Connected += (_, _) =>
-        {
-            _ = LoadSimulatorAppsAsync(reload: true);
-            _ = LoadProfilesAsync();
-        };
+        connection.Connected += (_, _) => _ = LoadSimulatorAppsAsync(reload: true);
     }
 
     public override string Key => "overview";
@@ -142,7 +141,7 @@ public sealed partial class OverviewViewModel : PageViewModel
     public override Task OnActivatedAsync()
     {
         Dashboard.Activate();
-        _ = LoadProfilesAsync();
+        _ = _catalog.RefreshAsync();
         return LoadSimulatorAppsAsync(reload: false);
     }
 
@@ -299,33 +298,22 @@ public sealed partial class OverviewViewModel : PageViewModel
         {
             await _connection.RequireClients().Profiles.ActivateAsync(
                 new Proto.ActivateProfileRequest { Id = value.Id });
-            await LoadProfilesAsync();
+            await _catalog.RefreshAsync();
+            SyncProfiles();
         });
     }
 
-    private async Task LoadProfilesAsync()
+    /// <summary>從共用的 ProfileCatalog 同步列表；舊版服務下為空，選擇器自動隱藏。</summary>
+    private void SyncProfiles()
     {
-        if (_connection.Clients is not { } clients)
+        Profiles.Clear();
+        foreach (var profile in _catalog.Profiles)
         {
-            return;
+            Profiles.Add(profile);
         }
 
-        try
-        {
-            var response = await clients.Profiles.ListAsync(new Empty());
-            Profiles.Clear();
-            foreach (var profile in response.Profiles)
-            {
-                Profiles.Add(profile);
-            }
-
-            OnPropertyChanged(nameof(ShowProfiles));
-            SyncProfile();
-        }
-        catch (RpcException)
-        {
-            // 舊版服務沒有配置文件接口；保持空列表並隱藏選擇器
-        }
+        OnPropertyChanged(nameof(ShowProfiles));
+        SyncProfile();
     }
 
     private void SyncProfile()

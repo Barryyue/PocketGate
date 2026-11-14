@@ -40,7 +40,7 @@
               </DataTemplate>
             </atom:ComboBox.ItemTemplate>
           </atom:ComboBox>
-          <atom:ComboBox Width="160" ItemsSource="{Binding ProfileFilters}" SelectedItem="{Binding ProfileFilter}">
+          <atom:ComboBox Width="160" IsVisible="{Binding ShowProfileFilter}" ItemsSource="{Binding ProfileFilters}" SelectedItem="{Binding ProfileFilter}">
             <atom:ComboBox.ItemTemplate>
               <DataTemplate x:DataType="vm:Choice">
                 <TextBlock Text="{Binding Title}" />
@@ -86,7 +86,7 @@
           <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnConditions}" Binding="{Binding ConditionsText}" Width="3*" />
           <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnLifetime}" Binding="{Binding LifetimeText}" Width="150" />
           <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnSource}" Binding="{Binding SourceText}" Width="96" />
-          <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnProfile}" Binding="{Binding ProfileText}" Width="140" />
+          <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" IsVisible="{ReflectionBinding ShowProfileFilter}" Header="{loc:RulesLangResource ColumnProfile}" Binding="{Binding ProfileText}" Width="140" />
           <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnHits}" Binding="{Binding HitCount}" Width="96" />
           <atom:DataGridTextColumn x:DataType="vm:RuleItemViewModel" Header="{loc:RulesLangResource ColumnUpdated}" Binding="{Binding UpdatedText}" Width="150" />
           <atom:DataGridTemplateColumn Header="{loc:RulesLangResource ColumnOperations}" Width="140">

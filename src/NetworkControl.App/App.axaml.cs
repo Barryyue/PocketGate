@@ -62,6 +62,7 @@ public sealed partial class App : Application
             SingleInstance.Current?.Listen(() => Avalonia.Threading.Dispatcher.UIThread.Post(ShowShell));
 
             StartManagedServiceIfNeeded(services);
+            services.GetRequiredService<ProfileCatalog>();
             services.GetRequiredService<ServiceConnection>().Start();
 
             // 更新檢查只由界面進程發起（服務以 SYSTEM 運行，不應主動聯網）；地址為空或開發構建時自動停用
@@ -105,6 +106,7 @@ public sealed partial class App : Application
         services.AddSingleton<IServiceLauncher, ServiceLauncher>();
         services.AddSingleton<ServiceLifecycle>();
         services.AddSingleton<AutoStartService>();
+        services.AddSingleton<ProfileCatalog>();
         services.AddSingleton<RuleEditing>();
         services.AddSingleton<PromptCoordinator>();
         services.AddSingleton<BlockedNotifier>();

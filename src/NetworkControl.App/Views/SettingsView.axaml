@@ -46,7 +46,7 @@
       </atom:Card>
 
       <!-- 配置文件（FR-MOD-02）：每組有自己的模式和專屬規則 -->
-      <atom:Card Header="{loc:ProfilesLangResource CardTitle}" IsEnabled="{Binding CanModify}">
+      <atom:Card Header="{loc:ProfilesLangResource CardTitle}" IsVisible="{Binding ShowProfiles}" IsEnabled="{Binding CanModify}">
         <StackPanel Spacing="12">
           <TextBlock Classes="secondary" Text="{loc:ProfilesLangResource CardDescription}" TextWrapping="Wrap" />
           <atom:Button ButtonType="Primary" HorizontalAlignment="Left"

@@ -25,22 +25,23 @@ public sealed class TrayService : IDisposable
     ];
 
     private readonly ServiceConnection _connection;
+    private readonly ProfileCatalog _catalog;
     private readonly DisplayText _text;
     private readonly UpdateChecker _updates;
     private readonly TrayIcon _trayIcon;
     private bool _refreshQueued;
-    private IReadOnlyList<Proto.ProfileInfo> _profiles = [];
-    private bool _loadingProfiles;
 
-    public TrayService(ServiceConnection connection, DisplayText text, UpdateChecker updates)
+    public TrayService(ServiceConnection connection, ProfileCatalog catalog, DisplayText text, UpdateChecker updates)
     {
         _connection = connection;
+        _catalog = catalog;
         _text = text;
         _updates = updates;
         _trayIcon = new TrayIcon { IsVisible = true };
         _trayIcon.Clicked += (_, _) => NavigateRequested?.Invoke(this, null);
 
         connection.PropertyChanged += OnConnectionChanged;
+        catalog.Changed += OnProfilesChanged;
         text.Localization.LanguageChanged += OnLanguageChanged;
         updates.PropertyChanged += OnUpdateChanged;
         Refresh();
@@ -61,21 +62,16 @@ public sealed class TrayService : IDisposable
     public void Dispose()
     {
         _connection.PropertyChanged -= OnConnectionChanged;
+        _catalog.Changed -= OnProfilesChanged;
         _text.Localization.LanguageChanged -= OnLanguageChanged;
         _updates.PropertyChanged -= OnUpdateChanged;
         _trayIcon.IsVisible = false;
         _trayIcon.Dispose();
     }
 
-    private void OnConnectionChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(ServiceConnection.State) && _connection.IsConnected)
-        {
-            _ = LoadProfilesAsync();
-        }
+    private void OnConnectionChanged(object? sender, PropertyChangedEventArgs e) => QueueRefresh();
 
-        QueueRefresh();
-    }
+    private void OnProfilesChanged(object? sender, EventArgs e) => QueueRefresh();
 
     private void OnLanguageChanged(object? sender, EventArgs e) => QueueRefresh();
 
@@ -115,30 +111,6 @@ public sealed class TrayService : IDisposable
         _trayIcon.Menu = BuildMenu(status);
     }
 
-    private async Task LoadProfilesAsync()
-    {
-        if (_loadingProfiles || _connection.Clients is not { } clients)
-        {
-            return;
-        }
-
-        _loadingProfiles = true;
-        try
-        {
-            var response = await clients.Profiles.ListAsync(new Empty());
-            _profiles = response.Profiles;
-            QueueRefresh();
-        }
-        catch (RpcException)
-        {
-            // 舊版服務沒有配置文件接口
-        }
-        finally
-        {
-            _loadingProfiles = false;
-        }
-    }
-
     private async Task ActivateProfileAsync(string id)
     {
         if (_connection.Clients is not { } clients)
@@ -149,7 +121,7 @@ public sealed class TrayService : IDisposable
         try
         {
             await clients.Profiles.ActivateAsync(new Proto.ActivateProfileRequest { Id = id });
-            await LoadProfilesAsync();
+            await _catalog.RefreshAsync();
         }
         catch (RpcException)
         {
@@ -189,15 +161,15 @@ public sealed class TrayService : IDisposable
 
         menu.Items.Add(new NativeMenuItem(loc.Get(TrayLangResourceKind.Mode)) { Menu = modeMenu, IsEnabled = connected });
 
-        // 配置文件
-        if (_profiles.Count > 1)
+        // 配置文件：勾選以狀態推送的 ActiveProfileId 為準，不再用列表快照的 IsActive（R5）
+        if (_catalog.HasMultiple)
         {
             var profileMenu = new NativeMenu();
-            foreach (var profile in _profiles)
+            foreach (var profile in _catalog.Profiles)
             {
                 var item = Item(profile.Name, () => _ = ActivateProfileAsync(profile.Id), connected);
                 item.ToggleType = MenuItemToggleType.Radio;
-                item.IsChecked = profile.IsActive;
+                item.IsChecked = profile.Id == status?.ActiveProfileId;
                 profileMenu.Items.Add(item);
             }
 
