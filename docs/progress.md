@@ -10,6 +10,11 @@
 
 ## 🔴 當前阻塞 / 下一步
 
+**0.3.0 試用包（2026-11-14，分支 `agent/claude/m3-traffic` 提交 `faddb94`）**，等待用戶驗證：
+- Windows：`artifacts\release\NetworkControl-0.3.0-win-x64-setup.exe`（28.2 MB）、`NetworkControl-0.3.0-win-x64.zip`（40.2 MB，可攜 / 安裝兩用）。Native AOT，只有白名單內的 AOT 警告。已用 AOT 服務（非管理員，WFP 按預期故障）驗證：統計、流量、應用、規則導出 / 導入 / 備份恢復接口在 AOT 下正常。
+- Android：`artifacts\android\com.networkcontrol.android-Signed.apk`（45.9 MB，versionCode 300，**調試簽名**，可以從 0.2.x 原地升級），清單包含 `PACKAGE_USAGE_STATS`。未在設備上運行過。
+- 驗證重點：總覽儀表板和網路用量、應用頁、規則匯入 / 匯出與還原、首次引導、再次雙擊喚起視窗；Android 今日用量（需要在設定中允許「使用情況存取權」）。
+
 0. **用戶驗證發布包（2026-11-12 晚）**——`0.2.0` 發布包已從提交 `8141f6f` 生成並核對（程序版本 `0.2.0+8141f6f`，Native AOT；zip 同時支援綠色版和安裝版）：`artifacts\release\NetworkControl-0.2.0-win-x64-setup.exe`（27.9 MB）和 `.zip`（39.7 MB）。已用解壓後的 AOT zip 驗證：界面識別為 `Portable`、使用 `pipe:NetworkControl.portable.v1`、日誌寫入 `<根目錄>\data\logs`、命令行診斷包可正常導出。以下需要管理員權限或需要看界面，由用戶執行：
    - 可攜版：解壓到可寫入的資料夾，雙擊 `start.cmd`，確認 UAC、WFP 攔截、退出界面後服務停止（見第 4 項）。
    - 安裝程序 `artifacts\release\NetworkControl-0.2.0-win-x64-setup.exe`：安裝 / 從 zip 安裝版升級 / 卸載（是否刪除數據的詢問）各走一遍。**尚未運行過**（只驗證了編譯和版本信息；安裝程序不會複製 `portable.txt` / `start.cmd`）。
