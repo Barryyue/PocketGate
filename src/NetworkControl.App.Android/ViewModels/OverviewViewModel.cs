@@ -11,7 +11,11 @@ namespace NetworkControl.Android.ViewModels;
 public sealed record UsageRow(string Label, string Bytes);
 
 /// <summary>總覽頁配置文件下拉中的一行。</summary>
-public sealed record ProfileChoice(Guid Id, string Name, bool IsActive);
+public sealed record ProfileChoice(Guid Id, string Name, bool IsActive)
+{
+    /// <summary>AtomUI ComboBox 的選中項直接顯示 ToString()。</summary>
+    public override string ToString() => Name;
+}
 
 public sealed partial class OverviewViewModel : LocalizedViewModel
 {

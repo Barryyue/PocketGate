@@ -37,4 +37,7 @@ public sealed class ProfileRow(
     public bool CanDelete => !IsActive && !IsDefault;
 
     public void Refresh() => OnPropertyChanged(string.Empty);
+
+    /// <summary>AtomUI ComboBox 的選中項直接顯示 ToString()。</summary>
+    public override string ToString() => Name;
 }
