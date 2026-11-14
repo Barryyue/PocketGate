@@ -175,5 +175,17 @@
         <target state="translated">服务正在停止，判决被取消。</target>
       </segment>
     </unit>
+    <unit id="ColumnLocal">
+      <segment>
+        <source>Local</source>
+        <target state="translated">本地</target>
+      </segment>
+    </unit>
+    <unit id="FieldLocalEndpoint">
+      <segment>
+        <source>Local endpoint (latest)</source>
+        <target state="translated">本地端点（最近一次）</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

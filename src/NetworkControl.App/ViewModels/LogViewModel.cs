@@ -19,7 +19,7 @@ public sealed class LogItemViewModel : ViewModelBase
 
     private LogItemViewModel(
         DisplayText text, Timestamp? time, string? appName, string? appPath, Proto.Direction direction, Proto.Protocol protocol,
-        Proto.IpEndpoint? remote, string? host, Proto.Verdict verdict, int count)
+        Proto.IpEndpoint? local, Proto.IpEndpoint? remote, string? host, Proto.Verdict verdict, int count)
     {
         _text = text;
         Time = time;
@@ -27,6 +27,7 @@ public sealed class LogItemViewModel : ViewModelBase
         AppNameValue = appName ?? DisplayText.FileName(appPath);
         Direction = direction;
         Protocol = protocol;
+        LocalEndpoint = local;
         RemoteEndpoint = remote;
         Host = host ?? "";
         Verdict = verdict;
@@ -49,6 +50,8 @@ public sealed class LogItemViewModel : ViewModelBase
 
     public Proto.IpEndpoint? RemoteEndpoint { get; }
 
+    public Proto.IpEndpoint? LocalEndpoint { get; }
+
     public string Host { get; }
 
     public Proto.Verdict Verdict { get; }
@@ -65,6 +68,8 @@ public sealed class LogItemViewModel : ViewModelBase
 
     public string Remote => DisplayText.Endpoint(RemoteEndpoint);
 
+    public string Local => DisplayText.Endpoint(LocalEndpoint);
+
     public string VerdictText => _text.Action(Verdict.Action);
 
     public string VerdictColor => Verdict.Action == Proto.VerdictAction.Allow ? "success" : "error";
@@ -75,11 +80,11 @@ public sealed class LogItemViewModel : ViewModelBase
 
     public static LogItemViewModel From(Proto.ConnectionEvent e, DisplayText text) => new(
         text, e.Timestamp, e.HasAppName ? e.AppName : null, e.HasAppPath ? e.AppPath : null, e.Direction, e.Protocol,
-        e.Remote, e.HasHostname ? e.Hostname : null, e.Verdict, 1);
+        e.Local, e.Remote, e.HasHostname ? e.Hostname : null, e.Verdict, 1);
 
     public static LogItemViewModel From(Proto.LogEntry e, DisplayText text) => new(
         text, e.LastSeen, e.HasAppName ? e.AppName : null, e.HasAppPath ? e.AppPath : null, e.Direction, e.Protocol,
-        e.Remote, e.HasHostname ? e.Hostname : null, e.Verdict, e.Count);
+        e.Local, e.Remote, e.HasHostname ? e.Hostname : null, e.Verdict, e.Count);
 
     public bool Matches(string keyword) =>
         AppNameValue.Contains(keyword, StringComparison.OrdinalIgnoreCase)

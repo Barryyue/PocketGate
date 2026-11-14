@@ -128,11 +128,13 @@ internal sealed partial class ActivityLogWriter : BackgroundService, IActivityCo
             cmd.Transaction = tx;
             cmd.CommandText = """
                 INSERT INTO connection_log (minute_ts, app_id, app_path, app_name, direction, protocol, remote_ip, remote_port,
-                                            hostname, verdict, reason, rule_id, count, first_ts, last_ts)
-                VALUES ($minute, $app, $path, $name, $dir, $proto, $ip, $port, $host, $verdict, $reason, $rule, 1, $ts, $ts)
+                                            local_ip, local_port, hostname, verdict, reason, rule_id, count, first_ts, last_ts)
+                VALUES ($minute, $app, $path, $name, $dir, $proto, $ip, $port, $local_ip, $local_port, $host, $verdict, $reason, $rule, 1, $ts, $ts)
                 ON CONFLICT (minute_ts, app_id, ifnull(app_path, ''), direction, protocol, remote_ip, remote_port, verdict, reason) DO UPDATE SET
                     count = count + 1,
                     last_ts = MAX(last_ts, excluded.last_ts),
+                    local_ip = excluded.local_ip,
+                    local_port = excluded.local_port,
                     hostname = COALESCE(excluded.hostname, hostname),
                     rule_id = COALESCE(excluded.rule_id, rule_id);
                 """;
@@ -145,6 +147,8 @@ internal sealed partial class ActivityLogWriter : BackgroundService, IActivityCo
             var pProto = cmd.Parameters.Add("$proto", SqliteType.Integer);
             var pIp = cmd.Parameters.Add("$ip", SqliteType.Text);
             var pPort = cmd.Parameters.Add("$port", SqliteType.Integer);
+            var pLocalIp = cmd.Parameters.Add("$local_ip", SqliteType.Text);
+            var pLocalPort = cmd.Parameters.Add("$local_port", SqliteType.Integer);
             var pHost = cmd.Parameters.Add("$host", SqliteType.Text);
             var pVerdict = cmd.Parameters.Add("$verdict", SqliteType.Integer);
             var pReason = cmd.Parameters.Add("$reason", SqliteType.Integer);
@@ -163,6 +167,8 @@ internal sealed partial class ActivityLogWriter : BackgroundService, IActivityCo
                 pProto.Value = (int)e.Protocol;
                 pIp.Value = e.Remote.Address.ToString();
                 pPort.Value = e.Remote.Port;
+                pLocalIp.Value = e.Local.Address.ToString();
+                pLocalPort.Value = e.Local.Port;
                 pHost.Value = (object?)e.Hostname ?? DBNull.Value;
                 pVerdict.Value = (int)e.Verdict.Action;
                 pReason.Value = (int)e.Verdict.Reason;

@@ -42,6 +42,7 @@ message LogEntry {
   optional string hostname = 10;
   Verdict verdict = 11;
   int32 count = 12;
+  IpEndpoint local = 13;
 }
 
 message LogPage {

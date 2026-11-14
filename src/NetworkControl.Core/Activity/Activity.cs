@@ -85,7 +85,8 @@ public sealed record LogEntry(
     int RemotePort,
     string? Hostname,
     Verdict Verdict,
-    int Count);
+    int Count,
+    IPEndPoint? Local = null);
 
 /// <summary>活動統計的查詢條件：時間範圍 [From, To) 按 <see cref="BucketSize"/> 分桶。</summary>
 public sealed record ActivitySummaryQuery

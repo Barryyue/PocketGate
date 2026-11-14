@@ -174,6 +174,7 @@ public class ActivityLogTests
         var entries = await query.QueryAsync(new LogQuery(), TestContext.Current.CancellationToken);
         Assert.Equal(3, entries.Count);
         Assert.Equal(2, entries.Single(e => e.Verdict.Action == VerdictAction.Allow && e.Count > 1).Count);
+        Assert.Equal(new IPEndPoint(IPAddress.Parse("192.168.1.10"), 50000), entries.Single(e => e.Count > 1).Local);
 
         var denied = await query.QueryAsync(new LogQuery { Action = VerdictAction.Deny }, TestContext.Current.CancellationToken);
         Assert.Single(denied);

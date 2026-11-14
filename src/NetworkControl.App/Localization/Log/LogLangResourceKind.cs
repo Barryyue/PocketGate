@@ -35,4 +35,6 @@ public enum LogLangResourceKind
     ExplainDoNotDisturb,
     ExplainFailSafe,
     ExplainCancelled,
+    ColumnLocal,
+    FieldLocalEndpoint,
 }

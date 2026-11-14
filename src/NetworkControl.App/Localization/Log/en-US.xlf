@@ -146,5 +146,15 @@
         <source>The decision was cancelled because the service was stopping.</source>
       </segment>
     </unit>
+    <unit id="ColumnLocal">
+      <segment>
+        <source>Local</source>
+      </segment>
+    </unit>
+    <unit id="FieldLocalEndpoint">
+      <segment>
+        <source>Local endpoint (latest)</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

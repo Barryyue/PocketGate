@@ -53,6 +53,7 @@
           </atom:DataGridTemplateColumn>
           <atom:DataGridTextColumn x:DataType="vm:LogItemViewModel" Header="{loc:LogLangResource ColumnDirection}" Binding="{Binding DirectionText}" Width="80" />
           <atom:DataGridTextColumn x:DataType="vm:LogItemViewModel" Header="{loc:LogLangResource ColumnProtocol}" Binding="{Binding ProtocolText}" Width="80" />
+          <atom:DataGridTextColumn x:DataType="vm:LogItemViewModel" Header="{loc:LogLangResource ColumnLocal}" Binding="{Binding Local}" Width="170" />
           <atom:DataGridTextColumn x:DataType="vm:LogItemViewModel" Header="{loc:LogLangResource ColumnRemote}" Binding="{Binding Remote}" Width="170" />
           <atom:DataGridTextColumn x:DataType="vm:LogItemViewModel" Header="{loc:LogLangResource ColumnHost}" Binding="{Binding Host}" Width="2*" />
           <atom:DataGridTemplateColumn Header="{loc:LogLangResource ColumnVerdict}" Width="88">

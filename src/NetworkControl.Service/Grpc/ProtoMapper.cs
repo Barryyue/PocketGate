@@ -365,6 +365,7 @@ internal static class ProtoMapper
             LastSeen = e.LastSeen.ToProto(),
             Direction = e.Direction.ToProto(),
             Protocol = e.Protocol.ToProto(),
+            Local = e.Local?.ToProto(),
             Remote = new Proto.IpEndpoint { Address = e.RemoteAddress.ToString(), Port = (uint)e.RemotePort },
             Verdict = e.Verdict.ToProto(),
             Count = e.Count,

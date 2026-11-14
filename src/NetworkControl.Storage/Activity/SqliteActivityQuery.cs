@@ -15,7 +15,7 @@ internal sealed class SqliteActivityQuery(ActivityDatabase db) : IActivityQuery
 
         var sql = new StringBuilder("""
             SELECT id, first_ts, last_ts, app_id, app_path, app_name, direction, protocol, remote_ip, remote_port,
-                   hostname, verdict, reason, rule_id, count
+                   local_ip, local_port, hostname, verdict, reason, rule_id, count
             FROM connection_log WHERE 1 = 1
             """);
 
@@ -75,9 +75,10 @@ internal sealed class SqliteActivityQuery(ActivityDatabase db) : IActivityQuery
                 (L4Protocol)r.GetInt32(7),
                 IPAddress.Parse(r.GetString(8)),
                 r.GetInt32(9),
-                r.GetNullableString(10),
-                new Verdict((VerdictAction)r.GetInt32(11), (VerdictReason)r.GetInt32(12), r.GetNullableString(13) is { } rule ? Guid.Parse(rule) : null),
-                r.GetInt32(14)));
+                r.GetNullableString(12),
+                new Verdict((VerdictAction)r.GetInt32(13), (VerdictReason)r.GetInt32(14), r.GetNullableString(15) is { } rule ? Guid.Parse(rule) : null),
+                r.GetInt32(16),
+                r.IsDBNull(10) || r.IsDBNull(11) ? null : new IPEndPoint(IPAddress.Parse(r.GetString(10)), r.GetInt32(11))));
         }
 
         return result;

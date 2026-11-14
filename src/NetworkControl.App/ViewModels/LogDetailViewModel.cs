@@ -45,6 +45,11 @@ public sealed class LogDetailViewModel(LogItemViewModel item, DisplayText text) 
 
             fields.Add(new(Loc.Get(LogLangResourceKind.ColumnDirection), item.DirectionText));
             fields.Add(new(Loc.Get(LogLangResourceKind.ColumnProtocol), item.ProtocolText));
+            if (item.LocalEndpoint is not null)
+            {
+                fields.Add(new(Loc.Get(LogLangResourceKind.FieldLocalEndpoint), item.Local, Monospace: true));
+            }
+
             fields.Add(new(Loc.Get(LogLangResourceKind.ColumnRemote), item.Remote, Monospace: true));
             if (item.Host.Length > 0)
             {

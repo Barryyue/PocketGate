@@ -67,7 +67,7 @@
       <atom:Alert Type="Warning" IsShowIcon="True" Message="{loc:OverviewLangResource BlockAllActive}" IsVisible="{Binding IsBlockAll}" />
 
       <!-- 關鍵指標 -->
-      <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="16">
+      <Grid x:Name="KpiGrid" ColumnDefinitions="*,*,*,*" ColumnSpacing="16">
         <atom:Card Grid.Column="0">
           <StackPanel Spacing="6">
             <TextBlock Classes="kpi-caption" Text="{loc:OverviewLangResource Protection}" />
@@ -129,7 +129,7 @@
       </atom:Card>
 
       <!-- 網路用量（FR-STA-01） -->
-      <Grid ColumnDefinitions="2*,*" ColumnSpacing="16">
+      <Grid x:Name="TrafficGrid" ColumnDefinitions="2*,*" ColumnSpacing="16">
         <atom:Card Grid.Column="0" Header="{loc:OverviewLangResource TrafficTitle}">
           <StackPanel Spacing="8">
             <DockPanel>
@@ -176,7 +176,7 @@
       </Grid>
 
       <!-- 排行榜 -->
-      <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+      <Grid x:Name="RankingGrid" ColumnDefinitions="*,*" ColumnSpacing="16">
         <atom:Card Grid.Column="0" Header="{loc:OverviewLangResource TopApps}">
           <Panel MinHeight="120">
             <atom:Empty IsVisible="{Binding Dashboard.ShowEmptyLists}" Description="{loc:OverviewLangResource NoActivity}"
