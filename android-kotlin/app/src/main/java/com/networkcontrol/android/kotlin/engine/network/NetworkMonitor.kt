@@ -5,12 +5,15 @@ import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.TelephonyNetworkSpecifier
 import android.net.wifi.WifiManager
 import android.Manifest
 import android.content.pm.PackageManager
+import android.telephony.SubscriptionManager
 import androidx.core.content.ContextCompat
 import com.networkcontrol.android.kotlin.core.model.NetworkContext
 import com.networkcontrol.android.kotlin.core.model.NetworkKind
+import com.networkcontrol.android.kotlin.core.model.SimInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,19 +64,45 @@ class NetworkMonitor(private val context: Context) {
             else -> NetworkKind.Other
         }
         val ssid = if (kind == NetworkKind.Wifi) currentSsid() else null
+        val subscriptionId = if (kind == NetworkKind.Cellular) {
+            (caps.networkSpecifier as? TelephonyNetworkSpecifier)?.subscriptionId
+                ?: runCatching { caps.subscriptionIds?.firstOrNull() }.getOrNull()
+        } else {
+            null
+        }
+        val sim = subscriptionId?.let { id -> subscriptions().firstOrNull { it.subscriptionId == id } }
         _state.value = NetworkContext(
             kind = kind,
             ssid = ssid,
             networkId = network.networkHandle.toString(),
+            subscriptionId = subscriptionId,
+            simSlotIndex = sim?.slotIndex,
+            carrierName = sim?.carrierName,
+            isMetered = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
             displayName = when (kind) {
                 NetworkKind.Wifi -> ssid ?: "Wi-Fi"
-                NetworkKind.Cellular -> "行動網路"
+                NetworkKind.Cellular -> sim?.label ?: "行動網路"
                 NetworkKind.Wired -> "有線網路"
                 NetworkKind.Vpn -> "VPN"
                 NetworkKind.Other -> "其他網路"
                 NetworkKind.None -> null
             },
         )
+    }
+
+    /** 目前可用的 SIM；需要 READ_PHONE_STATE，未授權時回空清單。 */
+    fun subscriptions(): List<SimInfo> {
+        val manager = appContext.getSystemService(SubscriptionManager::class.java) ?: return emptyList()
+        return runCatching {
+            manager.activeSubscriptionInfoList.orEmpty().map { info ->
+                SimInfo(
+                    subscriptionId = info.subscriptionId,
+                    slotIndex = info.simSlotIndex,
+                    carrierName = info.carrierName?.toString(),
+                    displayName = info.displayName?.toString(),
+                )
+            }
+        }.getOrDefault(emptyList())
     }
 
     private fun currentSsid(): String? {

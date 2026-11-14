@@ -9,6 +9,7 @@ import com.networkcontrol.android.kotlin.core.model.FilterMode
 import com.networkcontrol.android.kotlin.core.model.FlowInfo
 import com.networkcontrol.android.kotlin.core.model.FlowOrigin
 import com.networkcontrol.android.kotlin.core.model.L4Protocol
+import com.networkcontrol.android.kotlin.core.model.NetworkContext
 import com.networkcontrol.android.kotlin.core.model.NetworkZone
 import com.networkcontrol.android.kotlin.core.model.Verdict
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
@@ -30,6 +31,7 @@ class VerdictPipeline(
     private val activity: ActivityStore,
     private val scope: CoroutineScope,
     private val selfPackage: String,
+    private val currentNetwork: () -> NetworkContext = { NetworkContext.None },
 ) {
     private val selfPath = "android-app://$selfPackage"
 
@@ -72,7 +74,7 @@ class VerdictPipeline(
         }
 
         val ruleSet = rules.ruleSet.value
-        val match = ruleSet.evaluate(flow, flow.app, domains, zone)
+        val match = ruleSet.evaluate(flow, flow.app, domains, zone, currentNetwork())
         match.rule?.let { rule ->
             rules.recordHit(rule.id)
             return Verdict(rule.action, VerdictReason.Rule, rule.id)

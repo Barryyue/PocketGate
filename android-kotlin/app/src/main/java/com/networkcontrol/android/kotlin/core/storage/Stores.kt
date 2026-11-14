@@ -8,6 +8,8 @@ import com.networkcontrol.android.kotlin.core.model.AppTraffic
 import com.networkcontrol.android.kotlin.core.model.ConnectionEvent
 import com.networkcontrol.android.kotlin.core.model.LogEntry
 import com.networkcontrol.android.kotlin.core.model.LogQuery
+import com.networkcontrol.android.kotlin.core.model.NetworkKey
+import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import com.networkcontrol.android.kotlin.core.model.Profile
 import com.networkcontrol.android.kotlin.core.model.Rule
 import com.networkcontrol.android.kotlin.core.model.RuleEndReason
@@ -53,7 +55,18 @@ interface ActivityStore {
 }
 
 interface TrafficStore {
-    suspend fun add(appId: Long, minute: Long, bytesIn: Long, bytesOut: Long)
+    suspend fun add(
+        appId: Long,
+        minute: Long,
+        bytesIn: Long,
+        bytesOut: Long,
+        networkKind: NetworkKind = NetworkKind.Other,
+        subscriptionId: Int? = null,
+    )
+
     suspend fun summarize(from: Long, to: Long, bucketMillis: Long, topCount: Int): TrafficSummary
+
     suspend fun byApp(from: Long, to: Long): Map<Long, AppTraffic>
+
+    suspend fun byNetwork(from: Long, to: Long): Map<NetworkKey, Pair<Long, Long>>
 }

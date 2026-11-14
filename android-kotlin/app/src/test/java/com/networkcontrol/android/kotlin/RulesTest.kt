@@ -10,6 +10,8 @@ import com.networkcontrol.android.kotlin.core.model.Direction
 import com.networkcontrol.android.kotlin.core.model.DomainCandidates
 import com.networkcontrol.android.kotlin.core.model.FlowInfo
 import com.networkcontrol.android.kotlin.core.model.L4Protocol
+import com.networkcontrol.android.kotlin.core.model.NetworkContext
+import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import com.networkcontrol.android.kotlin.core.model.NetworkZone
 import com.networkcontrol.android.kotlin.core.model.PortRange
 import com.networkcontrol.android.kotlin.core.model.Rule
@@ -172,5 +174,55 @@ class RulesTest {
         )
         val match = rules.findAppRule(app) { true }
         assertEquals("blocked-by-port", match.rule?.id)
+    }
+
+    @Test
+    fun networkConditionsNeedMatchingContext() {
+        val rules = RuleSet(
+            listOf(
+                rule(
+                    "wifi-only",
+                    VerdictAction.Allow,
+                    conditions = RuleConditions(networkKinds = setOf(NetworkKind.Wifi)),
+                ),
+            ),
+        )
+        val wifi = NetworkContext(kind = NetworkKind.Wifi, ssid = "Office")
+        val cellular = NetworkContext(kind = NetworkKind.Cellular, subscriptionId = 1)
+        assertEquals("wifi-only", rules.evaluate(flow(), app, DomainCandidates.Empty, NetworkZone.Internet, wifi).rule?.id)
+        assertNull(rules.evaluate(flow(), app, DomainCandidates.Empty, NetworkZone.Internet, cellular).rule)
+        assertEquals("wifi-only", rules.findAppRule(app, wifi) { true }.rule?.id)
+        assertNull(rules.findAppRule(app, cellular) { true }.rule)
+    }
+
+    @Test
+    fun simConditionMatchesSubscription() {
+        val rules = RuleSet(
+            listOf(
+                rule(
+                    "sim-two",
+                    VerdictAction.Deny,
+                    conditions = RuleConditions(subscriptionIds = setOf(2)),
+                ),
+            ),
+        )
+        assertNotNull(
+            rules.evaluate(
+                flow(),
+                app,
+                DomainCandidates.Empty,
+                NetworkZone.Internet,
+                NetworkContext(kind = NetworkKind.Cellular, subscriptionId = 2),
+            ).rule,
+        )
+        assertNull(
+            rules.evaluate(
+                flow(),
+                app,
+                DomainCandidates.Empty,
+                NetworkZone.Internet,
+                NetworkContext(kind = NetworkKind.Cellular, subscriptionId = 1),
+            ).rule,
+        )
     }
 }

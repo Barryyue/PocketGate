@@ -193,6 +193,14 @@ enum class S {
     PresetColors,
     SsidLocationHint,
     NotificationPermissionMissing,
+    SimCard,
+    AllSims,
+    PhoneStateHint,
+    Other,
+    NetworkConditions,
+    NetworkRuleHint,
+    NetworkRules,
+    RuleAction,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -404,6 +412,14 @@ private val EN = mapOf(
     S.PresetColors to "Preset colors",
     S.SsidLocationHint to "Reading the Wi-Fi name requires location permission.",
     S.NotificationPermissionMissing to "Notifications are disabled. Background prompts cannot be shown until you allow notifications.",
+    S.SimCard to "SIM",
+    S.AllSims to "All SIMs",
+    S.PhoneStateHint to "Reading SIM labels and per-SIM traffic requires phone state permission.",
+    S.Other to "Other",
+    S.NetworkConditions to "Network conditions",
+    S.NetworkRuleHint to "This decision only applies on the selected network. Other networks keep their own rules.",
+    S.NetworkRules to "Network rules",
+    S.RuleAction to "Action",
 )
 
 private val CN = mapOf(
@@ -595,6 +611,14 @@ private val CN = mapOf(
     S.PresetColors to "预设颜色",
     S.SsidLocationHint to "读取 Wi-Fi 名称需要定位权限。",
     S.NotificationPermissionMissing to "通知权限已关闭，后台询问将无法显示。请允许通知。",
+    S.SimCard to "SIM 卡",
+    S.AllSims to "所有 SIM",
+    S.PhoneStateHint to "读取 SIM 名称和按 SIM 流量需要电话状态权限。",
+    S.Other to "其他",
+    S.NetworkConditions to "网络条件",
+    S.NetworkRuleHint to "此决定只在所选网络生效，其他网络继续使用各自的规则。",
+    S.NetworkRules to "网络规则",
+    S.RuleAction to "操作",
 )
 
 private val TW = mapOf(
@@ -786,4 +810,12 @@ private val TW = mapOf(
     S.PresetColors to "預設顏色",
     S.SsidLocationHint to "讀取 Wi-Fi 名稱需要定位權限。",
     S.NotificationPermissionMissing to "通知權限已關閉，背景詢問將無法顯示。請允許通知。",
+    S.SimCard to "SIM 卡",
+    S.AllSims to "所有 SIM",
+    S.PhoneStateHint to "讀取 SIM 名稱和按 SIM 流量需要電話狀態權限。",
+    S.Other to "其他",
+    S.NetworkConditions to "網路條件",
+    S.NetworkRuleHint to "此決定只在所選網路生效，其他網路繼續使用各自的規則。",
+    S.NetworkRules to "網路規則",
+    S.RuleAction to "動作",
 )

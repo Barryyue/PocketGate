@@ -301,6 +301,28 @@ fun OverviewScreen(backend: AppBackend) {
                             Text(formatBytes(traffic.bytesOut), style = MaterialTheme.typography.titleMedium)
                         }
                     }
+                    val simLabels = backend.subscriptions().associateBy { it.subscriptionId }
+                    traffic.byNetwork.entries
+                        .filter { it.value.first + it.value.second > 0 }
+                        .sortedByDescending { it.value.first + it.value.second }
+                        .take(4)
+                        .forEach { (key, bytes) ->
+                            val label = when (key.kind) {
+                                com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi -> s[S.Wifi]
+                                com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular ->
+                                    key.subscriptionId?.let { simLabels[it]?.label } ?: s[S.Cellular]
+                                com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired -> s[S.Wired]
+                                else -> s[S.Other]
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(label, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    formatBytes(bytes.first + bytes.second),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     val top = traffic.byPackage.entries
                         .sortedByDescending { it.value.first + it.value.second }
                         .take(3)

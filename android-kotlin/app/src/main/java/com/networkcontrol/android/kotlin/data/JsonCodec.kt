@@ -90,6 +90,9 @@ object JsonCodec {
         put("remote", remoteToJson(conditions.remote) ?: JSONObject.NULL)
         put("remotePort", portToJson(conditions.remotePort) ?: JSONObject.NULL)
         put("localPort", portToJson(conditions.localPort) ?: JSONObject.NULL)
+        put("networkKinds", JSONArray(conditions.networkKinds.map { it.name }))
+        put("subscriptionIds", JSONArray(conditions.subscriptionIds.toList()))
+        put("simSlots", JSONArray(conditions.simSlots.toList()))
     }.toString()
 
     fun conditionsFromJson(json: String): RuleConditions {
@@ -100,6 +103,16 @@ object JsonCodec {
             remote = obj.optJSONObject("remote")?.let(::remoteFromJson),
             remotePort = obj.optJSONObject("remotePort")?.let(::portFromJson),
             localPort = obj.optJSONObject("localPort")?.let(::portFromJson),
+            networkKinds = obj.optJSONArray("networkKinds")?.toStringList()
+                ?.mapNotNull { name -> NetworkKind.entries.firstOrNull { it.name == name } }
+                ?.toSet()
+                ?: emptySet(),
+            subscriptionIds = obj.optJSONArray("subscriptionIds")?.let { array ->
+                (0 until array.length()).map { array.getInt(it) }.toSet()
+            } ?: emptySet(),
+            simSlots = obj.optJSONArray("simSlots")?.let { array ->
+                (0 until array.length()).map { array.getInt(it) }.toSet()
+            } ?: emptySet(),
         )
     }
 
@@ -149,6 +162,8 @@ object JsonCodec {
             put("kind", it.kind?.name ?: JSONObject.NULL)
             put("ssids", JSONArray(it.ssids))
             put("networkIds", JSONArray(it.networkIds))
+            put("subscriptionIds", JSONArray(it.subscriptionIds))
+            put("simSlots", JSONArray(it.simSlots))
         }.toString()
     }
 
@@ -159,6 +174,12 @@ object JsonCodec {
             kind = enumOrNull<NetworkKind>(obj, "kind"),
             ssids = obj.optJSONArray("ssids")?.toStringList() ?: emptyList(),
             networkIds = obj.optJSONArray("networkIds")?.toStringList() ?: emptyList(),
+            subscriptionIds = obj.optJSONArray("subscriptionIds")?.let { array ->
+                (0 until array.length()).map { array.getInt(it) }
+            } ?: emptyList(),
+            simSlots = obj.optJSONArray("simSlots")?.let { array ->
+                (0 until array.length()).map { array.getInt(it) }
+            } ?: emptyList(),
         )
     }
 

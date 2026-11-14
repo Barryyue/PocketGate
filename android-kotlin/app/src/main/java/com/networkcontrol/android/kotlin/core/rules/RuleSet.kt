@@ -8,6 +8,7 @@ import com.networkcontrol.android.kotlin.core.model.AppIdentity
 import com.networkcontrol.android.kotlin.core.model.AppMatchOutcome
 import com.networkcontrol.android.kotlin.core.model.DomainCandidates
 import com.networkcontrol.android.kotlin.core.model.FlowInfo
+import com.networkcontrol.android.kotlin.core.model.NetworkContext
 import com.networkcontrol.android.kotlin.core.model.NetworkZone
 import com.networkcontrol.android.kotlin.core.model.RemoteTarget
 import com.networkcontrol.android.kotlin.core.model.Rule
@@ -37,6 +38,10 @@ object RuleSpecificity {
         score += if (conditions.localPort != null) 20 else 0
         score += if (conditions.protocol != null) 10 else 0
         score += if (conditions.direction != null) 5 else 0
+        // 網路條件讓規則更貼近使用者當下情境，優先於同應用的一般規則。
+        score += if (conditions.networkKinds.isNotEmpty()) 30 else 0
+        score += if (conditions.subscriptionIds.isNotEmpty()) 20 else 0
+        score += if (conditions.simSlots.isNotEmpty()) 10 else 0
         return score
     }
 
@@ -81,8 +86,14 @@ class CompiledRule(val rule: Rule) {
         return AppMatchOutcome.Match
     }
 
-    fun matchConditions(flow: FlowInfo, domains: DomainCandidates, remoteZone: NetworkZone): Boolean {
+    fun matchConditions(
+        flow: FlowInfo,
+        domains: DomainCandidates,
+        remoteZone: NetworkZone,
+        network: NetworkContext = NetworkContext.None,
+    ): Boolean {
         val conditions = rule.conditions
+        if (!conditions.matchesNetwork(network)) return false
         if (conditions.direction != null && conditions.direction != flow.direction) return false
         if (conditions.protocol != null && conditions.protocol != flow.protocol) return false
         if (conditions.remotePort != null && !conditions.remotePort.contains(flow.remote.port)) return false
@@ -115,10 +126,11 @@ class RuleSet(rules: List<Rule>, val version: Long = 0) {
         app: AppIdentity?,
         domains: DomainCandidates,
         remoteZone: NetworkZone,
+        network: NetworkContext = NetworkContext.None,
     ): RuleMatch {
         var tampered: Rule? = null
         for (candidate in compiled) {
-            if (!candidate.matchConditions(flow, domains, remoteZone)) continue
+            if (!candidate.matchConditions(flow, domains, remoteZone, network)) continue
             when (candidate.matchApp(app)) {
                 AppMatchOutcome.Match -> return RuleMatch(candidate.rule, tampered)
                 AppMatchOutcome.Tampered -> if (tampered == null) tampered = candidate.rule
@@ -128,10 +140,15 @@ class RuleSet(rules: List<Rule>, val version: Long = 0) {
         return RuleMatch(null, tampered)
     }
 
-    fun findAppRule(app: AppIdentity, includeRule: (Rule) -> Boolean): RuleMatch {
+    fun findAppRule(
+        app: AppIdentity,
+        network: NetworkContext = NetworkContext.None,
+        includeRule: (Rule) -> Boolean,
+    ): RuleMatch {
         var tampered: Rule? = null
         for (candidate in compiled) {
             if (!includeRule(candidate.rule)) continue
+            if (!candidate.rule.conditions.matchesNetwork(network)) continue
             when (candidate.matchApp(app)) {
                 AppMatchOutcome.Match -> return RuleMatch(candidate.rule, tampered)
                 AppMatchOutcome.Tampered -> if (tampered == null) tampered = candidate.rule

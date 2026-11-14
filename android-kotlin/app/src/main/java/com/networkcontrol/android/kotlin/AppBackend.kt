@@ -56,6 +56,7 @@ class AppBackend(val container: AppContainer) {
     val tunnelError = container.vpnEngine.tunnelError
     val quietPeriod = container.quietPeriods.summary
     val speed = container.speedMonitor.speed
+    val network = container.network.state
 
     fun protectionStatus(): ProtectionStatus = container.vpnEngine.status()
 
@@ -107,13 +108,26 @@ class AppBackend(val container: AppContainer) {
             .toList()
     }
 
-    suspend fun setAppDecision(packageName: String, decision: AppDecision) {
+    suspend fun setAppDecision(
+        packageName: String,
+        decision: AppDecision,
+        networkKinds: Set<com.networkcontrol.android.kotlin.core.model.NetworkKind> = emptySet(),
+        subscriptionIds: Set<Int> = emptySet(),
+        simSlots: Set<Int> = emptySet(),
+        replaceAllScopes: Boolean = networkKinds.isEmpty() && subscriptionIds.isEmpty() && simSlots.isEmpty(),
+    ) {
         val path = AppCatalog.appPath(packageName)
         val activeProfileId = container.profiles.active.id
         val existing = container.rules.all
             .filter { it.source == RuleSource.User || it.source == RuleSource.Prompt }
             .filter { isOwnRule(it, path) }
             .filter { it.profileId == null || it.profileId == activeProfileId }
+            .filter { rule ->
+                replaceAllScopes ||
+                    (rule.conditions.networkKinds == networkKinds &&
+                        rule.conditions.subscriptionIds == subscriptionIds &&
+                        rule.conditions.simSlots == simSlots)
+            }
             .map { it.id }
         if (existing.isNotEmpty()) {
             container.rules.remove(existing, RuleEndReason.Replaced)
@@ -126,7 +140,12 @@ class AppBackend(val container: AppContainer) {
                 id = java.util.UUID.randomUUID().toString(),
                 profileId = activeProfileId,
                 app = AppMatcherFactory.create(container.appCatalog.toIdentity(app)),
-                conditions = RuleConditions(direction = Direction.Outbound),
+                conditions = RuleConditions(
+                    direction = Direction.Outbound,
+                    networkKinds = networkKinds,
+                    subscriptionIds = subscriptionIds,
+                    simSlots = simSlots,
+                ),
                 action = if (decision == AppDecision.Allow) VerdictAction.Allow else VerdictAction.Deny,
                 lifetime = RuleLifetime.Permanent,
                 source = RuleSource.User,
@@ -134,6 +153,16 @@ class AppBackend(val container: AppContainer) {
                 updatedAt = now,
             ),
         )
+    }
+
+    /** 目前配置文件下，這個應用所有的三態規則（含不同網路條件）。 */
+    fun appRules(packageName: String): List<Rule> {
+        val path = AppCatalog.appPath(packageName)
+        val activeProfileId = container.profiles.active.id
+        return container.rules.all
+            .filter { it.source == RuleSource.User || it.source == RuleSource.Prompt }
+            .filter { isOwnRule(it, path) }
+            .filter { it.profileId == null || it.profileId == activeProfileId }
     }
 
     suspend fun getLogs(limit: Int = 300, keyword: String? = null): List<LogEntry> =
@@ -155,6 +184,7 @@ class AppBackend(val container: AppContainer) {
         if (!container.trafficCollector.isAvailable) return TrafficUsage.Empty
         runCatching { container.trafficCollector.collectNow() }
         val byApp = container.trafficStore.byApp(from, to)
+        val byNetwork = container.trafficStore.byNetwork(from, to)
         var totalIn = 0L
         var totalOut = 0L
         val byPackage = HashMap<String, Pair<Long, Long>>()
@@ -166,7 +196,7 @@ class AppBackend(val container: AppContainer) {
             val current = byPackage[packageName] ?: (0L to 0L)
             byPackage[packageName] = (current.first + usage.bytesIn) to (current.second + usage.bytesOut)
         }
-        return TrafficUsage(totalIn, totalOut, byPackage)
+        return TrafficUsage(totalIn, totalOut, byPackage, byNetwork)
     }
 
     fun activeProfile(): Profile = container.profiles.active
@@ -246,6 +276,15 @@ class AppBackend(val container: AppContainer) {
 
     fun appListVisibility(): com.networkcontrol.android.kotlin.engine.apps.AppCatalog.AppListVisibility =
         container.appCatalog.visibility()
+
+    fun subscriptions(): List<com.networkcontrol.android.kotlin.core.model.SimInfo> =
+        container.network.subscriptions()
+
+    fun hasPhoneStatePermission(): Boolean =
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.READ_PHONE_STATE,
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
     fun openAppSettings(): Intent =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -344,7 +383,9 @@ class AppBackend(val container: AppContainer) {
     }
 
     private fun ownRule(rules: List<Rule>, path: String): Rule? =
-        rules.firstOrNull { isOwnRule(it, path) }
+        rules.firstOrNull {
+            isOwnRule(it, path) && it.conditions.matchesNetwork(container.network.current)
+        }
 
     private fun isOwnRule(rule: Rule, path: String): Boolean =
         rule.app?.let { !it.hasWildcard && it.pathPattern == path } == true &&

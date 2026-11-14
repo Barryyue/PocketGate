@@ -8,6 +8,7 @@ import com.networkcontrol.android.kotlin.core.model.CodeSignature
 import com.networkcontrol.android.kotlin.core.model.Direction
 import com.networkcontrol.android.kotlin.core.model.FilterMode
 import com.networkcontrol.android.kotlin.core.model.InstalledApp
+import com.networkcontrol.android.kotlin.core.model.NetworkContext
 import com.networkcontrol.android.kotlin.core.model.Rule
 import com.networkcontrol.android.kotlin.core.model.RuleSkipReason
 import com.networkcontrol.android.kotlin.core.model.SkippedRule
@@ -27,6 +28,7 @@ object VpnRoutingPlanner {
         mode: FilterMode,
         apps: List<InstalledApp>,
         selfPackage: String,
+        network: NetworkContext = NetworkContext.None,
     ): VpnRoutingPlan {
         val skipped = rules.rules.mapNotNull { rule ->
             getSkipReason(rule)?.let { SkippedRule(rule.id, it) }
@@ -38,7 +40,7 @@ object VpnRoutingPlanner {
             val sorted = group.sortedBy { it.packageName }
             val primary = sorted.first()
             val packages = sorted.map { it.packageName }
-            val routing = decide(rules, mode, uid, primary, packages, selfPackage)
+            val routing = decide(rules, mode, uid, primary, packages, selfPackage, network)
             byUid[uid] = routing
             if (routing.decision == AppRoutingDecision.Bypass) bypass.addAll(packages)
         }
@@ -51,6 +53,7 @@ object VpnRoutingPlanner {
     fun getSkipReason(rule: Rule): RuleSkipReason? {
         val conditions = rule.conditions
         if (conditions.direction == Direction.Inbound) return RuleSkipReason.Inbound
+        // 網路類型 / SIM 條件可以在 VPN 路由層按目前網路套用，不算不支援。
         return if (conditions.remote == null &&
             conditions.remotePort == null &&
             conditions.localPort == null &&
@@ -78,6 +81,7 @@ object VpnRoutingPlanner {
         primary: InstalledApp,
         packages: List<String>,
         selfPackage: String,
+        network: NetworkContext,
     ): AppRouting {
         if (packages.contains(selfPackage)) {
             return AppRouting(uid, primary.packageName, packages, AppRoutingDecision.Bypass, AppRoutingReason.Self)
@@ -95,7 +99,7 @@ object VpnRoutingPlanner {
             else -> Unit
         }
 
-        val match = rules.findAppRule(toIdentity(primary)) { isEnforceable(it) }
+        val match = rules.findAppRule(toIdentity(primary), network) { isEnforceable(it) }
         match.rule?.let { rule ->
             val decision = if (rule.action == VerdictAction.Allow) {
                 AppRoutingDecision.Bypass

@@ -382,6 +382,7 @@ fun SettingsScreen(backend: AppBackend) {
         ProfileDialog(
             profile = editingProfile,
             currentNetwork = backend.container.network.current,
+            loadSims = { backend.subscriptions() },
             onDismiss = { showProfileDialog = false },
             onSave = { name, mode, auto ->
                 val current = editingProfile
@@ -487,6 +488,7 @@ private fun ProfileRow(
 private fun ProfileDialog(
     profile: Profile?,
     currentNetwork: com.networkcontrol.android.kotlin.core.model.NetworkContext,
+    loadSims: () -> List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     onDismiss: () -> Unit,
     onSave: (String, FilterMode, com.networkcontrol.android.kotlin.core.model.AutoActivateCondition?) -> Unit,
 ) {
@@ -494,11 +496,16 @@ private fun ProfileDialog(
     var name by remember { mutableStateOf(profile?.name ?: "") }
     var mode by remember { mutableStateOf(profile?.mode ?: FilterMode.Ask) }
     var autoKind by remember { mutableStateOf(profile?.autoActivate?.kind) }
+    var simSubscriptionId by remember { mutableStateOf(profile?.autoActivate?.subscriptionIds?.firstOrNull()) }
+    var sims by remember { mutableStateOf(loadSims()) }
     var ssid by remember { mutableStateOf(profile?.autoActivate?.ssids?.firstOrNull().orEmpty()) }
     val context = LocalContext.current
     val locationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {}
+    val phoneStateLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { sims = loadSims() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (profile == null) s[S.AddProfile] else s[S.Edit]) },
@@ -536,6 +543,31 @@ private fun ProfileDialog(
                         { autoKind = com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired },
                         { Text(s[S.Wired]) },
                     )
+                }
+                Text(s[S.SimCard], style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        simSubscriptionId == null,
+                        { simSubscriptionId = null },
+                        { Text(s[S.AllSims]) },
+                    )
+                    sims.take(2).forEach { sim ->
+                        FilterChip(
+                            simSubscriptionId == sim.subscriptionId,
+                            { simSubscriptionId = sim.subscriptionId },
+                            { Text(sim.label) },
+                        )
+                    }
+                }
+                if (sims.isEmpty()) {
+                    Text(
+                        s[S.PhoneStateHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = {
+                        phoneStateLauncher.launch(android.Manifest.permission.READ_PHONE_STATE)
+                    }) { Text(s[S.GrantAccess]) }
                 }
                 OutlinedTextField(
                     value = ssid,
@@ -576,12 +608,13 @@ private fun ProfileDialog(
             TextButton(
                 onClick = {
                     if (name.isNotBlank()) {
-                        val auto = if (autoKind == null && ssid.isBlank()) {
+                        val auto = if (autoKind == null && ssid.isBlank() && simSubscriptionId == null) {
                             null
                         } else {
                             com.networkcontrol.android.kotlin.core.model.AutoActivateCondition(
                                 kind = autoKind,
                                 ssids = ssid.trim().takeIf { it.isNotEmpty() }?.let { listOf(it) } ?: emptyList(),
+                                subscriptionIds = simSubscriptionId?.let { listOf(it) } ?: emptyList(),
                             )
                         }
                         onSave(name.trim(), mode, auto)

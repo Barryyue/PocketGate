@@ -83,6 +83,7 @@ class AppContainer(context: Context) {
         activity = activityStore,
         scope = scope,
         selfPackage = appContext.packageName,
+        currentNetwork = { network.current },
     )
 
     val vpnEngine = VpnEngine(
@@ -96,6 +97,7 @@ class AppContainer(context: Context) {
         pipeline = pipeline,
         protection = protection,
         tunnel = vpnTunnel,
+        network = network,
         notifier = vpnNotifier,
         selfPackage = appContext.packageName,
     )

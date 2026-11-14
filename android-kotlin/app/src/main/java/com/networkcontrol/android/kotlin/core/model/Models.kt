@@ -75,7 +75,29 @@ data class RuleConditions(
     val remote: RemoteTarget? = null,
     val remotePort: PortRange? = null,
     val localPort: PortRange? = null,
+    /** 只在這些網路類型上生效；空集合表示不限制。 */
+    val networkKinds: Set<NetworkKind> = emptySet(),
+    /** 只在這些 SIM 訂閱上生效；空集合表示不限制。 */
+    val subscriptionIds: Set<Int> = emptySet(),
+    /** 只在這些 SIM 卡槽上生效；空集合表示不限制。 */
+    val simSlots: Set<Int> = emptySet(),
 ) {
+    val hasNetworkScope: Boolean
+        get() = networkKinds.isNotEmpty() || subscriptionIds.isNotEmpty() || simSlots.isNotEmpty()
+
+    fun matchesNetwork(network: NetworkContext): Boolean {
+        if (networkKinds.isNotEmpty() && network.kind !in networkKinds) return false
+        if (subscriptionIds.isNotEmpty() &&
+            (network.subscriptionId == null || network.subscriptionId !in subscriptionIds)
+        ) {
+            return false
+        }
+        if (simSlots.isNotEmpty() && (network.simSlotIndex == null || network.simSlotIndex !in simSlots)) {
+            return false
+        }
+        return true
+    }
+
     companion object {
         val Any = RuleConditions()
     }
@@ -112,8 +134,12 @@ data class AutoActivateCondition(
     val kind: NetworkKind? = null,
     val ssids: List<String> = emptyList(),
     val networkIds: List<String> = emptyList(),
+    val subscriptionIds: List<Int> = emptyList(),
+    val simSlots: List<Int> = emptyList(),
 ) {
-    val isEmpty: Boolean get() = kind == null && ssids.isEmpty() && networkIds.isEmpty()
+    val isEmpty: Boolean
+        get() = kind == null && ssids.isEmpty() && networkIds.isEmpty() &&
+            subscriptionIds.isEmpty() && simSlots.isEmpty()
 
     fun matches(context: NetworkContext): Boolean {
         if (isEmpty) return false
@@ -122,6 +148,14 @@ data class AutoActivateCondition(
             return false
         }
         if (networkIds.isNotEmpty() && (context.networkId == null || !networkIds.contains(context.networkId))) {
+            return false
+        }
+        if (subscriptionIds.isNotEmpty() &&
+            (context.subscriptionId == null || !subscriptionIds.contains(context.subscriptionId))
+        ) {
+            return false
+        }
+        if (simSlots.isNotEmpty() && (context.simSlotIndex == null || !simSlots.contains(context.simSlotIndex))) {
             return false
         }
         return true
@@ -146,12 +180,29 @@ data class NetworkContext(
     val ssid: String? = null,
     val networkId: String? = null,
     val displayName: String? = null,
+    val subscriptionId: Int? = null,
+    val simSlotIndex: Int? = null,
+    val carrierName: String? = null,
+    val isMetered: Boolean? = null,
 ) {
-    val fingerprint: String get() = "${kind.name}|${ssid.orEmpty()}|${networkId.orEmpty()}"
+    val fingerprint: String
+        get() = "${kind.name}|${ssid.orEmpty()}|${networkId.orEmpty()}|${subscriptionId ?: -1}|${simSlotIndex ?: -1}"
 
     companion object {
         val None = NetworkContext()
     }
+}
+
+data class SimInfo(
+    val subscriptionId: Int,
+    val slotIndex: Int,
+    val carrierName: String?,
+    val displayName: String?,
+) {
+    val label: String
+        get() = displayName?.takeIf { it.isNotBlank() }
+            ?: carrierName?.takeIf { it.isNotBlank() }?.let { "SIM ${slotIndex + 1} · $it" }
+            ?: "SIM ${slotIndex + 1}"
 }
 
 data class UserSettings(
@@ -414,11 +465,17 @@ data class TrafficUsage(
     val bytesIn: Long,
     val bytesOut: Long,
     val byPackage: Map<String, Pair<Long, Long>>,
+    val byNetwork: Map<NetworkKey, Pair<Long, Long>> = emptyMap(),
 ) {
     companion object {
         val Empty = TrafficUsage(0, 0, emptyMap())
     }
 }
+
+data class NetworkKey(
+    val kind: NetworkKind,
+    val subscriptionId: Int? = null,
+)
 
 data class QuietPeriodSummary(
     val startedAt: Long,

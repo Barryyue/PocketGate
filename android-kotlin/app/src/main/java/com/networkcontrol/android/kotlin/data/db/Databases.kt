@@ -140,6 +140,7 @@ class ActivityDatabase(context: Context) : SQLiteOpenHelper(context, NAME, null,
         )
         db.execSQL("CREATE INDEX ix_log_last_ts ON connection_log(last_ts);")
         createTrafficTables(db)
+        createTrafficNetworkTable(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -159,6 +160,9 @@ class ActivityDatabase(context: Context) : SQLiteOpenHelper(context, NAME, null,
         if (oldVersion < VERSION && !tableExists(db, "traffic_minute")) {
             createTrafficTables(db)
         }
+        if (oldVersion < 4) {
+            createTrafficNetworkTable(db)
+        }
     }
 
     private fun createTrafficTables(db: SQLiteDatabase) {
@@ -173,11 +177,28 @@ class ActivityDatabase(context: Context) : SQLiteOpenHelper(context, NAME, null,
         )
     }
 
+    private fun createTrafficNetworkTable(db: SQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS traffic_network (
+                app_id          INTEGER NOT NULL,
+                ts              INTEGER NOT NULL,
+                unit            INTEGER NOT NULL,
+                network_kind    INTEGER NOT NULL,
+                subscription_id INTEGER NOT NULL DEFAULT -1,
+                bytes_in        INTEGER NOT NULL,
+                bytes_out       INTEGER NOT NULL,
+                PRIMARY KEY (app_id, ts, unit, network_kind, subscription_id)
+            ) WITHOUT ROWID;
+            """.trimIndent(),
+        )
+    }
+
     private fun tableExists(db: SQLiteDatabase, name: String): Boolean =
         db.rawQuery("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?;", arrayOf(name)).use { it.moveToFirst() }
 
     companion object {
         const val NAME = "activity.db"
-        const val VERSION = 3
+        const val VERSION = 4
     }
 }

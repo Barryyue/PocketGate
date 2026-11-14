@@ -31,6 +31,7 @@ class VpnEngine(
     private val pipeline: VerdictPipeline,
     private val protection: ProtectionController,
     private val tunnel: VpnTunnelController,
+    private val network: com.networkcontrol.android.kotlin.engine.network.NetworkMonitor,
     private val notifier: VpnForegroundNotifier,
     private val selfPackage: String,
 ) {
@@ -71,6 +72,8 @@ class VpnEngine(
         scope.launch { protection.enabled.collect { requestReplan() } }
         scope.launch { rules.ruleSet.collect { requestReplan() } }
         scope.launch { runtime.state.collect { requestReplan() } }
+        // 網路類型 / SIM 變更會改變帶網路條件的應用規則，必須重新規劃路由。
+        scope.launch { network.state.collect { requestReplan() } }
         scope.launch {
             replanSignal.debounce(300).collect {
                 runCatching { replanNow() }.onFailure { error ->
@@ -93,6 +96,7 @@ class VpnEngine(
             mode = runtime.mode,
             apps = catalog.getApps(),
             selfPackage = selfPackage,
+            network = network.current,
         )
         _plan.value = plan
 
