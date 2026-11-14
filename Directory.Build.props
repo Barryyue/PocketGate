@@ -20,7 +20,7 @@
     <Product>NetworkControl</Product>
     <Company>NetworkControl</Company>
     <Copyright>Copyright © NetworkControl contributors</Copyright>
-    <VersionPrefix>0.2.0</VersionPrefix>
+    <VersionPrefix>0.3.0</VersionPrefix>
     <NeutralLanguage>zh-Hant</NeutralLanguage>
 
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
