@@ -76,4 +76,5 @@ public enum SettingsLangResourceKind
     UpdateAvailable,
     UpdateDownload,
     UpdateIgnore,
+    ImportSkippedUnknownProfile,
 }

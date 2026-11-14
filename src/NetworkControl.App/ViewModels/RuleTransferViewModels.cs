@@ -22,6 +22,12 @@ public sealed partial class ImportPreviewViewModel(DisplayText text, string file
 
     public string Summary => RuleTransferText.Summary(Loc, Current);
 
+    public string SkippedUnknownProfileText => Current.SkippedUnknownProfile > 0
+        ? Loc.Format(SettingsLangResourceKind.ImportSkippedUnknownProfile, Current.SkippedUnknownProfile)
+        : "";
+
+    public bool HasSkippedUnknownProfile => Current.SkippedUnknownProfile > 0;
+
     /// <summary>覆蓋會刪除規則時用警告樣式提示。</summary>
     public bool HasRemovals => Current.Removed > 0;
 
@@ -38,6 +44,12 @@ public sealed class RestoreConfirmViewModel(DisplayText text, string backupTitle
 
     public string Summary => RuleTransferText.Summary(Loc, preview);
 
+    public string SkippedUnknownProfileText => preview.SkippedUnknownProfile > 0
+        ? Loc.Format(SettingsLangResourceKind.ImportSkippedUnknownProfile, preview.SkippedUnknownProfile)
+        : "";
+
+    public bool HasSkippedUnknownProfile => preview.SkippedUnknownProfile > 0;
+
     public bool HasRemovals => preview.Removed > 0;
 
     public bool Validate() => true;
@@ -45,8 +57,13 @@ public sealed class RestoreConfirmViewModel(DisplayText text, string backupTitle
 
 internal static class RuleTransferText
 {
-    public static string Summary(LocalizationService loc, Proto.ImportResult result) =>
-        result.Added + result.Updated + result.Removed == 0
+    public static string Summary(LocalizationService loc, Proto.ImportResult result)
+    {
+        var text = result.Added + result.Updated + result.Removed == 0
             ? loc.Get(SettingsLangResourceKind.NothingToChange)
             : loc.Format(SettingsLangResourceKind.ImportSummary, result.Added, result.Updated, result.Removed, result.Unchanged);
+        return result.SkippedUnknownProfile > 0
+            ? text + " " + loc.Format(SettingsLangResourceKind.ImportSkippedUnknownProfile, result.SkippedUnknownProfile)
+            : text;
+    }
 }

@@ -174,12 +174,12 @@ internal sealed class RulesGrpcService(RuleService rules, ProfileService profile
     {
         var now = time.GetUtcNow();
         var knownProfiles = profiles.All.Select(p => p.Id).ToHashSet();
-        // 已過期的限時規則沒有導入的意義；目標機器上不存在的配置文件降級為共享規則
+        // 已過期的限時規則沒有導入的意義；目標機器上不存在的配置文件會讓規則的作用範圍
+        // 意外擴大，因此整條略過，由界面告訴用戶（R8）。
+        var skippedUnknownProfile = imported.Count(r => r.ProfileId is { } id && !knownProfiles.Contains(id));
         var current = imported
+            .Where(r => r.ProfileId is not { } profileId || knownProfiles.Contains(profileId))
             .Where(r => r.Lifetime != RuleLifetime.Timed || r.ExpiresAt > now)
-            .Select(r => r.ProfileId is { } profileId && !knownProfiles.Contains(profileId)
-                ? r with { ProfileId = null }
-                : r)
             .ToArray();
         var plan = RuleImportPlanner.Plan(rules.All, current, mode, markNewAsImported);
         if (!previewOnly)
@@ -206,6 +206,7 @@ internal sealed class RulesGrpcService(RuleService rules, ProfileService profile
             Updated = plan.ToUpdate.Count,
             Removed = plan.ToRemove.Count,
             Unchanged = plan.Unchanged,
+            SkippedUnknownProfile = skippedUnknownProfile,
         };
         if (snapshot is not null)
         {

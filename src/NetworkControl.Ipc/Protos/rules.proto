@@ -57,6 +57,8 @@ message ImportResult {
   int32 unchanged = 4;
   // 恢復備份時建立的恢復前快照名稱。
   optional string snapshot = 5;
+  // 屬於本機不存在的配置文件而略過的規則數。
+  int32 skipped_unknown_profile = 6;
 }
 
 message BackupInfo {

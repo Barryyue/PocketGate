@@ -347,5 +347,6 @@
         <source>Ignore this version</source>
       </segment>
     </unit>
+    <unit id="ImportSkippedUnknownProfile"><segment><source>{0} rules belong to a profile that does not exist on this computer and will be skipped.</source></segment></unit>
   </file>
 </xliff>

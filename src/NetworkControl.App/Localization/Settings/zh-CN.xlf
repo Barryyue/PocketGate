@@ -416,5 +416,6 @@
         <target state="translated">忽略此版本</target>
       </segment>
     </unit>
+    <unit id="ImportSkippedUnknownProfile"><segment><source>{0} rules belong to a profile that does not exist on this computer and will be skipped.</source><target state="translated">{0} 条规则属于本机不存在的配置文件，将跳过。</target></segment></unit>
   </file>
 </xliff>

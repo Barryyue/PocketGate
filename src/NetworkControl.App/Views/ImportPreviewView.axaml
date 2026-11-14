@@ -14,5 +14,6 @@
     <TextBlock Text="{Binding ModeHint}" TextWrapping="Wrap" />
     <atom:Alert Type="Info" IsShowIcon="True" Message="{Binding Summary}" IsVisible="{Binding !HasRemovals}" />
     <atom:Alert Type="Warning" IsShowIcon="True" Message="{Binding Summary}" IsVisible="{Binding HasRemovals}" />
+    <atom:Alert Type="Warning" IsShowIcon="True" Message="{Binding SkippedUnknownProfileText}" IsVisible="{Binding HasSkippedUnknownProfile}" />
   </StackPanel>
 </UserControl>
