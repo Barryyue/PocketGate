@@ -90,6 +90,7 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 - **AtomUI DataGrid 的 `ItemsSource` 類型是 `IDataGridSource`**：直接綁定 `ObservableCollection` 能編譯通過，但運行時會靜默失敗，表格為空。必須用 `DataGridLocalSource.Create(collection, DataGridLocalSourceDescriptor.For<T>(row => DataGridRowKey.FromString(key)))` 包裝。排序和篩選需要在描述符中聲明字段（`.Field(...)`），目前沒有聲明，所以關閉了 `CanUserSortColumns`。
 - **AtomUI 的 `Empty` 控件**與 protobuf 的 `Empty` 同名：同時引用 `AtomUI.Desktop.Controls` 時，protobuf 的要寫完整類型名。
 - **模擬器（Simulator）gRPC 服務只在 Fake 引擎下映射**：其他引擎下調用會得到 `Unimplemented`，界面必須按當前引擎決定是否顯示模擬器。
+- **Avalonia Android 的根 `VisualLayerManager` 默認不建立 `OverlayLayer`**：AtomUI 的 `ComboBox` / `PopupConfirm` / 任何 `Popup` 一打開就拋 `InvalidOperationException: Unable to create IPopupImpl and no overlay layer is found`，進程直接閃退。在 `App.axaml.cs` 的 `CreateMainView` 之後用 `Dispatcher.UIThread.Post` 找到 `TopLevel` 下的 `VisualLayerManager` 並設 `EnableOverlayLayer = true`；不要在頁面裡自己套一層 `VisualLayerManager`，會破壞 `ScrollViewer` 的滾動範圍。
 - **`FwpmGetAppIdFromFileName0` 需要打開文件**：終端安全或防泄密軟件（例如用戶機器上的 tipray）會在驅動層拒絕訪問自身文件，API 返回「找不到文件」。現在的兜底順序是：先用阻斷事件中觀測到的原始應用 ID，再按「小寫 NT 設備路徑 + NUL，UTF-16LE 編碼」自行構造（`AppIdTests` 驗證過與 API 輸出逐字節一致）。
 - **同一實例在 DI 中註冊為兩種類型時，`DisposeAsync` 會被調用兩次**：引擎的停止和釋放必須可以重複調用。
 - **Native AOT**：
