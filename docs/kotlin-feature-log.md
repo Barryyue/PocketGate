@@ -50,12 +50,22 @@
 | K-022 | 按網絡類型 / SSID 自動切換配置文件；NetworkMonitor 改為默認網路回調、忽略自身 VPN | `ProfileAutoSwitcher`、`NetworkMonitor`、`SettingsScreen` | 模擬器 UI；自動切換待真機 | SSID 需定位權限 |
 | K-023 | P0/P1 審查修正：配置文件操作閃退、隧道重建競態、detach/revoke 競爭、BlockedEvent 待決額度、初始化/重配異常隔離、流量重複計數、日誌保留、通知權限回呼、UID -1、per-app 語言覆寫 | `VpnTunnel`、`PromptBroker`、`AppContainer`、`TrafficCollector` 等 | JVM 測試 + 構建 + 模擬器 | 詳見 [kotlin-audit-2026-11-15.md](kotlin-audit-2026-11-15.md) |
 
+### v0.3（2026-11-15，提交 `6beed8e`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-024 | 網路類型 / SIM 感知：`NetworkContext` 記錄訂閱、卡槽、電信商、計費狀態；配置文件自動切換支援 SIM；`traffic_network` 按 Wi-Fi / 行動網路 / SIM 拆分；規則條件可按網路類型 / SIM 限定，網路變化自動重新規劃路由；應用頁新增網路條件規則編輯器 | `Models.kt`、`NetworkMonitor.kt`、`TrafficCollector.kt`、`Databases.kt`、`RoutingPlanner.kt`、`AppsScreen.kt` | JVM 測試（`NetworkProfileTest`、`RoutingPlannerTest`、`RulesTest`）+ 模擬器建立 Wi-Fi 規則並顯示 | 雙 SIM / 真機流量拆分待驗證 |
+| K-029 | 連線記錄 CSV 匯出：目前篩選 / 全部、SAF 保存、RFC 4180、UTF-8 BOM、公式注入防護、分頁匯出避開查詢上限 | `LogCsv.kt`、`LogsScreen.kt`、`AppBackend.getAllLogsForExport` | JVM 測試（`LogCsvTest`）+ 模擬器匯出選單 | 真機 SAF 保存待驗證 |
+| K-030 | 應用詳情：應用資訊、UID、簽章者、目前生效規則、全部規則、最近目標 / 次數 / 時間、今日流量；可一鍵信任發布者 | `AppsScreen.kt`、`AppBackend.appRecentLogs` | 模擬器開啟詳情 | 最近活動需有記錄 |
+| K-031 | 規則語意去重與分組：`RuleIdentity` 正規化應用路徑 / 條件 / 網路範圍；新增規則時更新同語意規則；啟動合併重複規則並保留命中數；新增「規則」分頁按應用分組、啟停 / 刪除 | `RuleIdentity.kt`、`RuleService.kt`、`RuleTransferService.kt`、`RulesScreen.kt` | JVM 測試（`RuleIdentityTest`、`RuleTransferTest`）+ 模擬器規則分頁 | 匯入 Replace 的跨裝置 ID 差異已修正 |
+| K-032 | 可信發布者 / 系統應用默認允許：設定頁開關與信任清單；應用詳情可信任簽章者；明確規則優先於信任默認值；簽章不符不會被信任 | `RoutingPlanner.kt`、`UserSettings`、`JsonCodec.kt`、`SettingsScreen.kt`、`AppsScreen.kt` | JVM 測試（`RoutingPlannerTest` 信任 / 系統應用 / 篡改案例）+ 模擬器詳情頁按鈕 | 真機系統應用範圍待確認 |
+| K-033 | 批量詢問：待決列表多選，允許 / 拒絕 / 稍後一次處理；規則用 `addRange` 只發布一次規則集 | `PromptBroker.answerMany`、`OverviewScreen.kt`、`AppBackend.answerPrompts` | 構建 + 模擬器入口 | 批量流程待真機 / 多詢問場景驗證 |
+| K-034 | 通知動作在進程回收後仍有效：通知 action 帶應用路徑；詢問不存在時等待核心初始化後直接建立應用規則；無有效應用時提示已過期 | `PromptNotifier.kt`、`NotificationActionReceiver.kt` | 構建 + 代碼審查 | 需真機「殺進程後點通知」驗證 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
 |---|---|---|
-| K-024 | Wi-Fi / 行動網路 / SIM1 / SIM2 的流量拆分與管控 | 計劃見 [android-network-sim-plan.md](android-network-sim-plan.md) |
-| K-025 | 通知動作在進程被回收後失效（P2-6） | 待做 |
 | K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 待做 |
 | K-027 | 懸浮詢問面板、專注模式 / 時間表、鎖屏斷網、允許一次 | 路線圖 |
 | K-028 | 轉發模式 + 上游代理 | 預研完成，見 [android-forwarding-research.md](android-forwarding-research.md) |

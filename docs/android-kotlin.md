@@ -382,3 +382,43 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 通知動作在進程被回收後失效（P2-6）；主執行緒 PackageManager、`establish()` 失敗顯示等 P2 項目見審查報告。
 - 轉發模式 / 上游代理仍未實現；預研見 [android-forwarding-research.md](android-forwarding-research.md)，建議先做 Phase 0 spike。
 - 真機未驗證：OEM ROM、always-on、開機恢復、Tile、私人 DNS、純 IPv6、規則導入導出設備往返。
+
+---
+
+## 12. v0.3（2026-11-15）
+
+### 12.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 網路類型 / SIM | `NetworkContext` 增加 `subscriptionId`、`simSlotIndex`、`carrierName`、`isMetered`；`SimInfo` 與配置文件編輯器支援 SIM 選擇；`NetworkMonitor` 從 `TelephonyNetworkSpecifier` / `SubscriptionManager` 取得 SIM，忽略自家 VPN。 |
+| 流量拆分 | Activity DB v4 新增 `traffic_network`；`TrafficCollector` 按 Wi-Fi / 行動網路 / SIM 查詢；無 `READ_PHONE_STATE` 時降級為行動網路合計；總覽顯示 Wi-Fi / SIM 拆分；修正跨日收集把過去流量記到今天。 |
+| 網路感知規則 | `RuleConditions` 加入 `networkKinds` / `subscriptionIds` / `simSlots`；SIM 訂閱優先、卡槽作後備；`VpnRoutingPlanner` 與判決管線按目前網路套用；網路變化自動 replan；應用頁新增網路條件規則編輯器。 |
+| 規則品質 | `RuleIdentity` 以應用路徑、簽章、連線條件、網路範圍建立語意鍵；新增同語意規則改為更新；啟動合併重複規則並保留命中數；新增「規則」分頁按應用分組、啟停 / 刪除；修正跨裝置匯入 Replace 會誤刪規則。 |
+| 可信發布者 | 設定頁可默認允許系統應用、管理可信簽章者；應用詳情可一鍵信任發布者；明確規則優先，簽章不符不會被信任。 |
+| 記錄與詳情 | 連線記錄 CSV 匯出（目前篩選 / 全部、RFC 4180、UTF-8 BOM、公式注入防護、分頁）；應用詳情顯示規則、最近目標、次數、時間與今日流量。 |
+| 詢問 | 待決詢問可批量允許 / 拒絕 / 稍後，規則只發布一次；通知動作帶應用路徑，進程被回收後仍可直接建立規則。 |
+
+### 12.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.3.0.apk` |
+| 大小 | 3,274,474 bytes（約 3.1 MB，雙 ABI） |
+| SHA-256 | `AC520CC1D1D432C71501652C7C5F26A44245D9F215D502D2F72D0ED8BD07C07D` |
+| versionName / Code | `0.3.0` / `3` |
+| 簽名 | Android Debug（僅供對照試用） |
+
+### 12.3 驗證
+
+- 50 個 JVM 測試通過；Debug / Release 構建通過；R8 + 資源壓縮正常。
+- 模擬器：建立 Wi-Fi 條件的允許規則後，應用頁顯示「網路規則：Wi-Fi → 允許」，規則分頁按應用分組顯示；應用詳情可開啟；CSV 匯出選單可開啟 SAF；五個分頁（總覽 / 應用 / 規則 / 記錄 / 設定）正常切換，無閃退。
+- 模擬器網路為有線 / 非 Wi-Fi，因此 Wi-Fi 條件規則在應用頁的「目前生效」仍顯示詢問，符合預期。
+- 真機未驗證：雙 SIM 拆分、SIM 切換後 replan、CSV 保存、批量詢問、殺進程後通知動作、可信發布者對系統應用的實際範圍。
+
+### 12.4 仍待處理
+
+- 懸浮詢問面板（K-039）設計已完成，見 [android-overlay-prompt-design.md](android-overlay-prompt-design.md)；尚未實作。
+- 專注模式 / 時間表、鎖屏斷網、允許一次、詢問內容設定、新應用提醒、DoH 提示、應用鎖、無障礙回歸。
+- 性能（Baseline Profiles、啟動埋點）、正式簽名 / AAB、工作資料夾、純 IPv6 / OEM ROM 回歸、冒煙腳本。
+- 轉發模式 / 上游代理仍未實現；預研見 [android-forwarding-research.md](android-forwarding-research.md)。

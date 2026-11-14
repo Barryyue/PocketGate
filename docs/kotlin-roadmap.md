@@ -15,6 +15,8 @@
 
 ### M1 — v0.3：網路/SIM、資料導出與規則品質（約 1–2 週）
 
+> **狀態：已完成（2026-11-15，提交 `6beed8e`，APK `NetworkControl-KT-0.3.0.apk`）。** 功能記錄見 [kotlin-feature-log.md](kotlin-feature-log.md) 的 K-024、K-029～K-034。
+
 1. **N1 網路類型 / SIM / 流量拆分**（詳細見 [android-network-sim-plan.md](android-network-sim-plan.md)）
    - N1-1：NetworkContext 加 subscriptionId / simSlot / carrier / metered；NetworkMonitor 取 SIM；配置文件自動切換支援 SIM；編輯器與權限引導。
    - N1-2：`traffic_network` 遷移；TrafficCollector 按 Wi-Fi / 行動網路 / SIM 拆分；總覽與應用頁顯示。
