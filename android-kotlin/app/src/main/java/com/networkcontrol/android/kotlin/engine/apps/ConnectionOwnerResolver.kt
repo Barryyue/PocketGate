@@ -11,9 +11,10 @@ class ConnectionOwnerResolver(context: Context) {
 
     /** 必須在後台線程調用；getConnectionOwnerUid 是 Binder 調用。 */
     fun getOwnerUid(protocol: L4Protocol, local: InetSocketAddress, remote: InetSocketAddress): Int? {
-        val cm = manager ?: return null
-        return runCatching {
-            cm.getConnectionOwnerUid(protocol.number, local, remote)
-        }.getOrNull()
+        val connection = manager ?: return null
+        val uid = runCatching {
+            connection.getConnectionOwnerUid(protocol.number, local, remote)
+        }.getOrNull() ?: return null
+        return uid.takeIf { it != android.os.Process.INVALID_UID }
     }
 }

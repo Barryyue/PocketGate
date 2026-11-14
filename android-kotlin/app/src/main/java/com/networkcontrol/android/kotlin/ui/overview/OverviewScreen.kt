@@ -63,11 +63,20 @@ fun OverviewScreen(backend: AppBackend) {
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val settings by backend.settings.collectAsStateWithLifecycle()
     val quiet by backend.quietPeriod.collectAsStateWithLifecycle()
+    val speed by backend.speed.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     var blockedToday by remember { mutableLongStateOf(0L) }
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
     var refreshKey by remember { mutableIntStateOf(0) }
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(30_000)
+            now = System.currentTimeMillis()
+        }
+    }
 
     LaunchedEffect(runtime.mode, protection, tunnelState, prompts.size, refreshKey) {
         blockedToday = withContext(Dispatchers.IO) { runCatching { backend.countBlockedToday() }.getOrDefault(0L) }
@@ -202,6 +211,45 @@ fun OverviewScreen(backend: AppBackend) {
             }
         }
         item {
+            SectionCard(s[S.DoNotDisturb]) {
+                val until = runtime.doNotDisturbUntil
+                val active = until != null && until > now
+                if (active) {
+                    Text(s[S.DoNotDisturbOn], style = MaterialTheme.typography.bodyMedium)
+                    until?.let {
+                        Text(
+                            formatDateTime(it),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    OutlinedButton(onClick = { backend.setDoNotDisturb(null) }) {
+                        Text(s[S.Off])
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { backend.setDoNotDisturb(System.currentTimeMillis() + 60 * 60 * 1000L) },
+                    ) {
+                        Text("${s[S.DoNotDisturb]} ${s[S.OneHour]}")
+                    }
+                }
+            }
+        }
+        if (!backend.notificationsAvailable()) {
+            item {
+                SectionCard(s[S.Notifications]) {
+                    Text(
+                        s[S.NotificationPermissionMissing],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    OutlinedButton(onClick = { context.startActivity(backend.openNotificationSettings()) }) {
+                        Text(s[S.OpenNotificationSettings])
+                    }
+                }
+            }
+        }
+        item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 MetricCard(s[S.BlockedToday], blockedToday.toString(), Modifier.weight(1f))
                 MetricCard(s[S.PendingPrompts], prompts.size.toString(), Modifier.weight(1f))
@@ -224,6 +272,15 @@ fun OverviewScreen(backend: AppBackend) {
         }
         item {
             SectionCard(s[S.TrafficToday]) {
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    Column {
+                        Text(s[S.CurrentSpeed], style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            "↓ ${formatBytes(speed.downloadBytesPerSecond)}/s · ↑ ${formatBytes(speed.uploadBytesPerSecond)}/s",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                }
                 if (!backend.hasTrafficAccess()) {
                     Text(
                         s[S.NoTraffic],

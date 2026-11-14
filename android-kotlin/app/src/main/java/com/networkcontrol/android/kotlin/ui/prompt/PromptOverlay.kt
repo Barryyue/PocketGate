@@ -34,6 +34,13 @@ import com.networkcontrol.android.kotlin.ui.common.protocolLabel
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
 import kotlinx.coroutines.delay
 
+internal fun promptDisplayName(path: String?): String? = when {
+    path == null -> null
+    path.startsWith("android-app://uid:") -> "UID " + path.substringAfter("android-app://uid:")
+    path.startsWith("android-app://") -> path.removePrefix("android-app://")
+    else -> path
+}
+
 @Composable
 fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
     val s = rememberUiStrings()
@@ -55,12 +62,18 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                val packageName = prompt.app?.path?.removePrefix("android-app://") ?: ""
+                val packageName = prompt.app?.path?.removePrefix("android-app://")
+                    ?: prompt.executablePath?.removePrefix("android-app://")
+                    ?: ""
                 AppIcon(packageName, Modifier.width(40.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
+                    val appLabel = prompt.app?.displayName
+                        ?: prompt.app?.name
+                        ?: promptDisplayName(prompt.executablePath)
+                        ?: s[S.UnknownApp]
                     Text(
-                        s.format(S.PromptTitle, prompt.app?.displayName ?: prompt.app?.name ?: "?"),
+                        s.format(S.PromptTitle, appLabel),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )

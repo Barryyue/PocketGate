@@ -72,7 +72,11 @@ class VpnEngine(
         scope.launch { rules.ruleSet.collect { requestReplan() } }
         scope.launch { runtime.state.collect { requestReplan() } }
         scope.launch {
-            replanSignal.debounce(300).collect { replanNow() }
+            replanSignal.debounce(300).collect {
+                runCatching { replanNow() }.onFailure { error ->
+                    com.networkcontrol.android.kotlin.platform.AppLog.e("vpn", "replan failed", error)
+                }
+            }
         }
 
         reporter.start()

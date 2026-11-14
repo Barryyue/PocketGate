@@ -12,6 +12,16 @@ import com.networkcontrol.android.kotlin.core.model.InstalledApp
 import java.security.MessageDigest
 
 class AppCatalog(private val context: Context) {
+    data class AppListVisibility(
+        val installedCount: Int,
+        val visibleKnownPackages: Int,
+        val launcherCount: Int,
+        val androidPackageVisible: Boolean,
+        val oemPermissionName: String?,
+        val oemPermissionGranted: Boolean,
+        val restricted: Boolean,
+    )
+
     private val appContext = context.applicationContext
     private var snapshot: Snapshot? = null
     private val lock = Any()
@@ -56,6 +66,72 @@ class AppCatalog(private val context: Context) {
         synchronized(lock) { snapshot = null }
         onChange?.invoke()
     }
+
+    /** 偵測 Android 11+ 的套件可見性（部分廠商 ROM 另有「取得應用程式列表」權限）。 */
+    fun visibility(): AppListVisibility {
+        val pm = appContext.packageManager
+        val installed = runCatching { pm.getInstalledPackages(0).size }.getOrDefault(0)
+        val known = listOf(
+            "com.android.settings",
+            "com.android.systemui",
+            "com.android.launcher3",
+            "com.google.android.gms",
+            "com.android.vending",
+        )
+        val visibleKnown = known.count { pkg ->
+            runCatching { pm.getApplicationInfo(pkg, 0) }.isSuccess
+        }
+        val androidVisible = runCatching { pm.getApplicationInfo("android", 0) }.isSuccess
+        val launcherCount = runCatching {
+            val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+                .addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+            pm.queryIntentActivities(intent, 0)
+                .mapNotNull { it.activityInfo?.packageName }
+                .distinct()
+                .size
+        }.getOrDefault(0)
+
+        val oemPermission = listOf(
+            "com.android.permission.GET_INSTALLED_APPS",
+            "com.samsung.android.permission.GET_APP_LIST",
+        ).firstOrNull { name ->
+            runCatching { pm.getPermissionInfo(name, 0) }.isSuccess
+        }
+        val oemGranted = if (oemPermission == null) {
+            true
+        } else {
+            runCatching {
+                pm.checkPermission(oemPermission, appContext.packageName) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
+            }.getOrDefault(false)
+        }
+
+        if (android.os.Build.VERSION.SDK_INT < 30) {
+            return AppListVisibility(
+                installed,
+                visibleKnown,
+                launcherCount,
+                androidVisible,
+                oemPermission,
+                oemGranted,
+                restricted = false,
+            )
+        }
+        val restricted = (oemPermission != null && !oemGranted) ||
+            !androidVisible ||
+            launcherCount > installed + 10
+        return AppListVisibility(
+            installed,
+            visibleKnown,
+            launcherCount,
+            androidVisible,
+            oemPermission,
+            oemGranted,
+            restricted,
+        )
+    }
+
+    fun oemAppListPermission(): String? = visibility().oemPermissionName
 
     fun dispose() {
         runCatching { appContext.unregisterReceiver(receiver) }

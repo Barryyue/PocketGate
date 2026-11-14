@@ -65,6 +65,7 @@ class PromptBroker(
         app: AppIdentity?,
         domains: DomainCandidates,
         isTamperAlert: Boolean,
+        holdConnection: Boolean = true,
     ): CompletableDeferred<Verdict> {
         val currentSettings = settings.state.value
         val key = MergeKey(
@@ -82,7 +83,7 @@ class PromptBroker(
                 deferred.complete(Verdict(settings.state.value.promptDefaultAction, VerdictReason.Mode))
                 return@withLock
             }
-            if (pendingFlows >= currentSettings.maxPendingFlows) {
+            if (holdConnection && pendingFlows >= currentSettings.maxPendingFlows) {
                 deferred.complete(Verdict(currentSettings.promptDefaultAction, VerdictReason.FailSafe))
                 return@withLock
             }
@@ -110,7 +111,7 @@ class PromptBroker(
                 byApp[key] = prompt
                 event = PromptEvent(PromptEventKind.Added, prompt.snapshot())
             }
-            pendingFlows++
+            pendingFlows += if (holdConnection) 1 else 0
             refreshPendingLocked()
         }
         event?.let { _events.emit(it) }
@@ -133,10 +134,18 @@ class PromptBroker(
         }
         val first = head ?: return PromptAnswerResult(false, null, 0, 0)
         val now = Time.now()
+        val effectiveApp = app ?: first.flow.executablePath
+            ?.takeIf { it.startsWith("android-app://") && !it.startsWith("android-app://uid:") }
+            ?.let {
+                AppIdentity(
+                    path = it,
+                    displayName = it.removePrefix("android-app://"),
+                )
+            }
         val rule = PromptRuleFactory.createRule(
             decision = decision,
             flow = first.flow,
-            app = app,
+            app = effectiveApp,
             domains = first.domains,
             profileId = runtime.activeProfileId,
             now = now,
@@ -172,7 +181,7 @@ class PromptBroker(
                 listOf(first)
             }
             prompt.flows.removeAll(resolved.toSet())
-            pendingFlows = (pendingFlows - resolved.size).coerceAtLeast(0)
+            pendingFlows = (pendingFlows - resolved.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
             remaining = prompt.flows.size
             if (remaining == 0) {
                 removeLocked(prompt)
@@ -234,7 +243,7 @@ class PromptBroker(
         gate.withLock {
             prompt = prompts[promptId] ?: return@withLock
             removeLocked(prompt!!)
-            pendingFlows = (pendingFlows - prompt!!.flows.size).coerceAtLeast(0)
+            pendingFlows = (pendingFlows - prompt!!.flows.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
             val key = prompt!!.app?.path ?: prompt!!.firstFlow.executablePath ?: "unknown"
             suppressedUntil[key] = Time.now() + 10 * 60 * 1000L
             refreshPendingLocked()
@@ -258,8 +267,9 @@ class PromptBroker(
         var prompt: PendingPrompt? = null
         gate.withLock {
             prompt = prompts[promptId] ?: return@withLock
+            prompt!!.timer = null
             removeLocked(prompt!!)
-            pendingFlows = (pendingFlows - prompt!!.flows.size).coerceAtLeast(0)
+            pendingFlows = (pendingFlows - prompt!!.flows.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
             refreshPendingLocked()
         }
         val timedOut = prompt ?: return

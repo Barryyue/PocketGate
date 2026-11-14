@@ -51,7 +51,10 @@ class PromptNotifier(
     private fun show(prompt: PromptSnapshot) {
         val notificationId = prompt.id.hashCode() and 0x7FFFFFFF
         shown[prompt.id] = notificationId
-        val name = prompt.app?.displayName ?: prompt.app?.name ?: prompt.executablePath ?: "未知應用"
+        val name = prompt.app?.displayName
+            ?: prompt.app?.name
+            ?: com.networkcontrol.android.kotlin.ui.prompt.promptDisplayName(prompt.executablePath)
+            ?: context.getString(R.string.unknown_app)
         val targets = prompt.flows.mapNotNull { it.domains.firstOrNull() ?: "${it.remote.address.hostAddress}:${it.remote.port}" }
         val detail = if (targets.isEmpty()) "" else targets.distinct().take(3).joinToString("、")
         val count = prompt.flows.size

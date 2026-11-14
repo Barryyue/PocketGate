@@ -4,6 +4,8 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,8 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -27,18 +31,24 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.BuildConfig
@@ -64,12 +74,14 @@ fun SettingsScreen(backend: AppBackend) {
     val runtime by backend.runtime.collectAsStateWithLifecycle()
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val plan by backend.plan.collectAsStateWithLifecycle()
+    val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
 
     var timeoutText by remember(settings.promptTimeoutSeconds) {
         mutableStateOf(settings.promptTimeoutSeconds.toString())
     }
     var editingProfile by remember { mutableStateOf<Profile?>(null) }
     var showProfileDialog by remember { mutableStateOf(false) }
+    var showThemeColorDialog by remember { mutableStateOf(false) }
     var deletingProfile by remember { mutableStateOf<Profile?>(null) }
     var importJson by remember { mutableStateOf<String?>(null) }
     var previewMerge by remember { mutableStateOf<RuleImportPreview?>(null) }
@@ -78,6 +90,10 @@ fun SettingsScreen(backend: AppBackend) {
     var showImportDialog by remember { mutableStateOf(false) }
 
     fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+
+    LaunchedEffect(Unit) {
+        backend.profileErrors.collect { message -> toast(message) }
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -158,6 +174,20 @@ fun SettingsScreen(backend: AppBackend) {
                     ),
                     onSelected = { backend.setTheme(it ?: "system") },
                 )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(s[S.ThemeColor], style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    Box(
+                        Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(themeColor)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedButton(onClick = { showThemeColorDialog = true }) {
+                        Text(s[S.Edit])
+                    }
+                }
             }
         }
 
@@ -252,6 +282,29 @@ fun SettingsScreen(backend: AppBackend) {
                         }
                     }
                 }
+                val appListKey = remember { mutableIntStateOf(0) }
+                LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { appListKey.intValue++ }
+                val appList by produceState<com.networkcontrol.android.kotlin.engine.apps.AppCatalog.AppListVisibility?>(
+                    initialValue = null,
+                    key1 = appListKey.intValue,
+                ) {
+                    value = withContext(Dispatchers.IO) { backend.appListVisibility() }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(s[S.AppListPermission], style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            if (appList?.restricted == true) s[S.AppListPermissionRestricted] else s[S.AppListPermissionOk],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (appList?.restricted == true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (appList?.restricted == true) {
+                        OutlinedButton(onClick = { context.startActivity(backend.openAppSettings()) }) {
+                            Text(s[S.GoToSettings])
+                        }
+                    }
+                }
             }
         }
 
@@ -328,13 +381,22 @@ fun SettingsScreen(backend: AppBackend) {
     if (showProfileDialog) {
         ProfileDialog(
             profile = editingProfile,
+            currentNetwork = backend.container.network.current,
             onDismiss = { showProfileDialog = false },
-            onSave = { name, mode ->
+            onSave = { name, mode, auto ->
                 val current = editingProfile
-                if (current == null) backend.createProfile(name, mode)
-                else backend.updateProfile(current.id, name, mode)
+                if (current == null) backend.createProfile(name, mode, auto)
+                else backend.updateProfile(current.id, name, mode, auto)
                 showProfileDialog = false
             },
+        )
+    }
+
+    if (showThemeColorDialog) {
+        ThemeColorDialog(
+            current = themeColor,
+            onDismiss = { showThemeColorDialog = false },
+            onSelect = { backend.setThemeColor(it) },
         )
     }
 
@@ -397,12 +459,25 @@ private fun ProfileRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            profile.autoActivate?.let { auto ->
+                val network = when (auto.kind) {
+                    com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi -> s[S.Wifi]
+                    com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular -> s[S.Cellular]
+                    com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired -> s[S.Wired]
+                    else -> s[S.AnyNetwork]
+                }
+                Text(
+                    "${s[S.AutoSwitch]}: $network${auto.ssids.firstOrNull()?.let { " · $it" }.orEmpty()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
         }
         if (!active) {
             TextButton(onClick = onActivate) { Text(s[S.Open]) }
         }
         TextButton(onClick = onEdit) { Text(s[S.Edit]) }
-        if (profile.id != Profile.DEFAULT_ID) {
+        if (!active && profile.id != Profile.DEFAULT_ID) {
             TextButton(onClick = onDelete) { Text(s[S.Delete]) }
         }
     }
@@ -411,12 +486,19 @@ private fun ProfileRow(
 @Composable
 private fun ProfileDialog(
     profile: Profile?,
+    currentNetwork: com.networkcontrol.android.kotlin.core.model.NetworkContext,
     onDismiss: () -> Unit,
-    onSave: (String, FilterMode) -> Unit,
+    onSave: (String, FilterMode, com.networkcontrol.android.kotlin.core.model.AutoActivateCondition?) -> Unit,
 ) {
     val s = rememberUiStrings()
     var name by remember { mutableStateOf(profile?.name ?: "") }
     var mode by remember { mutableStateOf(profile?.mode ?: FilterMode.Ask) }
+    var autoKind by remember { mutableStateOf(profile?.autoActivate?.kind) }
+    var ssid by remember { mutableStateOf(profile?.autoActivate?.ssids?.firstOrNull().orEmpty()) }
+    val context = LocalContext.current
+    val locationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {}
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (profile == null) s[S.AddProfile] else s[S.Edit]) },
@@ -434,12 +516,76 @@ private fun ProfileDialog(
                     FilterChip(mode == FilterMode.Whitelist, { mode = FilterMode.Whitelist }, { Text(s[S.ModeWhitelist]) })
                     FilterChip(mode == FilterMode.Blacklist, { mode = FilterMode.Blacklist }, { Text(s[S.ModeBlacklist]) })
                 }
+                Text(s[S.AutoSwitch], style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(autoKind == null, { autoKind = null }, { Text(s[S.AnyNetwork]) })
+                    FilterChip(
+                        autoKind == com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi,
+                        { autoKind = com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi },
+                        { Text(s[S.Wifi]) },
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        autoKind == com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular,
+                        { autoKind = com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular },
+                        { Text(s[S.Cellular]) },
+                    )
+                    FilterChip(
+                        autoKind == com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired,
+                        { autoKind = com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired },
+                        { Text(s[S.Wired]) },
+                    )
+                }
+                OutlinedTextField(
+                    value = ssid,
+                    onValueChange = { ssid = it },
+                    label = { Text(s[S.Ssid]) },
+                    singleLine = true,
+                )
+                if (currentNetwork.kind == com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi &&
+                    currentNetwork.ssid == null
+                ) {
+                    Text(
+                        s[S.SsidLocationHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(
+                        onClick = {
+                            locationLauncher.launch(
+                                arrayOf(
+                                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                    android.Manifest.permission.ACCESS_COARSE_LOCATION,
+                                ),
+                            )
+                        },
+                    ) { Text(s[S.GrantAccess]) }
+                }
+                if (currentNetwork.kind != com.networkcontrol.android.kotlin.core.model.NetworkKind.None) {
+                    TextButton(
+                        onClick = {
+                            autoKind = currentNetwork.kind
+                            ssid = currentNetwork.ssid.orEmpty()
+                        },
+                    ) { Text(s[S.UseCurrentNetwork]) }
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (name.isNotBlank()) onSave(name.trim(), mode)
+                    if (name.isNotBlank()) {
+                        val auto = if (autoKind == null && ssid.isBlank()) {
+                            null
+                        } else {
+                            com.networkcontrol.android.kotlin.core.model.AutoActivateCondition(
+                                kind = autoKind,
+                                ssids = ssid.trim().takeIf { it.isNotEmpty() }?.let { listOf(it) } ?: emptyList(),
+                            )
+                        }
+                        onSave(name.trim(), mode, auto)
+                    }
                 },
                 enabled = name.isNotBlank(),
             ) { Text(s[S.Save]) }

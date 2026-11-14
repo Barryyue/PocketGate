@@ -13,7 +13,10 @@ import com.networkcontrol.android.kotlin.MainActivity
 import com.networkcontrol.android.kotlin.R
 import com.networkcontrol.android.kotlin.platform.NotificationChannels
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
@@ -97,6 +100,13 @@ class TunReader(
 class VpnForegroundNotifier(private val context: Context) {
     val notificationId: Int = 1001
 
+    @Volatile
+    private var speed: com.networkcontrol.android.kotlin.engine.traffic.SpeedSnapshot? = null
+
+    fun setSpeed(value: com.networkcontrol.android.kotlin.engine.traffic.SpeedSnapshot?) {
+        speed = value
+    }
+
     fun build(starting: Boolean = false): Notification {
         val intent = PendingIntent.getActivity(
             context,
@@ -104,14 +114,34 @@ class VpnForegroundNotifier(private val context: Context) {
             Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        val body = when {
+            starting -> context.getString(R.string.protection_notification_text)
+            speed != null -> {
+                val current = speed!!
+                "↓ ${formatRate(current.downloadBytesPerSecond)}/s · ↑ ${formatRate(current.uploadBytesPerSecond)}/s"
+            }
+            else -> context.getString(R.string.protection_notification_text)
+        }
         return NotificationCompat.Builder(context, NotificationChannels.PROTECTION)
             .setSmallIcon(R.drawable.ic_shield)
             .setContentTitle(context.getString(if (starting) R.string.protection_starting else R.string.protection_active))
-            .setContentText(context.getString(R.string.protection_notification_text))
+            .setContentText(body)
             .setContentIntent(intent)
             .setOngoing(true)
             .setSilent(true)
             .build()
+    }
+
+    private fun formatRate(bytes: Long): String {
+        if (bytes < 1024) return "$bytes B"
+        val units = arrayOf("KB", "MB", "GB")
+        var value = bytes.toDouble()
+        var index = -1
+        while (value >= 1024 && index < units.lastIndex) {
+            value /= 1024
+            index++
+        }
+        return "%.1f %s".format(value, units[index])
     }
 }
 
@@ -121,11 +151,13 @@ class VpnTunnelController(
 ) {
     private val appContext = context.applicationContext
     private val gate = Mutex()
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var service: NcVpnService? = null
     private var ready = CompletableDeferred<NcVpnService>()
     private var reader: TunReader? = null
     private var pfd: ParcelFileDescriptor? = null
     private var applied: VpnTunnelConfig? = null
+    private var generation = 0L
 
     @Volatile
     var state: VpnTunnelState = VpnTunnelState.Closed
@@ -158,23 +190,28 @@ class VpnTunnelController(
                 return
             }
 
-            val descriptor = runCatching { svc.establish(config) }
-                .onFailure {
-                    lastError = "建立虛擬網卡失敗：${it.message}"
-                    setState(VpnTunnelState.Failed)
-                }
-                .getOrNull() ?: run {
-                    lastError = "尚未取得建立 VPN 的授權。"
-                    setState(VpnTunnelState.NotPrepared)
-                    return
-                }
+            val myGeneration = ++generation
+            val descriptor = try {
+                svc.establish(config)
+            } catch (ex: Exception) {
+                lastError = "建立虛擬網卡失敗：${ex.message}"
+                setState(VpnTunnelState.Failed)
+                return
+            } ?: run {
+                lastError = "系統拒絕建立 VPN（可能已被其他 VPN 取代）。"
+                setState(VpnTunnelState.Failed)
+                return
+            }
             reader?.close()
             pfd?.close()
             pfd = descriptor
-            reader = TunReader(descriptor, sink) { error ->
-                lastError = "讀取虛擬網卡失敗：${error.message}"
-                setState(VpnTunnelState.Failed)
+            val newReader = TunReader(descriptor, sink) { error ->
+                if (myGeneration == generation) {
+                    lastError = "讀取虛擬網卡失敗：${error.message}"
+                    setState(VpnTunnelState.Failed)
+                }
             }
+            reader = newReader
             runCatching { svc.ensureForeground(notifier.notificationId, notifier.build()) }
                 .onFailure { lastError = "無法建立前景通知：${it.message}" }
             applied = config
@@ -189,6 +226,7 @@ class VpnTunnelController(
 
     suspend fun close() {
         gate.withLock {
+            generation++
             reader?.close()
             reader = null
             pfd?.close()
@@ -214,11 +252,18 @@ class VpnTunnelController(
         if (this.service !== service) return
         this.service = null
         ready = CompletableDeferred()
-        reader?.close()
-        reader = null
-        pfd?.close()
-        pfd = null
-        applied = null
+        generation++
+        cleanupScope.launch {
+            gate.withLock {
+                if (this@VpnTunnelController.service == null) {
+                    reader?.close()
+                    reader = null
+                    pfd?.close()
+                    pfd = null
+                    applied = null
+                }
+            }
+        }
         if (state == VpnTunnelState.Active || state == VpnTunnelState.Establishing) {
             setState(VpnTunnelState.Closed)
         }
@@ -226,14 +271,23 @@ class VpnTunnelController(
 
     fun revoke(service: NcVpnService) {
         if (this.service !== service) return
-        reader?.close()
-        reader = null
-        pfd?.close()
-        pfd = null
-        applied = null
+        this.service = null
+        ready = CompletableDeferred()
+        generation++
         lastError = "VPN 已被系統撤銷（可能啟用了其他 VPN）。"
         setState(VpnTunnelState.Revoked)
         com.networkcontrol.android.kotlin.platform.AppLog.w("vpn", "tunnel revoked")
+        cleanupScope.launch {
+            gate.withLock {
+                if (this@VpnTunnelController.service == null) {
+                    reader?.close()
+                    reader = null
+                    pfd?.close()
+                    pfd = null
+                    applied = null
+                }
+            }
+        }
         onRevoked?.invoke()
     }
 
@@ -302,6 +356,12 @@ class NcVpnService : VpnService() {
         )
         config.bypassPackages.forEach { packageName ->
             runCatching { builder.addDisallowedApplication(packageName) }
+                .onFailure { error ->
+                    com.networkcontrol.android.kotlin.platform.AppLog.w(
+                        "vpn",
+                        "cannot exclude $packageName: ${error.message}",
+                    )
+                }
         }
         return builder.establish()
     }

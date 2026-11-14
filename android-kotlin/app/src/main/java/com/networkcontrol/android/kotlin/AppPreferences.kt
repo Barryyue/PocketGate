@@ -27,11 +27,17 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_NOTIFICATION_ASKED, false)
         set(value) = prefs.edit().putBoolean(KEY_NOTIFICATION_ASKED, value).apply()
 
+    var themeColor: Int
+        get() = prefs.getInt(KEY_THEME_COLOR, DEFAULT_THEME_COLOR)
+        set(value) = prefs.edit().putInt(KEY_THEME_COLOR, value).apply()
+
     private companion object {
         const val KEY_THEME = "theme"
         const val KEY_LANGUAGE = "language"
         const val KEY_PROTECTION = "protection"
         const val KEY_NOTIFICATIONS = "notifications"
         const val KEY_NOTIFICATION_ASKED = "notification_asked"
+        const val KEY_THEME_COLOR = "theme_color"
+        const val DEFAULT_THEME_COLOR = 0xFF2E7D32.toInt()
     }
 }

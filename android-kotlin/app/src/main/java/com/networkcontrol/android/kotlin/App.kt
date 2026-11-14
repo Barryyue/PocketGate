@@ -28,12 +28,8 @@ class App : Application() {
     }
 
     private fun applyLanguagePreference() {
-        val tag = container.preferences.languageTag
-        if (tag.isNullOrBlank()) {
-            AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
-        } else {
-            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
-        }
+        val tag = container.preferences.languageTag ?: return
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
     }
 
     companion object {

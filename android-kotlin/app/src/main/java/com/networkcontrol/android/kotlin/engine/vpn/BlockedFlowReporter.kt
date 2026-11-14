@@ -113,15 +113,16 @@ class BlockedFlowReporter(
         val packageName = routing?.packageName ?: packages.firstOrNull()
         if (packageName == null) {
             counters.unknownOwner.incrementAndGet()
-            return
         }
-        val installed = catalog.find(packageName)
-        val app: AppIdentity? = installed?.let { found ->
-            identityCache[packageName] ?: run {
-                val identity = runCatching { apps.upsert(catalog.toIdentity(found)) }
-                    .getOrElse { catalog.toIdentity(found) }
-                identityCache[packageName] = identity
-                identity
+        val installed = packageName?.let { catalog.find(it) }
+        val app: AppIdentity? = packageName?.let { name ->
+            installed?.let { found ->
+                identityCache[name] ?: run {
+                    val identity = runCatching { apps.upsert(catalog.toIdentity(found)) }
+                        .getOrElse { catalog.toIdentity(found) }
+                    identityCache[name] = identity
+                    identity
+                }
             }
         }
         val flow = FlowInfo(
@@ -131,7 +132,7 @@ class BlockedFlowReporter(
             local = packet.source,
             remote = packet.destination,
             app = app,
-            executablePath = AppCatalog.appPath(packageName),
+            executablePath = packageName?.let(AppCatalog::appPath) ?: "android-app://uid:$uid",
             engineHostname = fakeDns.tryGetName(packet.destination.address),
             timestamp = now,
             origin = FlowOrigin.BlockedEvent,
@@ -140,9 +141,9 @@ class BlockedFlowReporter(
         )
         onFlow(flow)
         counters.reported.incrementAndGet()
-        com.networkcontrol.android.kotlin.platform.AppLog.i(
+        com.networkcontrol.android.kotlin.platform.AppLog.d(
             "flow",
-            "uid=$uid pkg=$packageName ${packet.protocol} ${packet.destination} host=${flow.engineHostname}",
+            "uid=$uid pkg=${packageName ?: "?"} ${packet.protocol} ${packet.destination} host=${flow.engineHostname}",
         )
     }
 

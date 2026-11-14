@@ -90,7 +90,13 @@ class VerdictPipeline(
             return Verdict(defaultAction, VerdictReason.DoNotDisturb)
         }
 
-        val deferred = prompts.request(flow, flow.app, domains, tampered)
+        val deferred = prompts.request(
+            flow,
+            flow.app,
+            domains,
+            tampered,
+            holdConnection = flow.origin == FlowOrigin.Pending,
+        )
         if (flow.origin == FlowOrigin.BlockedEvent) {
             return Verdict.deny(VerdictReason.Mode)
         }

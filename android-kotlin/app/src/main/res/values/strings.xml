@@ -13,6 +13,9 @@
     <string name="prompt_blocked_hint">This connection was temporarily blocked. Allow it and retry.</string>
     <string name="prompt_allow">Allow</string>
     <string name="prompt_deny">Deny</string>
+    <string name="unknown_app">Unknown app</string>
+    <string name="quiet_notification_title">Do not disturb summary</string>
+    <string name="quiet_notification_text">%1$d connection attempts were blocked during do not disturb. Top app: %2$s</string>
     <string name="nav_overview">Overview</string>
     <string name="nav_apps">Apps</string>
     <string name="nav_logs">Records</string>

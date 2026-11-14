@@ -5,8 +5,10 @@ import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.net.wifi.WifiManager
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import com.networkcontrol.android.kotlin.core.model.NetworkContext
 import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,27 +21,30 @@ class NetworkMonitor(private val context: Context) {
     private val _state = MutableStateFlow(NetworkContext.None)
     val state: StateFlow<NetworkContext> = _state.asStateFlow()
     val current: NetworkContext get() = _state.value
+    private var defaultNetwork: Network? = null
 
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return
+            defaultNetwork = network
             update(network, capabilities)
         }
 
         override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
-            update(network, cm?.getNetworkCapabilities(network))
+            if (network == defaultNetwork) update(network, cm?.getNetworkCapabilities(network))
         }
 
         override fun onLost(network: Network) {
-            _state.value = NetworkContext.None
+            if (network == defaultNetwork) {
+                defaultNetwork = null
+                _state.value = NetworkContext.None
+            }
         }
     }
 
     fun start() {
         val manager = cm ?: return
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-        runCatching { manager.registerNetworkCallback(request, callback) }
+        runCatching { manager.registerDefaultNetworkCallback(callback) }
     }
 
     fun stop() {
@@ -48,11 +53,11 @@ class NetworkMonitor(private val context: Context) {
 
     private fun update(network: Network, capabilities: NetworkCapabilities?) {
         val caps = capabilities ?: return
+        if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return
         val kind = when {
             caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkKind.Wifi
             caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkKind.Cellular
             caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> NetworkKind.Wired
-            caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> NetworkKind.Vpn
             else -> NetworkKind.Other
         }
         val ssid = if (kind == NetworkKind.Wifi) currentSsid() else null
@@ -72,6 +77,11 @@ class NetworkMonitor(private val context: Context) {
     }
 
     private fun currentSsid(): String? {
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+            appContext,
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted) return null
         val wifi = appContext.getSystemService(WifiManager::class.java) ?: return null
         return runCatching {
             @Suppress("DEPRECATION")

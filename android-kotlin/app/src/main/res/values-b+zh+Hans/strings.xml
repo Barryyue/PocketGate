@@ -13,6 +13,9 @@
     <string name="prompt_blocked_hint">此连接已被暂时阻止，允许后应用重新连接即可上网。</string>
     <string name="prompt_allow">允许</string>
     <string name="prompt_deny">拒绝</string>
+    <string name="unknown_app">未知应用</string>
+    <string name="quiet_notification_title">勿扰摘要</string>
+    <string name="quiet_notification_text">勿扰期间有 %1$d 次连接被阻止，最常尝试的是 %2$s</string>
     <string name="nav_overview">总览</string>
     <string name="nav_apps">应用</string>
     <string name="nav_logs">记录</string>

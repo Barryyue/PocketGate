@@ -37,7 +37,11 @@ import kotlinx.coroutines.launch
 class AppContainer(context: Context) {
     val appContext: Context = context.applicationContext
     val preferences = AppPreferences(appContext)
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val theme = com.networkcontrol.android.kotlin.ui.theme.ThemeController(preferences)
+    private val exceptionHandler = kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
+        com.networkcontrol.android.kotlin.platform.AppLog.e("scope", "uncaught coroutine exception", throwable)
+    }
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + exceptionHandler)
 
     val configDatabase = ConfigDatabase(appContext)
     val activityDatabase = ActivityDatabase(appContext)
@@ -57,10 +61,18 @@ class AppContainer(context: Context) {
     val appCatalog = AppCatalog(appContext)
     val owners = ConnectionOwnerResolver(appContext)
     val network = NetworkMonitor(appContext)
+    val profileAutoSwitcher = com.networkcontrol.android.kotlin.core.profiles.ProfileAutoSwitcher(
+        profiles = profiles,
+        runtime = runtime,
+        networkState = network.state,
+        currentNetwork = { network.current },
+        scope = scope,
+    )
     val protection = ProtectionController(preferences)
     val vpnNotifier = VpnForegroundNotifier(appContext)
     val vpnTunnel = VpnTunnelController(appContext, vpnNotifier)
     val quietPeriods = com.networkcontrol.android.kotlin.core.prompts.QuietPeriodTracker(runtime, scope)
+    val quietNotifier = com.networkcontrol.android.kotlin.platform.QuietPeriodNotifier(appContext, quietPeriods, scope)
 
     val pipeline = VerdictPipeline(
         rules = rules,
@@ -89,6 +101,7 @@ class AppContainer(context: Context) {
     )
 
     val trafficCollector = TrafficCollector(appContext, appCatalog, appStore, trafficStore)
+    val speedMonitor = com.networkcontrol.android.kotlin.engine.traffic.SpeedMonitor()
     val ruleLifetime = RuleLifetimeManager(rules, scope)
     val promptNotifier = com.networkcontrol.android.kotlin.platform.PromptNotifier(appContext, prompts, scope, preferences)
     val backend = AppBackend(this)
@@ -99,25 +112,41 @@ class AppContainer(context: Context) {
 
     init {
         scope.launch {
-            try {
-                settings.initialize()
-                runtime.initialize()
-                profiles.initialize()
-                rules.initialize()
-                configBackup.backupIfNeeded()
-                ruleLifetime.start()
-                network.start()
-                vpnEngine.start()
-                promptNotifier.start()
-                com.networkcontrol.android.kotlin.platform.AppLog.i(
-                    "core",
-                    "initialized rules=${rules.ruleSet.value.count} apps=${appCatalog.getApps().size}",
-                )
-            } catch (ex: Throwable) {
-                com.networkcontrol.android.kotlin.platform.AppLog.e("core", "initialization failed", ex)
-            } finally {
-                started.complete(Unit)
+            runCatching { settings.initialize() }
+                .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "settings init failed", it) }
+            runCatching { runtime.initialize() }
+                .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "runtime init failed", it) }
+            runCatching { profiles.initialize() }
+                .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "profiles init failed", it) }
+            runCatching { rules.initialize() }
+                .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "rules init failed", it) }
+            runCatching { migrateLegacySharedAppRules() }
+                .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "rule migration failed", it) }
+            runCatching { configBackup.backupIfNeeded() }
+                .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "backup failed", it) }
+            runCatching { ruleLifetime.start() }
+            runCatching { network.start() }
+            runCatching { vpnEngine.start() }
+                .onFailure {
+                    protection.setEnabled(false)
+                    com.networkcontrol.android.kotlin.platform.AppLog.e("core", "VPN engine start failed; protection disabled", it)
+                }
+            runCatching { promptNotifier.start() }
+            runCatching { quietNotifier.start() }
+            runCatching { speedMonitor.start(scope) }
+            scope.launch {
+                speedMonitor.speed.collect { speed ->
+                    vpnNotifier.setSpeed(speed)
+                    if (protection.isEnabled && vpnTunnel.state == com.networkcontrol.android.kotlin.engine.vpn.VpnTunnelState.Active) {
+                        vpnTunnel.refreshNotification()
+                    }
+                }
             }
+            com.networkcontrol.android.kotlin.platform.AppLog.i(
+                "core",
+                "initialized rules=${rules.ruleSet.value.count} apps=${appCatalog.getApps().size}",
+            )
+            started.complete(Unit)
             startTrafficLoop()
         }
     }
@@ -130,6 +159,41 @@ class AppContainer(context: Context) {
             runCatching { trafficCollector.collectNow() }
             runCatching { rules.flushHits() }
             runCatching { configBackup.backupIfNeeded() }
+            runCatching {
+                activityStore.applyRetention(
+                    System.currentTimeMillis() - settings.state.value.logRetentionDays * 24L * 60 * 60 * 1000,
+                )
+            }
+        }
+    }
+
+    /**
+     * v0.2 修正：應用頁三態規則以前沒有寫 profile_id，變成所有配置文件共享。
+     * 啟動時把舊的「使用者 / 詢問產生的應用級規則」遷移到默認配置文件。
+     */
+    private suspend fun migrateLegacySharedAppRules() {
+        val target = com.networkcontrol.android.kotlin.core.model.Profile.DEFAULT_ID
+        val legacy = rules.all.filter { rule ->
+            (rule.source == com.networkcontrol.android.kotlin.core.model.RuleSource.User ||
+                rule.source == com.networkcontrol.android.kotlin.core.model.RuleSource.Prompt) &&
+                rule.profileId == null &&
+                rule.app != null &&
+                rule.conditions.direction == com.networkcontrol.android.kotlin.core.model.Direction.Outbound &&
+                rule.conditions.remote == null &&
+                rule.conditions.remotePort == null &&
+                rule.conditions.localPort == null &&
+                rule.conditions.protocol == null
+        }
+        legacy.forEach { rule ->
+            runCatching {
+                rules.update(rule.copy(profileId = target))
+            }
+        }
+        if (legacy.isNotEmpty()) {
+            com.networkcontrol.android.kotlin.platform.AppLog.i(
+                "core",
+                "migrated ${legacy.size} shared app rules to default profile",
+            )
         }
     }
 }

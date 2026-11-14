@@ -14,6 +14,7 @@ import com.networkcontrol.android.kotlin.core.storage.AppStore
 import com.networkcontrol.android.kotlin.core.storage.TrafficStore
 import com.networkcontrol.android.kotlin.engine.apps.AppCatalog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
@@ -26,6 +27,7 @@ class TrafficCollector(
 ) {
     private val prefs = context.getSharedPreferences("networkcontrol-kotlin-traffic", Context.MODE_PRIVATE)
     private val manager = context.getSystemService(NetworkStatsManager::class.java)
+    private val gate = kotlinx.coroutines.sync.Mutex()
 
     val isAvailable: Boolean
         get() = runCatching {
@@ -43,25 +45,27 @@ class TrafficCollector(
     }
 
     suspend fun collectNow() = withContext(Dispatchers.IO) {
-        if (!isAvailable) return@withContext
-        val now = Time.now()
-        val todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val since = prefs.getLong(KEY_LAST_COLLECTED, todayStart).let {
-            if (it <= 0L || it > now) todayStart else it
-        }
+        gate.withLock {
+            if (!isAvailable) return@withLock
+            val now = Time.now()
+            val todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val since = prefs.getLong(KEY_LAST_COLLECTED, todayStart).let {
+                if (it <= 0L || it > now) todayStart else it
+            }
 
-        val totals = HashMap<Int, Pair<Long, Long>>()
-        collectType(ConnectivityManager.TYPE_WIFI, since, now, totals)
-        collectType(ConnectivityManager.TYPE_MOBILE, since, now, totals)
+            val totals = HashMap<Int, Pair<Long, Long>>()
+            collectType(ConnectivityManager.TYPE_WIFI, since, now, totals)
+            collectType(ConnectivityManager.TYPE_MOBILE, since, now, totals)
 
-        totals.forEach { (uid, usage) ->
-            if (uid < 0) return@forEach
-            val packageName = catalog.packagesForUid(uid).firstOrNull() ?: return@forEach
-            val app = catalog.find(packageName) ?: return@forEach
-            val identity = apps.upsert(catalog.toIdentity(app))
-            traffic.add(identity.appId, now, usage.first, usage.second)
+            totals.forEach { (uid, usage) ->
+                if (uid < 0) return@forEach
+                val packageName = catalog.packagesForUid(uid).firstOrNull() ?: return@forEach
+                val app = catalog.find(packageName) ?: return@forEach
+                val identity = apps.upsert(catalog.toIdentity(app))
+                traffic.add(identity.appId, now, usage.first, usage.second)
+            }
+            prefs.edit().putLong(KEY_LAST_COLLECTED, now).apply()
         }
-        prefs.edit().putLong(KEY_LAST_COLLECTED, now).apply()
     }
 
     private fun collectType(

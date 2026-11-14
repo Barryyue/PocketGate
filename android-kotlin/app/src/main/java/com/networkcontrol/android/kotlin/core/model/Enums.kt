@@ -5,7 +5,7 @@ enum class Direction(val code: Int) {
     Inbound(1);
 
     companion object {
-        fun fromCode(code: Int): Direction = entries.first { it.code == code }
+        fun fromCode(code: Int): Direction = entries.firstOrNull { it.code == code } ?: Outbound
     }
 }
 
@@ -19,7 +19,7 @@ enum class L4Protocol(val number: Int) {
     companion object {
         fun fromNumber(number: Int): L4Protocol = entries.firstOrNull { it.number == number } ?: Other
 
-        fun fromCode(code: Int): L4Protocol = entries.first { it.number == code }
+        fun fromCode(code: Int): L4Protocol = entries.firstOrNull { it.number == code } ?: Other
     }
 }
 
@@ -28,7 +28,7 @@ enum class VerdictAction(val code: Int) {
     Deny(1);
 
     companion object {
-        fun fromCode(code: Int): VerdictAction = entries.first { it.code == code }
+        fun fromCode(code: Int): VerdictAction = entries.firstOrNull { it.code == code } ?: Deny
     }
 }
 
@@ -40,7 +40,7 @@ enum class FilterMode(val code: Int) {
     Disabled(4);
 
     companion object {
-        fun fromCode(code: Int): FilterMode = entries.first { it.code == code }
+        fun fromCode(code: Int): FilterMode = entries.firstOrNull { it.code == code } ?: Ask
     }
 }
 
@@ -52,7 +52,7 @@ enum class RuleLifetime(val code: Int) {
     Permanent(4);
 
     companion object {
-        fun fromCode(code: Int): RuleLifetime = entries.first { it.code == code }
+        fun fromCode(code: Int): RuleLifetime = entries.firstOrNull { it.code == code } ?: Permanent
     }
 }
 
@@ -64,7 +64,7 @@ enum class RuleSource(val code: Int) {
     Import(4);
 
     companion object {
-        fun fromCode(code: Int): RuleSource = entries.first { it.code == code }
+        fun fromCode(code: Int): RuleSource = entries.firstOrNull { it.code == code } ?: User
     }
 }
 
@@ -75,7 +75,7 @@ enum class RuleEndReason(val code: Int) {
     Replaced(3);
 
     companion object {
-        fun fromCode(code: Int): RuleEndReason = entries.first { it.code == code }
+        fun fromCode(code: Int): RuleEndReason = entries.firstOrNull { it.code == code } ?: Deleted
     }
 }
 
@@ -91,7 +91,7 @@ enum class VerdictReason(val code: Int) {
     Cancelled(8);
 
     companion object {
-        fun fromCode(code: Int): VerdictReason = entries.first { it.code == code }
+        fun fromCode(code: Int): VerdictReason = entries.firstOrNull { it.code == code } ?: FailSafe
     }
 }
 
@@ -101,7 +101,7 @@ enum class NetworkZone(val code: Int) {
     Internet(2);
 
     companion object {
-        fun fromCode(code: Int): NetworkZone = entries.first { it.code == code }
+        fun fromCode(code: Int): NetworkZone = entries.firstOrNull { it.code == code } ?: Internet
     }
 }
 
@@ -114,7 +114,7 @@ enum class NetworkKind(val code: Int) {
     Other(5);
 
     companion object {
-        fun fromCode(code: Int): NetworkKind = entries.first { it.code == code }
+        fun fromCode(code: Int): NetworkKind = entries.firstOrNull { it.code == code } ?: Other
     }
 }
 
@@ -123,7 +123,7 @@ enum class FlowOrigin(val code: Int) {
     BlockedEvent(1);
 
     companion object {
-        fun fromCode(code: Int): FlowOrigin = entries.first { it.code == code }
+        fun fromCode(code: Int): FlowOrigin = entries.firstOrNull { it.code == code } ?: BlockedEvent
     }
 }
 
@@ -133,7 +133,7 @@ enum class AppRoutingDecision(val code: Int) {
     BlockAndAsk(2);
 
     companion object {
-        fun fromCode(code: Int): AppRoutingDecision = entries.first { it.code == code }
+        fun fromCode(code: Int): AppRoutingDecision = entries.firstOrNull { it.code == code } ?: Block
     }
 }
 
@@ -144,7 +144,7 @@ enum class AppRoutingReason(val code: Int) {
     Mode(3);
 
     companion object {
-        fun fromCode(code: Int): AppRoutingReason = entries.first { it.code == code }
+        fun fromCode(code: Int): AppRoutingReason = entries.firstOrNull { it.code == code } ?: Mode
     }
 }
 
@@ -153,7 +153,7 @@ enum class RuleSkipReason(val code: Int) {
     Inbound(1);
 
     companion object {
-        fun fromCode(code: Int): RuleSkipReason = entries.first { it.code == code }
+        fun fromCode(code: Int): RuleSkipReason = entries.firstOrNull { it.code == code } ?: UnsupportedConditions
     }
 }
 
@@ -165,7 +165,7 @@ enum class PromptScope(val code: Int) {
     Port(4);
 
     companion object {
-        fun fromCode(code: Int): PromptScope = entries.first { it.code == code }
+        fun fromCode(code: Int): PromptScope = entries.firstOrNull { it.code == code } ?: AnyConnection
     }
 }
 
@@ -175,7 +175,7 @@ enum class PromptEventKind(val code: Int) {
     Removed(2);
 
     companion object {
-        fun fromCode(code: Int): PromptEventKind = entries.first { it.code == code }
+        fun fromCode(code: Int): PromptEventKind = entries.firstOrNull { it.code == code } ?: Updated
     }
 }
 
@@ -185,7 +185,7 @@ enum class AppDecision(val code: Int) {
     Deny(2);
 
     companion object {
-        fun fromCode(code: Int): AppDecision = entries.first { it.code == code }
+        fun fromCode(code: Int): AppDecision = entries.firstOrNull { it.code == code } ?: Unset
     }
 }
 
@@ -198,7 +198,7 @@ enum class ProtectionStatus(val code: Int) {
     Failed(5);
 
     companion object {
-        fun fromCode(code: Int): ProtectionStatus = entries.first { it.code == code }
+        fun fromCode(code: Int): ProtectionStatus = entries.firstOrNull { it.code == code } ?: Failed
     }
 }
 
@@ -207,7 +207,7 @@ enum class RuleImportMode(val code: Int) {
     Replace(1);
 
     companion object {
-        fun fromCode(code: Int): RuleImportMode = entries.first { it.code == code }
+        fun fromCode(code: Int): RuleImportMode = entries.firstOrNull { it.code == code } ?: Merge
     }
 }
 
@@ -217,6 +217,6 @@ enum class AndroidRuleIneffectiveReason(val code: Int) {
     NotAndroidApp(2);
 
     companion object {
-        fun fromCode(code: Int): AndroidRuleIneffectiveReason = entries.first { it.code == code }
+        fun fromCode(code: Int): AndroidRuleIneffectiveReason = entries.firstOrNull { it.code == code } ?: UnsupportedConditions
     }
 }

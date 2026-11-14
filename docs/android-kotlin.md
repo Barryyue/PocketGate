@@ -5,7 +5,7 @@
 > 用途：保留兩套 Android 實現並行維護，作為後期技術選型（APK 體積、冷啟動、流暢度、內存、耗電、開發效率、平台整合成本）的實測對照。
 > 本文件是執行計劃和狀態看板；`docs/progress.md` / `docs/progress-android.md` 只保留入口連結，避免三處狀態不一致。
 >
-> **目前狀態（2026-11-14）：v0.1 已完成並打包。** K0–K9 全部走通；Release APK 3.1 MB（雙 ABI，Debug 簽名），模擬器冷啟動約 2.1 秒。已驗證 VPN、假 DNS、應用識別、詢問通知/卡片、允許後規則生成與 VPN 重建、應用三態、流量統計、三語切換、配置文件頁、診斷導出。真機、Chrome 加載和部分界面細節待後續回歸，詳見 §10。
+> **目前狀態（2026-11-15）：v0.2 已完成並打包。** 在 v0.1 基礎上新增應用列表權限引導、主題色（預設 + HSV 自訂）、規則按配置文件隔離、即時網速、勿擾入口與摘要通知、按網絡自動切換配置文件，並修正代碼審查發現的 P0/P1 問題。Release APK 約 3.2 MB（雙 ABI，Debug 簽名），模擬器冷啟動約 2.1 秒。真機仍需回歸 OEM 應用列表權限、自動切換、主題色與通知路徑，詳見 §11。
 
 ---
 
@@ -242,6 +242,7 @@ android-kotlin/app/src/main/java/com/networkcontrol/android/kotlin/
 | K7 平台整合 | 完成 | — | 通知渠道、通知按鈕、前景服務、Tile、開機廣播、應用安裝廣播、通知權限 |
 | K8 診斷 / 導入導出 / 備份 | 完成 | — | `netcontrol-rules` v1、SAF、zip 診斷包、7 份每日備份 |
 | K9 測試與 v0.1 | 完成 | — | 30 個 JVM 測試；Release 3.1 MB；冷啟動約 2.1 秒（模擬器） |
+| v0.2 收尾 | 完成 | — | 應用列表權限、主題色、規則按配置文件隔離、即時網速、勿擾、自動切換、P0/P1 審查修正；Release 3.2 MB |
 
 ---
 
@@ -340,3 +341,42 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 3. 規則導入導出做一次端到端設備驗證，並與 Avalonia 版的 `netcontrol-rules` 文件互導。
 4. 若正式採用 Kotlin：換正式簽名、加 Baseline Profiles、補 Macrobenchmark / 耗電測試、建立 CI APK 大小與冷啟動基線。
 5. 維持與 Avalonia 版的 conformance fixtures（規則優先級、超時、導入導出邊界），避免語義漂移。
+
+---
+
+## 11. v0.2（2026-11-15）
+
+### 11.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 應用程式列表權限 | Manifest 宣告 `com.android.permission.GET_INSTALLED_APPS`、`com.samsung.android.permission.GET_APP_LIST`；啟動偵測到受限時彈出說明並在可用時直接 `requestPermissions`，設定頁顯示狀態並可重查；沒有權限時用包名 / UID 降級顯示，不再只顯示問號。研究與 ROM 差異見 [android-app-list-permission.md](android-app-list-permission.md)。 |
+| 主題色 | 設定 → 外觀新增「主題色」：10 個預設色 + HSV 自訂選色盤（色相條、飽和度/明度面板、預覽與 HEX）；持久化，MaterialTheme 全局套用（頁面、卡片、按鈕、開關、圖表）。 |
+| 配置文件規則隔離 | 修正應用頁三態規則未寫 `profile_id`、變成全域共享的 bug；現在規則寫入當前配置文件，切換配置文件會切換規則集；舊的共享應用規則啟動時遷移到默認配置文件。 |
+| 即時網速 | `SpeedMonitor` 每 2 秒取 `TrafficStats` 差值；總覽顯示下載/上傳即時速率，前景通知同步顯示。 |
+| 勿擾 | 總覽新增 1 小時 / 關閉入口；`QuietPeriodTracker` 改為狀態驅動 + 同步計數；結束時發摘要通知，關閉摘要會取消通知。 |
+| 自動切換配置文件 | `ProfileAutoSwitcher` 以默認網絡去抖 3 秒；配置文件編輯器可選 Wi-Fi / 行動網路 / 有線 + SSID；SSID 需要定位權限，沒有權限時在編輯器引導授予。`NetworkMonitor` 改為 `registerDefaultNetworkCallback` 並忽略自家 VPN 網路。 |
+| 審查修正 | 修正 P0（刪除/重命名配置文件未捕獲異常會閃退）、隧道重建競態、`detach`/`revoke` 與 `apply` 競爭、PromptBroker 對 BlockedEvent 計入待決額度、初始化/重配異常隔離、流量重複計數、日誌保留、通知權限回呼、`getConnectionOwnerUid` 的 -1、per-app 語言覆寫等。完整報告見 [kotlin-audit-2026-11-15.md](kotlin-audit-2026-11-15.md)。 |
+
+### 11.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.2.0.apk` |
+| 大小 | 3,175,494 bytes（約 3.0 MB，雙 ABI） |
+| SHA-256 | `116C8AFEAE4C7E300B25703BF2E026182967DF7F1472E7B07B3AB4D4F8040955` |
+| versionName / Code | `0.2.0` / `2` |
+| 簽名 | Android Debug（僅供對照試用） |
+
+### 11.3 驗證
+
+- 30 個 JVM 測試通過；Debug / Release 構建通過；R8 + 資源壓縮正常。
+- 模擬器：主題色改為紫色後全局生效；建立第二個配置文件後，默認配置文件規則數 2、切換到新配置文件規則數 0，證明規則已按配置文件隔離；勿擾入口、應用列表權限卡片、設定頁狀態均顯示正常。
+- 真機：v0.1 基本功能已由用戶確認；v0.2 新增的應用列表權限引導、主題色、配置文件隔離、即時網速、勿擾與自動切換仍需用戶在真機上回歸。
+
+### 11.4 仍待處理
+
+- 應用列表權限在 MIUI / HyperOS / ColorOS / OriginOS / MagicOS / One UI 的實際彈窗與設定路徑需真機確認；研究文件已列出各 ROM 的權限名稱與頁面。
+- 通知動作在進程被回收後失效（P2-6）；主執行緒 PackageManager、`establish()` 失敗顯示等 P2 項目見審查報告。
+- 轉發模式 / 上游代理仍未實現；預研見 [android-forwarding-research.md](android-forwarding-research.md)，建議先做 Phase 0 spike。
+- 真機未驗證：OEM ROM、always-on、開機恢復、Tile、私人 DNS、純 IPv6、規則導入導出設備往返。

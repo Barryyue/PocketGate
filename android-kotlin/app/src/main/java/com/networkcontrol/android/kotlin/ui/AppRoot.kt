@@ -1,5 +1,7 @@
 package com.networkcontrol.android.kotlin.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -9,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +19,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.networkcontrol.android.kotlin.AppContainer
 import com.networkcontrol.android.kotlin.ui.apps.AppsScreen
@@ -47,11 +52,25 @@ private val tabs = listOf(
 @Composable
 fun AppRoot(container: AppContainer) {
     val s = rememberUiStrings()
+    val context = LocalContext.current
     var ready by remember { mutableStateOf(false) }
+    var showAppListPermission by remember { mutableStateOf(false) }
     var selected by rememberSaveable { mutableIntStateOf(0) }
+    val appListPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions(),
+    ) {
+        container.appCatalog.invalidate()
+        showAppListPermission = container.appCatalog.visibility().restricted
+        if (showAppListPermission) {
+            context.startActivity(container.backend.openAppSettings())
+        }
+    }
 
     LaunchedEffect(Unit) {
         container.awaitStarted()
+        showAppListPermission = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            container.appCatalog.visibility().restricted
+        }
         ready = true
     }
 
@@ -99,6 +118,42 @@ fun AppRoot(container: AppContainer) {
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 76.dp),
+        )
+    }
+
+    if (showAppListPermission) {
+        AlertDialog(
+            onDismissRequest = { showAppListPermission = false },
+            title = { Text(s[S.AppListPermissionTitle]) },
+            text = {
+                Text(
+                    buildString {
+                        append(s[S.AppListPermissionMessage])
+                        val visibility = container.appCatalog.visibility()
+                        if (visibility.installedCount > 0) {
+                            append("\n\n")
+                            append("${s[S.AppsCount]}：${visibility.installedCount}")
+                        }
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val visibility = container.appCatalog.visibility()
+                        val oemPermission = visibility.oemPermissionName
+                        if (oemPermission != null && !visibility.oemPermissionGranted) {
+                            appListPermissionLauncher.launch(arrayOf(oemPermission))
+                        } else {
+                            context.startActivity(backend.openAppSettings())
+                            showAppListPermission = false
+                        }
+                    },
+                ) { Text(s[S.GoToSettings]) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAppListPermission = false }) { Text(s[S.PromptLater]) }
+            },
         )
     }
 }

@@ -34,6 +34,7 @@ import com.networkcontrol.android.kotlin.data.transfer.RuleTransferService
 import com.networkcontrol.android.kotlin.engine.apps.AppCatalog
 import com.networkcontrol.android.kotlin.engine.vpn.AndroidRuleCompatibility
 import com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
@@ -42,6 +43,8 @@ import java.time.ZoneId
 class AppBackend(val container: AppContainer) {
     private val context get() = container.appContext
     private val scope get() = container.scope
+    private val _profileErrors = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val profileErrors = _profileErrors.asSharedFlow()
 
     val settings = container.settings.state
     val runtime = container.runtime.state
@@ -52,6 +55,7 @@ class AppBackend(val container: AppContainer) {
     val tunnelState = container.vpnEngine.tunnelState
     val tunnelError = container.vpnEngine.tunnelError
     val quietPeriod = container.quietPeriods.summary
+    val speed = container.speedMonitor.speed
 
     fun protectionStatus(): ProtectionStatus = container.vpnEngine.status()
 
@@ -105,9 +109,11 @@ class AppBackend(val container: AppContainer) {
 
     suspend fun setAppDecision(packageName: String, decision: AppDecision) {
         val path = AppCatalog.appPath(packageName)
+        val activeProfileId = container.profiles.active.id
         val existing = container.rules.all
             .filter { it.source == RuleSource.User || it.source == RuleSource.Prompt }
             .filter { isOwnRule(it, path) }
+            .filter { it.profileId == null || it.profileId == activeProfileId }
             .map { it.id }
         if (existing.isNotEmpty()) {
             container.rules.remove(existing, RuleEndReason.Replaced)
@@ -118,6 +124,7 @@ class AppBackend(val container: AppContainer) {
         container.rules.add(
             Rule(
                 id = java.util.UUID.randomUUID().toString(),
+                profileId = activeProfileId,
                 app = AppMatcherFactory.create(container.appCatalog.toIdentity(app)),
                 conditions = RuleConditions(direction = Direction.Outbound),
                 action = if (decision == AppDecision.Allow) VerdictAction.Allow else VerdictAction.Deny,
@@ -165,19 +172,36 @@ class AppBackend(val container: AppContainer) {
     fun activeProfile(): Profile = container.profiles.active
 
     fun activateProfile(id: String) {
-        container.scope.launch { container.profiles.activate(id) }
+        container.profileAutoSwitcher.suppressForCurrentNetwork()
+        container.scope.launch {
+            runCatching { container.profiles.activate(id) }
+                .onFailure { _profileErrors.tryEmit(it.message ?: "切換配置文件失敗") }
+        }
     }
 
-    fun createProfile(name: String, mode: FilterMode) {
-        container.scope.launch { container.profiles.create(name, mode) }
+    fun createProfile(
+        name: String,
+        mode: FilterMode,
+        autoActivate: com.networkcontrol.android.kotlin.core.model.AutoActivateCondition? = null,
+    ) {
+        container.scope.launch {
+            runCatching { container.profiles.create(name, mode, autoActivate) }
+                .onFailure { _profileErrors.tryEmit(it.message ?: "建立配置文件失敗") }
+        }
     }
 
     fun updateProfile(id: String, name: String, mode: FilterMode, autoActivate: com.networkcontrol.android.kotlin.core.model.AutoActivateCondition? = null) {
-        container.scope.launch { container.profiles.update(id, name, mode, autoActivate) }
+        container.scope.launch {
+            runCatching { container.profiles.update(id, name, mode, autoActivate) }
+                .onFailure { _profileErrors.tryEmit(it.message ?: "更新配置文件失敗") }
+        }
     }
 
     fun deleteProfile(id: String) {
-        container.scope.launch { container.profiles.delete(id) }
+        container.scope.launch {
+            runCatching { container.profiles.delete(id) }
+                .onFailure { _profileErrors.tryEmit(it.message ?: "刪除配置文件失敗") }
+        }
     }
 
     fun getRuleCount(profileId: String): Int = container.profiles.getRuleCount(profileId)
@@ -217,6 +241,17 @@ class AppBackend(val container: AppContainer) {
 
     fun hasTrafficAccess(): Boolean = container.trafficCollector.isAvailable
 
+    fun notificationsAvailable(): Boolean =
+        androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
+
+    fun appListVisibility(): com.networkcontrol.android.kotlin.engine.apps.AppCatalog.AppListVisibility =
+        container.appCatalog.visibility()
+
+    fun openAppSettings(): Intent =
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            .setData(Uri.parse("package:${context.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
     fun trafficAccessIntent(): Intent = container.trafficCollector.createAccessIntent()
 
     fun openAlwaysOnVpnSettings(): Intent =
@@ -250,6 +285,8 @@ class AppBackend(val container: AppContainer) {
             },
         )
     }
+
+    fun setThemeColor(color: androidx.compose.ui.graphics.Color) = container.theme.set(color)
 
     fun exportRules(): String = RuleTransferService.export(container.rules.all)
 

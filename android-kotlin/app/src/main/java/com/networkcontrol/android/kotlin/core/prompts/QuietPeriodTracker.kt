@@ -25,21 +25,24 @@ class QuietPeriodTracker(
 
     init {
         scope.launch {
+            runtime.state.collect {
+                applyState()
+            }
+        }
+        // 勿擾到期不一定改變 RuntimeState，補一個低頻檢查。
+        scope.launch {
             while (scope.isActive) {
-                val active = runtime.isDoNotDisturb
-                if (active && startedAt == null) {
-                    startedAt = Time.now()
-                    count = 0
-                    byApp.clear()
-                } else if (!active && startedAt != null) {
-                    finish()
-                }
                 delay(5_000)
+                applyState()
             }
         }
     }
 
+    @Synchronized
     fun onBlocked(appName: String?) {
+        if (startedAt == null && runtime.isDoNotDisturb) {
+            startLocked()
+        }
         if (startedAt == null) return
         count++
         val name = appName ?: "unknown"
@@ -50,7 +53,23 @@ class QuietPeriodTracker(
         _summary.value = null
     }
 
-    private fun finish() {
+    @Synchronized
+    private fun applyState() {
+        val active = runtime.isDoNotDisturb
+        if (active && startedAt == null) {
+            startLocked()
+        } else if (!active && startedAt != null) {
+            finishLocked()
+        }
+    }
+
+    private fun startLocked() {
+        startedAt = Time.now()
+        count = 0
+        byApp.clear()
+    }
+
+    private fun finishLocked() {
         val start = startedAt ?: return
         startedAt = null
         if (count > 0) {
