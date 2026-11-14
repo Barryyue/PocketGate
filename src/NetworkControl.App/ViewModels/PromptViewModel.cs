@@ -1,8 +1,10 @@
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Google.Protobuf.WellKnownTypes;
 using NetworkControl.App.Localization;
+using NetworkControl.App.Services;
 using Proto = NetworkControl.Ipc.V1;
 
 namespace NetworkControl.App.ViewModels;
@@ -30,14 +32,18 @@ public sealed partial class PromptViewModel : LocalizedViewModel, IDisposable
     private readonly DispatcherTimer _guard;
     private readonly Action<PromptAnswer> _answer;
     private readonly Action<string> _pauseTimer;
+    private readonly AppIconCache _icons;
     private Proto.Prompt _prompt;
     private bool _answered;
+    private string _iconPath = "";
+    private int _iconVersion;
 
     public PromptViewModel(
         Proto.Prompt prompt,
         Proto.VerdictAction defaultAction,
         int queueLength,
         DisplayText text,
+        AppIconCache icons,
         Action<PromptAnswer> answer,
         Action<string> pauseTimer)
         : base(text)
@@ -45,6 +51,8 @@ public sealed partial class PromptViewModel : LocalizedViewModel, IDisposable
         _prompt = prompt;
         _answer = answer;
         _pauseTimer = pauseTimer;
+        _icons = icons;
+        _iconPath = AppPath;
         DefaultAction = defaultAction;
         QueueLength = queueLength;
 
@@ -71,6 +79,7 @@ public sealed partial class PromptViewModel : LocalizedViewModel, IDisposable
             _guard!.Stop();
         });
         _guard.Start();
+        _ = LoadIconAsync(_iconPath);
     }
 
     /// <summary>彈窗應被關閉（已答覆）。</summary>
@@ -117,6 +126,8 @@ public sealed partial class PromptViewModel : LocalizedViewModel, IDisposable
         : Loc.Get(CommonLangResourceKind.UnknownApp);
 
     public string AppPath => _prompt.App?.Path ?? _prompt.ExecutablePath;
+
+    public Bitmap? Icon { get; private set; }
 
     public bool IsSigned => _prompt.App?.HasSignerId == true;
 
@@ -195,7 +206,36 @@ public sealed partial class PromptViewModel : LocalizedViewModel, IDisposable
             BuildScopeOptions();
         }
 
+        var path = AppPath;
+        if (!string.Equals(path, _iconPath, StringComparison.OrdinalIgnoreCase))
+        {
+            _iconPath = path;
+            Icon = null;
+            OnPropertyChanged(nameof(Icon));
+        }
+
+        if (Icon is null)
+        {
+            _ = LoadIconAsync(path);
+        }
+
         OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>彈窗在 UI 線程建立，提取在後台完成；結果回到 UI 線程後才通知綁定。</summary>
+    private async Task LoadIconAsync(string path)
+    {
+        var version = ++_iconVersion;
+        if (path.Length == 0)
+        {
+            return;
+        }
+
+        if (await _icons.GetAsync(path) is { } icon && version == _iconVersion)
+        {
+            Icon = icon;
+            OnPropertyChanged(nameof(Icon));
+        }
     }
 
     public void Dispose()

@@ -16,16 +16,18 @@ public sealed class PromptCoordinator
 {
     private readonly ServiceConnection _connection;
     private readonly DisplayText _text;
+    private readonly AppIconCache _icons;
     private readonly List<Proto.Prompt> _queue = [];
     private PromptWindow? _window;
     private PromptViewModel? _current;
     private CancellationTokenSource? _subscription;
     private Proto.VerdictAction _defaultAction = Proto.VerdictAction.Deny;
 
-    public PromptCoordinator(ServiceConnection connection, DisplayText text)
+    public PromptCoordinator(ServiceConnection connection, DisplayText text, AppIconCache icons)
     {
         _connection = connection;
         _text = text;
+        _icons = icons;
         connection.Connected += (_, clients) => _ = SubscribeAsync(clients);
     }
 
@@ -107,7 +109,7 @@ public sealed class PromptCoordinator
         }
 
         var prompt = _queue[0];
-        _current = new PromptViewModel(prompt, _defaultAction, _queue.Count - 1, _text, OnAnswered, OnPauseRequested);
+        _current = new PromptViewModel(prompt, _defaultAction, _queue.Count - 1, _text, _icons, OnAnswered, OnPauseRequested);
         _current.CloseRequested += (_, _) => CloseCurrent();
         _window = new PromptWindow { DataContext = _current };
         _window.Show();

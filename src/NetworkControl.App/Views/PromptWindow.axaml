@@ -22,7 +22,7 @@
 
     <!-- 應用 -->
     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-      <Image x:Name="AppIcon" Width="40" Height="40" VerticalAlignment="Top" />
+      <Image x:Name="AppIcon" Width="40" Height="40" VerticalAlignment="Top" Source="{Binding Icon}" />
       <StackPanel Grid.Column="1" Spacing="4">
         <DockPanel>
           <TextBlock DockPanel.Dock="Right" Classes="caption" VerticalAlignment="Center" IsVisible="{Binding HasQueue}" Text="{Binding QueueText}" />

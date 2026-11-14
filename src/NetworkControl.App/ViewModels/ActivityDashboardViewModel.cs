@@ -45,25 +45,56 @@ public readonly record struct ActivityRange(DateTimeOffset From, DateTimeOffset 
 }
 
 /// <summary>排行榜中的一行。</summary>
-public sealed class RankItemViewModel(string label, string? detail, long allowed, long blocked, double maximum, string countText, string tooltip, LogNavigation navigation)
+public sealed class RankItemViewModel : IconRowViewModel
 {
-    public string Label { get; } = label;
+    public RankItemViewModel(
+        string label,
+        string? detail,
+        long allowed,
+        long blocked,
+        double maximum,
+        string countText,
+        string tooltip,
+        LogNavigation navigation,
+        string? appPath,
+        AppIconCache icons)
+        : base(icons)
+    {
+        Label = label;
+        Detail = detail;
+        Allowed = allowed;
+        Blocked = blocked;
+        Maximum = maximum;
+        CountText = countText;
+        Tooltip = tooltip;
+        Navigation = navigation;
+        AppPath = appPath;
+        if (appPath is { Length: > 0 })
+        {
+            _ = LoadIconAsync(appPath);
+        }
+    }
 
-    public string? Detail { get; } = detail;
+    public string Label { get; }
+
+    public string? Detail { get; }
 
     public bool HasDetail => !string.IsNullOrEmpty(Detail);
 
-    public double Allowed { get; } = allowed;
+    public double Allowed { get; }
 
-    public double Blocked { get; } = blocked;
+    public double Blocked { get; }
 
-    public double Maximum { get; } = maximum;
+    public double Maximum { get; }
 
-    public string CountText { get; } = countText;
+    public string CountText { get; }
 
-    public string Tooltip { get; } = tooltip;
+    public string Tooltip { get; }
 
-    public LogNavigation Navigation { get; } = navigation;
+    public LogNavigation Navigation { get; }
+
+    /// <summary>應用的可執行文件路徑；目標排行沒有路徑，保持無圖標。</summary>
+    public string? AppPath { get; }
 }
 
 /// <summary>總覽儀表板：連接活動時間軸、允許 / 拒絕總數和排行榜。頁面可見時每 30 秒刷新一次。</summary>
@@ -73,17 +104,19 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
 
     private readonly ServiceConnection _connection;
     private readonly NavigationService _navigation;
+    private readonly AppIconCache _icons;
     private readonly DispatcherTimer _timer;
     private Proto.SummaryReply? _summary;
     private Proto.TrafficReply? _traffic;
     private ActivityRange _range;
     private bool _loading;
 
-    public ActivityDashboardViewModel(ServiceConnection connection, NavigationService navigation, DisplayText text)
+    public ActivityDashboardViewModel(ServiceConnection connection, NavigationService navigation, AppIconCache icons, DisplayText text)
         : base(text)
     {
         _connection = connection;
         _navigation = navigation;
+        _icons = icons;
         _timer = new DispatcherTimer { Interval = RefreshInterval };
         _timer.Tick += (_, _) => _ = LoadAsync();
         connection.Connected += (_, _) =>
@@ -257,7 +290,9 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
                     max,
                     ActivityChart.Bytes(app.BytesIn + app.BytesOut),
                     Loc.Format(OverviewLangResourceKind.TrafficRankTooltip, ActivityChart.Bytes(app.BytesIn), ActivityChart.Bytes(app.BytesOut)),
-                    new LogNavigation(path ?? label)));
+                    new LogNavigation(path ?? label),
+                    path,
+                    _icons));
             }
         }
 
@@ -318,6 +353,7 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
         {
             string label;
             string? detail = null;
+            string? appPath = null;
             string keyword;
             if (isApp)
             {
@@ -325,6 +361,7 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
                 var name = item.HasLabel && !string.IsNullOrWhiteSpace(item.Label) && item.Label != path ? item.Label : null;
                 label = name ?? (path is not null ? FileName(path) : Loc.Get(OverviewLangResourceKind.UnknownApp));
                 detail = path;
+                appPath = path;
                 keyword = path ?? name ?? "";
             }
             else
@@ -341,7 +378,9 @@ public sealed partial class ActivityDashboardViewModel : LocalizedViewModel
                 max,
                 Number(item.Allowed + item.Blocked),
                 Loc.Format(OverviewLangResourceKind.RankTooltip, Number(item.Allowed), Number(item.Blocked)),
-                new LogNavigation(keyword)));
+                new LogNavigation(keyword),
+                appPath,
+                _icons));
         }
     }
 
