@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ApplicationId>com.networkcontrol.uibench.atomui</ApplicationId>
+    <ApplicationTitle>UI Bench AtomUI</ApplicationTitle>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+    <RootNamespace>UiBench.AtomUI</RootNamespace>
+    <AssemblyName>UiBench.AtomUI</AssemblyName>
+    <!-- 只給 app 專案設定 RID，避免流向 UiBench.Common 等 Android 類庫。 -->
+    <RuntimeIdentifiers Condition="'$(BenchAbi)' == 'arm64'">android-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="'$(BenchAbi)' == 'x64'">android-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="'$(BenchAbi)' == ''">android-arm64;android-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UiBench.Common\UiBench.Common.csproj" />
+    <PackageReference Include="Avalonia" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Android" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+    <PackageReference Include="AtomUI.Desktop.Controls" Version="6.2.13" />
+    <PackageReference Include="AtomUI.Generator" Version="6.2.13" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

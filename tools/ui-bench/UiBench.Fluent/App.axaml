@@ -1,0 +1,9 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UiBench.Fluent.App"
+             RequestedThemeVariant="Light">
+  <Application.Styles>
+    <!-- 這個變體只用 Avalonia 自帶的 Fluent 主題，不引入任何第三方 UI 庫。 -->
+    <FluentTheme />
+  </Application.Styles>
+</Application>

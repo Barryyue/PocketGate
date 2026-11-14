@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:common="using:UiBench.Common"
+             x:Class="UiBench.AtomUI.MainView"
+             x:DataType="common:BenchViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="16" Spacing="12">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding Variant}" FontSize="26" FontWeight="Bold" />
+        <TextBlock Text="UI 框架啟動與渲染成本" FontSize="13" Opacity="0.65" />
+      </StackPanel>
+
+      <atom:Card Header="啟動耗時（越小越好）">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+          <TextBlock Grid.Row="0" Text="冷啟動（進程 → 首幀）" />
+          <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ColdStart}" FontWeight="SemiBold" />
+          <TextBlock Grid.Row="1" Text="運行時初始化" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding RuntimeInit}" />
+          <TextBlock Grid.Row="2" Text="Avalonia 初始化" />
+          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding AvaloniaInit}" />
+          <TextBlock Grid.Row="3" Text="UI 庫配置" />
+          <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding UiLibrarySetup}" />
+          <TextBlock Grid.Row="4" Text="Activity 建立" />
+          <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ActivityCreate}" />
+          <TextBlock Grid.Row="5" Text="首幀渲染" />
+          <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding FirstFrame}" />
+        </Grid>
+      </atom:Card>
+
+      <atom:Card Header="資源與記憶體">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+          <TextBlock Grid.Row="0" Text="APK（安裝包）" />
+          <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ApkSize}" />
+          <TextBlock Grid.Row="1" Text="PSS 記憶體" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Pss}" />
+          <TextBlock Grid.Row="2" Text="託管堆" />
+          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Managed}" />
+          <TextBlock Grid.Row="3" Text="原生堆" />
+          <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Native}" />
+          <TextBlock Grid.Row="4" Text="執行緒數" />
+          <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Threads}" />
+        </Grid>
+      </atom:Card>
+
+      <atom:Card Header="即時幀率（下拉或滾動時觀察）">
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
+          <TextBlock Grid.Row="0" Text="目前 FPS" />
+          <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Fps}" FontWeight="SemiBold" />
+          <TextBlock Grid.Row="1" Text="最差幀" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding WorstFrame}" />
+          <TextBlock Grid.Row="2" Text="掉幀數（>20 ms）" />
+          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding JankFrames}" />
+        </Grid>
+      </atom:Card>
+
+      <atom:Card Header="UI 壓力測試">
+        <StackPanel Spacing="10">
+          <atom:Button Content="量測 300 行布局" Click="OnLayoutTest" HorizontalAlignment="Left" />
+          <TextBlock Text="{Binding LayoutResult}" FontSize="13" />
+          <atom:Button Content="滾動 3 秒並量測 FPS" Click="OnScrollTest" HorizontalAlignment="Left" />
+          <TextBlock Text="{Binding ScrollResult}" FontSize="13" />
+          <StackPanel x:Name="LayoutHost" />
+        </StackPanel>
+      </atom:Card>
+
+      <atom:Card Header="滾動測試列表">
+        <ScrollViewer x:Name="ScrollHost" Height="220">
+          <StackPanel x:Name="ScrollList" />
+        </ScrollViewer>
+      </atom:Card>
+
+      <atom:Card Header="啟動里程碑">
+        <ItemsControl ItemsSource="{Binding Milestones}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="common:MilestoneRow">
+              <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                <TextBlock Text="{Binding Name}" FontSize="12" Opacity="0.8" />
+                <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="12" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </atom:Card>
+
+      <TextBlock Text="三個變體使用相同頁面、相同 Release / AOT 設定。數字為本次啟動的實測值。"
+                 FontSize="11" Opacity="0.55" TextWrapping="Wrap" Margin="0,4,0,12" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

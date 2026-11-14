@@ -1,0 +1,10 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="UiBench.AtomUI.App"
+             RequestedThemeVariant="Light">
+  <Application.Styles>
+    <!-- AtomUI 的主題由 AndroidApp.CustomizeAppBuilder 的 UseAtomUI 提供；
+         FluentTheme 只為 ScrollViewer 等基礎控件兜底，與正式版一致。 -->
+    <FluentTheme />
+  </Application.Styles>
+</Application>
