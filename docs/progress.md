@@ -119,6 +119,20 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
 
 ---
 
+## 🧭 第二階段（M3 v1.0，桌面 + Android，2026-11-14 起）
+
+原則：功能落在 Core / Storage（兩個平台共用），平台只提供數據源和界面；每項同時給出桌面和 Android 的實現或明確的「此平台不適用」說明。Android 進度細節記在 [progress-android.md](progress-android.md)。
+
+- [ ] **T1 流量統計**（FR-STA-01）：Core `TrafficAggregator` 消費 `IEngineHost.OnTraffic` → `traffic_minute / hour / day`（表結構已有）；IPC / 門面查詢接口；桌面總覽與應用頁顯示用量。數據源：模擬引擎（開發）、Windows ETW Kernel-Network（按 PID）、Android `NetworkStatsManager`（按 UID，需要「使用情況存取權」）。
+- [ ] **T2 實時連線視圖**：桌面 `GetExtendedTcpTable / UdpTable`（不需要管理員）；Android 10+ 無法讀取其他應用的連線表，**不適用**。
+- [ ] **T3 配置文件與按網絡自動切換**：Core 配置文件切換 + 網絡識別抽象；桌面按網絡配置文件 / SSID，Android 按 Wi-Fi / 行動網路（同時完成 Android P1「按網絡類型分別允許」）。
+- [ ] **T4 Android 阻斷快速失敗**：TCP SYN 回 RST、UDP 回 ICMP 不可達。
+- [ ] **T5 Android 規則導入導出**：復用 `RuleExportSerializer`，與桌面互通。
+- [ ] **T6 勿擾期間阻斷彙總通知**（桌面 + Android）。
+- [ ] **T7 其他 P1**：入站控制（WFP ALE_AUTH_RECV_ACCEPT）、權限分級提示、檢查更新、代碼簽名（需要用戶的證書）。
+
+---
+
 ## 🤝 可分派任務（適合交給其他 agent 獨立完成）
 
 > 認領規則、分支和完成標準見 [AGENTS.md §2](../AGENTS.md#2-協作規則多-agent-並行)。認領時把 `[ ]` 改為 `[~] (agent, 日期)`。
