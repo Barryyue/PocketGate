@@ -245,5 +245,7 @@
     <unit id="ColumnProfile"><segment><source>Profile</source></segment></unit>
     <unit id="ProfileFilterAll"><segment><source>All profiles</source></segment></unit>
     <unit id="ProfileFilterShared"><segment><source>Shared rules</source></segment></unit>
+    <unit id="EditorUnknownProfile"><segment><source>Unknown profile ({0})</source></segment></unit>
+    <unit id="EditorProfilesUnavailable"><segment><source>Profiles could not be loaded; the original profile is kept.</source></segment></unit>
   </file>
 </xliff>

@@ -293,5 +293,7 @@
     <unit id="ColumnProfile"><segment><source>Profile</source><target state="translated">配置文件</target></segment></unit>
     <unit id="ProfileFilterAll"><segment><source>All profiles</source><target state="translated">所有配置文件</target></segment></unit>
     <unit id="ProfileFilterShared"><segment><source>Shared rules</source><target state="translated">共享规则</target></segment></unit>
+    <unit id="EditorUnknownProfile"><segment><source>Unknown profile ({0})</source><target state="translated">未知配置文件（{0}）</target></segment></unit>
+    <unit id="EditorProfilesUnavailable"><segment><source>Profiles could not be loaded; the original profile is kept.</source><target state="translated">无法加载配置文件，保留原有设置。</target></segment></unit>
   </file>
 </xliff>

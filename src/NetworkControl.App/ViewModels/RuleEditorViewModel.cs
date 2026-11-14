@@ -73,12 +73,24 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
             Option(Proto.Lifetime.UntilRestart, CommonLangResourceKind.LifetimeUntilRestart),
             Option(Proto.Lifetime.Timed, CommonLangResourceKind.LifetimeTimed),
         ];
-        Profiles =
-        [
-            new Choice<string?>(null, () => Loc.Get(RulesLangResourceKind.ProfileFilterAll)),
-            new Choice<string?>("", () => Loc.Get(RulesLangResourceKind.ProfileFilterShared)),
-            .. (profiles ?? []).Select(p => new Choice<string?>(p.Id, () => p.Name)),
-        ];
+        CanEditProfile = profiles is not null;
+        var profileChoices = new List<Choice<string?>>
+        {
+            new(null, () => Loc.Get(RulesLangResourceKind.ProfileFilterAll)),
+        };
+        if (profiles is not null)
+        {
+            profileChoices.AddRange(profiles.Select(p => new Choice<string?>(p.Id, () => p.Name)));
+        }
+
+        if (_original?.HasProfileId == true
+            && profileChoices.All(c => c.Value != _original.ProfileId))
+        {
+            var unknown = _original.ProfileId;
+            profileChoices.Add(new Choice<string?>(unknown, () => Loc.Format(RulesLangResourceKind.EditorUnknownProfile, unknown)));
+        }
+
+        Profiles = profileChoices;
 
         SelectedAction = Actions[0];
         SelectedDirection = Directions[1];
@@ -105,6 +117,11 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
     public bool IsBuiltin { get; }
 
     public bool IsEditable => !IsBuiltin;
+
+    /// <summary>配置文件列表是否可用；載入失敗時仍保留原有 ProfileId。</summary>
+    public bool CanEditProfile { get; }
+
+    public bool ShowProfileUnavailable => !CanEditProfile;
 
     public IReadOnlyList<Choice<Proto.VerdictAction>> Actions { get; }
 
@@ -194,7 +211,12 @@ public sealed partial class RuleEditorViewModel : LocalizedViewModel, IValidatin
             return definition;
         }
 
-        if (SelectedProfile.Value is { Length: > 0 } profileId)
+        if (!CanEditProfile && _original?.HasProfileId == true)
+        {
+            // 載入配置文件失敗：原樣保留，避免把專屬規則默默擴大為共享規則（R3）
+            definition.ProfileId = _original.ProfileId;
+        }
+        else if (SelectedProfile?.Value is { } profileId)
         {
             definition.ProfileId = profileId;
         }

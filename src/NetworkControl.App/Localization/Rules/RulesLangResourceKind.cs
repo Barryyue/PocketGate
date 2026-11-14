@@ -58,4 +58,6 @@ public enum RulesLangResourceKind
     ColumnProfile,
     ProfileFilterAll,
     ProfileFilterShared,
+    EditorUnknownProfile,
+    EditorProfilesUnavailable,
 }

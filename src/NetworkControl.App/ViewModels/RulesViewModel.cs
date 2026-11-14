@@ -208,6 +208,8 @@ public sealed partial class RulesViewModel : PageViewModel
 
     partial void OnActionFilterChanged(int value) => ApplyFilter();
 
+    partial void OnProfileFilterChanged(Choice<string?>? value) => ApplyFilter();
+
     protected override void OnLanguageChanged()
     {
         foreach (var item in _all)
