@@ -1,5 +1,6 @@
 package com.networkcontrol.android.kotlin.ui.overview
 
+import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -221,6 +222,14 @@ fun OverviewScreen(backend: AppBackend) {
                         OutlinedButton(onClick = { backend.extendFocus(15) }) {
                             Text(s[S.FocusExtend])
                         }
+                        OutlinedButton(
+                            onClick = {
+                                backend.createFocusProfile(
+                                    allowedPackages = active.allowedPackages,
+                                    copyFromCurrent = false,
+                                )
+                            },
+                        ) { Text(s[S.SaveAsProfile]) }
                         TextButton(onClick = { confirmEndFocus = true }) {
                             Text(s[S.FocusStop])
                         }
@@ -525,6 +534,7 @@ private fun FocusStartDialog(
     onStart: (Int, Set<String>) -> Unit,
 ) {
     val s = rememberUiStrings()
+    val context = LocalContext.current
     var minutes by remember { mutableIntStateOf(30) }
     var query by remember { mutableStateOf("") }
     var apps by remember { mutableStateOf<List<com.networkcontrol.android.kotlin.core.model.AppEntry>>(emptyList()) }
@@ -547,14 +557,21 @@ private fun FocusStartDialog(
         title = { Text(s[S.FocusStart]) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(15, 30, 60, 120).forEach { value ->
-                        FilterChip(
-                            minutes == value,
-                            { minutes = value },
-                            { Text("$value min") },
-                        )
-                    }
+                OutlinedButton(
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute ->
+                                minutes = (hour * 60 + minute).coerceIn(5, 24 * 60)
+                            },
+                            minutes / 60,
+                            minutes % 60,
+                            true,
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("${s[S.FocusDuration]}：${formatDurationMinutes(minutes)}")
                 }
                 Text(s[S.FocusAllowedApps], style = MaterialTheme.typography.titleSmall)
                 OutlinedTextField(
@@ -611,6 +628,9 @@ private fun formatRemaining(millis: Long): String {
     val seconds = totalSeconds % 60
     return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
 }
+
+private fun formatDurationMinutes(minutes: Int): String =
+    if (minutes >= 60) "${minutes / 60}h ${minutes % 60}m" else "${minutes}m"
 
 @Composable
 private fun BatchPromptDialog(

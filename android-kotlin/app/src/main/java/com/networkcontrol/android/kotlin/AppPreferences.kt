@@ -41,6 +41,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_PROMPT_OVERLAY_POSITION, "top") ?: "top"
         set(value) = prefs.edit().putString(KEY_PROMPT_OVERLAY_POSITION, value).apply()
 
+    /** 自訂垂直位置：0=頂部，1=底部。 */
+    var promptOverlayCustomRatio: Float
+        get() = prefs.getFloat(KEY_PROMPT_OVERLAY_RATIO, 0.15f).coerceIn(0f, 1f)
+        set(value) = prefs.edit().putFloat(KEY_PROMPT_OVERLAY_RATIO, value.coerceIn(0f, 1f)).apply()
+
     var promptShowDetails: Boolean
         get() = prefs.getBoolean(KEY_PROMPT_SHOW_DETAILS, true)
         set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_DETAILS, value).apply()
@@ -69,6 +74,22 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_APP_LOCK, false)
         set(value) = prefs.edit().putBoolean(KEY_APP_LOCK, value).apply()
 
+    var forwardingEnabled: Boolean
+        get() = prefs.getBoolean(KEY_FORWARDING_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_FORWARDING_ENABLED, value).apply()
+
+    var socks5Host: String
+        get() = prefs.getString(KEY_SOCKS5_HOST, "127.0.0.1") ?: "127.0.0.1"
+        set(value) = prefs.edit().putString(KEY_SOCKS5_HOST, value).apply()
+
+    var socks5Port: Int
+        get() = prefs.getInt(KEY_SOCKS5_PORT, 7890)
+        set(value) = prefs.edit().putInt(KEY_SOCKS5_PORT, value).apply()
+
+    var socks5Udp: Boolean
+        get() = prefs.getBoolean(KEY_SOCKS5_UDP, true)
+        set(value) = prefs.edit().putBoolean(KEY_SOCKS5_UDP, value).apply()
+
     private companion object {
         const val KEY_THEME = "theme"
         const val KEY_LANGUAGE = "language"
@@ -78,6 +99,7 @@ class AppPreferences(context: Context) {
         const val KEY_THEME_COLOR = "theme_color"
         const val KEY_PROMPT_PRESENTATION = "prompt_presentation"
         const val KEY_PROMPT_OVERLAY_POSITION = "prompt_overlay_position"
+        const val KEY_PROMPT_OVERLAY_RATIO = "prompt_overlay_ratio"
         const val KEY_PROMPT_SHOW_DETAILS = "prompt_show_details"
         const val KEY_PROMPT_SHOW_EXPLANATION = "prompt_show_explanation"
         const val KEY_PROMPT_HIDE_DETAILS_LOCK = "prompt_hide_details_lock"
@@ -85,6 +107,10 @@ class AppPreferences(context: Context) {
         const val KEY_FOCUS_SESSION = "focus_session"
         const val KEY_FOCUS_SCHEDULES = "focus_schedules"
         const val KEY_APP_LOCK = "app_lock"
+        const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
+        const val KEY_SOCKS5_HOST = "socks5_host"
+        const val KEY_SOCKS5_PORT = "socks5_port"
+        const val KEY_SOCKS5_UDP = "socks5_udp"
         const val DEFAULT_THEME_COLOR = 0xFF2E7D32.toInt()
     }
 }

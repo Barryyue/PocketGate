@@ -36,9 +36,19 @@ enum class VpnTunnelState {
 data class VpnTunnelConfig(
     val bypassPackages: Set<String>,
     val mtu: Int = 1500,
+    val forwarding: Boolean = false,
+    val upstreamHost: String = "127.0.0.1",
+    val upstreamPort: Int = 7890,
+    val upstreamUdp: Boolean = true,
 ) {
     fun equivalentTo(other: VpnTunnelConfig?): Boolean =
-        other != null && mtu == other.mtu && bypassPackages == other.bypassPackages
+        other != null &&
+            mtu == other.mtu &&
+            forwarding == other.forwarding &&
+            upstreamHost == other.upstreamHost &&
+            upstreamPort == other.upstreamPort &&
+            upstreamUdp == other.upstreamUdp &&
+            bypassPackages == other.bypassPackages
 }
 
 interface PacketWriter {
@@ -158,6 +168,8 @@ class VpnTunnelController(
     private var pfd: ParcelFileDescriptor? = null
     private var applied: VpnTunnelConfig? = null
     private var generation = 0L
+    @Volatile
+    private var forwardingActive = false
 
     @Volatile
     var state: VpnTunnelState = VpnTunnelState.Closed
@@ -204,14 +216,34 @@ class VpnTunnelController(
             }
             reader?.close()
             pfd?.close()
+            if (forwardingActive) {
+                VpnForwardingTransport.stop()
+                forwardingActive = false
+            }
             pfd = descriptor
-            val newReader = TunReader(descriptor, sink) { error ->
-                if (myGeneration == generation) {
-                    lastError = "讀取虛擬網卡失敗：${error.message}"
-                    setState(VpnTunnelState.Failed)
+            var startedForwarding = false
+            if (config.forwarding) {
+                val file = java.io.File(appContext.filesDir, "hev-forwarding.yml")
+                writeForwardingConfig(file, config)
+                startedForwarding = VpnForwardingTransport.start(file, descriptor.fd)
+                if (!startedForwarding) {
+                    lastError = "轉發啟動失敗（可能是 ABI 不支援或上游設定錯誤），已回到黑洞模式。"
+                    com.networkcontrol.android.kotlin.platform.AppLog.w("forwarding", lastError!!)
+                } else {
+                    forwardingActive = true
                 }
             }
-            reader = newReader
+            if (!startedForwarding) {
+                val newReader = TunReader(descriptor, sink) { error ->
+                    if (myGeneration == generation) {
+                        lastError = "讀取虛擬網卡失敗：${error.message}"
+                        setState(VpnTunnelState.Failed)
+                    }
+                }
+                reader = newReader
+            } else {
+                reader = null
+            }
             runCatching { svc.ensureForeground(notifier.notificationId, notifier.build()) }
                 .onFailure { lastError = "無法建立前景通知：${it.message}" }
             applied = config
@@ -227,6 +259,10 @@ class VpnTunnelController(
     suspend fun close() {
         gate.withLock {
             generation++
+            if (forwardingActive) {
+                VpnForwardingTransport.stop()
+                forwardingActive = false
+            }
             reader?.close()
             reader = null
             pfd?.close()
@@ -256,6 +292,10 @@ class VpnTunnelController(
         cleanupScope.launch {
             gate.withLock {
                 if (this@VpnTunnelController.service == null) {
+                    if (forwardingActive) {
+                        VpnForwardingTransport.stop()
+                        forwardingActive = false
+                    }
                     reader?.close()
                     reader = null
                     pfd?.close()
@@ -280,6 +320,10 @@ class VpnTunnelController(
         cleanupScope.launch {
             gate.withLock {
                 if (this@VpnTunnelController.service == null) {
+                    if (forwardingActive) {
+                        VpnForwardingTransport.stop()
+                        forwardingActive = false
+                    }
                     reader?.close()
                     reader = null
                     pfd?.close()
@@ -341,7 +385,12 @@ class NcVpnService : VpnService() {
         builder.setMtu(config.mtu)
         builder.addAddress(FakeDnsPool.Ipv4Address.hostAddress!!, 32)
         builder.addAddress(FakeDnsPool.Ipv6Address.hostAddress!!, 128)
-        builder.addDnsServer(FakeDnsPool.DnsServer.hostAddress!!)
+        if (config.forwarding) {
+            builder.addDnsServer("1.1.1.1")
+            builder.addDnsServer("8.8.8.8")
+        } else {
+            builder.addDnsServer(FakeDnsPool.DnsServer.hostAddress!!)
+        }
         builder.addRoute("0.0.0.0", 0)
         builder.addRoute("::", 0)
         builder.setMetered(false)

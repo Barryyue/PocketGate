@@ -105,6 +105,7 @@ class AppContainer(context: Context) {
         screenState = screenState,
         blockOnLockScreen = { preferences.blockOnLockScreen },
         focus = focus,
+        preferences = preferences,
         notifier = vpnNotifier,
         selfPackage = appContext.packageName,
     )

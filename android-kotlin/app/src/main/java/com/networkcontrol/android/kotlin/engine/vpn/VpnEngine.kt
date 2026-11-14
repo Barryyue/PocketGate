@@ -36,6 +36,7 @@ class VpnEngine(
     private val screenState: com.networkcontrol.android.kotlin.engine.network.ScreenStateMonitor,
     private val blockOnLockScreen: () -> Boolean,
     private val focus: com.networkcontrol.android.kotlin.core.focus.FocusController,
+    private val preferences: com.networkcontrol.android.kotlin.AppPreferences,
     private val notifier: VpnForegroundNotifier,
     private val selfPackage: String,
 ) {
@@ -128,7 +129,17 @@ class VpnEngine(
             return
         }
 
-        val config = VpnTunnelConfig(plan.bypassPackages)
+        val config = if (preferences.forwardingEnabled) {
+            VpnTunnelConfig(
+                bypassPackages = setOf(selfPackage),
+                forwarding = true,
+                upstreamHost = preferences.socks5Host,
+                upstreamPort = preferences.socks5Port,
+                upstreamUdp = preferences.socks5Udp,
+            )
+        } else {
+            VpnTunnelConfig(plan.bypassPackages)
+        }
         if (tunnel.state == VpnTunnelState.Active && config.equivalentTo(applied)) {
             return
         }

@@ -284,6 +284,52 @@ class AppBackend(val container: AppContainer) {
         }
     }
 
+    /**
+     * 建立長期「專注」白名單配置文件。
+     * - allowedPackages 非 null：只把這些應用寫成 Allow 規則（從專注會話保存）。
+     * - copyFromCurrent：複製目前配置文件的所有規則（模板）。
+     */
+    fun createFocusProfile(
+        nameBase: String = "專注",
+        allowedPackages: Set<String>? = null,
+        copyFromCurrent: Boolean = allowedPackages == null,
+    ) {
+        container.scope.launch {
+            runCatching {
+                var name = nameBase
+                var index = 2
+                while (container.profiles.all.any { it.name.equals(name, ignoreCase = true) }) {
+                    name = "$nameBase $index"
+                    index++
+                }
+                val profile = container.profiles.create(
+                    name = name,
+                    mode = FilterMode.Whitelist,
+                    autoActivate = null,
+                    copyRulesFrom = if (copyFromCurrent) container.profiles.active.id else null,
+                )
+                allowedPackages?.forEach { packageName ->
+                    val app = container.appCatalog.find(packageName) ?: return@forEach
+                    val now = Time.now()
+                    container.rules.add(
+                        Rule(
+                            id = java.util.UUID.randomUUID().toString(),
+                            profileId = profile.id,
+                            app = AppMatcherFactory.create(container.appCatalog.toIdentity(app)),
+                            conditions = RuleConditions(direction = Direction.Outbound),
+                            action = VerdictAction.Allow,
+                            lifetime = RuleLifetime.Permanent,
+                            source = RuleSource.User,
+                            createdAt = now,
+                            updatedAt = now,
+                        ),
+                    )
+                }
+                container.profiles.activate(profile.id)
+            }.onFailure { _profileErrors.tryEmit(it.message ?: "建立專注配置文件失敗") }
+        }
+    }
+
     fun updateProfile(id: String, name: String, mode: FilterMode, autoActivate: com.networkcontrol.android.kotlin.core.model.AutoActivateCondition? = null) {
         container.scope.launch {
             runCatching { container.profiles.update(id, name, mode, autoActivate) }
@@ -426,6 +472,13 @@ class AppBackend(val container: AppContainer) {
         container.promptRouter.refresh()
     }
 
+    fun promptOverlayCustomRatio(): Float = container.preferences.promptOverlayCustomRatio
+
+    fun setPromptOverlayCustomRatio(ratio: Float) {
+        container.preferences.promptOverlayCustomRatio = ratio
+        container.promptRouter.refresh()
+    }
+
     fun promptShowDetails(): Boolean = container.preferences.promptShowDetails
 
     fun setPromptShowDetails(show: Boolean) {
@@ -471,6 +524,36 @@ class AppBackend(val container: AppContainer) {
 
     fun setAppLockEnabled(enabled: Boolean) {
         container.preferences.appLockEnabled = enabled
+    }
+
+    fun forwardingEnabled(): Boolean = container.preferences.forwardingEnabled
+
+    fun setForwardingEnabled(enabled: Boolean) {
+        container.preferences.forwardingEnabled = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun forwardingAvailable(): Boolean = com.networkcontrol.android.kotlin.engine.vpn.VpnForwardingTransport.isAvailable()
+
+    fun socks5Host(): String = container.preferences.socks5Host
+
+    fun setSocks5Host(host: String) {
+        container.preferences.socks5Host = host.trim()
+        container.vpnEngine.requestReplan()
+    }
+
+    fun socks5Port(): Int = container.preferences.socks5Port
+
+    fun setSocks5Port(port: Int) {
+        container.preferences.socks5Port = port.coerceIn(1, 65535)
+        container.vpnEngine.requestReplan()
+    }
+
+    fun socks5Udp(): Boolean = container.preferences.socks5Udp
+
+    fun setSocks5Udp(enabled: Boolean) {
+        container.preferences.socks5Udp = enabled
+        container.vpnEngine.requestReplan()
     }
 
     fun canDrawOverlays(): Boolean = container.promptOverlay.canDrawOverlays()

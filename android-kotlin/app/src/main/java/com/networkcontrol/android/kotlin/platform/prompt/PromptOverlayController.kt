@@ -78,6 +78,7 @@ class PromptOverlayController(
             windowParams = params
             currentId = prompt.id
             currentPrompt = prompt
+            applyCustomPosition(panel, params)
             startHold(prompt.id)
             AppLog.i("overlay", "shown prompt=${prompt.id} package=${prompt.app?.path}")
         }
@@ -128,8 +129,22 @@ class PromptOverlayController(
         handler.postDelayed(runnable, 10_000)
     }
 
-    private fun buildParams(): WindowManager.LayoutParams {
-        val bounds = if (Build.VERSION.SDK_INT >= 30) {
+    private fun applyCustomPosition(panel: View, params: WindowManager.LayoutParams) {
+        if (preferences.promptOverlayPosition != "custom") return
+        panel.post {
+            val screenHeight = if (Build.VERSION.SDK_INT >= 30) {
+                windowManager?.currentWindowMetrics?.bounds?.height()
+            } else {
+                context.resources.displayMetrics.heightPixels
+            } ?: context.resources.displayMetrics.heightPixels
+            val available = (screenHeight - panel.height).coerceAtLeast(1)
+            val y = (available * preferences.promptOverlayCustomRatio).toInt().coerceIn(0, available)
+            params.y = y
+            runCatching { windowManager?.updateViewLayout(panel, params) }
+        }
+    }
+
+    private fun buildParams(): WindowManager.LayoutParams {        val bounds = if (Build.VERSION.SDK_INT >= 30) {
             windowManager?.currentWindowMetrics?.bounds
         } else {
             null
@@ -152,7 +167,7 @@ class PromptOverlayController(
             android.graphics.PixelFormat.TRANSLUCENT,
         ).apply {
             this.gravity = gravity
-            y = dp(8)
+            y = if (position == "custom") 0 else dp(8)
             title = "NetworkControl prompt"
             packageName = context.packageName
             if (Build.VERSION.SDK_INT >= 28) {

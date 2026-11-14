@@ -2,20 +2,24 @@ package com.networkcontrol.android.kotlin.ui.settings
 
 import android.content.Context
 import android.content.Intent
+import android.app.TimePickerDialog
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +39,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,10 +49,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -74,6 +81,7 @@ import java.time.LocalTime
 import java.time.format.TextStyle
 import java.util.Locale
 import java.util.UUID
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(backend: AppBackend) {
@@ -91,11 +99,18 @@ fun SettingsScreen(backend: AppBackend) {
     val canDrawOverlays = remember(overlayKey) { backend.canDrawOverlays() }
     var promptMode by remember { mutableStateOf(backend.promptPresentationMode()) }
     var promptPosition by remember { mutableStateOf(backend.promptOverlayPosition()) }
+    var promptRatio by remember { mutableFloatStateOf(backend.promptOverlayCustomRatio()) }
+    var showOverlayPositionDialog by remember { mutableStateOf(false) }
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
     var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
     var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
+    var forwardingEnabled by remember { mutableStateOf(backend.forwardingEnabled()) }
+    var socks5Host by remember { mutableStateOf(backend.socks5Host()) }
+    var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
+    var socks5Udp by remember { mutableStateOf(backend.socks5Udp()) }
+    val forwardingAvailable = remember { backend.forwardingAvailable() }
     var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
     var showScheduleDialog by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
@@ -326,6 +341,27 @@ fun SettingsScreen(backend: AppBackend) {
                             },
                             { Text(s[S.OverlayBottom]) },
                         )
+                        FilterChip(
+                            promptPosition == "custom",
+                            {
+                                promptPosition = "custom"
+                                backend.setPromptOverlayPosition("custom")
+                            },
+                            { Text(s[S.OverlayCustom]) },
+                        )
+                    }
+                    if (promptPosition == "custom") {
+                        OutlinedButton(onClick = { showOverlayPositionDialog = true }) {
+                            Text(
+                                "${s[S.OverlayAdjustPosition]} " +
+                                    "(${(promptRatio * 100).roundToInt()}%)",
+                            )
+                        }
+                        Text(
+                            s[S.OverlayCustomHint],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     Text(
                         s[S.OverlayOemHint],
@@ -549,6 +585,9 @@ fun SettingsScreen(backend: AppBackend) {
                         showProfileDialog = true
                     },
                 ) { Text(s[S.AddProfile]) }
+                OutlinedButton(onClick = { backend.createFocusProfile(copyFromCurrent = true) }) {
+                    Text(s[S.CreateFocusProfile])
+                }
             }
         }
 
@@ -582,6 +621,77 @@ fun SettingsScreen(backend: AppBackend) {
                         }
                     },
                 ) { Text(s[S.ExportDiagnostics]) }
+            }
+        }
+
+        item {
+            SectionCard(s[S.ForwardingMode]) {
+                Text(
+                    s[S.ForwardingHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    if (forwardingAvailable) s[S.ForwardingAvailable] else s[S.ForwardingUnavailable],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (forwardingAvailable) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
+                )
+                SwitchRow(
+                    title = s[S.ForwardingMode],
+                    checked = forwardingEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !forwardingAvailable) {
+                            toast(s[S.ForwardingUnavailable])
+                        } else {
+                            forwardingEnabled = enabled
+                            backend.setForwardingEnabled(enabled)
+                        }
+                    },
+                )
+                if (forwardingEnabled) {
+                    OutlinedTextField(
+                        value = socks5Host,
+                        onValueChange = { socks5Host = it },
+                        label = { Text(s[S.Socks5Host]) },
+                        singleLine = true,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = socks5Port,
+                            onValueChange = {
+                                socks5Port = it.filter { char -> char.isDigit() }.take(5)
+                            },
+                            label = { Text(s[S.Socks5Port]) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(
+                            onClick = {
+                                backend.setSocks5Host(socks5Host)
+                                backend.setSocks5Port(socks5Port.toIntOrNull() ?: 7890)
+                                toast(s[S.Done])
+                            },
+                        ) { Text(s[S.Save]) }
+                    }
+                    SwitchRow(
+                        title = s[S.Socks5Udp],
+                        checked = socks5Udp,
+                        onCheckedChange = {
+                            socks5Udp = it
+                            backend.setSocks5Udp(it)
+                        },
+                    )
+                    Text(
+                        s[S.ForwardingAbiHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
 
@@ -672,6 +782,18 @@ fun SettingsScreen(backend: AppBackend) {
             onSave = { schedule ->
                 backend.saveFocusSchedule(schedule)
                 showScheduleDialog = false
+            },
+        )
+    }
+
+    if (showOverlayPositionDialog) {
+        OverlayPositionDialog(
+            initialRatio = promptRatio,
+            onDismiss = { showOverlayPositionDialog = false },
+            onSave = { ratio ->
+                promptRatio = ratio
+                backend.setPromptOverlayCustomRatio(ratio)
+                showOverlayPositionDialog = false
             },
         )
     }
@@ -1002,11 +1124,9 @@ private fun ScheduleDialog(
     val s = rememberUiStrings()
     val context = LocalContext.current
     var days by remember { mutableStateOf(schedule?.days ?: setOf(1, 2, 3, 4, 5)) }
-    var start by remember { mutableStateOf(minutesToText(schedule?.startMinute ?: 9 * 60)) }
-    var end by remember { mutableStateOf(minutesToText(schedule?.endMinute ?: 18 * 60)) }
-    val startMinute = parseMinutes(start)
-    val endMinute = parseMinutes(end)
-    val valid = days.isNotEmpty() && startMinute != null && endMinute != null && startMinute != endMinute
+    var startMinute by remember { mutableIntStateOf(schedule?.startMinute ?: 9 * 60) }
+    var endMinute by remember { mutableIntStateOf(schedule?.endMinute ?: 18 * 60) }
+    val valid = days.isNotEmpty() && startMinute != endMinute
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1034,18 +1154,34 @@ private fun ScheduleDialog(
                         }
                     }
                 }
-                OutlinedTextField(
-                    value = start,
-                    onValueChange = { start = it.take(5) },
-                    label = { Text(s[S.ScheduleStart]) },
-                    singleLine = true,
-                )
-                OutlinedTextField(
-                    value = end,
-                    onValueChange = { end = it.take(5) },
-                    label = { Text(s[S.ScheduleEnd]) },
-                    singleLine = true,
-                )
+                OutlinedButton(
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute -> startMinute = hour * 60 + minute },
+                            startMinute / 60,
+                            startMinute % 60,
+                            true,
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("${s[S.ScheduleStart]}：${minutesToText(startMinute)}")
+                }
+                OutlinedButton(
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute -> endMinute = hour * 60 + minute },
+                            endMinute / 60,
+                            endMinute % 60,
+                            true,
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("${s[S.ScheduleEnd]}：${minutesToText(endMinute)}")
+                }
                 Text(
                     s[S.ScheduleHint],
                     style = MaterialTheme.typography.bodySmall,
@@ -1056,14 +1192,12 @@ private fun ScheduleDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    val startValue = startMinute ?: return@TextButton
-                    val endValue = endMinute ?: return@TextButton
                     onSave(
                         FocusSchedule(
                             id = schedule?.id ?: UUID.randomUUID().toString(),
                             days = days,
-                            startMinute = startValue,
-                            endMinute = endValue,
+                            startMinute = startMinute,
+                            endMinute = endMinute,
                             enabled = schedule?.enabled ?: true,
                         ),
                     )
@@ -1096,6 +1230,81 @@ private fun parseMinutes(text: String): Int? {
     val minute = parts[1].toIntOrNull() ?: return null
     if (hour !in 0..23 || minute !in 0..59) return null
     return hour * 60 + minute
+}
+
+@Composable
+private fun OverlayPositionDialog(
+    initialRatio: Float,
+    onDismiss: () -> Unit,
+    onSave: (Float) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var ratio by remember { mutableFloatStateOf(initialRatio.coerceIn(0f, 1f)) }
+    val panelHeight = 72.dp
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.OverlayPosition]) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    s.format(S.OverlayPositionPercent, (ratio * 100).roundToInt()),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(380.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                        )
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { _, dragAmount ->
+                                val available = (380.dp - panelHeight).toPx().coerceAtLeast(1f)
+                                ratio = (ratio + dragAmount / available).coerceIn(0f, 1f)
+                            }
+                        },
+                ) {
+                    val available = maxHeight - panelHeight
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    0,
+                                    (available * ratio).roundToPx(),
+                                )
+                            }
+                            .fillMaxWidth()
+                            .height(panelHeight)
+                            .padding(horizontal = 12.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary,
+                                androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "NetworkControl",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+                Text(
+                    s[S.OverlayCustomHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(ratio) }) { Text(s[S.Save]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
 }
 
 @Composable
