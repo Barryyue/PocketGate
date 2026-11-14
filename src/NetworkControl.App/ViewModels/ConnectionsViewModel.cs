@@ -16,7 +16,6 @@ namespace NetworkControl.App.ViewModels;
 public sealed partial class ConnectionItemViewModel : IconRowViewModel
 {
     private readonly DisplayText _text;
-    private readonly AppIconCache _icons;
     private Proto.LiveConnection _connection;
     private bool _killSupported;
 
@@ -26,7 +25,6 @@ public sealed partial class ConnectionItemViewModel : IconRowViewModel
         _connection = connection;
         _text = text;
         _killSupported = killSupported;
-        _icons = icons;
     }
 
     public Task LoadIconAsync() => LoadIconAsync(AppPath);
