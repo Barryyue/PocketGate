@@ -62,13 +62,34 @@
 | K-033 | 批量詢問：待決列表多選，允許 / 拒絕 / 稍後一次處理；規則用 `addRange` 只發布一次規則集 | `PromptBroker.answerMany`、`OverviewScreen.kt`、`AppBackend.answerPrompts` | 構建 + 模擬器入口 | 批量流程待真機 / 多詢問場景驗證 |
 | K-034 | 通知動作在進程回收後仍有效：通知 action 帶應用路徑；詢問不存在時等待核心初始化後直接建立應用規則；無有效應用時提示已過期 | `PromptNotifier.kt`、`NotificationActionReceiver.kt` | 構建 + 代碼審查 | 需真機「殺進程後點通知」驗證 |
 
+### v0.4（2026-11-15，提交 `b66956d`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-037 | 全域鎖屏斷網：螢幕關閉 / 鎖屏時以 BlockAll 重新規劃；系統 UID 仍保留 | `ScreenStateMonitor`、`VpnEngine`、`SettingsScreen` | 構建 + 代碼審查 | 按應用鎖屏開關尚未做 |
+| K-038 | 「允許一次」：詢問卡片 / 懸浮面板可只放行目前連線，不建立持久規則 | `PromptOverlay`、`PromptOverlayController`、`PromptBroker` | 模擬器詢問卡片顯示 | 會話綁定（離開應用 / 鎖屏失效）尚未做 |
+| K-039 | 懸浮詢問面板：`SYSTEM_ALERT_WINDOW`；`PromptRouter` 統一決定應用內卡片 / 懸浮面板 / 通知；UsageStats 前景 UID 追蹤；原生 View 面板、頂部 / 底部、hold 計時、安靜通知渠道、addView fallback | `platform/prompt/`、`PromptNotifier`、`NotificationChannels`、`SettingsScreen`、`AndroidManifest.xml` | `PromptPresentationPolicyTest`；模擬器在 Chrome 上顯示面板並按允許成功 | 微信 / OEM ROM / IME 遮擋待真機 |
+| K-040 | 詢問內容顯示設定：連線詳情、說明文字、鎖屏隱藏詳情；通知與懸浮面板同步 | `AppPreferences`、`PromptNotifier`、`PromptOverlayController`、`PromptOverlay`、`SettingsScreen` | 構建 + 模擬器設定頁 | 真機鎖屏待驗證 |
+| K-035 | 專注模式：時長、允許應用選擇、剩餘時間、延長 15 分鐘、結束確認；專注期間 BlockAll 並只放行所選應用 | `FocusController`、`FocusSchedule`、`VpnEngine`、`RoutingPlanner`、`OverviewScreen` | 模擬器開始 15 分鐘、允許 Chrome、剩餘時間顯示 | 結束小結 / 通知尚未做 |
+| K-036 | 專注時間表：按星期與時段自動進入專注；跨午夜時段；設定頁新增 / 啟停 / 刪除；每 30 秒檢查 | `FocusScheduler`、`SettingsScreen`、`AppPreferences` | 模擬器新增週一至週五 09:00–18:00 | 重啟後校正、AlarmManager 待做 |
+| K-041 | 新應用安裝提醒：`PACKAGE_ADDED` 通知，點擊開啟應用決定 | `PackageChangeReceiver`、`NotificationChannels` | 構建 + 代碼審查 | 真機安裝流程待驗證 |
+| K-042 | 私人 DNS / DoH 提示：偵測 `private_dns_mode=hostname`，總覽提示域名規則可能失效 | `AppBackend.privateDnsMode`、`OverviewScreen` | 構建 + 代碼審查 | DoH 應用內檢測待做 |
+| K-043 | 應用鎖（第一版）：使用系統鎖屏憑證解鎖，離開超過 1 分鐘重新鎖定；未設定鎖屏時阻止啟用 | `AppLockGate`、`AppPreferences`、`SettingsScreen`、`MainActivity` | 構建 + 代碼審查 | 修改規則 / 模式前的即時驗證尚未做 |
+| K-044 | 無障礙與平板：導航圖示加內容描述；內容最大寬度 760dp 居中，改善平板與大字體佈局 | `AppRoot` | 構建 + 模擬器 | TalkBack 全流程待真機 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
 |---|---|---|
-| K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 待做 |
-| K-027 | 懸浮詢問面板、專注模式 / 時間表、鎖屏斷網、允許一次 | 路線圖 |
-| K-028 | 轉發模式 + 上游代理 | 預研完成，見 [android-forwarding-research.md](android-forwarding-research.md) |
+| K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 部分完成（應用列表的 SIM 查詢已提升），其餘待做 |
+| K-043b | 應用鎖在修改規則 / 模式前的即時驗證 | 待做（第一版只鎖啟動與背景超過 1 分鐘） |
+| K-045 | 性能：啟動埋點、只打 arm64、R8 / Baseline Profiles、CI 大小基線 | M3 |
+| K-046 | 正式簽名 / AAB / 側載更新檢查 | M3，需用戶提供 keystore |
+| K-047 | 工作資料夾 / 多使用者 | M3 |
+| K-048 | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | M3 |
+| K-049 | adb 冒煙測試腳本 | M3 |
+| K-050 | 內置 WireGuard（可選） | M3 預研 |
+| K-051 | 轉發模式 + 上游代理 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
 
 ## 3. 維護規則
 

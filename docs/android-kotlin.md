@@ -422,3 +422,44 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 專注模式 / 時間表、鎖屏斷網、允許一次、詢問內容設定、新應用提醒、DoH 提示、應用鎖、無障礙回歸。
 - 性能（Baseline Profiles、啟動埋點）、正式簽名 / AAB、工作資料夾、純 IPv6 / OEM ROM 回歸、冒煙腳本。
 - 轉發模式 / 上游代理仍未實現；預研見 [android-forwarding-research.md](android-forwarding-research.md)。
+
+---
+
+## 13. v0.4（2026-11-15）
+
+### 13.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 懸浮詢問面板 | `SYSTEM_ALERT_WINDOW` + `TYPE_APPLICATION_OVERLAY`；`PromptRouter` 成為 `PromptBroker.pending` 的唯一訂閱者，統一決定應用內卡片 / 懸浮面板 / 通知；UsageStats 增量追蹤前台 UID（Activity 級別），只在被詢問應用同 UID 前台時顯示；原生 View 面板（頂部 / 底部、時效 chips、允許一次、稍後 / 拒絕 / 允許）、hold 計時、addView 失敗退回通知。 |
+| 詢問內容 | 連線詳情、說明文字、鎖屏隱藏詳情三個開關，通知與懸浮面板同步；通知改為 `PROMPT_SOFT` 安靜渠道，避免 heads-up 蓋住頂部面板。 |
+| 鎖屏斷網 | `ScreenStateMonitor` 監聽螢幕 / 鎖屏；開啟後鎖屏時以 BlockAll 重新規劃，系統 UID 仍保留。 |
+| 專注模式 | 時長、允許應用選擇、剩餘時間、延長 15 分鐘、結束確認；專注期間 BlockAll，只放行所選應用；狀態持久化，重啟後按結束時間校正。 |
+| 專注時間表 | 按星期與時段自動進入專注（支援跨午夜）；設定頁新增 / 啟停 / 刪除；每 30 秒檢查，手動專注不被覆蓋。 |
+| 新應用提醒 | `PACKAGE_ADDED` 發送通知，點擊開啟應用做決定。 |
+| 私人 DNS | 偵測 `private_dns_mode=hostname`，在總覽提示域名規則可能失效。 |
+| 應用鎖 | 使用系統鎖屏憑證解鎖；離開超過 1 分鐘重新鎖定；未設定鎖屏時阻止啟用。 |
+| 無障礙 / 平板 | 導航圖示加內容描述；內容最大寬度 760dp 居中。 |
+
+### 13.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.4.0.apk` |
+| 大小 | 3,345,990 bytes（約 3.2 MB，雙 ABI） |
+| SHA-256 | `463597974C4CB536979750817F4F1143BA4A839446A294285A53686E72863C1F` |
+| versionName / Code | `0.4.0` / `4` |
+| 簽名 | Android Debug（僅供對照試用） |
+
+### 13.3 驗證
+
+- JVM 測試通過（含 `PromptPresentationPolicyTest`、`FocusScheduleTest`、既有規則 / 網路 / CSV 測試）；Debug / Release 構建通過。
+- 模擬器：Chrome 前景時懸浮面板顯示於頂部，按「允許」成功建立規則並收起；面板高度約 458px（修正文字大小誤用 dp 的問題）；設定頁顯示懸浮權限、位置、詢問內容與專注時間表；新增週一至週五 09:00–18:00 時間表成功；專注模式可開始並顯示剩餘時間與允許應用數。
+- 真機未驗證：微信 / OEM ROM 的懸浮窗、IME 遮擋、鎖屏斷網、應用鎖憑證、新應用通知、私人 DNS 提示、批量詢問與通知動作進程回收。
+
+### 13.4 仍待處理
+
+- 應用鎖目前只鎖啟動與背景超過 1 分鐘，尚未在修改規則 / 模式 / 退出時即時驗證。
+- 專注模式結束小結、AlarmManager 精確排程、重啟後時間表校正待補強。
+- 批量詢問與通知動作進程回收仍需真機場景驗證。
+- M3 性能、正式簽名 / AAB、工作資料夾、IPv6 / OEM 回歸、冒煙腳本；M4 轉發模式。
