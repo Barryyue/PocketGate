@@ -74,6 +74,8 @@ public static partial class BackendHost
 
         builder.Services.AddSingleton<PromptNotifier>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<PromptNotifier>());
+        builder.Services.AddHostedService<ProfileSwitchNotifier>();
+        builder.Services.AddHostedService<QuietPeriodNotifier>();
         builder.Services.AddSingleton<Backend>();
         builder.Services.AddSingleton<IBackend>(sp => sp.GetRequiredService<Backend>());
         builder.Services.AddSingleton<AppIconLoader>();

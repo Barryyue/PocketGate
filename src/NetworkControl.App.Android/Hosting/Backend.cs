@@ -130,9 +130,12 @@ public interface IBackend
 
     Task ActivateProfileAsync(Guid id, CancellationToken cancellationToken);
 
-    Task<Profile> CreateProfileAsync(string name, FilterMode mode, CancellationToken cancellationToken);
+    Task<Profile> CreateProfileAsync(string name, FilterMode mode, AutoActivateCondition? autoActivate, CancellationToken cancellationToken);
 
-    Task<Profile> UpdateProfileAsync(Guid id, string name, FilterMode mode, CancellationToken cancellationToken);
+    Task<Profile> UpdateProfileAsync(Guid id, string name, FilterMode mode, AutoActivateCondition? autoActivate, CancellationToken cancellationToken);
+
+    /// <summary>目前的主要網路；用於設定頁的「使用目前的 Wi-Fi」。</summary>
+    NetworkContext CurrentNetwork { get; }
 
     Task DeleteProfileAsync(Guid id, CancellationToken cancellationToken);
 
@@ -163,6 +166,7 @@ internal sealed class Backend : IBackend
     private readonly VpnBlackholeEngine _engine;
     private readonly AndroidVpnTunnel _tunnel;
     private readonly IProtectionSwitch _protection;
+    private readonly INetworkMonitor _network;
     private readonly IInstalledAppCatalog _catalog;
     private readonly RuntimeStateService _state;
     private readonly SettingsService _settings;
@@ -188,6 +192,7 @@ internal sealed class Backend : IBackend
         VpnBlackholeEngine engine,
         AndroidVpnTunnel tunnel,
         IProtectionSwitch protection,
+        INetworkMonitor network,
         IInstalledAppCatalog catalog,
         RuntimeStateService state,
         SettingsService settings,
@@ -214,6 +219,7 @@ internal sealed class Backend : IBackend
         _engine = engine;
         _tunnel = tunnel;
         _protection = protection;
+        _network = network;
         _catalog = catalog;
         _state = state;
         _settings = settings;
@@ -308,13 +314,23 @@ internal sealed class Backend : IBackend
     public Task ActivateProfileAsync(Guid id, CancellationToken cancellationToken) =>
         _profiles.ActivateAsync(id, ProfileSwitchReason.User, cancellationToken);
 
-    public Task<Profile> CreateProfileAsync(string name, FilterMode mode, CancellationToken cancellationToken) =>
-        _profiles.CreateAsync(name, mode, copyRulesFrom: null, cancellationToken);
+    public NetworkContext CurrentNetwork => _network.Current;
 
-    public Task<Profile> UpdateProfileAsync(Guid id, string name, FilterMode mode, CancellationToken cancellationToken)
+    public async Task<Profile> CreateProfileAsync(string name, FilterMode mode, AutoActivateCondition? autoActivate, CancellationToken cancellationToken)
+    {
+        var profile = await _profiles.CreateAsync(name, mode, copyRulesFrom: null, cancellationToken);
+        if (autoActivate is { IsEmpty: false })
+        {
+            profile = await _profiles.UpdateAsync(profile with { AutoActivate = autoActivate }, cancellationToken);
+        }
+
+        return profile;
+    }
+
+    public Task<Profile> UpdateProfileAsync(Guid id, string name, FilterMode mode, AutoActivateCondition? autoActivate, CancellationToken cancellationToken)
     {
         var existing = _profiles.Find(id) ?? throw new KeyNotFoundException($"配置文件 {id} 不存在。");
-        return _profiles.UpdateAsync(existing with { Name = name, Mode = mode }, cancellationToken);
+        return _profiles.UpdateAsync(existing with { Name = name, Mode = mode, AutoActivate = autoActivate }, cancellationToken);
     }
 
     public Task DeleteProfileAsync(Guid id, CancellationToken cancellationToken) =>

@@ -16,6 +16,36 @@
         <source>To keep apps blocked even if NetworkControl stops, turn on "Always-on VPN" and "Block connections without VPN" for NetworkControl in system settings.</source>
       </segment>
     </unit>
+    <unit id="AutoSwitch">
+      <segment>
+        <source>Auto switch</source>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchChannel">
+      <segment>
+        <source>Profile switches</source>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchChannelDescription">
+      <segment>
+        <source>Notifies when the profile changes because of the current network.</source>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchHint">
+      <segment>
+        <source>Switch to this profile when the current network matches.</source>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchText">
+      <segment>
+        <source>Network: {0}</source>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchTitle">
+      <segment>
+        <source>Switched to {0}</source>
+      </segment>
+    </unit>
     <unit id="Battery">
       <segment>
         <source>Battery optimization</source>
@@ -131,6 +161,46 @@
         <source>Language</source>
       </segment>
     </unit>
+    <unit id="NetworkKind">
+      <segment>
+        <source>Network type</source>
+      </segment>
+    </unit>
+    <unit id="NetworkKindAny">
+      <segment>
+        <source>Any</source>
+      </segment>
+    </unit>
+    <unit id="NetworkKindCellular">
+      <segment>
+        <source>Mobile</source>
+      </segment>
+    </unit>
+    <unit id="NetworkKindWifi">
+      <segment>
+        <source>Wi-Fi</source>
+      </segment>
+    </unit>
+    <unit id="NetworkKindWired">
+      <segment>
+        <source>Ethernet</source>
+      </segment>
+    </unit>
+    <unit id="NetworkSsidUnavailable">
+      <segment>
+        <source>Current Wi-Fi name is unavailable. Grant location permission to read it.</source>
+      </segment>
+    </unit>
+    <unit id="NetworkSsids">
+      <segment>
+        <source>Wi-Fi names</source>
+      </segment>
+    </unit>
+    <unit id="NetworkSsidsPlaceholder">
+      <segment>
+        <source>Comma separated, e.g. Home, Office</source>
+      </segment>
+    </unit>
     <unit id="Notifications">
       <segment>
         <source>Notifications</source>
@@ -191,6 +261,11 @@
         <source>Each profile has its own mode and rules. Shared rules apply to every profile.</source>
       </segment>
     </unit>
+    <unit id="ProfileMode">
+      <segment>
+        <source>Mode</source>
+      </segment>
+    </unit>
     <unit id="ProfileName">
       <segment>
         <source>Name</source>
@@ -224,6 +299,26 @@
     <unit id="Prompts">
       <segment>
         <source>Connection requests</source>
+      </segment>
+    </unit>
+    <unit id="QuietSummaryChannel">
+      <segment>
+        <source>Do not disturb summary</source>
+      </segment>
+    </unit>
+    <unit id="QuietSummaryChannelDescription">
+      <segment>
+        <source>Summary of connections handled while do not disturb was on.</source>
+      </segment>
+    </unit>
+    <unit id="QuietSummaryText">
+      <segment>
+        <source>{0} apps, {1} connections blocked</source>
+      </segment>
+    </unit>
+    <unit id="QuietSummaryTitle">
+      <segment>
+        <source>Do not disturb ended</source>
       </segment>
     </unit>
     <unit id="RuleTransferHint">
@@ -279,6 +374,11 @@
     <unit id="TrafficNotGranted">
       <segment>
         <source>Usage access not granted</source>
+      </segment>
+    </unit>
+    <unit id="UseCurrentWifi">
+      <segment>
+        <source>Use current Wi-Fi</source>
       </segment>
     </unit>
     <unit id="Version">

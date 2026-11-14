@@ -19,6 +19,42 @@
         <target state="translated">若要在 NetworkControl 停止時仍阻擋應用程式，請在系統設定中為 NetworkControl 開啟「永久連線的 VPN」和「封鎖未使用 VPN 的連線」。</target>
       </segment>
     </unit>
+    <unit id="AutoSwitch">
+      <segment>
+        <source>Auto switch</source>
+        <target state="translated">自動切換</target>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchChannel">
+      <segment>
+        <source>Profile switches</source>
+        <target state="translated">設定檔切換</target>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchChannelDescription">
+      <segment>
+        <source>Notifies when the profile changes because of the current network.</source>
+        <target state="translated">因目前網路自動切換設定檔時通知。</target>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchHint">
+      <segment>
+        <source>Switch to this profile when the current network matches.</source>
+        <target state="translated">目前網路符合條件時自動切換到這個設定檔。</target>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchText">
+      <segment>
+        <source>Network: {0}</source>
+        <target state="translated">網路：{0}</target>
+      </segment>
+    </unit>
+    <unit id="AutoSwitchTitle">
+      <segment>
+        <source>Switched to {0}</source>
+        <target state="translated">已切換到「{0}」</target>
+      </segment>
+    </unit>
     <unit id="Battery">
       <segment>
         <source>Battery optimization</source>
@@ -157,6 +193,54 @@
         <target state="translated">語言</target>
       </segment>
     </unit>
+    <unit id="NetworkKind">
+      <segment>
+        <source>Network type</source>
+        <target state="translated">網路類型</target>
+      </segment>
+    </unit>
+    <unit id="NetworkKindAny">
+      <segment>
+        <source>Any</source>
+        <target state="translated">不限</target>
+      </segment>
+    </unit>
+    <unit id="NetworkKindCellular">
+      <segment>
+        <source>Mobile</source>
+        <target state="translated">行動網路</target>
+      </segment>
+    </unit>
+    <unit id="NetworkKindWifi">
+      <segment>
+        <source>Wi-Fi</source>
+        <target state="translated">Wi-Fi</target>
+      </segment>
+    </unit>
+    <unit id="NetworkKindWired">
+      <segment>
+        <source>Ethernet</source>
+        <target state="translated">有線</target>
+      </segment>
+    </unit>
+    <unit id="NetworkSsidUnavailable">
+      <segment>
+        <source>Current Wi-Fi name is unavailable. Grant location permission to read it.</source>
+        <target state="translated">目前無法取得 Wi-Fi 名稱；請授予定位權限。</target>
+      </segment>
+    </unit>
+    <unit id="NetworkSsids">
+      <segment>
+        <source>Wi-Fi names</source>
+        <target state="translated">Wi-Fi 名稱</target>
+      </segment>
+    </unit>
+    <unit id="NetworkSsidsPlaceholder">
+      <segment>
+        <source>Comma separated, e.g. Home, Office</source>
+        <target state="translated">以逗號分隔，例如：家裡、公司</target>
+      </segment>
+    </unit>
     <unit id="Notifications">
       <segment>
         <source>Notifications</source>
@@ -229,6 +313,12 @@
         <target state="translated">每個設定檔有自己的模式和規則；共用規則對所有設定檔生效。</target>
       </segment>
     </unit>
+    <unit id="ProfileMode">
+      <segment>
+        <source>Mode</source>
+        <target state="translated">模式</target>
+      </segment>
+    </unit>
     <unit id="ProfileName">
       <segment>
         <source>Name</source>
@@ -269,6 +359,30 @@
       <segment>
         <source>Connection requests</source>
         <target state="translated">連線詢問</target>
+      </segment>
+    </unit>
+    <unit id="QuietSummaryChannel">
+      <segment>
+        <source>Do not disturb summary</source>
+        <target state="translated">勿擾摘要</target>
+      </segment>
+    </unit>
+    <unit id="QuietSummaryChannelDescription">
+      <segment>
+        <source>Summary of connections handled while do not disturb was on.</source>
+        <target state="translated">勿擾期間處理的連線摘要。</target>
+      </segment>
+    </unit>
+    <unit id="QuietSummaryText">
+      <segment>
+        <source>{0} apps, {1} connections blocked</source>
+        <target state="translated">{0} 個應用程式，{1} 次連線被拒絕</target>
+      </segment>
+    </unit>
+    <unit id="QuietSummaryTitle">
+      <segment>
+        <source>Do not disturb ended</source>
+        <target state="translated">勿擾已結束</target>
       </segment>
     </unit>
     <unit id="RuleTransferHint">
@@ -335,6 +449,12 @@
       <segment>
         <source>Usage access not granted</source>
         <target state="translated">尚未允許使用情況存取權</target>
+      </segment>
+    </unit>
+    <unit id="UseCurrentWifi">
+      <segment>
+        <source>Use current Wi-Fi</source>
+        <target state="translated">使用目前的 Wi-Fi</target>
       </segment>
     </unit>
     <unit id="Version">

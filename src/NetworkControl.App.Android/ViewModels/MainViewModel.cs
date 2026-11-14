@@ -70,6 +70,7 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
 
             context.Backend.Changed += (_, _) => Dispatcher.UIThread.Post(ScheduleRefresh);
             MainActivity.PromptRequested += (_, id) => Dispatcher.UIThread.Post(() => OpenPrompt(id));
+            MainActivity.NavigationRequested += (_, request) => Dispatcher.UIThread.Post(() => NavigateFromNotification(context, request));
             MainActivity.ForegroundChanged += (_, foreground) =>
             {
                 context.Notifier.IsUiForeground = foreground;
@@ -86,6 +87,11 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
             if (MainActivity.PendingPromptId is { } pending)
             {
                 OpenPrompt(pending);
+            }
+
+            if (MainActivity.PendingNavigation is { } navigation)
+            {
+                NavigateFromNotification(context, navigation);
             }
         }
         catch (Exception ex)
@@ -123,6 +129,18 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
     {
         MainActivity.PendingPromptId = null;
         Prompt?.Open(promptId);
+    }
+
+    /// <summary>從通知跳轉頁面；勿擾摘要通知同時清除摘要（與桌面「查看」一致）。</summary>
+    private void NavigateFromNotification(UiContext context, (int Tab, bool DismissQuietSummary) request)
+    {
+        MainActivity.PendingNavigation = null;
+        SelectedTab = Math.Clamp(request.Tab, 0, 3);
+        if (request.DismissQuietSummary)
+        {
+            context.Backend.DismissQuietPeriod();
+            Overview?.Refresh();
+        }
     }
 
     /// <summary>合併短時間內的多次變化（規則、模式、引擎狀態可能連續變化）。</summary>

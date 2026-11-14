@@ -20,6 +20,12 @@ internal static class NotificationChannels
     /// <summary>保護被系統停止等提醒。</summary>
     public const string Alerts = "alerts";
 
+    /// <summary>按網路自動切換配置文件：低優先級，不發出聲音。</summary>
+    public const string AutoSwitch = "autoswitch";
+
+    /// <summary>勿擾結束後的摘要：低優先級，不發出聲音。</summary>
+    public const string QuietSummary = "quietsummary";
+
     public static void Ensure(Context context)
     {
         if (context.GetSystemService(Context.NotificationService) is not NotificationManager manager)
@@ -37,10 +43,18 @@ internal static class NotificationChannels
             Description = text.Get(context, PromptLangResourceKind.ChannelServiceDescription),
         });
         manager.CreateNotificationChannel(new NotificationChannel(Alerts, text.Get(context, PromptLangResourceKind.ChannelAlerts), NotificationImportance.Default));
+        manager.CreateNotificationChannel(new NotificationChannel(AutoSwitch, text.Get(context, SettingsLangResourceKind.AutoSwitchChannel), NotificationImportance.Low)
+        {
+            Description = text.Get(context, SettingsLangResourceKind.AutoSwitchChannelDescription),
+        });
+        manager.CreateNotificationChannel(new NotificationChannel(QuietSummary, text.Get(context, SettingsLangResourceKind.QuietSummaryChannel), NotificationImportance.Low)
+        {
+            Description = text.Get(context, SettingsLangResourceKind.QuietSummaryChannelDescription),
+        });
     }
 
     /// <summary>打開主界面的 PendingIntent；<paramref name="promptId"/> 有值時界面打開對應的詢問。</summary>
-    public static PendingIntent OpenApp(Context context, Guid? promptId = null)
+    public static PendingIntent OpenApp(Context context, Guid? promptId = null, int? tab = null, bool dismissQuietSummary = false)
     {
         var intent = new Intent(context, typeof(MainActivity))
             .SetFlags(ActivityFlags.NewTask | ActivityFlags.SingleTop);
@@ -49,7 +63,17 @@ internal static class NotificationChannels
             intent.PutExtra(MainActivity.ExtraPromptId, id.ToString());
         }
 
-        var requestCode = promptId?.GetHashCode() ?? 0;
+        if (tab is { } index)
+        {
+            intent.PutExtra(MainActivity.ExtraTab, index);
+        }
+
+        if (dismissQuietSummary)
+        {
+            intent.PutExtra(MainActivity.ExtraDismissQuietSummary, true);
+        }
+
+        var requestCode = promptId?.GetHashCode() ?? (tab ?? 0) + (dismissQuietSummary ? 100 : 0);
         return PendingIntent.GetActivity(context, requestCode, intent, PendingIntentFlags.Immutable | PendingIntentFlags.UpdateCurrent)!;
     }
 }

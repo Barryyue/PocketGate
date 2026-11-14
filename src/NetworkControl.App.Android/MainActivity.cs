@@ -22,6 +22,12 @@ public sealed class MainActivity : AvaloniaMainActivity
     /// <summary>從詢問通知打開時攜帶的詢問 ID。</summary>
     public const string ExtraPromptId = "prompt_id";
 
+    /// <summary>要直接打開的頁面索引（0 總覽、1 應用程式、2 阻擋記錄、3 設定）。</summary>
+    public const string ExtraTab = "tab";
+
+    /// <summary>從勿擾摘要通知打開：進入阻擋記錄並清除摘要。</summary>
+    public const string ExtraDismissQuietSummary = "dismiss_quiet_summary";
+
     private const int VpnConsentRequest = 1001;
     private const int NotificationPermissionRequest = 1002;
     private const int CreateDocumentRequest = 1003;
@@ -35,6 +41,9 @@ public sealed class MainActivity : AvaloniaMainActivity
     /// <summary>從通知打開了某個詢問（UI 線程）。</summary>
     public static event EventHandler<Guid>? PromptRequested;
 
+    /// <summary>從通知要求切換頁面；第二個參數為是否清除勿擾摘要（UI 線程）。</summary>
+    public static event EventHandler<(int Tab, bool DismissQuietSummary)>? NavigationRequested;
+
     /// <summary>界面是否在前台（決定詢問通知是否懸浮）。</summary>
     public static event EventHandler<bool>? ForegroundChanged;
 
@@ -42,6 +51,9 @@ public sealed class MainActivity : AvaloniaMainActivity
 
     /// <summary>上一次從通知帶來、但界面尚未處理的詢問。</summary>
     public static Guid? PendingPromptId { get; set; }
+
+    /// <summary>上一次從通知帶來、但界面尚未處理的頁面請求。</summary>
+    public static (int Tab, bool DismissQuietSummary)? PendingNavigation { get; set; }
 
     public bool AreNotificationsEnabled =>
         GetSystemService(NotificationService) is NotificationManager manager && manager.AreNotificationsEnabled();
@@ -176,11 +188,25 @@ public sealed class MainActivity : AvaloniaMainActivity
 
     private void HandleIntent(Intent? intent)
     {
-        if (Guid.TryParse(intent?.GetStringExtra(ExtraPromptId), out var promptId))
+        if (intent is null)
         {
-            intent!.RemoveExtra(ExtraPromptId);
+            return;
+        }
+
+        if (Guid.TryParse(intent.GetStringExtra(ExtraPromptId), out var promptId))
+        {
+            intent.RemoveExtra(ExtraPromptId);
             PendingPromptId = promptId;
             PromptRequested?.Invoke(this, promptId);
+        }
+
+        if (intent.GetIntExtra(ExtraTab, -1) is var tab and >= 0)
+        {
+            intent.RemoveExtra(ExtraTab);
+            var dismiss = intent.GetBooleanExtra(ExtraDismissQuietSummary, false);
+            intent.RemoveExtra(ExtraDismissQuietSummary);
+            PendingNavigation = (tab, dismiss);
+            NavigationRequested?.Invoke(this, (tab, dismiss));
         }
     }
 

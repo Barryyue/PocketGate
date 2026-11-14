@@ -9,6 +9,7 @@ using NetworkControl.Android.Infrastructure;
 using NetworkControl.Android.Localization;
 using NetworkControl.Android.Platform;
 using NetworkControl.Core.Domain;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Storage.Serialization;
 
 namespace NetworkControl.Android.ViewModels;
@@ -18,6 +19,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 {
     private static readonly LanguageTag?[] Languages = [null, LanguageTags.ZhTW, LanguageTags.ZhCN, LanguageTags.EnUS];
     private static readonly int[] TimeoutSeconds = [15, 30, 60, 120];
+    private static readonly NetworkKind?[] AutoKinds = [null, NetworkKind.Wired, NetworkKind.Wifi, NetworkKind.Cellular];
 
     private bool _syncing;
     private bool _syncingProfiles;
@@ -64,6 +66,20 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     [ObservableProperty]
     public partial string? ProfileError { get; set; }
 
+    /// <summary>目前網路符合條件時自動切換到選中的配置文件。</summary>
+    [ObservableProperty]
+    public partial bool AutoSwitchEnabled { get; set; }
+
+    /// <summary>0 不限、1 有線、2 Wi-Fi、3 行動網路。</summary>
+    [ObservableProperty]
+    public partial int AutoKindIndex { get; set; }
+
+    /// <summary>逗號分隔的 Wi-Fi 名稱；留空表示不按 SSID 限制。</summary>
+    [ObservableProperty]
+    public partial string AutoSsids { get; set; } = "";
+
+    public bool HasProfileError => !string.IsNullOrEmpty(ProfileError);
+
     /// <summary>診斷包是否包含應用清單（默認不含包名）。</summary>
     [ObservableProperty]
     public partial bool IncludeAppList { get; set; }
@@ -101,6 +117,8 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     public bool HasSelectedProfile => SelectedProfile is not null;
 
     public bool CanDeleteSelected => SelectedProfile?.CanDelete == true;
+
+    public bool CanActivateSelected => SelectedProfile?.CanActivate == true;
 
     public static IReadOnlyList<string> LanguageNames { get; } = ["", "繁體中文", "简体中文", "English"];
 
@@ -198,8 +216,62 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 
         ProfileName = value?.Name ?? "";
         ProfileModeIndex = value?.ModeIndex ?? -1;
+        var condition = value is null
+            ? null
+            : Backend.Profiles.FirstOrDefault(p => p.Id == value.Id)?.AutoActivate;
+        _syncingProfiles = true;
+        try
+        {
+            AutoSwitchEnabled = condition is { IsEmpty: false };
+            AutoKindIndex = Math.Max(0, Array.IndexOf(AutoKinds, condition?.Kind));
+            AutoSsids = condition is null ? "" : string.Join(", ", condition.Ssids);
+        }
+        finally
+        {
+            _syncingProfiles = false;
+        }
+
         OnPropertyChanged(nameof(HasSelectedProfile));
         OnPropertyChanged(nameof(CanDeleteSelected));
+        OnPropertyChanged(nameof(CanActivateSelected));
+    }
+
+    partial void OnProfileErrorChanged(string? value) => OnPropertyChanged(nameof(HasProfileError));
+
+    /// <summary>把目前 Wi-Fi 的 SSID 填入條件；沒有定位權限時讀不到 SSID。</summary>
+    [RelayCommand]
+    private void UseCurrentWifi()
+    {
+        ProfileError = null;
+        if (Backend.CurrentNetwork.Ssid is not { Length: > 0 } ssid)
+        {
+            ProfileError = Loc.Get(SettingsLangResourceKind.NetworkSsidUnavailable);
+            return;
+        }
+
+        AutoSwitchEnabled = true;
+        AutoKindIndex = Array.IndexOf(AutoKinds, NetworkKind.Wifi);
+        var names = AutoSsids
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Append(ssid)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        AutoSsids = string.Join(", ", names);
+    }
+
+    private AutoActivateCondition? BuildAutoActivate()
+    {
+        if (!AutoSwitchEnabled)
+        {
+            return null;
+        }
+
+        var kind = AutoKindIndex >= 0 && AutoKindIndex < AutoKinds.Length ? AutoKinds[AutoKindIndex] : null;
+        var ssids = AutoSsids
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var condition = new AutoActivateCondition(kind, ssids, []);
+        return condition.IsEmpty ? null : condition;
     }
 
     partial void OnProfileModeIndexChanged(int value)
@@ -216,7 +288,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         ProfileError = null;
         try
         {
-            await Backend.CreateProfileAsync(ProfileName.Trim(), SelectedMode(), CancellationToken.None);
+            await Backend.CreateProfileAsync(ProfileName.Trim(), SelectedMode(), BuildAutoActivate(), CancellationToken.None);
             ProfileName = "";
             RefreshProfiles();
         }
@@ -237,7 +309,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         ProfileError = null;
         try
         {
-            await Backend.UpdateProfileAsync(selected.Id, ProfileName.Trim(), SelectedMode(), CancellationToken.None);
+            await Backend.UpdateProfileAsync(selected.Id, ProfileName.Trim(), SelectedMode(), BuildAutoActivate(), CancellationToken.None);
             RefreshProfiles();
         }
         catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException or InvalidOperationException)
@@ -302,6 +374,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         OnPropertyChanged(nameof(HasProfiles));
         OnPropertyChanged(nameof(HasSelectedProfile));
         OnPropertyChanged(nameof(CanDeleteSelected));
+        OnPropertyChanged(nameof(CanActivateSelected));
     }
 
     private FilterMode SelectedMode() => ProfileModeIndex switch

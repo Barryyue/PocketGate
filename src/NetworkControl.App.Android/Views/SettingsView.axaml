@@ -68,6 +68,64 @@
         </StackPanel>
       </atom:Card>
 
+      <atom:Card Header="{loc:SettingsLangResource Profiles}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource ProfileHint}" />
+          <atom:ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" HorizontalAlignment="Stretch">
+            <atom:ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ProfileRow">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                  <atom:Tag Grid.Column="1" IsVisible="{Binding IsActive}" Text="{loc:SettingsLangResource ProfileCurrent}" />
+                </Grid>
+              </DataTemplate>
+            </atom:ComboBox.ItemTemplate>
+          </atom:ComboBox>
+          <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding ProfileError}" IsVisible="{Binding HasProfileError}" />
+          <atom:LineEdit Text="{Binding ProfileName}" PlaceholderText="{loc:SettingsLangResource ProfileNamePlaceholder}" />
+          <TextBlock Classes="secondary" Text="{loc:SettingsLangResource ProfileMode}" />
+          <atom:Segmented SelectedIndex="{Binding ProfileModeIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeAsk}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeWhitelist}" />
+            <atom:SegmentedItem Content="{loc:CommonLangResource ModeBlacklist}" />
+          </atom:Segmented>
+
+          <!-- 自動切換（M3-04）：目前網路符合條件時切換到這個配置文件 -->
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <StackPanel>
+              <TextBlock Text="{loc:SettingsLangResource AutoSwitch}" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:SettingsLangResource AutoSwitchHint}" />
+            </StackPanel>
+            <atom:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding AutoSwitchEnabled}" />
+          </Grid>
+          <StackPanel Spacing="8" IsVisible="{Binding AutoSwitchEnabled}">
+            <TextBlock Classes="secondary" Text="{loc:SettingsLangResource NetworkKind}" />
+            <atom:Segmented SelectedIndex="{Binding AutoKindIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+              <atom:SegmentedItem Content="{loc:SettingsLangResource NetworkKindAny}" />
+              <atom:SegmentedItem Content="{loc:SettingsLangResource NetworkKindWired}" />
+              <atom:SegmentedItem Content="{loc:SettingsLangResource NetworkKindWifi}" />
+              <atom:SegmentedItem Content="{loc:SettingsLangResource NetworkKindCellular}" />
+            </atom:Segmented>
+            <TextBlock Classes="secondary" Text="{loc:SettingsLangResource NetworkSsids}" />
+            <atom:LineEdit Text="{Binding AutoSsids}" PlaceholderText="{loc:SettingsLangResource NetworkSsidsPlaceholder}" />
+            <atom:Button HorizontalAlignment="Left" Command="{Binding UseCurrentWifiCommand}" Content="{loc:SettingsLangResource UseCurrentWifi}" />
+          </StackPanel>
+
+          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+            <atom:Button HorizontalAlignment="Stretch" Command="{Binding AddProfileCommand}" Content="{loc:SettingsLangResource ProfileAdd}" />
+            <atom:Button Grid.Column="1" HorizontalAlignment="Stretch" Command="{Binding SaveProfileCommand}" Content="{loc:SettingsLangResource ProfileSave}" />
+            <atom:Button Grid.Row="1" HorizontalAlignment="Stretch" IsEnabled="{Binding CanActivateSelected}"
+                         Command="{Binding ActivateProfileCommand}" Content="{loc:SettingsLangResource ProfileActivate}" />
+            <atom:PopupConfirm Grid.Row="1" Grid.Column="1" Title="{loc:SettingsLangResource ProfileDeleteConfirmTitle}"
+                               ConfirmContent="{loc:SettingsLangResource ProfileDeleteConfirmContent}"
+                               OkButtonType="Primary" Confirmed="OnDeleteProfileConfirmed">
+              <atom:Button HorizontalAlignment="Stretch" IsDanger="True" IsEnabled="{Binding CanDeleteSelected}"
+                           Content="{loc:SettingsLangResource ProfileDelete}" />
+            </atom:PopupConfirm>
+          </Grid>
+        </StackPanel>
+      </atom:Card>
+
       <atom:Card Header="{loc:SettingsLangResource Battery}">
         <StackPanel Spacing="12">
           <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource BatteryHint}" />
