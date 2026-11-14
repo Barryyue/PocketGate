@@ -88,6 +88,33 @@ public sealed class ProfileServiceTests
         Assert.DoesNotContain(host.Rules.All, r => r.ProfileId == profile.Id);
     }
 
+    [Fact]
+    public async Task Activate_and_delete_cannot_both_succeed()
+    {
+        await using var host = await ScenarioHost.StartAsync(withUiSession: false);
+        var ct = TestContext.Current.CancellationToken;
+        var profile = await host.Profiles.CreateAsync("競態", FilterMode.Ask, null, ct);
+
+        var activate = host.Profiles.ActivateAsync(profile.Id, ProfileSwitchReason.User, ct);
+        var delete = host.Profiles.DeleteAsync(profile.Id, ct);
+        await Task.WhenAll(Record(activate), Record(delete));
+
+        // 不能留下「ActiveProfileId 指向已刪除配置文件」的狀態
+        Assert.False(host.Profiles.Find(profile.Id) is null && host.State.ActiveProfileId == profile.Id);
+    }
+
+    private static async Task Record(Task task)
+    {
+        try
+        {
+            await task;
+        }
+        catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException)
+        {
+            // 其中一方失敗是預期結果
+        }
+    }
+
     private static Rule NewRule(Guid profileId, RuleLifetime lifetime, DateTimeOffset now) => new()
     {
         Id = Guid.NewGuid(),

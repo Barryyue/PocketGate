@@ -148,15 +148,14 @@ public sealed partial class ProfileService(
             };
             await repository.UpsertAsync(updated, cancellationToken);
             Volatile.Write(ref _profiles, Sort(All.Select(p => p.Id == updated.Id ? updated : p)));
+            if (updated.Id == state.ActiveProfileId && state.Mode != FilterMode.BlockAll)
+            {
+                await state.SetModeAsync(updated.Mode, cancellationToken);
+            }
         }
         finally
         {
             _writeGate.Release();
-        }
-
-        if (updated.Id == state.ActiveProfileId && state.Mode != FilterMode.BlockAll)
-        {
-            await state.SetModeAsync(updated.Mode, cancellationToken);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
@@ -170,14 +169,14 @@ public sealed partial class ProfileService(
             throw new ArgumentException("默認配置文件不能刪除。", nameof(id));
         }
 
-        if (id == state.ActiveProfileId)
-        {
-            throw new ArgumentException("不能刪除當前配置文件，請先切換到其他配置文件。", nameof(id));
-        }
-
         await _writeGate.WaitAsync(cancellationToken);
         try
         {
+            if (id == state.ActiveProfileId)
+            {
+                throw new ArgumentException("不能刪除當前配置文件，請先切換到其他配置文件。", nameof(id));
+            }
+
             var existing = Find(id) ?? throw new KeyNotFoundException($"配置文件 {id} 不存在。");
             var ruleIds = rules.All.Where(r => r.ProfileId == id).Select(r => r.Id).ToArray();
             if (ruleIds.Length > 0)
@@ -198,8 +197,18 @@ public sealed partial class ProfileService(
 
     public async Task ActivateAsync(Guid id, ProfileSwitchReason reason, CancellationToken cancellationToken)
     {
-        var profile = Find(id) ?? throw new KeyNotFoundException($"配置文件 {id} 不存在。");
-        await state.ActivateProfileAsync(profile.Id, profile.Mode, cancellationToken);
+        Profile profile;
+        await _writeGate.WaitAsync(cancellationToken);
+        try
+        {
+            profile = Find(id) ?? throw new KeyNotFoundException($"配置文件 {id} 不存在。");
+            await state.ActivateProfileAsync(profile.Id, profile.Mode, cancellationToken);
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
+
         Activated?.Invoke(this, new ProfileActivatedEventArgs(profile.Id, reason));
         Changed?.Invoke(this, EventArgs.Empty);
     }
