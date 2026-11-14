@@ -19,5 +19,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="NetworkControl.Engine.Windows.Tests" />
+    <!-- WFP 管理員集成測試直接使用 WfpSession / RuleCompiler / 互操作結構（M3-17） -->
+    <InternalsVisibleTo Include="NetworkControl.Engine.Windows.IntegrationTests" />
   </ItemGroup>
 </Project>

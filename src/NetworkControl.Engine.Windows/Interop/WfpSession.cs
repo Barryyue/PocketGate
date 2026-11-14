@@ -24,9 +24,16 @@ internal sealed unsafe class WfpSession : IDisposable
     public static readonly Guid SubLayerKey = new("6c1f1d53-6f5b-4f3e-9b2e-8b7a4c1a0e02");
 
     private readonly Dictionary<string, byte[]> _appIdCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Guid _providerKey;
+    private readonly Guid _subLayerKey;
     private nint _engine;
 
-    private WfpSession(nint engine) => _engine = engine;
+    private WfpSession(nint engine, Guid providerKey, Guid subLayerKey)
+    {
+        _engine = engine;
+        _providerKey = providerKey;
+        _subLayerKey = subLayerKey;
+    }
 
     public nint Handle => _engine;
 
@@ -36,7 +43,11 @@ internal sealed unsafe class WfpSession : IDisposable
     /// </summary>
     public Func<string, byte[]?>? AppIdFallback { get; set; }
 
-    public static WfpSession Open(string displayName)
+    /// <summary>
+    /// 打開動態會話。providerKey / subLayerKey / subLayerWeight 可選，供集成測試使用獨立子層，
+    /// 避免與正式安裝的服務相互影響；產品代碼使用默認值。
+    /// </summary>
+    public static WfpSession Open(string displayName, Guid? providerKey = null, Guid? subLayerKey = null, ushort subLayerWeight = 0x8000)
     {
         using var name = new NativeString(displayName);
         var session = new FwpmSession0
@@ -47,10 +58,10 @@ internal sealed unsafe class WfpSession : IDisposable
         };
 
         Check("FwpmEngineOpen0", FwpNative.FwpmEngineOpen0(0, FwpConstants.RpcCAuthnWinNt, 0, &session, out var engine));
-        var result = new WfpSession(engine);
+        var result = new WfpSession(engine, providerKey ?? ProviderKey, subLayerKey ?? SubLayerKey);
         try
         {
-            result.EnsureProviderAndSubLayer(displayName);
+            result.EnsureProviderAndSubLayer(displayName, subLayerWeight);
             return result;
         }
         catch
@@ -165,10 +176,10 @@ internal sealed unsafe class WfpSession : IDisposable
         }
     }
 
-    private void EnsureProviderAndSubLayer(string displayName)
+    private void EnsureProviderAndSubLayer(string displayName, ushort subLayerWeight)
     {
         using var name = new NativeString(displayName);
-        var providerKey = ProviderKey;
+        var providerKey = _providerKey;
 
         Check("FwpmTransactionBegin0", FwpNative.FwpmTransactionBegin0(_engine, 0));
         try
@@ -178,10 +189,10 @@ internal sealed unsafe class WfpSession : IDisposable
 
             var subLayer = new FwpmSublayer0
             {
-                SubLayerKey = SubLayerKey,
+                SubLayerKey = _subLayerKey,
                 DisplayData = new FwpmDisplayData0 { Name = name.Pointer },
                 ProviderKey = (nint)(&providerKey),
-                Weight = 0x8000,
+                Weight = subLayerWeight,
             };
             CheckAllowExisting("FwpmSubLayerAdd0", FwpNative.FwpmSubLayerAdd0(_engine, &subLayer, 0));
 
@@ -262,7 +273,7 @@ internal sealed unsafe class WfpSession : IDisposable
         var weight = memory.Alloc<ulong>();
         *weight = spec.Weight;
         var providerKey = memory.Alloc<Guid>();
-        *providerKey = ProviderKey;
+        *providerKey = _providerKey;
         var name = memory.String(spec.Name);
 
         var filter = new FwpmFilter0
@@ -272,7 +283,7 @@ internal sealed unsafe class WfpSession : IDisposable
             LayerKey = spec.Inbound
                 ? (spec.Family == IpFamily.V4 ? FwpGuids.LayerAleAuthRecvAcceptV4 : FwpGuids.LayerAleAuthRecvAcceptV6)
                 : (spec.Family == IpFamily.V4 ? FwpGuids.LayerAleAuthConnectV4 : FwpGuids.LayerAleAuthConnectV6),
-            SubLayerKey = SubLayerKey,
+            SubLayerKey = _subLayerKey,
             Weight = new FwpValue0 { Type = FwpDataType.UInt64, Pointer = (nint)weight },
             NumFilterConditions = (uint)conditions.Count,
             FilterCondition = conditions.Count > 0 ? (nint)conditionArray : 0,
