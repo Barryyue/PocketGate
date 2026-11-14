@@ -24,6 +24,18 @@ public static class AndroidEngineServiceCollectionExtensions
         services.TryAddSingleton<IVpnTunnel>(sp => sp.GetRequiredService<AndroidVpnTunnel>());
         services.TryAddSingleton<IProtectionSwitch, SharedPreferencesProtectionSwitch>();
 
+        // 流量統計：允許的應用不經過 VPN，只能讀取系統的按 UID 統計
+        services.TryAddSingleton<AndroidUidTrafficSource>();
+        services.TryAddSingleton<IUidTrafficSource>(sp => sp.GetRequiredService<AndroidUidTrafficSource>());
+        services.TryAddSingleton(sp => new UidTrafficCollector(
+            sp.GetRequiredService<IUidTrafficSource>(),
+            sp.GetRequiredService<IInstalledAppCatalog>(),
+            sp.GetRequiredService<Core.Traffic.TrafficAggregator>(),
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<UidTrafficCollector>>(),
+            Path.Combine(appContext.FilesDir?.AbsolutePath ?? Path.GetTempPath(), "data", "uid-traffic.json")));
+        services.AddHostedService(sp => sp.GetRequiredService<UidTrafficCollector>());
+
         return services.AddVpnBlackholeEngine(o => o.SelfPackage = appContext.PackageName ?? "");
     }
 }

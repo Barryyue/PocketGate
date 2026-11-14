@@ -12,6 +12,8 @@
   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
   <!-- 防火牆需要列出並識別所有聯網應用（Android 11+ 的軟件包可見性） -->
   <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+  <!-- 流量統計（NetworkStatsManager）：特殊權限，用戶在「使用情況存取權」設定頁中授予 -->
+  <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" xmlns:tools="http://schemas.android.com/tools" tools:ignore="ProtectedPermissions" />
 
   <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:supportsRtl="true" />
 </manifest>

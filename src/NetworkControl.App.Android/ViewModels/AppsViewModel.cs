@@ -34,6 +34,34 @@ public sealed partial class AppsViewModel : LocalizedViewModel
 
     public bool IsEmpty => Visible.Count == 0;
 
+    /// <summary>讀取今日各應用的用量並填到對應的行（後台查詢，回到 UI 線程賦值）。</summary>
+    private async Task LoadUsageAsync()
+    {
+        if (!Backend.HasTrafficAccess)
+        {
+            return;
+        }
+
+        try
+        {
+            var today = new DateTimeOffset(DateTimeOffset.Now.Date, DateTimeOffset.Now.Offset);
+            var usage = await Backend.GetTrafficAsync(today, today.AddDays(1), CancellationToken.None);
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                foreach (var (package, item) in _items)
+                {
+                    item.UsageText = usage.ByPackage.TryGetValue(package, out var bytes) && bytes.In + bytes.Out > 0
+                        ? Loc.Format(AppsLangResourceKind.UsageToday, Infrastructure.ByteSize.Format(bytes.In + bytes.Out))
+                        : null;
+                }
+            });
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or Microsoft.Data.Sqlite.SqliteException)
+        {
+            // 用量只是附加信息
+        }
+    }
+
     /// <summary>從核心重新讀取應用列表（UI 線程）。</summary>
     public void Refresh()
     {
@@ -56,6 +84,8 @@ public sealed partial class AppsViewModel : LocalizedViewModel
         {
             _items.Remove(removed);
         }
+
+        _ = LoadUsageAsync();
 
         ApplyFilter();
     }
@@ -123,6 +153,13 @@ public sealed partial class AppItemViewModel : LocalizedViewModel
     public bool IsSystem => Entry.App.IsSystem;
 
     public bool IsTampered => Entry.IsTampered;
+
+    /// <summary>今日用量（「今日 12 MB」）；沒有用量或沒有權限時為 null。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUsage))]
+    public partial string? UsageText { get; set; }
+
+    public bool HasUsage => UsageText is not null;
 
     /// <summary>0 允許、1 未設定、2 拒絕。</summary>
     [ObservableProperty]

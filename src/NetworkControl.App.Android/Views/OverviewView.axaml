@@ -64,6 +64,39 @@
         </atom:Card>
       </Grid>
 
+      <!-- 今日用量（FR-STA-01） -->
+      <atom:Card Header="{loc:OverviewLangResource UsageToday}">
+        <StackPanel Spacing="12">
+          <StackPanel Spacing="12" IsVisible="{Binding !HasTrafficAccess}">
+            <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:OverviewLangResource UsageAccessNeeded}" />
+            <atom:Button HorizontalAlignment="Left" Command="{Binding GrantUsageAccessCommand}" Content="{loc:OverviewLangResource GrantUsageAccess}" />
+          </StackPanel>
+          <StackPanel Spacing="12" IsVisible="{Binding HasTrafficAccess}">
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+              <StackPanel Spacing="2">
+                <TextBlock Classes="caption" Text="{loc:OverviewLangResource Download}" />
+                <TextBlock Classes="title" Text="{Binding DownloadToday}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Classes="caption" Text="{loc:OverviewLangResource Upload}" />
+                <TextBlock Classes="title" Text="{Binding UploadToday}" />
+              </StackPanel>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding TopUsage}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:UsageRow">
+                  <Grid ColumnDefinitions="*,Auto" Margin="0,4">
+                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding Bytes}" Margin="12,0,0,0" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Classes="secondary" Text="{loc:OverviewLangResource NoUsage}" IsVisible="{Binding HasNoUsage}" />
+          </StackPanel>
+        </StackPanel>
+      </atom:Card>
+
       <atom:Alert Type="Info" IsShowIcon="True" Message="{Binding SkippedRulesText}" IsVisible="{Binding HasSkippedRules}" />
     </StackPanel>
   </ScrollViewer>

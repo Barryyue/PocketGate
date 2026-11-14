@@ -27,4 +27,8 @@ public enum SettingsLangResourceKind
     Version,
     Statistics,
     StatisticsFormat,
+    Traffic,
+    TrafficHint,
+    TrafficGranted,
+    TrafficNotGranted,
 }

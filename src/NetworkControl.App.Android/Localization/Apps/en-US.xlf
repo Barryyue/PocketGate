@@ -81,5 +81,10 @@
         <source>until restart</source>
       </segment>
     </unit>
+    <unit id="UsageToday">
+      <segment>
+        <source>Today {0}</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

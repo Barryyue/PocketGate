@@ -44,6 +44,8 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 
     public string NotificationsText => Loc.Get(NotificationsEnabled ? SettingsLangResourceKind.NotificationsOn : SettingsLangResourceKind.NotificationsOff);
 
+    public string TrafficAccessText => Loc.Get(Backend.HasTrafficAccess ? SettingsLangResourceKind.TrafficGranted : SettingsLangResourceKind.TrafficNotGranted);
+
     public string TimeoutText(int index) => Loc.Format(SettingsLangResourceKind.Seconds, TimeoutSeconds[index]);
 
     public string Timeout15 => TimeoutText(0);
@@ -86,6 +88,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         }
 
         OnPropertyChanged(nameof(NotificationsText));
+        OnPropertyChanged(nameof(TrafficAccessText));
         OnPropertyChanged(nameof(StatisticsText));
     }
 
@@ -131,4 +134,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 
     [RelayCommand]
     private void OpenBatterySettings() => MainActivity.Current?.OpenBatterySettings();
+
+    [RelayCommand]
+    private void OpenTrafficSettings() => MainActivity.Current?.StartActivity(Backend.CreateTrafficAccessIntent());
 }

@@ -121,6 +121,30 @@
         <target state="translated">淺色</target>
       </segment>
     </unit>
+    <unit id="Traffic">
+      <segment>
+        <source>Data usage</source>
+        <target state="translated">數據用量</target>
+      </segment>
+    </unit>
+    <unit id="TrafficGranted">
+      <segment>
+        <source>Usage access granted</source>
+        <target state="translated">已允許使用情況存取權</target>
+      </segment>
+    </unit>
+    <unit id="TrafficHint">
+      <segment>
+        <source>Per-app data usage is read from Android's network statistics, which requires usage access.</source>
+        <target state="translated">各應用程式的數據用量來自 Android 的網路統計，需要「使用情況存取權」。</target>
+      </segment>
+    </unit>
+    <unit id="TrafficNotGranted">
+      <segment>
+        <source>Usage access not granted</source>
+        <target state="translated">尚未允許使用情況存取權</target>
+      </segment>
+    </unit>
     <unit id="Version">
       <segment>
         <source>Version</source>

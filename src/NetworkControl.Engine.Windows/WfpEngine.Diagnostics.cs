@@ -20,6 +20,7 @@ internal sealed partial class WfpEngine
         Line("Session open", _session is not null);
         Line("Net events subscribed", _eventsHandle != 0);
         Line("DNS (ETW) monitor", _dns is not null ? "running" : "not running");
+        Line("Traffic (ETW) monitor", _traffic is not null ? $"running, {_traffic.EventCount} events" : "not running");
         Line("Collect net events changed", _previousCollectOption is { } previous ? $"yes (was {previous}, restored on stop)" : "no");
         Line("Last applied (UTC)", _lastAppliedAt?.ToString("u", CultureInfo.InvariantCulture) ?? "-");
         Line("Installed filters", installed.Length);

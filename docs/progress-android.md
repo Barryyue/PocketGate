@@ -44,6 +44,10 @@
 - [ ] 診斷資訊導出（日誌 + 路由計劃 + 計數器）
 - [ ] 廠商 ROM 實測（MIUI / HyperOS 後台限制、電池最佳化）
 
+### M3（與桌面版同步，見 progress.md「第二階段」）
+- [x] (claude, 2026-11-14) **流量統計**：`AndroidUidTrafficSource`（NetworkStatsManager，需要「使用情況存取權」PACKAGE_USAGE_STATS，清單已聲明）+ `UidTrafficCollector`（每 10 分鐘、打開頁面時立即採集；只上報增量，狀態存 `files/data/uid-traffic.json`）。總覽新增「今日用量」卡片（下載 / 上傳、前三名應用；未授權時顯示授權按鈕），應用列表每行顯示今日用量，設定頁新增「數據用量」卡片（授權狀態 + 打開設定）。`IBackend` 新增 `HasTrafficAccess` / `CreateTrafficAccessIntent` / `GetTrafficAsync`。
+  - 驗證：Debug APK 構建通過，`dotnet format` 通過；`UidTrafficCollector` 的單元測試。**未在設備上運行過**（本機無設備、模擬器在本機無法啟動）：授權跳轉、NetworkStatsManager 返回的分桶形態、各廠商 ROM 的差異都需要真機確認。
+
 ### P2
 - [ ] 轉發模式（用戶態 TCP/IP 協議棧）：按域名 / IP / 端口控制、允許連接的日誌和流量統計、真正掛起等待判決
 - [ ] 桌面小工具、工作資料夾（多用戶）

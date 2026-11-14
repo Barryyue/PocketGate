@@ -40,6 +40,7 @@
                              Text="{Binding StatusText}" />
                   <atom:Tag TagColor="red" Text="{loc:AppsLangResource Tampered}" IsVisible="{Binding IsTampered}" />
                   <atom:Tag Text="{loc:AppsLangResource System}" IsVisible="{Binding IsSystem}" />
+                  <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding UsageText}" IsVisible="{Binding HasUsage}" />
                 </StackPanel>
               </StackPanel>
               <atom:Segmented Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" SizeType="Small"

@@ -64,6 +64,12 @@ CATALOGS = {
         ('SkippedRules', '{0} rules have no effect on Android (they use domain, IP or port conditions).', '{0} 條規則在 Android 上不生效（帶有網域、IP 或連接埠條件）。', '{0} 条规则在 Android 上不生效（带有域名、IP 或端口条件）。'),
         ('NotificationsOff', 'Notifications are off: connection requests are only shown inside the app.', '通知已關閉：連線詢問只會在應用程式內顯示。', '通知已关闭：联网询问只会在应用内显示。'),
         ('EnableNotifications', 'Turn on', '開啟', '开启'),
+        ('UsageToday', 'Data used today', '今日用量', '今日用量'),
+        ('Download', 'Download', '下載', '下载'),
+        ('Upload', 'Upload', '上傳', '上传'),
+        ('UsageAccessNeeded', 'Allow usage access so NetworkControl can show how much data each app uses.', '允許「使用情況存取權」後，即可查看每個應用程式的數據用量。', '允许“使用情况访问权限”后，即可查看每个应用的数据用量。'),
+        ('GrantUsageAccess', 'Allow usage access', '允許存取', '允许访问'),
+        ('NoUsage', 'No data used today', '今天還沒有數據用量', '今天还没有数据用量'),
     ],
     'Apps': [
         ('Search', 'Search apps', '搜尋應用程式', '搜索应用'),
@@ -82,6 +88,7 @@ CATALOGS = {
         ('System', 'System', '系統', '系统'),
         ('Count', '{0} apps', '{0} 個應用程式', '{0} 个应用'),
         ('Empty', 'No apps', '沒有應用程式', '没有应用'),
+        ('UsageToday', 'Today {0}', '今日 {0}', '今日 {0}'),
     ],
     'Log': [
         ('Empty', 'Nothing has been blocked yet', '尚未阻擋任何連線', '还没有拦截任何连接'),
@@ -129,6 +136,10 @@ CATALOGS = {
         ('Version', 'Version', '版本', '版本'),
         ('Statistics', 'Engine', '攔截引擎', '拦截引擎'),
         ('StatisticsFormat', '{0} packets, {1} attempts, {2} reported', '{0} 個封包，{1} 次連線嘗試，{2} 次回報', '{0} 个数据包，{1} 次联网尝试，{2} 次上报'),
+        ('Traffic', 'Data usage', '數據用量', '数据用量'),
+        ('TrafficHint', "Per-app data usage is read from Android's network statistics, which requires usage access.", '各應用程式的數據用量來自 Android 的網路統計，需要「使用情況存取權」。', '各应用的数据用量来自 Android 的网络统计，需要“使用情况访问权限”。'),
+        ('TrafficGranted', 'Usage access granted', '已允許使用情況存取權', '已允许使用情况访问权限'),
+        ('TrafficNotGranted', 'Usage access not granted', '尚未允許使用情況存取權', '尚未允许使用情况访问权限'),
     ],
 }
 

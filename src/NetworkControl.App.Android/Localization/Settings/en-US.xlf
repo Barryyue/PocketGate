@@ -101,6 +101,26 @@
         <source>Light</source>
       </segment>
     </unit>
+    <unit id="Traffic">
+      <segment>
+        <source>Data usage</source>
+      </segment>
+    </unit>
+    <unit id="TrafficGranted">
+      <segment>
+        <source>Usage access granted</source>
+      </segment>
+    </unit>
+    <unit id="TrafficHint">
+      <segment>
+        <source>Per-app data usage is read from Android's network statistics, which requires usage access.</source>
+      </segment>
+    </unit>
+    <unit id="TrafficNotGranted">
+      <segment>
+        <source>Usage access not granted</source>
+      </segment>
+    </unit>
     <unit id="Version">
       <segment>
         <source>Version</source>

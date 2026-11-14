@@ -27,4 +27,10 @@ public enum OverviewLangResourceKind
     SkippedRules,
     NotificationsOff,
     EnableNotifications,
+    UsageToday,
+    Download,
+    Upload,
+    UsageAccessNeeded,
+    GrantUsageAccess,
+    NoUsage,
 }

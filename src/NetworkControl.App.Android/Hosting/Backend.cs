@@ -7,6 +7,7 @@ using NetworkControl.Core.Domain;
 using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
+using NetworkControl.Core.Traffic;
 using NetworkControl.Engine.Android;
 using NetworkControl.Engine.Vpn;
 using NetworkControl.Engine.Vpn.Platform;
@@ -50,6 +51,12 @@ public sealed record AppEntry(
     DateTimeOffset? ExpiresAt,
     bool IsTemporary,
     bool IsTampered);
+
+/// <summary>一段時間內的流量：總計和按包名的用量（FR-STA-01）。</summary>
+public sealed record TrafficUsage(long BytesIn, long BytesOut, IReadOnlyDictionary<string, (long In, long Out)> ByPackage)
+{
+    public static TrafficUsage Empty { get; } = new(0, 0, new Dictionary<string, (long, long)>());
+}
 
 /// <summary>
 /// 界面訪問核心的門面（docs/android.md §7.1）。所有方法都可以在任意線程調用；<see cref="Changed"/> 可能在後台線程觸發。
@@ -100,6 +107,15 @@ public interface IBackend
     void HoldPrompt(Guid promptId);
 
     Task UpdateSettingsAsync(Func<UserSettings, UserSettings> update, CancellationToken cancellationToken);
+
+    /// <summary>是否已授予「使用情況存取權」（讀取系統流量統計需要）。</summary>
+    bool HasTrafficAccess { get; }
+
+    /// <summary>打開系統的「使用情況存取權」設定頁。</summary>
+    Intent CreateTrafficAccessIntent();
+
+    /// <summary>[from, to) 的流量。先從系統採集一次最新數據。</summary>
+    Task<TrafficUsage> GetTrafficAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken);
 }
 
 internal sealed class Backend : IBackend
@@ -115,6 +131,13 @@ internal sealed class Backend : IBackend
     private readonly PromptBroker _prompts;
     private readonly IActivityQuery _activity;
     private readonly TimeProvider _time;
+    private readonly Context _context;
+    private readonly IUidTrafficSource _trafficSource;
+    private readonly UidTrafficCollector _trafficCollector;
+    private readonly TrafficAggregator _trafficAggregator;
+    private readonly ITrafficRepository _traffic;
+    private readonly IAppRepository _apps;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<long, string?> _packagesByAppId = new();
     private readonly string _selfPackage;
 
     public Backend(
@@ -130,8 +153,19 @@ internal sealed class Backend : IBackend
         PromptBroker prompts,
         PromptNotifier notifier,
         IActivityQuery activity,
-        TimeProvider time)
+        TimeProvider time,
+        IUidTrafficSource trafficSource,
+        UidTrafficCollector trafficCollector,
+        TrafficAggregator trafficAggregator,
+        ITrafficRepository traffic,
+        IAppRepository apps)
     {
+        _context = context;
+        _trafficSource = trafficSource;
+        _trafficCollector = trafficCollector;
+        _trafficAggregator = trafficAggregator;
+        _traffic = traffic;
+        _apps = apps;
         _engine = engine;
         _tunnel = tunnel;
         _protection = protection;
@@ -289,6 +323,50 @@ internal sealed class Backend : IBackend
         }, cancellationToken);
 
     public void HoldPrompt(Guid promptId) => _prompts.PauseTimer(promptId);
+
+    public bool HasTrafficAccess => _trafficSource.IsAvailable;
+
+    public Intent CreateTrafficAccessIntent() => AndroidUidTrafficSource.CreateSettingsIntent(_context);
+
+    public async Task<TrafficUsage> GetTrafficAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    {
+        if (!_trafficSource.IsAvailable)
+        {
+            return TrafficUsage.Empty;
+        }
+
+        // 系統統計按小時級分桶更新：打開頁面時採集一次並立即寫入，界面看到的是最新值
+        await Task.Run(_trafficCollector.CollectNow, cancellationToken);
+        await _trafficAggregator.FlushAsync(cancellationToken);
+
+        var byApp = await _traffic.ByAppAsync(from, to, cancellationToken);
+        var byPackage = new Dictionary<string, (long In, long Out)>();
+        long totalIn = 0, totalOut = 0;
+        foreach (var (appId, usage) in byApp)
+        {
+            totalIn += usage.BytesIn;
+            totalOut += usage.BytesOut;
+            if (appId < 0)
+            {
+                continue;
+            }
+
+            if (!_packagesByAppId.TryGetValue(appId, out var package))
+            {
+                var identity = await _apps.GetAsync(appId, cancellationToken);
+                package = PackageAppPath.TryGetPackage(identity?.Path, out var name) ? name : null;
+                _packagesByAppId[appId] = package;
+            }
+
+            if (package is not null)
+            {
+                var current = byPackage.GetValueOrDefault(package);
+                byPackage[package] = (current.In + usage.BytesIn, current.Out + usage.BytesOut);
+            }
+        }
+
+        return new TrafficUsage(totalIn, totalOut, byPackage);
+    }
 
     public Task UpdateSettingsAsync(Func<UserSettings, UserSettings> update, CancellationToken cancellationToken) =>
         _settings.UpdateAsync(update, cancellationToken);

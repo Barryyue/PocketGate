@@ -7,6 +7,9 @@ using NetworkControl.Core.Domain;
 namespace NetworkControl.Android.ViewModels;
 
 /// <summary>總覽頁：保護開關、模式、一鍵斷網、今日阻擋、待決詢問。</summary>
+/// <summary>今日用量排行中的一行。</summary>
+public sealed record UsageRow(string Label, string Bytes);
+
 public sealed partial class OverviewViewModel : LocalizedViewModel
 {
     private static readonly FilterMode[] SelectableModes = [FilterMode.Ask, FilterMode.Whitelist, FilterMode.Blacklist];
@@ -87,6 +90,21 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
 
     public bool HasSkippedRules => SkippedRules > 0;
 
+    /// <summary>今日用量（FR-STA-01）；沒有「使用情況存取權」時顯示授權入口。</summary>
+    [ObservableProperty]
+    public partial bool HasTrafficAccess { get; set; }
+
+    [ObservableProperty]
+    public partial string DownloadToday { get; set; } = "—";
+
+    [ObservableProperty]
+    public partial string UploadToday { get; set; } = "—";
+
+    public System.Collections.ObjectModel.ObservableCollection<UsageRow> TopUsage { get; } = [];
+
+    [ObservableProperty]
+    public partial bool HasNoUsage { get; set; }
+
     /// <summary>從核心重新讀取狀態（UI 線程）。</summary>
     public void Refresh()
     {
@@ -154,6 +172,10 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
     [RelayCommand]
     private Task RetryAsync() => SetProtectionAsync(true);
 
+    /// <summary>打開系統的「使用情況存取權」設定；返回界面時 <see cref="Refresh"/> 會重新檢查。</summary>
+    [RelayCommand]
+    private void GrantUsageAccess() => MainActivity.Current?.StartActivity(Backend.CreateTrafficAccessIntent());
+
     private async Task SetProtectionAsync(bool enabled)
     {
         if (!enabled)
@@ -195,6 +217,32 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
         try
         {
             BlockedToday = await Backend.CountBlockedSinceAsync(DateTimeOffset.Now.Date, CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or Microsoft.Data.Sqlite.SqliteException)
+        {
+            // 統計失敗不影響其他功能
+        }
+
+        try
+        {
+            HasTrafficAccess = Backend.HasTrafficAccess;
+            if (!HasTrafficAccess)
+            {
+                return;
+            }
+
+            var today = new DateTimeOffset(DateTimeOffset.Now.Date, DateTimeOffset.Now.Offset);
+            var usage = await Backend.GetTrafficAsync(today, today.AddDays(1), CancellationToken.None);
+            DownloadToday = Infrastructure.ByteSize.Format(usage.BytesIn);
+            UploadToday = Infrastructure.ByteSize.Format(usage.BytesOut);
+            var labels = Backend.GetApps().ToDictionary(a => a.App.PackageName, a => a.App.Label, StringComparer.Ordinal);
+            TopUsage.Clear();
+            foreach (var (package, bytes) in usage.ByPackage.OrderByDescending(p => p.Value.In + p.Value.Out).Take(3))
+            {
+                TopUsage.Add(new UsageRow(labels.GetValueOrDefault(package) ?? package, Infrastructure.ByteSize.Format(bytes.In + bytes.Out)));
+            }
+
+            HasNoUsage = TopUsage.Count == 0;
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or Microsoft.Data.Sqlite.SqliteException)
         {

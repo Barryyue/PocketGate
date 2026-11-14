@@ -57,6 +57,16 @@
         </StackPanel>
       </atom:Card>
 
+      <atom:Card Header="{loc:SettingsLangResource Traffic}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource TrafficHint}" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock VerticalAlignment="Center" Text="{Binding TrafficAccessText}" />
+            <atom:Button Grid.Column="1" Command="{Binding OpenTrafficSettingsCommand}" Content="{loc:SettingsLangResource Open}" />
+          </Grid>
+        </StackPanel>
+      </atom:Card>
+
       <atom:Card Header="{loc:SettingsLangResource Battery}">
         <StackPanel Spacing="12">
           <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource BatteryHint}" />

@@ -123,7 +123,11 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
 
 原則：功能落在 Core / Storage（兩個平台共用），平台只提供數據源和界面；每項同時給出桌面和 Android 的實現或明確的「此平台不適用」說明。Android 進度細節記在 [progress-android.md](progress-android.md)。
 
-- [ ] **T1 流量統計**（FR-STA-01）：Core `TrafficAggregator` 消費 `IEngineHost.OnTraffic` → `traffic_minute / hour / day`（表結構已有）；IPC / 門面查詢接口；桌面總覽與應用頁顯示用量。數據源：模擬引擎（開發）、Windows ETW Kernel-Network（按 PID）、Android `NetworkStatsManager`（按 UID，需要「使用情況存取權」）。
+- [x] **T1 流量統計**（FR-STA-01，2026-11-14）
+  - Core：`Traffic/TrafficAggregator`（引擎樣本只入隊；後台解析應用身份、按（應用, 分鐘）累加，每 15 秒寫入；停止時寫完）；`ITrafficRepository`。Storage：`SqliteTrafficRepository` 同時累加分鐘 / 小時 / 天三張表（表結構在 0001 中已有），分鐘表保留 3 天；查詢跨度不超過 2 天用分鐘表，否則用小時表。
+  - 數據源：**模擬引擎**（允許連接時和每 10 秒為活躍進程生成流量）；**Windows**：`Traffic/NetworkTrafficMonitor`，ETW Microsoft-Windows-Kernel-Network 的 TCP / UDP 收發事件按 PID 累加，每 10 秒上報（失敗時報非致命故障，診斷包中有事件計數）；**Android**：`AndroidUidTrafficSource`（NetworkStatsManager，Wi-Fi + 行動網路）+ `Engine.Vpn` 中平台無關的 `UidTrafficCollector`（系統分桶持續增長，記住每個（UID, 分桶起點）上次的值只上報增量；狀態存文件，進程重啟不重複計數）。
+  - IPC：`ActivityLog.GetTraffic`；`Apps.List` 新增 `bytes_in / bytes_out`。桌面界面：總覽「網路用量」卡片（下載 / 上傳總量、堆疊柱狀圖、用量排行），應用頁「用量」列。
+  - 驗證：聚合器、倉儲、ETW 事件分類 / 按進程聚合、UID 增量與重啟恢復的單元測試；模擬引擎探針：`GetTraffic` 返回 4 個應用的下載 / 上傳和時間軸，`Apps.List` 帶用量。**未驗證**：真實 WFP 下的 ETW 流量（需要管理員）、Android 設備上的 NetworkStatsManager（本機無設備）、界面效果。
 - [ ] **T2 實時連線視圖**：桌面 `GetExtendedTcpTable / UdpTable`（不需要管理員）；Android 10+ 無法讀取其他應用的連線表，**不適用**。
 - [ ] **T3 配置文件與按網絡自動切換**：Core 配置文件切換 + 網絡識別抽象；桌面按網絡配置文件 / SSID，Android 按 Wi-Fi / 行動網路（同時完成 Android P1「按網絡類型分別允許」）。
 - [ ] **T4 Android 阻斷快速失敗**：TCP SYN 回 RST、UDP 回 ICMP 不可達。

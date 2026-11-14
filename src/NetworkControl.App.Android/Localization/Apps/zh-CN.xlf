@@ -97,5 +97,11 @@
         <target state="translated">直到重启</target>
       </segment>
     </unit>
+    <unit id="UsageToday">
+      <segment>
+        <source>Today {0}</source>
+        <target state="translated">今日 {0}</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

@@ -22,4 +22,5 @@ public enum AppsLangResourceKind
     System,
     Count,
     Empty,
+    UsageToday,
 }

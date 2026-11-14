@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
+using NetworkControl.Core.Apps;
 using NetworkControl.Core.Diagnostics;
 using NetworkControl.Core.Dns;
 using NetworkControl.Core.Domain;
@@ -53,6 +54,7 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
     private IEngineHost? _host;
     private WfpSession? _session;
     private DnsClientMonitor? _dns;
+    private Traffic.NetworkTrafficMonitor? _traffic;
     private nint _eventsHandle;
     private GCHandle _self;
     private uint? _previousCollectOption;
@@ -73,8 +75,11 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
     private long _dropsSeen;
     private long _dropsReported;
 
-    public WfpEngine(SettingsService settings, DevicePathResolver paths, TimeProvider time, ILogger<WfpEngine> logger)
+    private readonly IProcessInfoProvider _processes;
+
+    public WfpEngine(SettingsService settings, DevicePathResolver paths, IProcessInfoProvider processes, TimeProvider time, ILogger<WfpEngine> logger)
     {
+        _processes = processes;
         _settings = settings;
         _paths = paths;
         _time = time;
@@ -84,7 +89,7 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
 
     public string Name => "WFP";
 
-    public EngineCapabilities Capabilities => EngineCapabilities.RulePush;
+    public EngineCapabilities Capabilities => EngineCapabilities.RulePush | EngineCapabilities.TrafficStats;
 
     public async Task StartAsync(IEngineHost host, CancellationToken cancellationToken)
     {
@@ -137,6 +142,19 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
             _dns = null;
         }
 
+        // 4. 流量統計（失敗不致命：只影響用量顯示）
+        try
+        {
+            _traffic = new Traffic.NetworkTrafficMonitor(_processes, _time, _logger);
+            _traffic.Start(host);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or InvalidOperationException or COMException)
+        {
+            host.OnEngineFault(new EngineFault("wfp.traffic", $"Traffic statistics unavailable: {ex.Message}", IsFatal: false, ex));
+            _traffic?.Dispose();
+            _traffic = null;
+        }
+
         host.Rules.RuleSetChanged += OnRuleSetChanged;
         _settings.Changed += OnSettingsChanged;
 
@@ -177,6 +195,8 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
 
         _dns?.Dispose();
         _dns = null;
+        _traffic?.Dispose();
+        _traffic = null;
 
         if (_session is not null)
         {

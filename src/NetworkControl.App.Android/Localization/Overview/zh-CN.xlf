@@ -19,10 +19,22 @@
         <target state="translated">今天拦截</target>
       </segment>
     </unit>
+    <unit id="Download">
+      <segment>
+        <source>Download</source>
+        <target state="translated">下载</target>
+      </segment>
+    </unit>
     <unit id="EnableNotifications">
       <segment>
         <source>Turn on</source>
         <target state="translated">开启</target>
+      </segment>
+    </unit>
+    <unit id="GrantUsageAccess">
+      <segment>
+        <source>Allow usage access</source>
+        <target state="translated">允许访问</target>
       </segment>
     </unit>
     <unit id="HintNeedsConsent">
@@ -53,6 +65,12 @@
       <segment>
         <source>Mode</source>
         <target state="translated">模式</target>
+      </segment>
+    </unit>
+    <unit id="NoUsage">
+      <segment>
+        <source>No data used today</source>
+        <target state="translated">今天还没有数据用量</target>
       </segment>
     </unit>
     <unit id="NotificationsOff">
@@ -125,6 +143,24 @@
       <segment>
         <source>Starting protection…</source>
         <target state="translated">正在开启保护…</target>
+      </segment>
+    </unit>
+    <unit id="Upload">
+      <segment>
+        <source>Upload</source>
+        <target state="translated">上传</target>
+      </segment>
+    </unit>
+    <unit id="UsageAccessNeeded">
+      <segment>
+        <source>Allow usage access so NetworkControl can show how much data each app uses.</source>
+        <target state="translated">允许“使用情况访问权限”后，即可查看每个应用的数据用量。</target>
+      </segment>
+    </unit>
+    <unit id="UsageToday">
+      <segment>
+        <source>Data used today</source>
+        <target state="translated">今日用量</target>
       </segment>
     </unit>
   </file>

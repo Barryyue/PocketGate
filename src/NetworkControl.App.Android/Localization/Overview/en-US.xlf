@@ -16,9 +16,19 @@
         <source>Blocked today</source>
       </segment>
     </unit>
+    <unit id="Download">
+      <segment>
+        <source>Download</source>
+      </segment>
+    </unit>
     <unit id="EnableNotifications">
       <segment>
         <source>Turn on</source>
+      </segment>
+    </unit>
+    <unit id="GrantUsageAccess">
+      <segment>
+        <source>Allow usage access</source>
       </segment>
     </unit>
     <unit id="HintNeedsConsent">
@@ -44,6 +54,11 @@
     <unit id="Mode">
       <segment>
         <source>Mode</source>
+      </segment>
+    </unit>
+    <unit id="NoUsage">
+      <segment>
+        <source>No data used today</source>
       </segment>
     </unit>
     <unit id="NotificationsOff">
@@ -104,6 +119,21 @@
     <unit id="StatusStarting">
       <segment>
         <source>Starting protection…</source>
+      </segment>
+    </unit>
+    <unit id="Upload">
+      <segment>
+        <source>Upload</source>
+      </segment>
+    </unit>
+    <unit id="UsageAccessNeeded">
+      <segment>
+        <source>Allow usage access so NetworkControl can show how much data each app uses.</source>
+      </segment>
+    </unit>
+    <unit id="UsageToday">
+      <segment>
+        <source>Data used today</source>
       </segment>
     </unit>
   </file>
