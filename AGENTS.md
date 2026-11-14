@@ -72,6 +72,7 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 ## 6. 踩過的坑（不要重犯）
 
 - **系統代理**：用戶機器運行 Reqable，本地 gRPC 必須設置 `SocketsHttpHandler.UseProxy = false`，否則 HTTP/2 協商失敗。
+- **公網請求與本地 IPC 相反**：檢查更新等公網請求必須使用默認的系統代理（`HttpClient` 不要設 `UseProxy = false`），否則只能通過代理上網的用戶會失敗；只有本地 gRPC 才要關閉代理。
 - **AtomUI 不為 Avalonia 基礎控件提供主題**：托盤菜單（MenuFlyoutPresenter / MenuItem）和普通 `Window` 依賴 `App.axaml` 中的 `<FluentTheme />`。
 - **AtomUI 的 FollowSystem 主題**開啟後會覆蓋用戶手動選擇的明暗，所以跟隨系統由 `AppearanceService` 自己實現。
 - **AtomUI 分段選擇器（Segmented）加載時會自動選中第一項並寫回綁定**：視圖模型必須忽略未連接時的變化；不要「清空後再同步」，否則會死循環。
