@@ -49,6 +49,10 @@ public static class CoreServiceCollectionExtensions
         // 詢問
         services.TryAddSingleton<PromptBroker>();
 
+        // 勿擾期間的阻斷彙總
+        services.AddActivityConsumer<QuietPeriodTracker>();
+        services.AddHostedService(sp => sp.GetRequiredService<QuietPeriodTracker>());
+
         // 活動日誌：消費者通過 TryAddEnumerable 註冊，存儲層等可以追加自己的消費者
         services.TryAddSingleton<LiveActivityFeed>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IActivityConsumer, LiveActivityFeed>(sp => sp.GetRequiredService<LiveActivityFeed>()));

@@ -399,6 +399,7 @@ internal static class ProtoMapper
         To = q.To?.ToDateTimeOffset(),
         AppId = q.HasAppId ? q.AppId : null,
         Action = q.HasAction ? q.Action.ToDomain() : null,
+        Reason = q.HasReason ? (VerdictReason)(int)q.Reason : null,
         Keyword = q.HasKeyword ? q.Keyword : null,
         Limit = q.Limit > 0 ? q.Limit : 200,
         BeforeId = q.HasBeforeId ? q.BeforeId : null,

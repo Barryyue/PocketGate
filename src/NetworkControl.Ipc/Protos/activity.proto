@@ -27,6 +27,7 @@ message LogQuery {
   optional string keyword = 5;
   int32 limit = 6;
   optional int64 before_id = 7;
+  optional VerdictReason reason = 8;
 }
 
 message LogEntry {

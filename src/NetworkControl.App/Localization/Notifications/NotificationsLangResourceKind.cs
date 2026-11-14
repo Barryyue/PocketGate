@@ -9,4 +9,7 @@ public enum NotificationsLangResourceKind
     BlockedTitle,
     BlockedBody,
     AllowApp,
+    QuietTitle,
+    QuietBody,
+    QuietView,
 }

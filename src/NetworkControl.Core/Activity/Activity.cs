@@ -62,6 +62,8 @@ public sealed record LogQuery
 
     public VerdictAction? Action { get; init; }
 
+    public VerdictReason? Reason { get; init; }
+
     /// <summary>匹配應用路徑、域名或遠端 IP 的關鍵字。</summary>
     public string? Keyword { get; init; }
 

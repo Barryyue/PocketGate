@@ -145,6 +145,9 @@ public sealed partial class LogViewModel : PageViewModel
     public partial int ActionFilter { get; set; }
 
     [ObservableProperty]
+    public partial Proto.VerdictReason? ReasonFilter { get; set; }
+
+    [ObservableProperty]
     public partial bool IsLive { get; set; } = true;
 
     public bool IsEmpty => Items.Count == 0;
@@ -161,6 +164,7 @@ public sealed partial class LogViewModel : PageViewModel
         _applyingNavigation = true;
         Keyword = filter.Keyword;
         ActionFilter = filter.ActionFilter;
+        ReasonFilter = filter.Reason;
         _applyingNavigation = false;
         _ = QueryAsync();
         return true;
@@ -178,6 +182,11 @@ public sealed partial class LogViewModel : PageViewModel
         if (ActionFilter is 1 or 2)
         {
             query.Action = ActionFilter == 1 ? Proto.VerdictAction.Allow : Proto.VerdictAction.Deny;
+        }
+
+        if (ReasonFilter is { } reason)
+        {
+            query.Reason = reason;
         }
 
         var page = await _connection.RequireClients().Activity.QueryLogAsync(query);

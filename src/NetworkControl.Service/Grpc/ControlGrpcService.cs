@@ -3,6 +3,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.AspNetCore.Authorization;
 using NetworkControl.Core.Engine;
+using NetworkControl.Core.Prompts;
 using NetworkControl.Core.Rules;
 using NetworkControl.Core.Settings;
 using NetworkControl.Ipc;
@@ -17,6 +18,7 @@ internal sealed class ControlGrpcService(
     SettingsService settings,
     EngineStatus engine,
     RuleEngine rules,
+    QuietPeriodTracker quietPeriods,
     ServiceStatusBuilder statusBuilder,
     IHostApplicationLifetime lifetime,
     TimeProvider time) : Proto.Control.ControlBase
@@ -78,6 +80,12 @@ internal sealed class ControlGrpcService(
     {
         await state.RestoreFromBlockAllAsync(context.CancellationToken);
         return statusBuilder.Build(context.GetHttpContext().User);
+    }
+
+    public override Task<Empty> DismissQuietPeriod(Empty request, ServerCallContext context)
+    {
+        quietPeriods.Dismiss();
+        return Task.FromResult(new Empty());
     }
 
     public override async Task<Proto.ServiceStatus> SetDoNotDisturb(Proto.SetDoNotDisturbRequest request, ServerCallContext context)

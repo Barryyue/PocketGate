@@ -17,6 +17,8 @@ service Control {
   rpc SetMode (SetModeRequest) returns (ServiceStatus);
   // 從「全部阻斷」恢復到之前的模式。
   rpc RestoreFromBlockAll (google.protobuf.Empty) returns (ServiceStatus);
+  // 關閉勿擾結束通知（界面看過後調用，避免重連後重複提示）。
+  rpc DismissQuietPeriod (google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc SetDoNotDisturb (SetDoNotDisturbRequest) returns (ServiceStatus);
   rpc GetSettings (google.protobuf.Empty) returns (UserSettings);
   rpc UpdateSettings (UserSettings) returns (UserSettings);
@@ -64,6 +66,22 @@ message ServiceStatus {
   ClientInfo client = 9;
   string active_profile_name = 10;
   string network_display_name = 11;
+  QuietPeriodSummary last_quiet_period = 12;
+}
+
+message QuietPeriodApp {
+  optional int64 app_id = 1;
+  string name = 2;
+  string path = 3;
+  int32 allowed = 4;
+  int32 denied = 5;
+}
+
+message QuietPeriodSummary {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+  repeated QuietPeriodApp apps = 3;
+  string id = 4;
 }
 
 message SetModeRequest {

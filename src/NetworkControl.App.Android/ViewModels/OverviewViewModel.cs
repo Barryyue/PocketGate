@@ -102,6 +102,12 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
 
     public bool HasSkippedRules => SkippedRules > 0;
 
+    public bool HasQuietPeriod => Backend.LastQuietPeriod is not null;
+
+    public string QuietPeriodText => Backend.LastQuietPeriod is { } summary
+        ? Loc.Format(OverviewLangResourceKind.QuietPeriod, summary.Apps.Count, summary.Denied)
+        : "";
+
     /// <summary>今日用量（FR-STA-01）；沒有「使用情況存取權」時顯示授權入口。</summary>
     [ObservableProperty]
     public partial bool HasTrafficAccess { get; set; }
@@ -149,6 +155,8 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
         }
 
         OnPropertyChanged(string.Empty);
+        OnPropertyChanged(nameof(HasQuietPeriod));
+        OnPropertyChanged(nameof(QuietPeriodText));
         _ = RefreshCountsAsync();
     }
 
@@ -186,6 +194,14 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
 
     [RelayCommand]
     private void ShowPrompt() => _showPrompt();
+
+    [RelayCommand]
+    private void DismissQuietPeriod()
+    {
+        Backend.DismissQuietPeriod();
+        OnPropertyChanged(nameof(HasQuietPeriod));
+        OnPropertyChanged(nameof(QuietPeriodText));
+    }
 
     [RelayCommand]
     private async Task EnableNotificationsAsync()

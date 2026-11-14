@@ -34,4 +34,6 @@ public enum OverviewLangResourceKind
     GrantUsageAccess,
     NoUsage,
     Profiles,
+    QuietPeriod,
+    Dismiss,
 }

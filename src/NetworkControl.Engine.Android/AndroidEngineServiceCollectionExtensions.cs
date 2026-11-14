@@ -1,9 +1,9 @@
 using global::Android.Content;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NetworkControl.Core.Profiles;
 using NetworkControl.Engine.Vpn;
 using NetworkControl.Engine.Vpn.Platform;
-using NetworkControl.Core.Profiles;
 
 namespace NetworkControl.Engine.Android;
 

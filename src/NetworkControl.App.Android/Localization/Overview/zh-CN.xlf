@@ -19,6 +19,12 @@
         <target state="translated">今天拦截</target>
       </segment>
     </unit>
+    <unit id="Dismiss">
+      <segment>
+        <source>Dismiss</source>
+        <target state="translated">关闭</target>
+      </segment>
+    </unit>
     <unit id="Download">
       <segment>
         <source>Download</source>
@@ -95,6 +101,12 @@
       <segment>
         <source>Protection</source>
         <target state="translated">保护</target>
+      </segment>
+    </unit>
+    <unit id="QuietPeriod">
+      <segment>
+        <source>{0} apps, {1} connections were blocked while Do Not Disturb was on.</source>
+        <target state="translated">勿扰期间有 {0} 个应用的 {1} 次连线被拒绝。</target>
       </segment>
     </unit>
     <unit id="Restore">

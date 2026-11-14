@@ -43,6 +43,12 @@ internal sealed class SqliteActivityQuery(ActivityDatabase db) : IActivityQuery
             cmd.With("$verdict", (int)action);
         }
 
+        if (query.Reason is { } reason)
+        {
+            sql.Append(" AND reason = $reason");
+            cmd.With("$reason", (int)reason);
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
             sql.Append(" AND (app_path LIKE $kw ESCAPE '\\' OR app_name LIKE $kw ESCAPE '\\' OR hostname LIKE $kw ESCAPE '\\' OR remote_ip LIKE $kw ESCAPE '\\')");

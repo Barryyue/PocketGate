@@ -18,6 +18,7 @@ internal sealed class ServiceStatusBuilder(
     RuleEngine rules,
     PromptBroker prompts,
     ProfileService profiles,
+    QuietPeriodTracker quietPeriods,
     IEnumerable<NetworkControl.Core.Profiles.INetworkMonitor> monitors)
 {
     private static readonly string ServiceVersion =
@@ -52,7 +53,7 @@ internal sealed class ServiceStatusBuilder(
             client.UserId = userId;
         }
 
-        return new Proto.ServiceStatus
+        var status = new Proto.ServiceStatus
         {
             ProtocolVersion = IpcEndpoint.ProtocolVersion,
             ServiceVersion = ServiceVersion,
@@ -66,5 +67,33 @@ internal sealed class ServiceStatusBuilder(
             PendingPromptFlows = prompts.PendingFlowCount,
             Client = client,
         };
+        if (quietPeriods.LastSummary is { } quiet)
+        {
+            var summary = new Proto.QuietPeriodSummary
+            {
+                Id = quiet.Id.ToString(),
+                From = quiet.From.ToProto(),
+                To = quiet.To.ToProto(),
+            };
+            foreach (var app in quiet.Apps)
+            {
+                var message = new Proto.QuietPeriodApp
+                {
+                    Name = app.Name ?? "",
+                    Path = app.Path ?? "",
+                    Allowed = app.Allowed,
+                    Denied = app.Denied,
+                };
+                if (app.AppId is { } appId)
+                {
+                    message.AppId = appId;
+                }
+
+                summary.Apps.Add(message);
+            }
+            status.LastQuietPeriod = summary;
+        }
+
+        return status;
     }
 }

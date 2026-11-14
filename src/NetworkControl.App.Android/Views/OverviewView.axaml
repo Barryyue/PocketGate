@@ -26,6 +26,13 @@
 
       <atom:Alert Type="Warning" IsShowIcon="True" Message="{loc:OverviewLangResource BlockAllActive}" IsVisible="{Binding IsBlockAll}" />
 
+      <atom:Card IsVisible="{Binding HasQuietPeriod}">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBlock Text="{Binding QuietPeriodText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+          <atom:Button Grid.Column="1" Command="{Binding DismissQuietPeriodCommand}" Content="{loc:OverviewLangResource Dismiss}" />
+        </Grid>
+      </atom:Card>
+
       <atom:Card IsVisible="{Binding NotificationsOff}">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
           <TextBlock Classes="secondary" TextWrapping="Wrap" VerticalAlignment="Center" Text="{loc:OverviewLangResource NotificationsOff}" />

@@ -179,6 +179,10 @@ public class ActivityLogTests
         var denied = await query.QueryAsync(new LogQuery { Action = VerdictAction.Deny }, TestContext.Current.CancellationToken);
         Assert.Single(denied);
 
+        var byReason = await query.QueryAsync(new LogQuery { Reason = VerdictReason.Rule }, TestContext.Current.CancellationToken);
+        Assert.Equal(3, byReason.Count);
+        Assert.Empty(await query.QueryAsync(new LogQuery { Reason = VerdictReason.Mode }, TestContext.Current.CancellationToken));
+
         var byKeyword = await query.QueryAsync(new LogQuery { Keyword = "github" }, TestContext.Current.CancellationToken);
         Assert.Equal(3, byKeyword.Count);
         Assert.Empty(await query.QueryAsync(new LogQuery { Keyword = "100%_" }, TestContext.Current.CancellationToken));

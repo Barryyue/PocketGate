@@ -16,6 +16,11 @@
         <source>Blocked today</source>
       </segment>
     </unit>
+    <unit id="Dismiss">
+      <segment>
+        <source>Dismiss</source>
+      </segment>
+    </unit>
     <unit id="Download">
       <segment>
         <source>Download</source>
@@ -79,6 +84,11 @@
     <unit id="Protection">
       <segment>
         <source>Protection</source>
+      </segment>
+    </unit>
+    <unit id="QuietPeriod">
+      <segment>
+        <source>{0} apps, {1} connections were blocked while Do Not Disturb was on.</source>
       </segment>
     </unit>
     <unit id="Restore">

@@ -49,6 +49,7 @@ public sealed partial class App : Application
             // 這些組件訂閱連接事件，必須在連接啟動前創建，才能收到第一次 Connected
             services.GetRequiredService<PromptCoordinator>();
             services.GetRequiredService<BlockedNotifier>();
+            services.GetRequiredService<QuietPeriodNotifier>();
 
             var tray = services.GetRequiredService<TrayService>();
             tray.Attach(this);
@@ -103,6 +104,7 @@ public sealed partial class App : Application
         services.AddSingleton<RuleEditing>();
         services.AddSingleton<PromptCoordinator>();
         services.AddSingleton<BlockedNotifier>();
+        services.AddSingleton<QuietPeriodNotifier>();
         services.AddSingleton<TrayService>();
         services.AddSingleton<DiagnosticsExporter>();
         services.AddSingleton<DiagnosticsExportFlow>();

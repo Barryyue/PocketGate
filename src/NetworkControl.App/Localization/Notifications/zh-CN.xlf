@@ -19,5 +19,8 @@
         <target state="translated">已阻断连接</target>
       </segment>
     </unit>
+    <unit id="QuietTitle"><segment><source>Do Not Disturb ended</source><target state="translated">勿扰已结束</target></segment></unit>
+    <unit id="QuietBody"><segment><source>{0} apps and {1} connections were blocked while Do Not Disturb was on.</source><target state="translated">勿扰期间有 {0} 个应用的 {1} 次连线被拒绝。</target></segment></unit>
+    <unit id="QuietView"><segment><source>View</source><target state="translated">查看</target></segment></unit>
   </file>
 </xliff>

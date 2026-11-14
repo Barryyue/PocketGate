@@ -131,6 +131,10 @@ public interface IBackend
     Task DeleteProfileAsync(Guid id, CancellationToken cancellationToken);
 
     int GetRuleCount(Guid profileId);
+
+    QuietPeriodSummary? LastQuietPeriod { get; }
+
+    void DismissQuietPeriod();
 }
 
 internal sealed class Backend : IBackend
@@ -142,6 +146,7 @@ internal sealed class Backend : IBackend
     private readonly RuntimeStateService _state;
     private readonly SettingsService _settings;
     private readonly ProfileService _profiles;
+    private readonly QuietPeriodTracker _quietPeriods;
     private readonly RuleEngine _rules;
     private readonly RuleService _ruleService;
     private readonly PromptBroker _prompts;
@@ -165,6 +170,7 @@ internal sealed class Backend : IBackend
         RuntimeStateService state,
         SettingsService settings,
         ProfileService profiles,
+        QuietPeriodTracker quietPeriods,
         RuleEngine rules,
         RuleService ruleService,
         PromptBroker prompts,
@@ -190,6 +196,7 @@ internal sealed class Backend : IBackend
         _state = state;
         _settings = settings;
         _profiles = profiles;
+        _quietPeriods = quietPeriods;
         _rules = rules;
         _ruleService = ruleService;
         _prompts = prompts;
@@ -260,6 +267,10 @@ internal sealed class Backend : IBackend
         _profiles.DeleteAsync(id, cancellationToken);
 
     public int GetRuleCount(Guid profileId) => _ruleService.All.Count(r => r.ProfileId == profileId);
+
+    public QuietPeriodSummary? LastQuietPeriod => _quietPeriods.LastSummary;
+
+    public void DismissQuietPeriod() => _quietPeriods.Dismiss();
 
     public Intent? CreateVpnConsentIntent() => _tunnel.CreatePrepareIntent();
 

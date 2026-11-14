@@ -16,5 +16,8 @@
         <source>Connection blocked</source>
       </segment>
     </unit>
+    <unit id="QuietTitle"><segment><source>Do Not Disturb ended</source></segment></unit>
+    <unit id="QuietBody"><segment><source>{0} apps and {1} connections were blocked while Do Not Disturb was on.</source></segment></unit>
+    <unit id="QuietView"><segment><source>View</source></segment></unit>
   </file>
 </xliff>

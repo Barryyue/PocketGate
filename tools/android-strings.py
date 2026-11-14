@@ -71,6 +71,8 @@ CATALOGS = {
         ('GrantUsageAccess', 'Allow usage access', '允許存取', '允许访问'),
         ('NoUsage', 'No data used today', '今天還沒有數據用量', '今天还没有数据用量'),
         ('Profiles', 'Profile', '設定檔', '配置文件'),
+        ('QuietPeriod', '{0} apps, {1} connections were blocked while Do Not Disturb was on.', '勿擾期間有 {0} 個應用程式的 {1} 次連線被拒絕。', '勿扰期间有 {0} 个应用的 {1} 次连线被拒绝。'),
+        ('Dismiss', 'Dismiss', '關閉', '关闭'),
     ],
     'Apps': [
         ('Search', 'Search apps', '搜尋應用程式', '搜索应用'),

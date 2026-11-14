@@ -1,3 +1,5 @@
+using Proto = NetworkControl.Ipc.V1;
+
 namespace NetworkControl.App.Services;
 
 /// <summary>
@@ -19,4 +21,4 @@ public sealed record RulesNavigation(string Keyword);
 
 /// <summary>跳轉到連線記錄頁時的篩選條件。</summary>
 /// <param name="ActionFilter">0 全部，1 允許，2 阻斷。</param>
-public sealed record LogNavigation(string Keyword, int ActionFilter = 0);
+public sealed record LogNavigation(string Keyword, int ActionFilter = 0, Proto.VerdictReason? Reason = null);
