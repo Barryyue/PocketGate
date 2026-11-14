@@ -1,6 +1,5 @@
 using System.Net;
 using NetworkControl.Core.Domain;
-using NetworkControl.Core.Matching;
 using NetworkControl.Engine.Windows.Compilation;
 
 namespace NetworkControl.Engine.Windows.IntegrationTests;

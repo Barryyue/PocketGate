@@ -147,7 +147,7 @@ nonexistent_1234567890
 **結論：若只實作 `ALE_PACKAGE_ID`，對 Windows Terminal / Spotify / ChatGPT 這類最常見的商店應用完全無效。** 需要下列替代方案之一（優先順序待管理員實測後決定）：
 
 1. **`FWPM_CONDITION_ALE_PACKAGE_FAMILY_NAME`**
-   - GUID：`81BC78FB-F28D-4886-A604-6ACC261F261B`（SDK `fwpmu.h`，`NTDDI_WIN10_CU` / Windows 10 1703 起）。
+   - GUID：`81BC78FB-F28D-4886-A604-6ACC261F261B`（SDK `fwpmu.h`，`NTDDI_WIN10_CU` / Windows 10 1703 起）。注意「Filtering conditions available at each filtering layer」頁面把它列為 Windows 7+，與 header 的 `NTDDI_WIN10_CU` 守衛不一致；實作時應以 `OperatingSystem.IsWindowsVersionAtLeast(10, 0, 15063)` 保守判斷，並在舊系統上跳過。
    - 文件說「The package family name of the app」，**但資料類型寫成 `FWP_SECURITY_DESCRIPTOR_TYPE`**，與「family name 是字串」矛盾，疑似文件錯誤。可能的實際型別是 `FWP_UNICODE_STRING_TYPE` 或 `FWP_BYTE_BLOB`（UTF-16）。**不要直接照文件實作，先做 §8 的實測。**
    - 若驗證成功，這是最直接的解法：同一條規則可同時覆蓋 AppContainer 與 full-trust 的 MSIX 應用。
 2. **`FWPM_CONDITION_ALE_SECURITY_ATTRIBUTE_FQBN_VALUE`**

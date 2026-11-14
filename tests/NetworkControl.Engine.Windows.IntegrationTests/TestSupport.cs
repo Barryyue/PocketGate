@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
 using NetworkControl.Core.Domain;
-using NetworkControl.Core.Matching;
 using NetworkControl.Engine.Windows.Compilation;
 using NetworkControl.Engine.Windows.Interop;
 
