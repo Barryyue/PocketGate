@@ -13,7 +13,7 @@
     <ApplicationDisplayVersion>$(VersionPrefix)</ApplicationDisplayVersion>
     <ApplicationVersion>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($(VersionPrefix.Split('.')[0]), 10000)), $([MSBuild]::Multiply($(VersionPrefix.Split('.')[1]), 100)))), $(VersionPrefix.Split('.')[2])))</ApplicationVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
-    <RuntimeIdentifiers>android-arm64;android-x64</RuntimeIdentifiers>
+    <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- 界面文本使用 AtomUI 的 XLIFF Catalog（Localization/*），不使用 resx 衛星程序集 -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
