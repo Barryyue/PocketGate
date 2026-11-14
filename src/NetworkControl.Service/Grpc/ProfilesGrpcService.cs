@@ -20,8 +20,12 @@ internal sealed class ProfilesGrpcService(
 {
     public override Task<Proto.ListProfilesResponse> List(Empty request, ServerCallContext context)
     {
+        var counts = rules.All
+            .Where(r => r.ProfileId is not null)
+            .GroupBy(r => r.ProfileId!.Value)
+            .ToDictionary(g => g.Key, g => g.Count());
         var response = new Proto.ListProfilesResponse();
-        response.Profiles.AddRange(profiles.All.Select(ToInfo));
+        response.Profiles.AddRange(profiles.All.Select(p => ToInfo(p, counts)));
         return Task.FromResult(response);
     }
 
@@ -95,7 +99,7 @@ internal sealed class ProfilesGrpcService(
         return Task.FromResult(info);
     }
 
-    private Proto.ProfileInfo ToInfo(Profile profile)
+    private Proto.ProfileInfo ToInfo(Profile profile, IReadOnlyDictionary<Guid, int>? counts = null)
     {
         var info = new Proto.ProfileInfo
         {
@@ -103,7 +107,7 @@ internal sealed class ProfilesGrpcService(
             Name = profile.Name,
             Mode = profile.Mode.ToProto(),
             SortOrder = profile.SortOrder,
-            RuleCount = rules.All.Count(r => r.ProfileId == profile.Id),
+            RuleCount = counts?.GetValueOrDefault(profile.Id) ?? rules.All.Count(r => r.ProfileId == profile.Id),
             IsDefault = profile.Id == Profile.DefaultId,
             IsActive = profile.Id == state.ActiveProfileId,
         };

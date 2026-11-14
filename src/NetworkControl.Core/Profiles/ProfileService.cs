@@ -89,6 +89,11 @@ public sealed partial class ProfileService(
         try
         {
             EnsureUniqueName(normalized, except: null);
+            if (copyRulesFrom is { } sourceId && Find(sourceId) is null)
+            {
+                throw new KeyNotFoundException($"來源配置文件 {sourceId} 不存在。");
+            }
+
             var sortOrder = All.Count == 0 ? 0 : All.Max(p => p.SortOrder) + 1;
             profile = new Profile
             {
@@ -107,25 +112,45 @@ public sealed partial class ProfileService(
 
         if (copyRulesFrom is { } source)
         {
+            var now = time.GetUtcNow();
             var copies = rules.All
-                .Where(r => r.ProfileId == source && r.Lifetime is RuleLifetime.Permanent or RuleLifetime.Timed)
+                .Where(r => r.ProfileId == source
+                    && (r.Lifetime == RuleLifetime.Permanent
+                        || (r.Lifetime == RuleLifetime.Timed && r.ExpiresAt > now)))
                 .Select(r => r with
                 {
-                    Id = Guid.CreateVersion7(time.GetUtcNow()),
+                    Id = Guid.CreateVersion7(now),
                     ProfileId = profile.Id,
                     BoundProcess = null,
-                    CreatedAt = time.GetUtcNow(),
-                    UpdatedAt = time.GetUtcNow(),
+                    CreatedAt = now,
+                    UpdatedAt = now,
                 })
                 .ToArray();
-            foreach (var copy in copies)
+            try
             {
-                await rules.AddAsync(copy, cancellationToken);
+                if (copies.Length > 0)
+                {
+                    await rules.AddRangeAsync(copies, cancellationToken);
+                    LogCopiedRules(logger, copies.Length, profile.Id);
+                }
             }
-
-            if (copies.Length > 0)
+            catch
             {
-                LogCopiedRules(logger, copies.Length, profile.Id);
+                if (copies.Length > 0)
+                {
+                    try
+                    {
+                        await rules.RemoveAsync(copies.Select(r => r.Id).ToArray(), RuleEndReason.Replaced, cancellationToken);
+                    }
+                    catch (Exception cleanup) when (cleanup is not OutOfMemoryException)
+                    {
+                        LogCopyCleanupFailed(logger, profile.Id, cleanup);
+                    }
+                }
+
+                await repository.DeleteAsync(profile.Id, cancellationToken);
+                Volatile.Write(ref _profiles, All.Where(p => p.Id != profile.Id).ToArray());
+                throw;
             }
         }
 
@@ -255,4 +280,7 @@ public sealed partial class ProfileService(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "已從來源配置文件複製 {Count} 條規則到新配置文件 {ProfileId}")]
     private static partial void LogCopiedRules(ILogger logger, int count, Guid profileId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "複製規則失敗後清理新配置文件 {ProfileId} 時出錯")]
+    private static partial void LogCopyCleanupFailed(ILogger logger, Guid profileId, Exception exception);
 }

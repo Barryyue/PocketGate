@@ -115,6 +115,55 @@ public sealed partial class RuleService(
         return rule;
     }
 
+    /// <summary>批量添加規則；只在最後重新發布一次規則集。主要供複製配置文件使用。</summary>
+    public async Task AddRangeAsync(IReadOnlyCollection<Rule> rules, CancellationToken cancellationToken)
+    {
+        var items = rules.ToArray();
+        foreach (var rule in items)
+        {
+            Validate(rule);
+        }
+
+        await _writeGate.WaitAsync(cancellationToken);
+        try
+        {
+            foreach (var rule in items)
+            {
+                if (rule.IsPersistent)
+                {
+                    await repository.UpsertAsync(rule, cancellationToken);
+                }
+            }
+
+            ImmutableInterlocked.Update(ref _rules, (dictionary, added) =>
+            {
+                var builder = dictionary.ToBuilder();
+                foreach (var rule in added)
+                {
+                    builder[rule.Id] = rule;
+                }
+
+                return builder.ToImmutable();
+            }, items);
+
+            foreach (var rule in items)
+            {
+                _hits.TryAdd(rule.Id, new HitCounter(0, null));
+            }
+
+            Republish();
+        }
+        finally
+        {
+            _writeGate.Release();
+        }
+
+        foreach (var rule in items)
+        {
+            Notify(new RuleChange(RuleChangeKind.Added, rule));
+        }
+    }
+
     public async Task<Rule> UpdateAsync(Rule rule, CancellationToken cancellationToken)
     {
         Validate(rule);

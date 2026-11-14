@@ -89,6 +89,37 @@ public sealed class ProfileServiceTests
     }
 
     [Fact]
+    public async Task Creating_from_a_missing_profile_fails_without_creating_anything()
+    {
+        await using var host = await ScenarioHost.StartAsync(withUiSession: false);
+        var ct = TestContext.Current.CancellationToken;
+        var before = host.Profiles.All.Count;
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            host.Profiles.CreateAsync("來源不存在", FilterMode.Ask, Guid.NewGuid(), ct));
+        Assert.Equal(before, host.Profiles.All.Count);
+    }
+
+    [Fact]
+    public async Task Copying_a_profile_skips_expired_timed_rules()
+    {
+        await using var host = await ScenarioHost.StartAsync(withUiSession: false);
+        var ct = TestContext.Current.CancellationToken;
+        var source = await host.Profiles.CreateAsync("來源", FilterMode.Ask, null, ct);
+        var now = host.Time.GetUtcNow();
+        var permanent = NewRule(source.Id, RuleLifetime.Permanent, now);
+        var expired = NewRule(source.Id, RuleLifetime.Timed, now) with { ExpiresAt = now.AddMinutes(-1) };
+        await host.Rules.AddAsync(permanent, ct);
+        await host.Rules.AddAsync(expired, ct);
+
+        var target = await host.Profiles.CreateAsync("目標", FilterMode.Ask, source.Id, ct);
+        var copied = host.Rules.All.Where(r => r.ProfileId == target.Id).ToArray();
+
+        var copy = Assert.Single(copied);
+        Assert.Equal(RuleLifetime.Permanent, copy.Lifetime);
+    }
+
+    [Fact]
     public async Task Revision_changes_on_every_profile_mutation()
     {
         await using var host = await ScenarioHost.StartAsync(withUiSession: false);
