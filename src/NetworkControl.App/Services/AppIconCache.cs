@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using NetworkControl.App.Infrastructure;
 
 namespace NetworkControl.App.Services;
 
@@ -45,9 +46,10 @@ public sealed partial class AppIconCache
                 DestroyIcon(icon);
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ExternalException)
+        catch (Exception ex)
         {
-            // 安全軟件可能拒絕讀取文件；界面使用默認圖標
+            // 安全軟件可能拒絕讀取文件，或圖標格式異常；界面使用默認圖標
+            AppLog.Warn($"Could not extract an icon from {path}", ex);
             return null;
         }
     }
@@ -61,7 +63,7 @@ public sealed partial class AppIconCache
 
         try
         {
-            if (info.ColorBitmap == IntPtr.Zero || GetObject(info.ColorBitmap, Marshal.SizeOf<Bitmap>(), out var native) == 0
+            if (info.ColorBitmap == IntPtr.Zero || GetObject(info.ColorBitmap, Marshal.SizeOf<NativeBitmap>(), out var native) == 0
                 || native.Width <= 0 || native.Height <= 0)
             {
                 return null;
