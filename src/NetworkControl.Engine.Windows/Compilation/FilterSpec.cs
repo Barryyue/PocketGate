@@ -24,6 +24,9 @@ internal enum FilterRole : byte
 
     /// <summary>詢問 / 白名單模式的默認阻斷（權重最低）；它攔下的連接會觸發詢問。</summary>
     DefaultBlock = 3,
+
+    /// <summary>默認入站阻斷；只記錄日誌，不詢問。</summary>
+    InboundDefaultBlock = 4,
 }
 
 /// <summary>
@@ -59,6 +62,9 @@ internal sealed record FilterSpec
 
     public bool LoopbackOnly { get; init; }
 
+    /// <summary>true 表示編譯到 RECV_ACCEPT 層（入站）。</summary>
+    public bool Inbound { get; init; }
+
     public string Key
     {
         get
@@ -70,7 +76,7 @@ internal sealed record FilterSpec
                 .Append('|').Append(RemotePort?.ToString())
                 .Append('|').Append(LocalPort?.ToString())
                 .Append('|').Append(Protocol?.ToString())
-                .Append('|').Append(LoopbackOnly ? 'L' : '-');
+                .Append('|').Append(LoopbackOnly ? 'L' : '-').Append('|').Append(Inbound ? 'I' : 'O');
             return sb.ToString();
         }
     }

@@ -269,7 +269,9 @@ internal sealed unsafe class WfpSession : IDisposable
         {
             DisplayData = new FwpmDisplayData0 { Name = name },
             ProviderKey = (nint)providerKey,
-            LayerKey = spec.Family == IpFamily.V4 ? FwpGuids.LayerAleAuthConnectV4 : FwpGuids.LayerAleAuthConnectV6,
+            LayerKey = spec.Inbound
+                ? (spec.Family == IpFamily.V4 ? FwpGuids.LayerAleAuthRecvAcceptV4 : FwpGuids.LayerAleAuthRecvAcceptV6)
+                : (spec.Family == IpFamily.V4 ? FwpGuids.LayerAleAuthConnectV4 : FwpGuids.LayerAleAuthConnectV6),
             SubLayerKey = SubLayerKey,
             Weight = new FwpValue0 { Type = FwpDataType.UInt64, Pointer = (nint)weight },
             NumFilterConditions = (uint)conditions.Count,

@@ -64,6 +64,7 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
 
     // 網絡事件回調在 WFP 線程上運行，讀取這些不可變快照
     private FrozenSet<ulong> _defaultBlockIds = FrozenSet<ulong>.Empty;
+    private FrozenSet<ulong> _inboundDefaultBlockIds = FrozenSet<ulong>.Empty;
     private FrozenSet<ulong> _ruleBlockIds = FrozenSet<ulong>.Empty;
     private DomainPattern[] _domainPatterns = [];
 
@@ -313,6 +314,7 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
             Rules = rules,
             Mode = host.CurrentMode,
             AllowIcmp = _settings.Current.AllowIcmpByDefault,
+            InboundDefaultDeny = _settings.Current.InboundDefault == InboundDefault.Deny,
             SelfPath = Environment.ProcessPath,
             SystemServiceHostPath = Path.Combine(Environment.SystemDirectory, "svchost.exe"),
             ResolveDomain = _domains.Resolve,
@@ -345,6 +347,7 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
         }
 
         _defaultBlockIds = _installed.Values.Where(f => f.Spec.Role == FilterRole.DefaultBlock).Select(f => f.Id).ToFrozenSet();
+        _inboundDefaultBlockIds = _installed.Values.Where(f => f.Spec.Role == FilterRole.InboundDefaultBlock).Select(f => f.Id).ToFrozenSet();
         _ruleBlockIds = _installed.Values.Where(f => f.Spec is { Role: FilterRole.Rule or FilterRole.BlockAll, Permit: false }).Select(f => f.Id).ToFrozenSet();
         _installedSnapshot = [.. _installed.Values];
         _lastAppliedAt = _time.GetUtcNow();
@@ -394,7 +397,11 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
         Interlocked.Increment(ref _dropsSeen);
         var drop = (FwpmNetEventClassifyDrop1*)evt->Detail;
         BlockReason reason;
-        if (_defaultBlockIds.Contains(drop->FilterId))
+        if (_inboundDefaultBlockIds.Contains(drop->FilterId))
+        {
+            reason = BlockReason.InboundDefault;
+        }
+        else if (_defaultBlockIds.Contains(drop->FilterId))
         {
             reason = BlockReason.DefaultBlock;
         }
@@ -408,7 +415,7 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
             return;
         }
 
-        if (TryCreateFlow(&evt->Header) is not { } flow)
+        if (TryCreateFlow(&evt->Header, drop->MsFwpDirection) is not { } flow)
         {
             return;
         }
@@ -425,7 +432,7 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
         _host?.OnFlowBlocked(flow, reason);
     }
 
-    private unsafe FlowInfo? TryCreateFlow(FwpmNetEventHeader1* header)
+    private unsafe FlowInfo? TryCreateFlow(FwpmNetEventHeader1* header, uint direction)
     {
         const uint required = FwpConstants.NetEventFlagRemoteAddrSet | FwpConstants.NetEventFlagIpVersionSet;
         if ((header->Flags & required) != required)
@@ -467,7 +474,7 @@ internal sealed partial class WfpEngine : INetworkEngine, IDiagnosticsContributo
         return new FlowInfo
         {
             FlowId = (ulong)Interlocked.Increment(ref _nextFlowId),
-            Direction = Direction.Outbound,
+            Direction = direction == 1 ? Direction.Inbound : Direction.Outbound,
             Protocol = Enum.IsDefined(protocol) ? protocol : L4Protocol.Other,
             Local = new IPEndPoint(local, (header->Flags & FwpConstants.NetEventFlagLocalPortSet) != 0 ? header->LocalPort : 0),
             Remote = new IPEndPoint(remote, (header->Flags & FwpConstants.NetEventFlagRemotePortSet) != 0 ? header->RemotePort : 0),

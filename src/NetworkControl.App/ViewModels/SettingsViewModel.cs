@@ -111,6 +111,9 @@ public sealed partial class SettingsViewModel : PageViewModel
     public partial bool AllowIcmp { get; set; } = true;
 
     [ObservableProperty]
+    public partial bool BlockInbound { get; set; }
+
+    [ObservableProperty]
     public partial decimal? LogRetentionDays { get; set; } = 30;
 
     public bool IsConnected => _connection.IsConnected;
@@ -262,6 +265,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         DefaultAction = DefaultActions.FirstOrDefault(a => a.Value == _loaded.PromptDefaultAction) ?? DefaultActions[0];
         FailPolicy = FailPolicies.FirstOrDefault(p => p.Value == _loaded.FailPolicy) ?? FailPolicies[0];
         AllowIcmp = _loaded.AllowIcmpByDefault;
+        BlockInbound = _loaded.InboundDefault == Proto.InboundDefault.Deny;
         LogRetentionDays = _loaded.LogRetentionDays;
         OnPropertyChanged(nameof(IsConnected));
     });
@@ -274,6 +278,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         settings.PromptDefaultAction = DefaultAction?.Value ?? Proto.VerdictAction.Deny;
         settings.FailPolicy = FailPolicy?.Value ?? Proto.FailPolicy.FailOpen;
         settings.AllowIcmpByDefault = AllowIcmp;
+        settings.InboundDefault = BlockInbound ? Proto.InboundDefault.Deny : Proto.InboundDefault.Allow;
         settings.LogRetentionDays = (int)(LogRetentionDays ?? 30);
 
         _loaded = await _connection.RequireClients().Control.UpdateSettingsAsync(settings);

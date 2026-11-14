@@ -95,16 +95,17 @@ public class RuleCompilerTests
 
         var after = Compile(FilterMode.Ask, _ => [IPAddress.Parse("140.82.112.3"), IPAddress.Parse("2606:50c0::1")], rule);
         var filters = after.Filters.Where(f => f.RuleId == rule.Id).ToList();
-        Assert.Equal(2, filters.Count);
-        Assert.Contains(filters, f => f.Family == IpFamily.V4 && f.RemoteNetworks.Single().ToString() == "140.82.112.3/32");
-        Assert.Contains(filters, f => f.Family == IpFamily.V6);
+        Assert.Equal(4, filters.Count);
+        Assert.Contains(filters, f => !f.Inbound && f.Family == IpFamily.V4 && f.RemoteNetworks.Single().ToString() == "140.82.112.3/32");
+        Assert.Contains(filters, f => !f.Inbound && f.Family == IpFamily.V6);
+        Assert.Equal(2, filters.Count(f => f.Inbound));
     }
 
     [Fact]
     public void Internet_zone_excludes_private_networks()
     {
         var rule = NewRule(VerdictAction.Deny, @"C:\a.exe", new RuleConditions { Remote = new ZoneTarget(NetworkZone.Internet) });
-        var v4 = Compile(FilterMode.Ask, rule).Filters.Single(f => f.RuleId == rule.Id && f.Family == IpFamily.V4);
+        var v4 = Compile(FilterMode.Ask, rule).Filters.Single(f => f.RuleId == rule.Id && f.Family == IpFamily.V4 && !f.Inbound);
 
         bool Covered(string ip) => v4.RemoteNetworks.Any(n => n.Contains(IPAddress.Parse(ip)));
         Assert.True(Covered("8.8.8.8"));
@@ -115,14 +116,46 @@ public class RuleCompilerTests
     }
 
     [Fact]
-    public void Inbound_and_service_rules_are_skipped()
+    public void Inbound_rules_compile_to_recv_accept_and_service_rules_are_skipped()
     {
         var inbound = NewRule(VerdictAction.Allow, @"C:\a.exe", new RuleConditions { Direction = Direction.Inbound });
         var service = NewRule(VerdictAction.Allow) with { App = new AppMatcher { PathPattern = @"C:\Windows\System32\svchost.exe", ServiceName = "wuauserv" } };
         var result = Compile(FilterMode.Ask, inbound, service);
 
-        Assert.DoesNotContain(result.Filters, f => f.RuleId == inbound.Id || f.RuleId == service.Id);
-        Assert.Equal(2, result.Skipped.Count);
+        var filters = result.Filters.Where(f => f.RuleId == inbound.Id).ToList();
+        Assert.Equal(2, filters.Count);
+        Assert.All(filters, f => Assert.True(f.Inbound));
+        Assert.DoesNotContain(result.Filters, f => f.RuleId == service.Id);
+        Assert.Contains(result.Skipped, s => s.RuleId == service.Id);
+    }
+
+    [Fact]
+    public void Dual_direction_rules_compile_to_both_layers()
+    {
+        var rule = NewRule(VerdictAction.Deny, @"C:\a.exe");
+        var filters = Compile(FilterMode.Ask, rule).Filters.Where(f => f.RuleId == rule.Id).ToList();
+
+        Assert.Equal(4, filters.Count);
+        Assert.Equal(2, filters.Count(f => f.Inbound));
+        Assert.Equal(2, filters.Count(f => !f.Inbound));
+    }
+
+    [Fact]
+    public void Inbound_default_deny_adds_only_inbound_default_filters()
+    {
+        var result = RuleCompiler.Compile(new CompileInput
+        {
+            Rules = [],
+            Mode = FilterMode.Ask,
+            InboundDefaultDeny = true,
+            ResolveDomain = _ => [],
+            ExpandPath = p => [p],
+        });
+
+        var inbound = result.Filters.Where(f => f.Role == FilterRole.InboundDefaultBlock).ToList();
+        Assert.Equal(2, inbound.Count);
+        Assert.All(inbound, f => Assert.True(f.Inbound));
+        Assert.Equal(2, result.Filters.Count(f => f.Role == FilterRole.DefaultBlock && !f.Inbound));
     }
 
     [Fact]
@@ -144,6 +177,7 @@ public class RuleCompilerTests
         Assert.NotEqual(a.Key, (a with { Permit = false }).Key);
         Assert.NotEqual(a.Key, (a with { Weight = 6 }).Key);
         Assert.Equal(a.Key, (a with { AppPath = @"c:\A.EXE" }).Key);
+        Assert.NotEqual(a.Key, (a with { Inbound = true }).Key);
     }
 }
 

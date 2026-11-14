@@ -29,6 +29,9 @@ public sealed record UserSettings
     /// <summary>為 true 時 ICMP 不受規則控制，直接放行（FR-INT-05）。</summary>
     public bool AllowIcmpByDefault { get; init; } = true;
 
+    /// <summary>沒有入站規則命中時的默認動作（FR-INT-06）。</summary>
+    public InboundDefault InboundDefault { get; init; } = InboundDefault.Allow;
+
     /// <summary>連接日誌保留天數。</summary>
     public int LogRetentionDays { get; init; } = 30;
 }

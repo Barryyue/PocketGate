@@ -34,6 +34,9 @@ public enum BlockReason : byte
 
     /// <summary>被用戶規則攔下：只記日誌。</summary>
     UserRule = 1,
+
+    /// <summary>被默認入站阻斷攔下：只記錄，不詢問。</summary>
+    InboundDefault = 2,
 }
 
 /// <summary>按應用聚合的流量樣本。</summary>

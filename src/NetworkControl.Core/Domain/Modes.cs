@@ -19,6 +19,13 @@ public enum FilterMode : byte
     Disabled = 4,
 }
 
+/// <summary>默認入站策略。</summary>
+public enum InboundDefault : byte
+{
+    Allow = 0,
+    Deny = 1,
+}
+
 /// <summary>失效策略：服務異常時放行還是阻斷。</summary>
 public enum FailPolicy : byte
 {

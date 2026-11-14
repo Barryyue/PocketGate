@@ -65,4 +65,5 @@ public enum SettingsLangResourceKind
     BackupSnapshot,
     NothingToChange,
     Subtitle,
+    BlockInbound,
 }

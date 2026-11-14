@@ -415,6 +415,7 @@ internal static class ProtoMapper
         AllowIcmpByDefault = s.AllowIcmpByDefault,
         LogRetentionDays = s.LogRetentionDays,
         OnceFallbackDuration = Duration.FromTimeSpan(s.OnceFallbackDuration),
+        InboundDefault = (Proto.InboundDefault)(int)s.InboundDefault,
     };
 
     public static UserSettings ApplyTo(this Proto.UserSettings msg, UserSettings current) => current with
@@ -425,6 +426,7 @@ internal static class ProtoMapper
         AllowIcmpByDefault = msg.AllowIcmpByDefault,
         LogRetentionDays = msg.LogRetentionDays > 0 ? msg.LogRetentionDays : current.LogRetentionDays,
         OnceFallbackDuration = msg.OnceFallbackDuration?.ToTimeSpan() ?? current.OnceFallbackDuration,
+        InboundDefault = System.Enum.IsDefined(msg.InboundDefault) ? (InboundDefault)(int)msg.InboundDefault : throw Invalid("未知的入站策略。"),
     };
 
     // ---------- 校驗輔助 ----------

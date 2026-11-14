@@ -15,6 +15,9 @@ internal sealed record CompileInput
 
     public bool AllowIcmp { get; init; } = true;
 
+    /// <summary>沒有入站規則命中時默認阻斷。</summary>
+    public bool InboundDefaultDeny { get; init; }
+
     /// <summary>服務自身的可執行文件，總是放行。</summary>
     public string? SelfPath { get; init; }
 
@@ -65,7 +68,8 @@ internal static class RuleCompiler
             case FilterMode.BlockAll:
                 foreach (var family in BothFamilies)
                 {
-                    filters.Add(new FilterSpec { Name = "Block all", Family = family, Permit = false, Weight = BlockAllWeight, Role = FilterRole.BlockAll });
+                    filters.Add(new FilterSpec { Name = "Block all outbound", Family = family, Permit = false, Weight = BlockAllWeight, Role = FilterRole.BlockAll });
+                    filters.Add(new FilterSpec { Name = "Block all inbound", Family = family, Permit = false, Weight = BlockAllWeight, Role = FilterRole.BlockAll, Inbound = true });
                 }
 
                 return new CompileResult(filters, skipped);
@@ -90,15 +94,23 @@ internal static class RuleCompiler
             }
         }
 
+        if (input.InboundDefaultDeny)
+        {
+            foreach (var family in BothFamilies)
+            {
+                filters.Add(new FilterSpec { Name = "Default inbound block", Family = family, Permit = false, Weight = DefaultBlockWeight, Role = FilterRole.InboundDefaultBlock, Inbound = true });
+            }
+        }
+
         return new CompileResult(filters, skipped);
     }
 
     private static void AddBuiltins(CompileInput input, List<FilterSpec> filters)
     {
         var weight = BuiltinWeightBase;
-        void Add(string name, IpFamily family, Func<FilterSpec, FilterSpec>? configure = null)
+        void Add(string name, IpFamily family, Func<FilterSpec, FilterSpec>? configure = null, bool inbound = false)
         {
-            var spec = new FilterSpec { Name = name, Family = family, Permit = true, Weight = weight--, Role = FilterRole.Builtin };
+            var spec = new FilterSpec { Name = name, Family = family, Permit = true, Weight = weight--, Role = FilterRole.Builtin, Inbound = inbound };
             filters.Add(configure is null ? spec : configure(spec));
         }
 
@@ -124,18 +136,25 @@ internal static class RuleCompiler
         {
             Add("Builtin: ICMP", IpFamily.V4, s => s with { Protocol = L4Protocol.Icmp });
         }
+
+        // 入站：只放行回環、DHCP 客戶端和 ICMP
+        foreach (var family in BothFamilies)
+        {
+            Add("Builtin inbound: loopback", family, s => s with { LoopbackOnly = true }, inbound: true);
+        }
+
+        Add("Builtin inbound: DHCP", IpFamily.V4, s => s with { LocalPort = new PortRange(68, 68), Protocol = L4Protocol.Udp }, inbound: true);
+        Add("Builtin inbound: DHCPv6", IpFamily.V6, s => s with { LocalPort = new PortRange(546, 546), Protocol = L4Protocol.Udp }, inbound: true);
+        Add("Builtin inbound: ICMPv6 (neighbor discovery)", IpFamily.V6, s => s with { Protocol = L4Protocol.IcmpV6 }, inbound: true);
+        if (input.AllowIcmp)
+        {
+            Add("Builtin inbound: ICMP", IpFamily.V4, s => s with { Protocol = L4Protocol.Icmp }, inbound: true);
+        }
     }
 
     private static void CompileRule(Rule rule, ulong weight, CompileInput input, List<FilterSpec> filters, List<SkippedRule> skipped)
     {
         var c = rule.Conditions;
-
-        // M1 只攔截出站連接（ALE_AUTH_CONNECT 層）；入站控制在 P1 實現
-        if (c.Direction == Direction.Inbound)
-        {
-            skipped.Add(new SkippedRule(rule.Id, "inbound rules are not enforced yet"));
-            return;
-        }
 
         if (rule.App is { ServiceName: not null } or { PackageId: not null })
         {
@@ -203,32 +222,43 @@ internal static class RuleCompiler
                 return;
         }
 
-        foreach (var app in apps)
+        foreach (var inbound in Directions(c.Direction))
         {
-            foreach (var (family, networks) in remotes)
+            foreach (var app in apps)
             {
-                if (networks is { Count: 0 })
+                foreach (var (family, networks) in remotes)
                 {
-                    continue;
-                }
+                    if (networks is { Count: 0 })
+                    {
+                        continue;
+                    }
 
-                filters.Add(new FilterSpec
-                {
-                    Name = $"Rule {rule.Id:N}",
-                    Family = family,
-                    Permit = rule.Action == VerdictAction.Allow,
-                    Weight = weight,
-                    Role = FilterRole.Rule,
-                    RuleId = rule.Id,
-                    AppPath = app,
-                    RemoteNetworks = networks ?? [],
-                    RemotePort = c.RemotePort,
-                    LocalPort = c.LocalPort,
-                    Protocol = NormalizeProtocol(c.Protocol, family),
-                });
+                    filters.Add(new FilterSpec
+                    {
+                        Name = $"Rule {rule.Id:N}",
+                        Family = family,
+                        Permit = rule.Action == VerdictAction.Allow,
+                        Weight = weight,
+                        Role = FilterRole.Rule,
+                        RuleId = rule.Id,
+                        AppPath = app,
+                        RemoteNetworks = networks ?? [],
+                        RemotePort = c.RemotePort,
+                        LocalPort = c.LocalPort,
+                        Protocol = NormalizeProtocol(c.Protocol, family),
+                        Inbound = inbound,
+                    });
+                }
             }
         }
     }
+
+    private static IEnumerable<bool> Directions(Direction? direction) => direction switch
+    {
+        Direction.Outbound => [false],
+        Direction.Inbound => [true],
+        _ => [false, true],
+    };
 
     private static L4Protocol? NormalizeProtocol(L4Protocol? protocol, IpFamily family) => protocol switch
     {

@@ -105,12 +105,14 @@
         </atom:Card>
 
         <atom:Card Header="{loc:SettingsLangResource SectionSafety}">
-          <Grid ColumnDefinitions="280,*" RowDefinitions="Auto,Auto" RowSpacing="14">
+          <Grid ColumnDefinitions="280,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
             <TextBlock Grid.Row="0" VerticalAlignment="Center" Text="{loc:SettingsLangResource FailPolicy}" />
             <atom:ComboBox Grid.Row="0" Grid.Column="1" Width="220" HorizontalAlignment="Left"
                            ItemsSource="{Binding FailPolicies}" SelectedItem="{Binding FailPolicy}" ItemTemplate="{StaticResource ChoiceTemplate}" />
             <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="{loc:SettingsLangResource AllowIcmp}" />
             <atom:ToggleSwitch Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" IsChecked="{Binding AllowIcmp}" />
+            <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="{loc:SettingsLangResource BlockInbound}" />
+            <atom:ToggleSwitch Grid.Row="2" Grid.Column="1" HorizontalAlignment="Left" IsChecked="{Binding BlockInbound}" />
           </Grid>
         </atom:Card>
 

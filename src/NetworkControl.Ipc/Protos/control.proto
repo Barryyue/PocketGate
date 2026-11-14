@@ -34,6 +34,11 @@ enum EngineState {
   ENGINE_STATE_STOPPED = 4;
 }
 
+enum InboundDefault {
+  INBOUND_DEFAULT_ALLOW = 0;
+  INBOUND_DEFAULT_DENY = 1;
+}
+
 enum FailPolicy {
   FAIL_POLICY_FAIL_OPEN = 0;
   FAIL_POLICY_FAIL_CLOSED = 1;
@@ -100,4 +105,5 @@ message UserSettings {
   bool allow_icmp_by_default = 4;
   int32 log_retention_days = 5;
   google.protobuf.Duration once_fallback_duration = 6;
+  InboundDefault inbound_default = 7;
 }

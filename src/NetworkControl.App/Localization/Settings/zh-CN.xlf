@@ -355,5 +355,6 @@
         <target state="translated">界面偏好只影响你自己；服务设置对本机所有用户生效。</target>
       </segment>
     </unit>
+    <unit id="BlockInbound"><segment><source>Block inbound connections by default</source><target state="translated">默认阻止入站连接</target></segment></unit>
   </file>
 </xliff>
