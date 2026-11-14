@@ -63,6 +63,14 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
     [ObservableProperty]
     public partial ProfileChoice? SelectedProfile { get; set; }
 
+    /// <summary>切換配置文件失敗時的提示（R6）；下一次成功操作或刷新時清除。</summary>
+    [ObservableProperty]
+    public partial string? ProfileError { get; set; }
+
+    public bool HasProfileError => !string.IsNullOrEmpty(ProfileError);
+
+    partial void OnProfileErrorChanged(string? value) => OnPropertyChanged(nameof(HasProfileError));
+
     public string StatusText => Loc.Get(Status switch
     {
         ProtectionStatus.On => OverviewLangResourceKind.StatusOn,
@@ -136,16 +144,16 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
             IsProtectionOn = Status is not (ProtectionStatus.Off or ProtectionStatus.Revoked);
             ModeIndex = Array.IndexOf(SelectableModes, Mode);
             NotificationsOff = MainActivity.Current is { AreNotificationsEnabled: false };
-            var selectedProfile = SelectedProfile?.Id;
+            // 當前配置文件一律以核心為準；界面不保留自己的選擇（R6）
+            var activeId = Backend.ActiveProfile.Id;
             _syncingProfile = true;
             Profiles.Clear();
             foreach (var profile in Backend.Profiles.OrderBy(p => p.SortOrder))
             {
-                Profiles.Add(new ProfileChoice(profile.Id, profile.Name, profile.Id == Backend.ActiveProfile.Id));
+                Profiles.Add(new ProfileChoice(profile.Id, profile.Name, profile.Id == activeId));
             }
 
-            SelectedProfile = Profiles.FirstOrDefault(p => p.Id == selectedProfile)
-                ?? Profiles.FirstOrDefault(p => p.IsActive);
+            SelectedProfile = Profiles.FirstOrDefault(p => p.Id == activeId) ?? Profiles.FirstOrDefault();
             _syncingProfile = false;
             OnPropertyChanged(nameof(ShowProfiles));
         }
@@ -175,7 +183,25 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
             return;
         }
 
-        _ = Backend.ActivateProfileAsync(value.Id, CancellationToken.None);
+        _ = ActivateProfileAsync(value);
+    }
+
+    /// <summary>切換失敗時提示並在 finally 中還原到核心的實際選擇（R6）。</summary>
+    private async Task ActivateProfileAsync(ProfileChoice choice)
+    {
+        ProfileError = null;
+        try
+        {
+            await Backend.ActivateProfileAsync(choice.Id, CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is ArgumentException or KeyNotFoundException or InvalidOperationException)
+        {
+            ProfileError = ex.Message;
+        }
+        finally
+        {
+            Refresh();
+        }
     }
 
     partial void OnModeIndexChanged(int value)
