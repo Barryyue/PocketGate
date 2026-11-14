@@ -61,6 +61,18 @@ D:\tools\android-dev\dotnet\dotnet.exe format NetworkControl.Android.slnx --veri
 | M3-12 | 權限分級提示 | 桌面 | 小 | — |
 | M3-13 | 檢查更新 | 桌面 | 中 | 需要用戶決定發布源 |
 | M3-14 | 應用圖標 | 桌面 | 小 | — |
+| M3-15 | svchost 服務與 MSIX 應用的規則下發 | Windows WFP | 大（含預研） | — |
+| M3-16 | 目錄簽名（catalog）校驗 | Windows | 中 | — |
+| M3-17 | WFP 管理員集成測試 | Windows | 中 | — |
+| M3-18 | 安裝程序繁體中文界面 | Windows | 小 | — |
+| M3-19 | 界面小修：指標卡換行、連線記錄的本地端點 | 桌面 | 小 | — |
+
+**按平台分組**：
+
+- **只有桌面（Windows）**：M3-01、M3-02、M3-08、M3-12、M3-13、M3-14、M3-15、M3-16、M3-17、M3-18、M3-19。
+- **只有 Android**：M3-05、M3-06、M3-09、M3-10、M3-11。
+- **兩端都要做**（Core / Storage 共用，兩端各自做界面）：M3-03、M3-04、M3-07。
+- **只有桌面、Android 不適用**：M3-01 / M3-02（Android 10+ 不能讀取其他應用的連線表），M3-08（Android 黑洞方案只處理出站）。
 
 不需要編碼、由用戶完成：代碼簽名證書（Windows 安裝程序 / 可執行文件、Android 正式密鑰庫），見 progress.md。
 
@@ -615,6 +627,136 @@ zip 內容：`summary.txt`（版本、Android 版本、設備型號、保護狀�
 ### 驗收
 
 應用頁中 Chrome、VS Code 等顯示正確圖標；系統目錄程序顯示其圖標；快速滾動不卡頓（提取在後台）。
+
+---
+
+## M3-15 svchost 服務與 MSIX 應用的規則下發（Windows WFP）
+
+**背景**：`RuleCompiler.CompileRule` 對 `AppMatcher.ServiceName` 或 `PackageId` 不為空的規則直接跳過（"service / package matching is not supported by the user-mode engine"），已知限制見 development.md §7。結果是：用戶在詢問彈窗中允許某個 svchost 承載的服務（例如 Windows Update 的 `wuauserv`）或某個商店應用時，規則存了但不生效。
+
+**本任務分兩步，第一步是預研，結論寫進 design.md §22 並由主 agent 確認後再做第二步。**
+
+### 範圍
+
+`Engine.Windows/Compilation/RuleCompiler.cs`、`FilterSpec.cs`、`Interop/WfpNative.cs`（新條件 GUID、SID 相關 P/Invoke）、`Interop/WfpSession.cs`（構造條件值）、`Platform/WindowsProcesses.cs`（服務識別）、`WfpEngine.cs`（阻斷事件中識別服務 / 包）、測試；`InteropLayoutTests` 同步更新。
+
+### 設計
+
+**MSIX / 商店應用（較確定）**：
+- WFP 條件 `FWPM_CONDITION_ALE_PACKAGE_ID`（值類型 `FWP_SID`），值為應用容器 SID。包名 → SID：`DeriveAppContainerSidFromAppContainerName`（`userenv.dll`），參數是**包族名**（Package Family Name），不是完整包名；`AppMatcher.PackageId` 中存的是什麼格式需要先查 `WindowsAppInspector` / `PromptRuleFactory` 的現有代碼確認，不一致要在任務下說明。
+- 有 `PackageId` 的規則：條件為 PACKAGE_ID（不再加 ALE_APP_ID，因為同一個包可能有多個可執行文件）。
+
+**svchost 服務（需要預研）**：
+- 規則條件：Windows 防火牆對「服務」規則的做法是 `FWPM_CONDITION_ALE_USER_ID`，值為一個安全描述符（`FWP_SECURITY_DESCRIPTOR_TYPE`），只允許服務 SID（`NT SERVICE\<服務名>`，由 `RtlCreateServiceSid` 或 `LookupAccountName("NT SERVICE\\wuauserv")` 得到）匹配；配合 `ALE_APP_ID = svchost.exe`。**預研要確認**：(1) 該條件在 ALE_AUTH_CONNECT 層對以 LocalService / NetworkService 運行的共享 svchost 是否按服務 SID 匹配（需要服務 SID 類型為 unrestricted / restricted，`sc qsidtype <服務名>` 查看；類型為 NONE 的服務無法區分）；(2) 不能區分的服務如何處理（建議：規則仍跳過，並在規則頁顯示「此服務不支持單獨控制，將作用於整個 svchost 組」的說明，用戶可以選擇改為按 svchost 路徑控制）。
+- 連線歸屬（阻斷事件 → 哪個服務）：阻斷事件頭的 `userId`（`FWPM_NET_EVENT_HEADER1.userId`，已在結構體中）在服務 SID 啟用時就是服務 SID；從 SID 反查服務名（`LookupAccountSid` 得到 `NT SERVICE\xxx`）。拿不到時退回到按 PID 查詢：`QueryServiceStatusEx` 枚舉同一 PID 下的服務，只有一個服務時可以確定，多個時記為「svchost（多個服務）」。結果填入 `ProcessSnapshot.ServiceName`（字段已存在），核心會把它帶進 `AppKey` 和詢問彈窗。
+- 詢問彈窗：服務的顯示名用 `QueryServiceConfig` 的 `lpDisplayName`（`FlowInfo` 不需要改；顯示名在 `AppIdentity.DisplayName` 中）。
+
+### 測試 / 驗收
+
+- `RuleCompiler`：有 `PackageId` 的規則生成 PACKAGE_ID 條件、不再被跳過；服務規則生成 USER_ID 安全描述符條件；無法區分的服務仍跳過並給出新的說明文本。
+- SID 構造與安全描述符的單元測試（對照 `ConvertStringSecurityDescriptorToSecurityDescriptor("D:(A;;CC;;;<服務 SID>)")` 的結果）。
+- **待用戶驗證**（需要管理員）：在彈窗中拒絕 Windows Update（`wuauserv`）→ 檢查更新失敗；其他 svchost 服務（如 DNS 客戶端）不受影響。
+
+---
+
+## M3-16 目錄簽名（catalog）校驗（Windows）
+
+**背景**：`WindowsAppInspector` 只校驗嵌入式 Authenticode 簽名（類注釋中的 M1 限制）。系統目錄中大量程序（包括很多 `C:\Windows\System32` 下的可執行文件）是通過**目錄文件**簽名的，現在被當成未簽名並按哈希綁定，系統更新後哈希一變就觸發篡改檢測和重新詢問。
+
+### 範圍
+
+`Engine.Windows/Platform/WindowsAppInspector.cs`（新增目錄簽名路徑）、新建 `Platform/CatalogSignature.cs`（P/Invoke）、`tests/NetworkControl.Engine.Windows.Tests/`。
+
+### 設計
+
+- 嵌入式簽名校驗失敗（`TRUST_E_NOSIGNATURE`）後再查目錄：
+  1. `CryptCATAdminAcquireContext2(out hAdmin, DRIVER_ACTION_VERIFY, BCRYPT_SHA256_ALGORITHM, null, 0)`；
+  2. `CryptCATAdminCalcHashFromFileHandle2` 算文件哈希；
+  3. `CryptCATAdminEnumCatalogFromHash` 找到包含該哈希的目錄；`CryptCATCatalogInfoFromContext` 得到目錄文件路徑；
+  4. `WinVerifyTrust`，`WINTRUST_DATA.dwUnionChoice = WTD_CHOICE_CATALOG`，`WINTRUST_CATALOG_INFO` 填目錄路徑、成員標籤（哈希的十六進制大寫字符串）和文件句柄；`WTD_REVOKE_NONE`、`WTD_CACHE_ONLY_URL_RETRIEVAL`（與現有的嵌入式校驗一致，不聯網）；
+  5. 成功時從 `WTHelperProvDataFromStateData` → `WTHelperGetProvSignerFromChain` → 證書取簽名者名稱；**所有句柄按順序釋放**（`CryptCATAdminReleaseCatalogContext`、`CryptCATAdminReleaseContext`、`WTD_STATEACTION_CLOSE`）。
+- SHA-256 找不到時回退到 SHA-1 再查一次（舊目錄只有 SHA-1 哈希）。
+- 結果：`CodeSignature(signer, IsPlatformBinary: 路徑在 Windows 目錄下)`；不再計算 SHA-256（與嵌入式簽名一致）。
+- 結構體 `WINTRUST_CATALOG_INFO`、`CATALOG_INFO` 按 SDK `wintrust.h` / `mscat.h` 核對，加入 `InteropLayoutTests`。
+- 性能：目錄查找比嵌入式校驗慢（幾十毫秒）；結果已由核心按文件戳緩存（`AppIdentityResolver`），不需要額外緩存。
+
+### 測試 / 驗收
+
+- 佈局測試；對 `C:\Windows\System32\notepad.exe`（Windows 10/11 上是目錄簽名）運行 `VerifySigner` 應返回 Microsoft 簽名者——這個測試不需要管理員，但依賴系統文件，**沒有找到目錄簽名文件時 Skip**。
+- 嵌入式簽名的程序行為不變（回歸測試）。
+
+---
+
+## M3-17 WFP 管理員集成測試（Windows）
+
+**背景**：progress.md P0「WFP 管理員集成測試」。現有 Engine.Windows 測試全是純函數，WFP 會話、過濾器下發、刪除沒有自動化測試，只能靠用戶手動驗收。
+
+### 範圍
+
+新建 `tests/NetworkControl.Engine.Windows.IntegrationTests/`（加入 `NetworkControl.slnx`）；不修改產品代碼（需要暴露內部類型時用 `InternalsVisibleTo`，在任務下說明）。
+
+### 設計
+
+- 不是管理員時所有測試 `Assert.Skip("需要管理員權限")`（`WindowsIdentity.GetCurrent()` + `WindowsPrincipal.IsInRole(Administrator)`），CI 中自然跳過。
+- 用例：
+  1. `WfpSession.Open` 打開動態會話 → 添加一條阻斷過濾器（目標 `127.0.0.2:<隨機端口>` 的 TCP 出站，本機起一個 `TcpListener` 監聽在 `127.0.0.2`）→ `TcpClient.ConnectAsync` 失敗；刪除過濾器 → 連接成功。
+  2. 會話關閉（Dispose）後過濾器自動消失：用 `FwpmFilterEnum0` 按提供程序 / 子層確認數量為 0。
+  3. `RuleCompiler` + `WfpSession` 的增量下發：規則集變化後只增刪變化的過濾器（對比過濾器 ID）。
+  4. 網絡事件訂閱：被阻斷的連接在 5 秒內產生 `ClassifyDrop` 事件。
+- 只使用回環地址，不影響本機真實網絡；每個測試在 finally 中關閉會話。
+- 不要用默認的「NetworkControl」會話名和子層，避免與正式安裝的服務衝突：測試用獨立的子層 GUID（如有必要給 `WfpSession` 追加可選參數，屬於越界，需說明）。
+
+### 驗收
+
+普通用戶運行 `dotnet test`：全部 Skip、零失敗。**待用戶以管理員運行**：全部通過，運行後 `netsh wfp show filters` 中沒有殘留過濾器。
+
+---
+
+## M3-18 安裝程序繁體中文界面（Windows）
+
+**背景**：`installer/NetworkControl.iss` 的 `[Languages]` 只有簡體中文和英文（Inno Setup 沒有官方繁體中文語言文件）。
+
+### 範圍
+
+`installer/`（新增 `Languages/ChineseTraditional.isl`、修改 `NetworkControl.iss`）、`scripts/publish-release.ps1`（如需傳遞語言文件路徑）。**不要修改 `AppId`。**
+
+### 設計
+
+- 語言文件：使用 Inno Setup 社區維護的非官方繁體中文翻譯（jrsoftware 官網「Inno Setup Translations」頁面中的 ChineseTraditional.isl），**核對其許可證後**提交到倉庫，並在文件頭部注明來源和版本；用台灣用語通讀一遍（「程式」「資料夾」「設定」）。
+- `[Languages]` 追加 `Name: "chinesetraditional"; MessagesFile: "Languages\ChineseTraditional.isl"`；`[CustomMessages]` 中自定義的文本（`AutoStartTask`、`ExportDiagnostics` 等）同時提供 `chinesetraditional.` 前綴的版本。
+- `.isl` 文件的編碼：Inno Setup 6 支持 UTF-8 BOM，**用 UTF-8 BOM 保存**（AGENTS.md 第 6 節的腳本編碼約定）。
+- 安裝時按系統語言自動選擇（`LanguageDetectionMethod=uilanguage`，確認現有配置）。
+
+### 驗收
+
+`publish-release.ps1` 生成安裝程序無錯誤；**待用戶在繁體中文系統（或把顯示語言改為繁中）上運行安裝程序**確認界面為繁中。
+
+---
+
+## M3-19 界面小修（桌面）
+
+### a. 總覽指標卡在窄視窗下換行
+
+- 範圍：`Views/OverviewView.axaml`。
+- 現在四張指標卡是 `Grid ColumnDefinitions="*,*,*,*"`，視窗最小寬度 900 時每張只有約 140 px。改為按可用寬度切換列數：寬度 ≥ 1000 時 4 列，否則 2 列（2×2）。實現：在視圖代碼後置中監聽內容區 `Bounds` 變化切換 `Grid` 的列定義和子元素的 `Grid.Row / Grid.Column`，或使用 `UniformGrid` 並綁定 `Columns`。「網路用量」和「排行榜」兩欄的 `Grid` 同理（< 1000 時改為上下排列）。
+- 驗收：把視窗拉到最小寬度，指標卡排成 2×2、文字不截斷（**界面效果由用戶確認**）。
+
+### b. 連線記錄顯示本地端點
+
+- 背景：`connection_log` 沒有本地地址和端口（`LogDetailViewModel` 因此不顯示本地端點）。本地端口是臨時端口，**不能加入聚合鍵**（否則每條連線都是一行，聚合失效）。
+- 範圍：新遷移 `Migrations/Activity/0003_log_local_endpoint.sql`（`ALTER TABLE connection_log ADD COLUMN local_ip TEXT; ADD COLUMN local_port INTEGER;`，SQLite 每條 ALTER 只能加一列，寫兩條）、`Storage/Activity/ActivityLogWriter.cs`（插入時寫入，衝突更新時用最新值覆蓋）、`SqliteActivityQuery.cs`、`Core/Activity/Activity.cs`（`LogEntry` 追加可選參數 `IPEndPoint? Local = null`，放在參數列表**末尾**以保持兼容）、`activity.proto`（`LogEntry` 追加 `IpEndpoint local = 13;`）、`Service/Grpc/ProtoMapper.cs`、`App` 的 `LogItemViewModel` / `LogDetailViewModel`。
+- 語義：記錄的是「這一分鐘內最近一次」的本地端點，詳情中標註為「本地端點（最近一次）」。
+- 測試：存儲層寫入 / 讀取、舊數據（列為 NULL）讀取不報錯、Android 構建（Storage 共用）。
+
+---
+
+## 不在本階段的項目
+
+以下屬於 P2 或後續里程碑，本階段不設計、不分派（需要時另出設計）：Linux 引擎 M2 的剩餘部分（eBPF 進程歸屬、DNS 採集、服務接入）、macOS 引擎 M4、限速、黑名單訂閱、時間段規則、地圖 / ASN、密碼保護、命令行工具 `ncctl`、Windows WFP Callout 驅動；Android 的轉發模式（用戶態協議棧）、桌面小工具、工作資料夾、AAB 上架。
+
+已經有設計、在 progress.md「可分派任務」中的：A3 譯文審校、A4 Windows 引擎測試補充、A5 CI 測試報告。
+
+需要用戶本人完成的：WFP 真實攔截和托盤菜單的確認、代碼簽名證書、Android 正式密鑰庫、各廠商 ROM 實測。
 
 ---
 
