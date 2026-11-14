@@ -1,4 +1,4 @@
-# Android Kotlin comparison build helper.
+﻿# Android Kotlin comparison build helper.
 # Usage:
 #   .\scripts\android-kotlin.ps1 build
 #   .\scripts\android-kotlin.ps1 test
