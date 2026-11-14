@@ -10,7 +10,7 @@
 
 1. **服務 SID（`FWPM_CONDITION_ALE_USER_ID`）技術上可行**，但只對「服務 SID 類型為 `UNRESTRICTED` / `RESTRICTED`」且「能確定連線屬於哪一個服務」的情況有效。`NONE` 的服務（例如本機的 `SamSs`、`Themes`）token 中沒有服務 SID，無法用這個條件匹配。
 2. **svchost 共享進程是比 SID 類型更大的限制**：同一個進程承載多個服務時，進程 token 會包含這些服務的全部 SID；因此針對其中一個服務的 `ALE_USER_ID` 過濾器會同時匹配同一進程中所有服務的連線。Windows 10 1703 之後大多數服務已拆成獨立進程，但仍有例外（本機實測 `BFE` + `mpssvc` 共用 PID 3448，`RpcSs` + `RpcEptMapper` 共用 PID 1364）。
-3. **原設計「MSIX / 商店應用較確定」的判斷不成立**。本機執行中的 27 個 `C:\Program Files\WindowsApps` 進程中，可查詢 token 的 26 個**全部不是 AppContainer**（`TokenIsAppContainer == false`），包括 Windows Terminal、PowerShell、Spotify、ChatGPT/Codex；剩下 1 個是 SYSTEM 服務（`MSPCManagerService.exe`），非管理員無法查詢 token。依 Microsoft 與 Project Zero 的文件，非 AppContainer 進程的 `FWPM_CONDITION_ALE_PACKAGE_ID` 是 **NULL SID `S-1-0-0`**，只用 `ALE_PACKAGE_ID` 的規則對這些應用永遠不會匹配。
+3. **原設計「MSIX / 商店應用較確定」的判斷不成立**。本機執行中的 27 個 `C:\Program Files\WindowsApps` 進程中，可查詢 token 的 26 個裡只有 **2 個**是 AppContainer：`Video.UI.exe`（Microsoft.ZuneVideo，PFN 派生的 SID 與 token 完全一致）和一個 ChatGPT 子進程（自訂 AppContainer profile，SID 與 PFN 派生值不同）。其餘 **24 個都是 full-trust**（`TokenIsAppContainer == false`），包括 Windows Terminal、PowerShell、Spotify、ChatGPT 主進程。剩下 1 個是 SYSTEM 服務（`MSPCManagerService.exe`），非管理員無法查詢 token。依 Microsoft 與 Project Zero 的文件，非 AppContainer 進程的 `FWPM_CONDITION_ALE_PACKAGE_ID` 是 **NULL SID `S-1-0-0`**，只用 `ALE_PACKAGE_ID` 的規則對這 24 個應用永遠不會匹配。
 4. 全信任（full-trust / `mediumIL`）MSIX 應用需要改用其他條件，候選是 `FWPM_CONDITION_ALE_PACKAGE_FAMILY_NAME` 或 `FWPM_CONDITION_ALE_SECURITY_ATTRIBUTE_FQBN_VALUE`。兩者的實際資料類型和匹配行為**需要用管理員在 WFP 上實測**（見 §8）。
 5. **`AppMatcher.PackageId` 目前沒有任何 Windows 代碼會填值**：`WindowsProcessInfoProvider` 只填 PID / 路徑，`WindowsAppInspector` 只處理簽名。建議把 `PackageId` 正式定義為 **Package Family Name（PFN）**，例如 `Microsoft.WindowsTerminal_8wekyb3d8bbwe`，並用 `GetPackageFamilyName` API 填充；不要存完整包名或 AUMID（`PFN!App`）。
 6. 建議的實作順序：
@@ -123,6 +123,8 @@ nonexistent_1234567890
 3. 對導入的規則，建議用 `GetPackageFullName` / `PackageManager` 或 `Get-AppxPackage` 等價 API 檢查套件存在；不存在就跳過並提示（不要默默產生假 SID）。
 4. 單元測試要覆蓋「輸入 AUMID 會被拒絕」。
 
+補充：若要在程式內核對 token 的 AppContainer SID，`GetTokenInformation(TokenAppContainerSid = 31)` 的緩衝區不只 8 字節（`TOKEN_APPCONTAINER_INFORMATION` 的 `PSID` 指向**同一緩衝區內的內聯 SID**）；本機實測 package SID 需要 48–64 字節。不要只分配 `sizeof(TOKEN_APPCONTAINER_INFORMATION)`，否則會得到 `ERROR_INSUFFICIENT_BUFFER`（122）。另外，自訂 AppContainer profile 的 token SID 不是套件 PFN 派生出的 package SID（本機 ChatGPT 子進程就是這種情況），不能拿 PFN 派生值去匹配它。
+
 ### 2.3 全信任 MSIX 的實測風險
 
 本機（Windows 10 19045）執行中的 WindowsApps 進程：
@@ -132,9 +134,13 @@ nonexistent_1234567890
 | WindowsTerminal.exe | 否 | `TokenIsAppContainer == false` |
 | pwsh.exe | 否 | 同上 |
 | SpotifyLauncher.exe | 否 | 同上 |
-| ChatGPT.exe（Codex） | 否 | 同上 |
-| 其他 21 個可查詢的 WindowsApps 進程 | 否 | 合計可查詢 26 個，AppContainer 為 0 |
+| ChatGPT.exe（主進程） | 否 | 同上 |
+| Video.UI.exe（Microsoft.ZuneVideo） | **是（套件 AppContainer）** | token SID 與 `DeriveAppContainerSidFromAppContainerName(PFN)` 完全一致 |
+| ChatGPT.exe（PID 21332） | **是（自訂 AppContainer profile）** | token SID 有 11 個 sub-authority，PFN 派生值只有 7 個，兩者不同 |
+| 其他 20 個可查詢的 WindowsApps 進程 | 否 | — |
 | MSPCManagerService.exe | 無法查詢 | SYSTEM 服務，非管理員無權打開 token |
+
+合計可查詢 26 個：24 個 full-trust、2 個 AppContainer。**好消息**：對真正的套件 AppContainer（`Video.UI`），PFN → SID 的派生結果已經和 token 實測一致；`ALE_PACKAGE_ID` 在這種情況下可用。但對 full-trust（24/26）和自訂 AppContainer profile（ChatGPT 子進程）不行。
 
 這是正常的：MSIX 桌面應用（`packagedClassicApp`、`mediumIL`）有 package identity，但**不在 AppContainer 中執行**；`WIN://SYSAPPID` 屬性存在，但 `TokenIsAppContainer` 為 false。依 §2.1 的語義，`ALE_PACKAGE_ID` 對它們是 `S-1-0-0`。
 
@@ -350,7 +356,7 @@ Microsoft「Configure Firewall Rules With Group Policy」明確寫：
 ## 7. 風險
 
 1. **假 SID**：`DeriveAppContainerSidFromAppContainerName` 和 `sc showsid` 都接受任意名稱並返回合法 SID；不校驗會導致規則「成功但永不匹配」。這是最容易被忽略的風險。
-2. **全信任 MSIX**：只做 `ALE_PACKAGE_ID` 對本機可查詢的 26/26 個商店應用進程無效；必須有 PFN / FQBN 或路徑方案。
+2. **全信任 MSIX**：只做 `ALE_PACKAGE_ID` 對本機可查詢的 24/26 個商店應用進程無效；必須有 PFN / FQBN 或路徑方案。
 3. **共享 svchost 誤傷**：按服務 SID 的允許規則可能放行同一進程中其他服務的流量；阻斷規則也可能阻斷整個群組。必須在界面和文檔中說明。
 4. **Windows 版本差異**：`ALE_PACKAGE_ID` 是 Win8+，`PACKAGE_FAMILY_NAME` 是 Win10 1703+，`FQBN` 是 Win10+；產品要按 `OperatingSystem.IsWindowsVersionAtLeast` 分級，避免在舊系統下發不支持的條件。
 5. **服務 SID 變更需要重啟**：`sc sidtype` 的變更在下次啟動才生效；測試和用戶提示要考慮。
@@ -400,7 +406,7 @@ Microsoft「Configure Firewall Rules With Group Policy」明確寫：
 | 項目 | 結果 | 是否需要管理員 |
 |---|---|---|
 | `sc qsidtype` 常見服務 | 見 §3.3；多數 UNRESTRICTED，`DPS` RESTRICTED，`SamSs` / `Themes` NONE | 否 |
-| 執行中的 WindowsApps 進程 | 27 個；可查詢的 26 個全是非 AppContainer（另 1 個 SYSTEM 進程無法查詢） | 否 |
+| 執行中的 WindowsApps 進程 | 27 個；可查詢的 26 個中 24 個 full-trust、2 個 AppContainer（1 個套件 AppContainer + 1 個自訂 profile）；另 1 個 SYSTEM 進程無法查詢 | 否 |
 | `DeriveAppContainerSidFromAppContainerName` | 對不存在名稱 / AUMID 也返回合法 SID | 否 |
 | `GetPackageFamilyName` | 可從進程 handle 取得 PFN；未打包返回 15700 | 否 |
 | `netsh advfirewall firewall show rule` | 可讀；409 條服務規則、44 個服務短名 | 否 |
