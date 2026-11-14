@@ -39,4 +39,18 @@ public class DiagnosticsRedactorTests
         var redactor = new DiagnosticsRedactor(["SYSTEM", "ab"], "PC");
         Assert.Equal("SYSTEM ab PC", redactor.Redact("SYSTEM ab PC"));
     }
+
+    [Fact]
+    public void Addresses_are_redacted_only_when_enabled()
+    {
+        const string text = "connect 140.82.112.3:443 and [2606:4700::1111]:443 at 17:12:34";
+        Assert.Equal(text, Redactor.Redact(text));
+
+        var redactor = new DiagnosticsRedactor(redactAddresses: true);
+        var redacted = redactor.Redact(text);
+        Assert.DoesNotContain("140.82.112.3", redacted);
+        Assert.DoesNotContain("2606:4700::1111", redacted);
+        Assert.Contains(DiagnosticsRedactor.AddressPlaceholder, redacted);
+        Assert.Contains("17:12:34", redacted); // 時間不是 IP，不能誤傷
+    }
 }

@@ -31,9 +31,44 @@
         <source>If not answered</source>
       </segment>
     </unit>
+    <unit id="Diagnostics">
+      <segment>
+        <source>Diagnostics</source>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsHint">
+      <segment>
+        <source>Export a zip with the app version, device model, engine counters, recent logs and rule statistics. Connection addresses are redacted.</source>
+      </segment>
+    </unit>
+    <unit id="ExportCanceled">
+      <segment>
+        <source>Export cancelled</source>
+      </segment>
+    </unit>
+    <unit id="ExportDiagnostics">
+      <segment>
+        <source>Export diagnostics</source>
+      </segment>
+    </unit>
+    <unit id="ExportFailed">
+      <segment>
+        <source>Export failed: {0}</source>
+      </segment>
+    </unit>
+    <unit id="ExportSaved">
+      <segment>
+        <source>Saved {0}</source>
+      </segment>
+    </unit>
     <unit id="FollowSystem">
       <segment>
         <source>System</source>
+      </segment>
+    </unit>
+    <unit id="IncludeAppList">
+      <segment>
+        <source>Include app list</source>
       </segment>
     </unit>
     <unit id="Language">

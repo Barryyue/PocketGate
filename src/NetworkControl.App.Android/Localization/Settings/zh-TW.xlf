@@ -37,10 +37,52 @@
         <target state="translated">未回應時</target>
       </segment>
     </unit>
+    <unit id="Diagnostics">
+      <segment>
+        <source>Diagnostics</source>
+        <target state="translated">診斷資訊</target>
+      </segment>
+    </unit>
+    <unit id="DiagnosticsHint">
+      <segment>
+        <source>Export a zip with the app version, device model, engine counters, recent logs and rule statistics. Connection addresses are redacted.</source>
+        <target state="translated">導出包含版本、裝置型號、引擎計數器、最近日誌和規則統計的 zip。連線位址會先脫敏。</target>
+      </segment>
+    </unit>
+    <unit id="ExportCanceled">
+      <segment>
+        <source>Export cancelled</source>
+        <target state="translated">已取消導出</target>
+      </segment>
+    </unit>
+    <unit id="ExportDiagnostics">
+      <segment>
+        <source>Export diagnostics</source>
+        <target state="translated">導出診斷資訊</target>
+      </segment>
+    </unit>
+    <unit id="ExportFailed">
+      <segment>
+        <source>Export failed: {0}</source>
+        <target state="translated">導出失敗：{0}</target>
+      </segment>
+    </unit>
+    <unit id="ExportSaved">
+      <segment>
+        <source>Saved {0}</source>
+        <target state="translated">已儲存 {0}</target>
+      </segment>
+    </unit>
     <unit id="FollowSystem">
       <segment>
         <source>System</source>
         <target state="translated">跟隨系統</target>
+      </segment>
+    </unit>
+    <unit id="IncludeAppList">
+      <segment>
+        <source>Include app list</source>
+        <target state="translated">包含應用程式清單</target>
       </segment>
     </unit>
     <unit id="Language">

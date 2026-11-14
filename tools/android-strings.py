@@ -163,6 +163,13 @@ CATALOGS = {
         ('ProfileRuleCount', '{0} rules', '{0} 條規則', '{0} 条规则'),
         ('ProfileDeleteConfirmTitle', 'Delete this profile?', '刪除這個設定檔？', '删除这个配置文件？'),
         ('ProfileDeleteConfirmContent', 'Its dedicated rules will also be deleted. Shared rules are not affected.', '它的專屬規則也會被刪除；共用規則不受影響。', '它的专属规则也会被删除；共享规则不受影响。'),
+        ('Diagnostics', 'Diagnostics', '診斷資訊', '诊断信息'),
+        ('DiagnosticsHint', 'Export a zip with the app version, device model, engine counters, recent logs and rule statistics. Connection addresses are redacted.', '導出包含版本、裝置型號、引擎計數器、最近日誌和規則統計的 zip。連線位址會先脫敏。', '导出包含版本、设备型号、引擎计数器、最近日志和规则统计的 zip。连接地址会先脱敏。'),
+        ('IncludeAppList', 'Include app list', '包含應用程式清單', '包含应用列表'),
+        ('ExportDiagnostics', 'Export diagnostics', '導出診斷資訊', '导出诊断信息'),
+        ('ExportSaved', 'Saved {0}', '已儲存 {0}', '已保存 {0}'),
+        ('ExportCanceled', 'Export cancelled', '已取消導出', '已取消导出'),
+        ('ExportFailed', 'Export failed: {0}', '導出失敗：{0}', '导出失败：{0}'),
     ],
 }
 

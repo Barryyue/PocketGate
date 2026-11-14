@@ -138,6 +138,9 @@ public interface IBackend
 
     /// <summary>語言切換後刷新通知渠道名稱、前台通知和已顯示的詢問通知。</summary>
     void RefreshNotifications();
+
+    /// <summary>當前生效規則的快照（診斷統計用；可能包含其他配置文件與已過期的規則）。</summary>
+    IReadOnlyList<Rule> Rules { get; }
 }
 
 internal sealed class Backend : IBackend
@@ -253,6 +256,8 @@ internal sealed class Backend : IBackend
     public VpnEngineCounters Counters => _engine.Counters;
 
     public IReadOnlyList<Profile> Profiles => _profiles.All;
+
+    public IReadOnlyList<Rule> Rules => [.. _rules.Current.Rules];
 
     public Profile ActiveProfile => _profiles.Active;
 

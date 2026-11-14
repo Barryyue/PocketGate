@@ -44,4 +44,11 @@ public enum SettingsLangResourceKind
     ProfileRuleCount,
     ProfileDeleteConfirmTitle,
     ProfileDeleteConfirmContent,
+    Diagnostics,
+    DiagnosticsHint,
+    IncludeAppList,
+    ExportDiagnostics,
+    ExportSaved,
+    ExportCanceled,
+    ExportFailed,
 }

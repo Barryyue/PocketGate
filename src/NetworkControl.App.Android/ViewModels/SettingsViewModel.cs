@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NetworkControl.Android.Infrastructure;
 using NetworkControl.Android.Localization;
+using NetworkControl.Android.Platform;
 using NetworkControl.Core.Domain;
 
 namespace NetworkControl.Android.ViewModels;
@@ -57,6 +58,16 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 
     [ObservableProperty]
     public partial string? ProfileError { get; set; }
+
+    /// <summary>診斷包是否包含應用清單（默認不含包名）。</summary>
+    [ObservableProperty]
+    public partial bool IncludeAppList { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsExporting { get; set; }
+
+    [ObservableProperty]
+    public partial string? DiagnosticsStatus { get; set; }
 
     public bool HasProfiles => Profiles.Count > 0;
 
@@ -273,6 +284,35 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         _ => FilterMode.Ask,
     };
 
+
+    [RelayCommand]
+    private async Task ExportDiagnosticsAsync()
+    {
+        if (IsExporting)
+        {
+            return;
+        }
+
+        IsExporting = true;
+        DiagnosticsStatus = null;
+        try
+        {
+            var result = await DiagnosticsExporter.ExportAsync(Backend, IncludeAppList, CancellationToken.None);
+            DiagnosticsStatus = result.Saved
+                ? Loc.Format(SettingsLangResourceKind.ExportSaved, result.FileName)
+                : result.Canceled
+                    ? Loc.Get(SettingsLangResourceKind.ExportCanceled)
+                    : Loc.Format(SettingsLangResourceKind.ExportFailed, result.Error ?? "");
+        }
+        catch (Exception ex)
+        {
+            DiagnosticsStatus = Loc.Format(SettingsLangResourceKind.ExportFailed, ex.Message);
+        }
+        finally
+        {
+            IsExporting = false;
+        }
+    }
 
     [RelayCommand]
     private void OpenNotificationSettings() => MainActivity.Current?.OpenNotificationSettings();
