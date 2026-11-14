@@ -21,6 +21,8 @@
     <Company>NetworkControl</Company>
     <Copyright>Copyright © NetworkControl contributors</Copyright>
     <VersionPrefix>0.3.0</VersionPrefix>
+    <!-- 更新清單地址（latest.json）：留空時界面中不顯示更新功能。正式發布源確定後填入，例如 https://example.com/networkcontrol/latest.json -->
+    <UpdateFeedUrl></UpdateFeedUrl>
     <NeutralLanguage>zh-Hant</NeutralLanguage>
 
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>

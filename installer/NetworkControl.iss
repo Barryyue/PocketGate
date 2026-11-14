@@ -1,4 +1,4 @@
-; NetworkControl 安裝程序（Inno Setup 6）。由 scripts\publish-release.ps1 調用 ISCC 編譯，所有參數通過 /D 傳入：
+﻿; NetworkControl 安裝程序（Inno Setup 6）。由 scripts\publish-release.ps1 調用 ISCC 編譯，所有參數通過 /D 傳入：
 ;   AppVersion      顯示版本，例如 0.1.0
 ;   NumericVersion  四段數字版本（文件版本信息），例如 0.1.0.0
 ;   BuildLabel      構建標記（提交哈希，未提交時帶 -dirty）
@@ -55,6 +55,8 @@ ArchitecturesAllowed={#Arch}
 ArchitecturesInstallIn64BitMode={#Arch}
 ; Windows 10 1809 起（與 .NET 10 的最低要求一致）
 MinVersion=10.0.17763
+; 按 Windows 界面語言自動選擇安裝語言；沒有匹配時使用清單中的第一種語言
+LanguageDetectionMethod=uilanguage
 OutputDir={#OutputDir}
 OutputBaseFilename={#AppName}-{#AppVersion}-{#Runtime}-setup
 Compression=lzma2/max
@@ -70,16 +72,22 @@ UsedUserAreasWarning=no
 
 [Languages]
 Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+; 繁體中文是 Inno Setup 6.5.0+ 的官方翻譯（社群維護，見 Languages\ChineseTraditional.isl 的來源和授權說明）
+Name: "chinesetraditional"; MessagesFile: "Languages\ChineseTraditional.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [CustomMessages]
 chinesesimplified.AutoStartTask=登录时启动界面（推荐：“询问”模式下需要界面回应弹窗）
+chinesetraditional.AutoStartTask=登入時啟動介面（建議：「詢問」模式需要介面回應彈窗）
 english.AutoStartTask=Start the interface when I sign in (recommended: prompts need the interface in Ask mode)
 chinesesimplified.ExportDiagnostics=导出诊断包
+chinesetraditional.ExportDiagnostics=匯出診斷包
 english.ExportDiagnostics=Export diagnostics
 chinesesimplified.ServiceFailed=无法注册或启动 NetworkControl 服务（%1）。请导出诊断包发给开发者。
+chinesetraditional.ServiceFailed=無法註冊或啟動 NetworkControl 服務（%1）。請匯出診斷包並傳給開發者。
 english.ServiceFailed=Could not register or start the NetworkControl service (%1). Please export diagnostics and send them to the developer.
 chinesesimplified.RemoveDataPrompt=是否同时删除规则和日志（%1）？%n%n选择“否”可在重新安装后继续使用原来的规则。
+chinesetraditional.RemoveDataPrompt=是否同時刪除規則和記錄（%1）？%n%n選擇「否」可在重新安裝後繼續使用原來的規則。
 english.RemoveDataPrompt=Also delete rules and logs (%1)?%n%nChoose No to keep your rules for a future reinstall.
 
 [Tasks]

@@ -297,5 +297,55 @@
       </segment>
     </unit>
     <unit id="BlockInbound"><segment><source>Block inbound connections by default</source></segment></unit>
+    <unit id="SectionUpdate">
+      <segment>
+        <source>Updates</source>
+      </segment>
+    </unit>
+    <unit id="UpdateHint">
+      <segment>
+        <source>NetworkControl checks for a new version at most once a day. Nothing is uploaded, and updates are not installed automatically.</source>
+      </segment>
+    </unit>
+    <unit id="UpdateAutoCheck">
+      <segment>
+        <source>Check for updates automatically</source>
+      </segment>
+    </unit>
+    <unit id="UpdateCheckNow">
+      <segment>
+        <source>Check now</source>
+      </segment>
+    </unit>
+    <unit id="UpdateChecking">
+      <segment>
+        <source>Checking…</source>
+      </segment>
+    </unit>
+    <unit id="UpdateNeverChecked">
+      <segment>
+        <source>Not checked yet</source>
+      </segment>
+    </unit>
+    <unit id="UpdateLastChecked">
+      <segment>
+        <source>Last checked: {0}</source>
+      </segment>
+    </unit>
+    <unit id="UpdateAvailable">
+      <segment>
+        <source>Version {0} is available (you have {1}).</source>
+      </segment>
+    </unit>
+    <unit id="UpdateDownload">
+      <segment>
+        <source>Download</source>
+      </segment>
+    </unit>
+    <unit id="UpdateIgnore">
+      <segment>
+        <source>Ignore this version</source>
+      </segment>
+    </unit>
   </file>
 </xliff>

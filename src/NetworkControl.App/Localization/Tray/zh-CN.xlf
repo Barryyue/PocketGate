@@ -85,5 +85,11 @@
         <target state="translated">应用</target>
       </segment>
     </unit>
+    <unit id="UpdateAvailable">
+      <segment>
+        <source>Update {0} available</source>
+        <target state="translated">有新版本 {0} 可用</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

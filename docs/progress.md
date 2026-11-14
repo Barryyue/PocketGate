@@ -83,7 +83,7 @@
 
 **合併 main（Android 版）後（2026-11-14）：Windows 解決方案 292 個測試，291 通過、1 個跳過；Android Debug APK 用用戶級工具鏈（`D:\tools\android-dev`，`scripts/android.ps1 build`）構建通過（0 錯誤；3 個 XA0033 是工具鏈解析 JDK 版本號的既有警告），**未在設備上回歸**。本輪改動了 Core（`IActivityQuery` 新增兩個方法、判決後補充解析應用身份）和 Storage（遷移 `Activity/0002`、備份 / 導入導出），均為追加式修改。**
 
-**測試現狀（2026-11-14）：366 個，365 通過、1 個跳過（Linux /proc 符號鏈接測試，Windows 非開發者模式不能建立符號鏈接）；完整解決方案構建零警告零錯誤；`dotnet format --verify-no-changes` 通過；Android Debug 構建通過（3 個既有 XA0033 警告），未在設備上回歸。Release / AOT 發布包本輪未重新生成。**
+**測試現狀（2026-11-14）：420 個，419 通過、1 個跳過（Linux /proc 符號鏈接測試，Windows 非開發者模式不能建立符號鏈接）；完整解決方案構建零警告零錯誤；`dotnet format --verify-no-changes` 通過；Android Debug 構建通過（3 個既有 XA0033 警告），未在設備上回歸。Release / AOT 發布包本輪未重新生成；更新檢查已用本機 HTTP 伺服器 + Release 構建端到端驗證（見 M3-13）。**
 
 ---
 
@@ -154,6 +154,7 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
     - 平台：Fake 網絡監視器 + `Simulator.SimulateNetwork`；Windows 用 `NetworkInterface` 判斷有線 / Wi-Fi / 蜂窩和網絡 ID（SSID 暫未接入 WlanAPI）；Android `registerDefaultNetworkCallback`，SSID 需要定位權限。
     - 界面：桌面配置文件編輯器加入自動切換類型 / SSID；`Profiles.GetNetwork` 和 `ServiceStatus.network_display_name`。
     - **驗證**：單元測試和 Fake 探針（Wi-Fi CorpNet 自動切到公司、無匹配保持、手動覆蓋）。**未驗證**：Windows 真實 Wi-Fi 切換、Android 真機。
+    - 2026-11-14：修正場景測試的時序依賴（提交 `91102ac`）——整套測試並行時偶發失敗（Core 單獨連跑 5 次均通過），改為等待期間持續推進虛擬時間。
   - [ ] M3-05 Android 阻斷快速失敗（TCP RST / ICMP 不可達）
   - [ ] M3-06 Android 規則導入導出
   - [~] (claude, 2026-11-14) M3-07 勿擾期間阻斷彙總通知（Core + 桌面 + Android）
@@ -171,16 +172,29 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
   - [~] (claude, 2026-11-14) M3-12 權限分級提示（桌面）
     - `ServiceConnection.CanModify`；`PageViewModel.RunAsync` 把 `PermissionDenied` 轉為本地化提示；規則 / 應用 / 配置文件 / 服務設置的寫操作禁用，頁頭顯示說明。
     - **未驗證**：`TreatAllClientsAsAdmin=false` + 普通用戶的界面效果（需要用戶確認）。
-  - [ ] M3-13 檢查更新（桌面，**需要用戶先決定發布源**）
+  - [~] (claude, 2026-11-14) M3-13 檢查更新（桌面）
+    - `Directory.Build.props` 新增 `UpdateFeedUrl`（默認空），界面程序集用 `AssemblyMetadata` 讀取；為空、Debug 或 `-dirty` 構建時整個功能隱藏。清單解析、版本比較、`minimumOs` 校驗與「忽略此版本」判斷放在 `Ipc/Updates`（System.Text.Json 源生成），新增測試。
+    - `UpdateChecker` 只在界面進程聯網：尊重系統代理、10 秒超時、User-Agent 為 `NetworkControl/<版本>`、失敗只寫界面日誌；啟動 30 秒後檢查、之後每 24 小時。設定頁「更新」卡片包含自動檢查開關、立即檢查、版本與說明、下載（系統瀏覽器）和忽略此版本，忽略記錄在 `UiPreferences`；托盤菜單在有新版時顯示「有新版本 x.y.z」，點擊打開下載頁。
+    - **驗證**（提交 `f3bddc0`、`be8dce2`）：420 個測試 419 通過、1 跳過；本機 HTTP 伺服器 + Release 構建（`-p:UpdateFeedUrl=http://127.0.0.1:8765/latest.json`）端到端確認界面在啟動約 30 秒後請求 `latest.json`，日誌記錄「Update 9.9.9 is available」。**未驗證**：正式 feed URL、真實網絡 / 系統代理、界面與托盤效果（需要用戶確認）。
   - [~] (claude, 2026-11-14) M3-14 應用圖標（桌面）
     - `AppIconCache` 用 shell32 / gdi32 在後台提取大圖標，轉成 `WriteableBitmap`，按路徑緩存最多 512 項；應用頁顯示圖標；失敗或非 Windows 返回 null。
     - **驗證**：構建通過；**未驗證**：界面圖標效果（需要用戶確認）。目前只接入應用頁，即時連線 / 排行榜 / 詢問彈窗尚未接入。
+    - **待修復（代碼審查發現，2026-11-14，提交 `f4ee5e2`「連線頁顯示應用圖標」）**：修復時附帶測試，修完逐項標註。
+      - [ ] **圖標永遠提取不出來（必須修，已核實）**：`AppIconCache.cs:64` 寫的是 `Marshal.SizeOf<Bitmap>()`，這裡的 `Bitmap` 是 Avalonia 的位圖類，對它調用會拋 `ArgumentException`；第 48 行的 `catch` 沒有捕獲這個異常，失敗的任務還被緩存（第 27 行）。結果是應用頁和連線頁的圖標一直空白。改為 `Marshal.SizeOf<NativeBitmap>()`，並把提取過程中的意外異常記入日誌後返回 null，不讓失敗的任務留在緩存裡。
+      - [ ] **舊式圖標顯示為全透明**（`AppIconCache.cs:99`）：沒有 Alpha 通道的老圖標，所有像素的 Alpha 都是 0。Alpha 全為 0 時改用掩碼位圖（`hbmMask`）生成透明度。
+      - [ ] **一次讀取失敗就永久沒有圖標**（`AppIconCache.cs:26`）：null 結果和成功結果一樣被緩存，文件暫時被鎖（例如被 tipray 攔住）時就再也不重試。失敗結果不緩存，或者只緩存一段時間（例如 5 分鐘）。
+      - [ ] **連線頁的行對象不同步**（`ConnectionsViewModel.cs` 第 205、279、319 行，同一個根源）：`ApplyFilter` 復用界面上已有的行對象，只替換連線數據，而語言切換（`RefreshText`）和「能否斷開」的更新（`UpdateKillSupported`）只作用在 `_all` 中新建的對象上。結果是可見行的文字停留在舊語言、「斷開」按鈕的可用狀態不更新；而且每 2 秒為所有新建對象發起的圖標加載都白做了（300 條連線就是 300 次）。改為：更新已有行時同步全部狀態，只在真正插入新行時加載圖標，語言切換時刷新可見行。
+      - [ ] **圖標加載邏輯重複**：`ConnectionsViewModel.cs:34` 複製了 `AppsViewModel.cs` 中 `AppItemViewModel` 的 `Icon` 和 `LoadIconAsync`，抽成共用的小類，上面的修復只改一處。
+      - [ ] **補測試**：圖標提取（對 Windows 自帶的 exe 提取出非空且非全透明的位圖）、緩存的失敗重試，以及連線頁行對象的狀態同步。
   - [ ] M3-15 svchost 服務與 MSIX 應用的規則下發（Windows，含預研）
   - [~] (claude, 2026-11-14) M3-16 目錄簽名（catalog）校驗（Windows）
     - 嵌入式簽名不存在時，用 `CryptCATAdminAcquireContext2` + SHA-256 / SHA-1 查目錄，`WinVerifyTrust(WTD_CHOICE_CATALOG)` 驗證，目錄簽名者取自已簽名的目錄文件；`WINTRUST_CATALOG_INFO` 佈局測試。
     - **驗證**：本機 `notepad.exe` 識別為 Microsoft 目錄簽名；未驗證其他系統文件。
   - [ ] M3-17 WFP 管理員集成測試（Windows）
-  - [ ] M3-18 安裝程序繁體中文界面（Windows）
+  - [~] (claude, 2026-11-14) M3-18 安裝程序繁體中文界面（Windows）
+    - 取得 Inno Setup 6.5.0+ 官方繁體中文翻譯（維護者 GoneTone，來源 `jrsoftware/issrc` 的 `Files/Languages/ChineseTraditional.isl`）；核對 Inno Setup License：允許再散布源碼文件，條件是保留著作權聲明和授權條文，已在 `installer/Languages/ChineseTraditional.isl` 文件頭注明來源、版本、取得日期並附完整授權條文，翻譯正文未修改，UTF-8 BOM。
+    - `NetworkControl.iss` 的 `[Languages]` 追加 `chinesetraditional`、`[CustomMessages]` 補四條繁中文本、明確 `LanguageDetectionMethod=uilanguage`；`AppId` 未改。
+    - **驗證**（提交 `2acb28d`）：本機 `ISCC.exe` 用臨時 staging 編譯成功（0 錯誤）。**待用戶驗證**：在繁體中文系統（或把顯示語言改為繁中）上運行安裝 / 卸載界面。
   - [~] (codex, 2026-11-14) M3-19 界面小修：指標卡換行、連線記錄的本地端點（桌面）
     - 完成連線記錄本地端點：追加 Activity 0003 遷移、`LogEntry.local` proto 字段、最近一次本地端點寫入 / 查詢，以及日誌表格和詳情顯示；聚合鍵保持不變。
     - 完成窄窗口響應式布局：總覽指標卡在寬度不足 1000 時切換為 2×2，網路用量和排行榜切換為上下排列。

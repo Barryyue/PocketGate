@@ -356,5 +356,65 @@
       </segment>
     </unit>
     <unit id="BlockInbound"><segment><source>Block inbound connections by default</source><target state="translated">默认阻止入站连接</target></segment></unit>
+    <unit id="SectionUpdate">
+      <segment>
+        <source>Updates</source>
+        <target state="translated">更新</target>
+      </segment>
+    </unit>
+    <unit id="UpdateHint">
+      <segment>
+        <source>NetworkControl checks for a new version at most once a day. Nothing is uploaded, and updates are not installed automatically.</source>
+        <target state="translated">NetworkControl 每天最多检查一次新版本。不会上传任何内容，也不会自动安装。</target>
+      </segment>
+    </unit>
+    <unit id="UpdateAutoCheck">
+      <segment>
+        <source>Check for updates automatically</source>
+        <target state="translated">自动检查更新</target>
+      </segment>
+    </unit>
+    <unit id="UpdateCheckNow">
+      <segment>
+        <source>Check now</source>
+        <target state="translated">立即检查</target>
+      </segment>
+    </unit>
+    <unit id="UpdateChecking">
+      <segment>
+        <source>Checking…</source>
+        <target state="translated">正在检查…</target>
+      </segment>
+    </unit>
+    <unit id="UpdateNeverChecked">
+      <segment>
+        <source>Not checked yet</source>
+        <target state="translated">尚未检查</target>
+      </segment>
+    </unit>
+    <unit id="UpdateLastChecked">
+      <segment>
+        <source>Last checked: {0}</source>
+        <target state="translated">上次检查：{0}</target>
+      </segment>
+    </unit>
+    <unit id="UpdateAvailable">
+      <segment>
+        <source>Version {0} is available (you have {1}).</source>
+        <target state="translated">有新版本 {0} 可用（当前为 {1}）。</target>
+      </segment>
+    </unit>
+    <unit id="UpdateDownload">
+      <segment>
+        <source>Download</source>
+        <target state="translated">下载</target>
+      </segment>
+    </unit>
+    <unit id="UpdateIgnore">
+      <segment>
+        <source>Ignore this version</source>
+        <target state="translated">忽略此版本</target>
+      </segment>
+    </unit>
   </file>
 </xliff>

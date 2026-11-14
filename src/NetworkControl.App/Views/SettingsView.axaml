@@ -164,6 +164,35 @@
           <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource DiagnosticsCommandLineHint}" />
         </StackPanel>
       </atom:Card>
+
+      <!-- 更新：清單地址為空或開發構建時整張卡片隱藏（見 UpdateChecker.IsSupported） -->
+      <atom:Card Header="{loc:SettingsLangResource SectionUpdate}" IsVisible="{Binding Update.IsSupported}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{loc:SettingsLangResource UpdateHint}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <atom:ToggleSwitch IsChecked="{Binding Update.AutoCheckEnabled}" />
+            <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource UpdateAutoCheck}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <atom:Button Command="{Binding CheckForUpdatesCommand}" IsLoading="{Binding Update.IsChecking}"
+                         Content="{loc:SettingsLangResource UpdateCheckNow}" />
+            <TextBlock Classes="secondary" VerticalAlignment="Center" Text="{Binding Update.StatusText}" />
+          </StackPanel>
+          <Border IsVisible="{Binding Update.HasUpdate}" BorderBrush="{atom:SharedTokenResource ColorBorderSecondary}"
+                  BorderThickness="1" CornerRadius="6" Padding="12">
+            <StackPanel Spacing="8">
+              <TextBlock Text="{Binding Update.AvailableText}" TextWrapping="Wrap" />
+              <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding Update.HasNotes}"
+                         Text="{Binding Update.NotesText}" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <atom:Button ButtonType="Primary" Command="{Binding DownloadUpdateCommand}"
+                             Content="{loc:SettingsLangResource UpdateDownload}" />
+                <atom:Button Command="{Binding IgnoreUpdateCommand}" Content="{loc:SettingsLangResource UpdateIgnore}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </atom:Card>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

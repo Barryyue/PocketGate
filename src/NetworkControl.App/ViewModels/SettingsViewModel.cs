@@ -24,6 +24,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     private readonly DiagnosticsExportFlow _diagnostics;
     private readonly RuleTransferFlow _transfer;
     private readonly DialogService _dialogs;
+    private readonly UpdateChecker _updates;
     private Proto.UserSettings? _loaded;
     private bool _loading;
 
@@ -35,11 +36,20 @@ public sealed partial class SettingsViewModel : PageViewModel
         DiagnosticsExportFlow diagnostics,
         RuleTransferFlow transfer,
         DialogService dialogs,
+        UpdateChecker updates,
         DisplayText text)
         : base(text)
     {
         _dialogs = dialogs;
         _transfer = transfer;
+        _updates = updates;
+        updates.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(UpdateChecker.IsChecking))
+            {
+                CheckForUpdatesCommand.NotifyCanExecuteChanged();
+            }
+        };
         _diagnostics = diagnostics;
         _connection = connection;
         connection.PropertyChanged += (_, e) =>
@@ -79,6 +89,9 @@ public sealed partial class SettingsViewModel : PageViewModel
     public override string Key => "settings";
 
     public bool CanModify => _connection.CanModify;
+
+    /// <summary>更新檢查器：設定頁直接綁定它的狀態（只在界面進程中工作，不經過服務）。</summary>
+    public UpdateChecker Update => _updates;
 
     public IReadOnlyList<Choice<LanguageTag?>> Languages { get; }
 
@@ -148,6 +161,17 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     [RelayCommand]
     private Task OpenLogFolderAsync() => _diagnostics.OpenLogFolderAsync();
+
+    private bool CanCheckForUpdates() => !_updates.IsChecking;
+
+    [RelayCommand(CanExecute = nameof(CanCheckForUpdates))]
+    private Task CheckForUpdatesAsync() => _updates.CheckAsync();
+
+    [RelayCommand]
+    private void DownloadUpdate() => _updates.OpenDownloadPage();
+
+    [RelayCommand]
+    private void IgnoreUpdate() => _updates.IgnoreAvailable();
 
     /// <summary>每日備份和恢復前快照，最新的在前。</summary>
     public ObservableCollection<Choice<Proto.BackupInfo>> Backups { get; } = [];
