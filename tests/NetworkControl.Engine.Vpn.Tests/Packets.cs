@@ -49,11 +49,12 @@ internal static class Packets
         return packet;
     }
 
-    public static byte[] TcpSegment(ushort sourcePort, ushort destinationPort, byte flags)
+    public static byte[] TcpSegment(ushort sourcePort, ushort destinationPort, byte flags, uint sequence = 0)
     {
         var segment = new byte[20];
         BinaryPrimitives.WriteUInt16BigEndian(segment, sourcePort);
         BinaryPrimitives.WriteUInt16BigEndian(segment.AsSpan(2), destinationPort);
+        BinaryPrimitives.WriteUInt32BigEndian(segment.AsSpan(4), sequence);
         segment[12] = 0x50;
         segment[13] = flags;
         return segment;
@@ -68,8 +69,8 @@ internal static class Packets
         return datagram;
     }
 
-    public static byte[] Syn(string source, ushort sourcePort, string destination, ushort destinationPort) =>
+    public static byte[] Syn(string source, ushort sourcePort, string destination, ushort destinationPort, uint sequence = 0) =>
         source.Contains(':', StringComparison.Ordinal)
-            ? Ipv6(source, destination, Tcp, TcpSegment(sourcePort, destinationPort, 0x02))
-            : Ipv4(source, destination, Tcp, TcpSegment(sourcePort, destinationPort, 0x02));
+            ? Ipv6(source, destination, Tcp, TcpSegment(sourcePort, destinationPort, 0x02, sequence))
+            : Ipv4(source, destination, Tcp, TcpSegment(sourcePort, destinationPort, 0x02, sequence));
 }

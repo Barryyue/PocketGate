@@ -22,6 +22,8 @@ public sealed class VpnEngineCounters
     private long _reported;
     private long _dnsAnswered;
     private long _systemUid;
+    private long _resetsSent;
+    private long _unreachablesSent;
 
     /// <summary>從虛擬網卡讀到的報文數。</summary>
     public long Packets => Interlocked.Read(ref _packets);
@@ -56,6 +58,16 @@ public sealed class VpnEngineCounters
 
     internal void AddSystemUid() => Interlocked.Increment(ref _systemUid);
 
+    /// <summary>回給被明確拒絕的應用的 TCP RST 數（快速失敗）。</summary>
+    public long ResetsSent => Interlocked.Read(ref _resetsSent);
+
+    internal void AddResetSent() => Interlocked.Increment(ref _resetsSent);
+
+    /// <summary>回給被明確拒絕的應用的 ICMP 端口不可達數（快速失敗）。</summary>
+    public long UnreachablesSent => Interlocked.Read(ref _unreachablesSent);
+
+    internal void AddUnreachableSent() => Interlocked.Increment(ref _unreachablesSent);
+
     internal void AddUnparsed() => Interlocked.Increment(ref _unparsed);
 
     internal void AddAttempt() => Interlocked.Increment(ref _attempts);
@@ -73,25 +85,33 @@ public sealed class VpnEngineCounters
 /// 把虛擬網卡中的報文轉換成核心的阻斷事件（docs/android.md §5.5）：
 /// 讀線程只解析和入隊；後台任務查詢 UID、去重、構造 <see cref="FlowInfo"/> 並調用 <see cref="IEngineHost.OnFlowBlocked"/>。
 /// 發往 <see cref="VpnTunnelConfig.DnsServer"/> 的 DNS 查詢在讀線程上直接用假地址回答。
+/// 被明確拒絕的應用在讀線程上立即收到 TCP RST / ICMP 端口不可達（docs/m3-tasks.md M3-05）；
+/// 等待詢問的應用保持黑洞，避免用戶允許後應用已經放棄重試。
 /// </summary>
 internal sealed partial class BlockedFlowReporter : IPacketSink
 {
     private const int QueueCapacity = 512;
     private const int MaxDedupEntries = 4096;
+    private const int MaxFastFailEntries = 4096;
 
     /// <summary>假 DNS 回答的 TTL：盡量短，用戶允許後應用（改走真實網絡）很快就會重新解析。</summary>
     private const uint FakeDnsTtlSeconds = 1;
+
+    /// <summary>同一（UID, 遠端地址）的快速失敗回應間隔：防止應用重試風暴打滿 CPU。</summary>
+    private static readonly TimeSpan FastFailInterval = TimeSpan.FromSeconds(1);
 
     private readonly IConnectionOwnerResolver _owners;
     private readonly IInstalledAppCatalog _catalog;
     private readonly Func<VpnRoutingPlan> _plan;
     private readonly TimeProvider _time;
     private readonly TimeSpan _dedupWindow;
+    private readonly bool _fastFail;
     private readonly ILogger _logger;
     private readonly Channel<PacketInfo> _queue = Channel.CreateBounded<PacketInfo>(
         new BoundedChannelOptions(QueueCapacity) { FullMode = BoundedChannelFullMode.DropWrite, SingleReader = true });
 
     private readonly Dictionary<DedupKey, DateTimeOffset> _recent = [];
+    private readonly Dictionary<FastFailKey, DateTimeOffset> _lastFastFail = [];
     private readonly FakeDnsPool _fakeDns;
     private long _nextFlowId;
 
@@ -103,7 +123,8 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
         TimeProvider time,
         TimeSpan dedupWindow,
         ILogger logger,
-        FakeDnsPool? fakeDns = null)
+        FakeDnsPool? fakeDns = null,
+        bool fastFail = true)
     {
         _fakeDns = fakeDns ?? new FakeDnsPool();
         _owners = owners;
@@ -112,6 +133,7 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
         Counters = counters;
         _time = time;
         _dedupWindow = dedupWindow;
+        _fastFail = fastFail;
         _logger = logger;
     }
 
@@ -135,6 +157,11 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
         if (!info.IsConnectionAttempt)
         {
             return;
+        }
+
+        if (_fastFail)
+        {
+            TrySendFastFail(packet, info, writer);
         }
 
         Counters.AddAttempt();
@@ -229,6 +256,49 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
     public void Complete() => _queue.Writer.TryComplete();
 
     /// <summary>
+    /// 快速失敗：應用當前的分流決策是「明確拒絕」（規則拒絕、白名單未允許、全部封鎖）時，
+    /// TCP SYN 回 RST+ACK、UDP 回 ICMP 端口不可達，讓應用立刻報錯而不是等到超時。
+    /// 等待詢問（<see cref="AppRoutingDecision.BlockAndAsk"/>）、未知 UID、系統 UID 保持黑洞。
+    /// </summary>
+    private void TrySendFastFail(ReadOnlySpan<byte> packet, in PacketInfo info, IPacketWriter writer)
+    {
+        if (_owners.GetOwnerUid(info.Protocol, info.Source, info.Destination) is not { } uid)
+        {
+            return;
+        }
+
+        if (VpnRoutingPlanner.IsSystemUid(uid) || _plan().Find(uid) is not { Decision: AppRoutingDecision.Block })
+        {
+            return;
+        }
+
+        var now = _time.GetUtcNow();
+        var key = new FastFailKey(uid, info.Destination.Address);
+        if (_lastFastFail.TryGetValue(key, out var last) && now - last < FastFailInterval)
+        {
+            return;
+        }
+
+        if (_lastFastFail.Count >= MaxFastFailEntries)
+        {
+            PruneFastFail(now);
+        }
+
+        _lastFastFail[key] = now;
+        switch (info.Protocol)
+        {
+            case L4Protocol.Tcp:
+                writer.Write(IpPacketBuilder.TcpReset(info.Destination, info.Source, info.TcpSequence + 1));
+                Counters.AddResetSent();
+                break;
+            case L4Protocol.Udp:
+                writer.Write(IpPacketBuilder.IcmpPortUnreachable(info.Destination, info.Source, packet));
+                Counters.AddUnreachableSent();
+                break;
+        }
+    }
+
+    /// <summary>
     /// 假 DNS：A 查詢返回地址池中分配給該域名的地址，其他類型返回沒有記錄（應用會退回 IPv4）。
     /// 只有被阻斷的應用會走到這裡（允許的應用不經過 VPN）。
     /// </summary>
@@ -262,8 +332,26 @@ internal sealed partial class BlockedFlowReporter : IPacketSink
         }
     }
 
+    private void PruneFastFail(DateTimeOffset now)
+    {
+        foreach (var (key, at) in _lastFastFail.ToArray())
+        {
+            if (now - at >= FastFailInterval)
+            {
+                _lastFastFail.Remove(key);
+            }
+        }
+
+        if (_lastFastFail.Count >= MaxFastFailEntries)
+        {
+            _lastFastFail.Clear();
+        }
+    }
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "處理被阻斷的聯網嘗試失敗")]
     private static partial void LogProcessFailed(ILogger logger, Exception exception);
 
     private readonly record struct DedupKey(int Uid, L4Protocol Protocol, IPAddress Address, int Port);
+
+    private readonly record struct FastFailKey(int Uid, IPAddress Address);
 }

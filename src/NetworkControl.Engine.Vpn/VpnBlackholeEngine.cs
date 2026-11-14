@@ -20,6 +20,12 @@ public sealed class VpnEngineOptions
 
     /// <summary>同一應用到同一目標的重複嘗試在這段時間內只上報一次。</summary>
     public TimeSpan ReportDedupWindow { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// 被明確拒絕的連線立即回 TCP RST / ICMP 端口不可達（docs/m3-tasks.md M3-05）。
+    /// 等待詢問的連線不受影響，保持黑洞。出問題時可以關掉。
+    /// </summary>
+    public bool FastFail { get; set; } = true;
 }
 
 /// <summary>
@@ -100,7 +106,7 @@ public sealed partial class VpnBlackholeEngine : INetworkEngine
 
             _host = host;
             _cts = new CancellationTokenSource();
-            _reporter = new BlockedFlowReporter(_owners, _catalog, () => CurrentPlan, Counters, _time, _options.ReportDedupWindow, _logger);
+            _reporter = new BlockedFlowReporter(_owners, _catalog, () => CurrentPlan, Counters, _time, _options.ReportDedupWindow, _logger, fastFail: _options.FastFail);
 
             host.Rules.RuleSetChanged += OnRuleSetChanged;
             _state.Changed += OnInputChanged;
