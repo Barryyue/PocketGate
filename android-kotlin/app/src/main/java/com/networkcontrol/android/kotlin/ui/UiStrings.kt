@@ -348,6 +348,9 @@ enum class S {
     ProxyTestSuccess,
     ProxyTestFailed,
     ForwardingDnsHint,
+    ProxyApp,
+    ProxyAppHint,
+    Select,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -714,6 +717,9 @@ private val EN = mapOf(
     S.ProxyTestSuccess to "Proxy is reachable and can connect out.",
     S.ProxyTestFailed to "Proxy test failed: %1\$s",
     S.ForwardingDnsHint to "DNS needs UDP support from the proxy. If pages fail but IP addresses work, turn on UDP forwarding or set a system private DNS (DoT).",
+    S.ProxyApp to "Proxy app",
+    S.ProxyAppHint to "Traffic from this app bypasses the VPN. Keep the proxy running with TUN/VPN mode off to avoid a loop.",
+    S.Select to "Select",
 )
 
 private val CN = mapOf(
@@ -1060,6 +1066,9 @@ private val CN = mapOf(
     S.ProxyTestSuccess to "代理可访问，且能正常连接外网。",
     S.ProxyTestFailed to "代理测试失败：%1\$s",
     S.ForwardingDnsHint to "DNS 需要代理支持 UDP。若网页打不开但 IP 能连，请开启 UDP 转发，或在系统设置里配置私人 DNS（DoT）。",
+    S.ProxyApp to "代理应用",
+    S.ProxyAppHint to "此应用的流量不经过本 VPN。请让代理保持运行并关闭 TUN/VPN 模式，避免回环。",
+    S.Select to "选择",
 )
 
 private val TW = mapOf(
@@ -1406,4 +1415,7 @@ private val TW = mapOf(
     S.ProxyTestSuccess to "代理可連線，且能正常連往外網。",
     S.ProxyTestFailed to "代理測試失敗：%1\$s",
     S.ForwardingDnsHint to "DNS 需要代理支援 UDP。若網頁打不開但 IP 能連，請開啟 UDP 轉發，或在系統設定裡配置私人 DNS（DoT）。",
+    S.ProxyApp to "代理應用",
+    S.ProxyAppHint to "此應用的流量不經過本 VPN。請讓代理保持執行並關閉 TUN/VPN 模式，避免迴圈。",
+    S.Select to "選擇",
 )

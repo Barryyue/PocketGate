@@ -11,6 +11,17 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.8.1",
+            date = "2026-11-15",
+            features = listOf(
+                "转发设置新增「代理应用」选择：被选中的应用流量绕过本 VPN，避免代理自身的连接回环。",
+                "转发设置补充 VPN 共存提示：Android 一次只允许一个 VPN，请关闭代理应用的 TUN/VPN 模式，只保留 SOCKS5 端口。",
+            ),
+            notes = listOf(
+                "代理应用需要保持运行；开启本应用的保护前，先在代理应用里关闭 TUN。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.8.0",
             date = "2026-11-15",
             features = listOf(

@@ -191,6 +191,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_SOCKS5_UDP, true)
         set(value) = prefs.edit().putBoolean(KEY_SOCKS5_UDP, value).apply()
 
+    /** 代理應用包名：轉發模式下排除此應用，避免代理自身的流量回環進 VPN。 */
+    var socks5BypassPackage: String?
+        get() = prefs.getString(KEY_SOCKS5_BYPASS_PACKAGE, null)?.takeIf { it.isNotBlank() }
+        set(value) = prefs.edit().putString(KEY_SOCKS5_BYPASS_PACKAGE, value).apply()
+
     private companion object {
         const val KEY_THEME = "theme"
         const val KEY_LANGUAGE = "language"
@@ -229,6 +234,7 @@ class AppPreferences(context: Context) {
         const val KEY_SOCKS5_HOST = "socks5_host"
         const val KEY_SOCKS5_PORT = "socks5_port"
         const val KEY_SOCKS5_UDP = "socks5_udp"
+        const val KEY_SOCKS5_BYPASS_PACKAGE = "socks5_bypass_package"
         const val DEFAULT_THEME_COLOR = 0xFF2E7D32.toInt()
     }
 }

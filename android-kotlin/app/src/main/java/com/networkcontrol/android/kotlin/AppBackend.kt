@@ -684,6 +684,18 @@ class AppBackend(val container: AppContainer) {
         container.vpnEngine.requestReplan()
     }
 
+    fun socks5BypassPackage(): String? = container.preferences.socks5BypassPackage
+
+    fun setSocks5BypassPackage(packageName: String?) {
+        container.preferences.socks5BypassPackage = packageName
+        container.vpnEngine.requestReplan()
+    }
+
+    fun installedApps(): List<com.networkcontrol.android.kotlin.core.model.InstalledApp> =
+        container.appCatalog.getApps()
+            .filter { it.packageName != context.packageName }
+            .sortedBy { it.label.lowercase() }
+
     fun canDrawOverlays(): Boolean = container.promptOverlay.canDrawOverlays()
 
     fun overlayPermissionIntent(): Intent {

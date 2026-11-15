@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -70,6 +71,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.BuildConfig
 import com.networkcontrol.android.kotlin.core.model.FilterMode
+import com.networkcontrol.android.kotlin.core.model.InstalledApp
 import com.networkcontrol.android.kotlin.core.model.Profile
 import com.networkcontrol.android.kotlin.core.model.RuleImportMode
 import com.networkcontrol.android.kotlin.core.model.RuleImportPreview
@@ -130,6 +132,8 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
     var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
     var socks5Udp by remember { mutableStateOf(backend.socks5Udp()) }
     var proxyTesting by remember { mutableStateOf(false) }
+    var proxyPackage by remember { mutableStateOf(backend.socks5BypassPackage()) }
+    var showProxyAppDialog by remember { mutableStateOf(false) }
     var showTimedOption by remember { mutableStateOf(backend.promptShowTimedOption()) }
     val forwardingAvailable = remember { backend.forwardingAvailable() }
     var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
@@ -785,6 +789,24 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                             backend.setSocks5Udp(it)
                         },
                     )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(s[S.ProxyApp], style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                proxyPackage ?: s[S.Unset],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = { showProxyAppDialog = true }) {
+                            Text(s[S.Select])
+                        }
+                    }
+                    Text(
+                        s[S.ProxyAppHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     OutlinedButton(
                         onClick = {
                             proxyTesting = true
@@ -914,6 +936,19 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
             current = themeColor,
             onDismiss = { showThemeColorDialog = false },
             onSelect = { backend.setThemeColor(it) },
+        )
+    }
+
+    if (showProxyAppDialog) {
+        ProxyAppDialog(
+            apps = remember { backend.installedApps() },
+            selected = proxyPackage,
+            onDismiss = { showProxyAppDialog = false },
+            onSelect = { packageName ->
+                proxyPackage = packageName
+                backend.setSocks5BypassPackage(packageName)
+                showProxyAppDialog = false
+            },
         )
     }
 
@@ -1547,4 +1582,80 @@ private fun DetailLine(label: String, value: String) {
         )
         Text(value, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun ProxyAppDialog(
+    apps: List<InstalledApp>,
+    selected: String?,
+    onDismiss: () -> Unit,
+    onSelect: (String?) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query, apps) {
+        if (query.isBlank()) {
+            apps
+        } else {
+            apps.filter {
+                it.label.contains(query, ignoreCase = true) ||
+                    it.packageName.contains(query, ignoreCase = true)
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.ProxyApp]) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text(s[S.SearchApps]) },
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(null) }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(s[S.Unset], style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    items(filtered, key = { it.packageName }) { app ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(app.packageName) }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    app.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    app.packageName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (app.packageName == selected) {
+                                Text("✓", color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Close]) }
+        },
+    )
 }

@@ -131,7 +131,10 @@ class VpnEngine(
 
         val config = if (preferences.forwardingEnabled) {
             VpnTunnelConfig(
-                bypassPackages = setOf(selfPackage),
+                bypassPackages = buildSet {
+                    add(selfPackage)
+                    preferences.socks5BypassPackage?.let(::add)
+                },
                 forwarding = true,
                 upstreamHost = preferences.socks5Host,
                 upstreamPort = preferences.socks5Port,

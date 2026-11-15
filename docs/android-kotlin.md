@@ -945,3 +945,31 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 模擬器：獨立設定頁、預覽、內容籌片、字體滑桿、詢問限時開關均可操作。
 - 轉發：模擬器 + Reqable 的 HTTP 流量已能完整往返；HTTPS/域名受 `adb reverse` 無 UDP 限制影響，真機需再驗證。
 - 真機未驗證：代理 UDP DNS、不同 ROM 的懸浮窗、字體粗細渲染差異。
+
+---
+
+## 28. v0.8.1-m4spike（2026-11-15）
+
+### 28.1 代理應用繞過 VPN
+
+- **問題**：同時開 NetworkControl VPN 和代理應用時，代理應用的上游流量也會進入本 VPN，再被轉發回代理的 SOCKS 埠，形成回環；代理應用也可能因 VPN 被頂掉而暫停。
+- 轉發設定新增「代理應用」選擇器（可搜尋套件），選中的應用會加入 `VpnTunnelConfig.bypassPackages`，最終呼叫 `Builder.addDisallowedApplication`。
+- 設定頁顯示「Android 一次只允許一個 VPN」提示，要求代理應用關閉 TUN/VPN，只保留 SOCKS5 埠。
+- 清除選擇後恢復只繞過本應用。
+
+### 28.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.1-m4spike.apk` |
+| APK 大小 | 4,236,877 bytes |
+| APK SHA-256 | `852002378EC9EF6F8ED250AEF498B571FE2BF9CE57CBC2D651D15C68BD28802E` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.1-m4spike.aab` |
+| AAB 大小 | 4,831,242 bytes |
+| AAB SHA-256 | `2096B26492B56DB81A7B18B674FB244D2ADB195C68DB48A90C3361F81E844F46` |
+| versionName / Code | `0.8.1-m4spike` / `19` |
+
+### 28.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 真機未驗證：代理應用繞過後 SOCKS 埠是否保持可用、代理應用是否需要額外保活設定。

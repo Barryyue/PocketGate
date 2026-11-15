@@ -163,6 +163,12 @@
 | K-069 | 修復轉發模式：hev 隧道 ipv4/ipv6 改用 VPN 介面實際地址（10.111.222.1 / fd00:6e63::1）、關閉 TSO/USO/jumbo、加大任務堆疊 | `VpnForwardingTransport` | 模擬器 + Reqable SOCKS5：HTTP 請求和回應完整通過 tun0 | 先前位址不一致導致回包被丟棄 |
 | K-070 | 轉發設定新增「測試代理」與 DNS 提示 | `Socks5Probe`、`SettingsScreen` | 代碼審查 | DNS 仍需代理支援 UDP |
 
+### v0.8.1-m4spike（2026-11-15）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-071 | 轉發模式可選擇「代理應用」，把它加入 VPN 的 `addDisallowedApplication`，避免代理自身流量回環；設定頁顯示代理應用與 VPN 共存提示 | `AppPreferences`、`AppBackend`、`VpnEngine`、`SettingsScreen`、`UiStrings` | 構建 + 設定頁代碼審查 | 代理需關閉 TUN、保持 SOCKS 埠 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
