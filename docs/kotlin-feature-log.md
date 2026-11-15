@@ -135,6 +135,12 @@
 |---|---|---|---|---|
 | K-057 | 靈動島水平 / 垂直偏移與背景透明度改為拖動即時生效 | `SpeedIslandController.applyPosition`、`SettingsScreen` | 模擬器拖動水平滑桿 frame x 由 335 變 499，即時顯示 | 真機拖動手勢待驗證 |
 
+### v0.6.10-m4spike（2026-11-15，提交 `2ef6dbc`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-058 | 靈動島「嘗試放進狀態欄」：`FLAG_LAYOUT_IN_SCREEN` / `NO_LIMITS`、`fitInsetsTypes=0`、cutout ALWAYS，垂直偏移可負值 | `SpeedIslandController`、`AppPreferences`、`SettingsScreen` | 構建 + 代碼審查 | 第三方懸浮窗仍在系統狀態欄之下，部分 ROM 會遮住；需真機確認 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

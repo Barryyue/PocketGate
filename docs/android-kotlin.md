@@ -828,3 +828,31 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 模擬器：拖動水平偏移滑桿，靈動島 frame x 由 335 即時變為 499，不需要放開。
 - 背景透明度滑桿同樣在拖動中更新。
 - 真機未驗證：實際拖動手勢、負偏移邊界與低透明度可讀性。
+
+---
+
+## 25. v0.6.10-m4spike（2026-11-15）
+
+### 25.1 狀態欄模式
+
+- 新增設定「嘗試放進狀態欄」：開啟後靈動島使用 `FLAG_LAYOUT_IN_SCREEN`、`FLAG_LAYOUT_NO_LIMITS`、`fitInsetsTypes=0`、cutout `ALWAYS`，可把 `y` 設為負值，移到狀態欄座標區。
+- 垂直偏移範圍仍為 -60..+60dp；狀態欄模式下以 0 為狀態欄頂部，負值再往上。
+- **系統限制**：`TYPE_APPLICATION_OVERLAY` 的層級在系統狀態欄之下，Android 通常會用狀態欄蓋住第三方懸浮窗；vivo 原子島同樣不開放給第三方。部分 ROM 在透明狀態欄或全螢幕應用下可能看得到，屬盡力而為。
+- 若看不到，請關閉「嘗試放進狀態欄」，使用一般懸浮位置。
+
+### 25.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.10-m4spike.apk` |
+| APK 大小 | 4,171,341 bytes |
+| APK SHA-256 | `A2746376061B263F6D2A20E94EFB270B0129AEC536620239C308BDA8FAD7D773` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.10-m4spike.aab` |
+| AAB 大小 | 4,734,088 bytes |
+| AAB SHA-256 | `40D4BA5524515C62CC5A5ED2E512DFE175CF9156EC488500F5FFA4F5E01E7AEA` |
+| versionName / Code | `0.6.10-m4spike` / `16` |
+
+### 25.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 真機未驗證：狀態欄模式在不同 ROM 的可見性；這是 Android 層級限制，不是位置計算問題。
