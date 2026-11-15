@@ -616,3 +616,33 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 速度島與詢問面板都使用 `TYPE_APPLICATION_OVERLAY`；部分系統敏感頁面或 `setHideOverlayWindows(true)` 會隱藏它們。
 - 速度島是系統懸浮窗，關閉保護或鎖屏時隱藏；若使用者撤銷懸浮窗權限，會自動消失。
 - 「直到重啟」已從 UI 移除，但舊版建立過的 `UntilRestart` 規則仍會在當前 NetworkControl 進程內生效，直到進程重啟。
+
+---
+
+## 18. v0.6.3-m4spike（2026-11-15）
+
+### 18.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 靈動島 | 原名「速度島」更名為「靈動島（速度）」；**預設開啟**，保護開啟且螢幕解鎖時顯示上傳/下載速度；設定 → 詢問顯示方式 →「靈動島（速度）」可隨時關閉。 |
+| 權限刷新 | 授予「顯示在其他應用程式上層」後返回設定頁會立即刷新靈動島，不需要重啟。 |
+| 位置 | 靈動島固定在螢幕頂部中央；開啟時詢問面板自動下移 50dp。 |
+
+### 18.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.3-m4spike.apk` |
+| APK 大小 | 4,122,189 bytes |
+| APK SHA-256 | `B506D4A7B6F22FC68367FA2106622DCC67B1D8129BD17C54FDD9B3AB94C4C3C8` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.3-m4spike.aab` |
+| AAB 大小 | 4,667,910 bytes |
+| AAB SHA-256 | `E341F39E6921D09B8E63201A9DBD0E6C1A41D424A9B652711FBD8339DA95AD50` |
+| versionName / Code | `0.6.3-m4spike` / `9` |
+
+### 18.3 驗證
+
+- JVM 測試通過；Debug / Release / AAB 構建通過。
+- 模擬器：設定頁可切換靈動島；保護開啟且 overlay 權限授予時，`dumpsys window` 可見 `NetworkControl speed` 視窗；關閉設定後視窗移除（代碼路徑）。
+- 真機未驗證：瀏海 / 挖孔位置、狀態欄高度、與鍵盤 / 其他懸浮窗遮擋、待機耗電、OEM ROM 限制。

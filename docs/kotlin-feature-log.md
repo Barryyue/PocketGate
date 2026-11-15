@@ -103,7 +103,7 @@
 | ID | 功能 | 實作位置 | 驗證 | 備註 |
 |---|---|---|---|---|
 | K-035e | 詢問壽命精簡：移除「直到重啟」選項，保留允許一次 / 永久 / 限時；限時時長可在設定中心配置（預設 60 分鐘，可改 30 等） | `PromptOverlay`、`PromptOverlayController`、`OverviewScreen`、`UserSettings.promptTimedMinutes`、`SettingsScreen` | 構建 + 模擬器 | `UntilRestart` 枚舉保留以載入舊規則，但不再提供新選擇 |
-| K-052 | 速度島：保護開啟後在螢幕頂部顯示上傳/下載速度；可設定開關、鎖屏隱藏、點擊開啟主界面；詢問面板自動下移避免重疊 | `SpeedIslandController`、`AppContainer`、`SettingsScreen`、`PromptOverlayController` | 模擬器 `dumpsys window` 找到 `NetworkControl speed` | 真機位置 / 遮擋 / 耗電待驗證 |
+| K-052 | 靈動島（速度）：保護開啟後在螢幕頂部顯示上傳/下載速度；預設開啟，可在設定關閉；鎖屏隱藏、點擊開啟主界面；詢問面板自動下移避免重疊 | `SpeedIslandController`、`AppContainer`、`SettingsScreen`、`PromptOverlayController` | 模擬器 `dumpsys window` 找到 `NetworkControl speed` | 真機位置 / 遮擋 / 耗電待驗證 |
 
 ### 尚未完成（待辦，不屬於完成項）
 
