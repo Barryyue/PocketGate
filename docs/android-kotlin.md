@@ -646,3 +646,33 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試通過；Debug / Release / AAB 構建通過。
 - 模擬器：設定頁可切換靈動島；保護開啟且 overlay 權限授予時，`dumpsys window` 可見 `NetworkControl speed` 視窗；關閉設定後視窗移除（代碼路徑）。
 - 真機未驗證：瀏海 / 挖孔位置、狀態欄高度、與鍵盤 / 其他懸浮窗遮擋、待機耗電、OEM ROM 限制。
+
+---
+
+## 19. v0.6.4-m4spike（2026-11-15）
+
+### 19.1 vivo / iQOO 相容模式
+
+- 偵測 `Build.MANUFACTURER` / `Build.BRAND` 含 `vivo` 或 `iqoo`，預設開啟相容模式。
+- 相容模式把靈動島額外下移 16dp，放在 vivo 原子島 / 狀態欄下方，減少重疊。
+- 設定 → 詢問顯示方式 → 靈動島開啟後，可看到「vivo / iQOO 相容模式」開關與「額外頂部偏移 0–48dp」滑桿。
+- 詢問面板在靈動島開啟時同步下移，偏移量與速度島一致。
+- **限制**：第三方應用無法接入 vivo 原子島 API；相容模式只是位置與視覺避讓，不會把內容放進系統島。
+
+### 19.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.4-m4spike.apk` |
+| APK 大小 | 4,154,961 bytes |
+| APK SHA-256 | `6833810590ED314259DDCC24C07C45684FB54B58F35443B605F0EABB894CA092` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.4-m4spike.aab` |
+| AAB 大小 | 4,704,855 bytes |
+| AAB SHA-256 | `DBC2F354935B435D56B363AB52B0A2C28359151522AA80C2C303ECA7C4933DD3` |
+| versionName / Code | `0.6.4-m4spike` / `10` |
+
+### 19.3 驗證
+
+- JVM 測試通過；Debug / Release / AAB 構建通過。
+- 模擬器：速度島預設 frame y=84；開啟 vivo 相容後 y=126（+16dp × density），偏移滑桿可調。
+- 真機未驗證：vivo / iQOO 實際原子島高度、挖孔位置、系統島展開時的遮擋；建議在真機上把「額外頂部偏移」調到不重疊的位置。
