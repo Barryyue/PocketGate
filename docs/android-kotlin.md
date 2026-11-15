@@ -799,3 +799,32 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 模擬器：設定頁可切換三種樣式；模式變更會移除並重建懸浮窗。
 - 真機未驗證：循環節奏是否足夠、迷你模式在窄屏 / 大字體下的寬度、透明背景上的文字可讀性。
+
+---
+
+## 24. v0.6.9-m4spike（2026-11-15）
+
+### 24.1 即時偏移與透明度
+
+- 水平 / 垂直偏移與背景透明度改為拖動滑桿時**即時更新懸浮窗**，不需要放開或重啟。
+- `SpeedIslandController` 在每次刷新時更新 `WindowManager.LayoutParams` 的 `x` / `y`，並呼叫 `updateViewLayout`。
+- 設定頁的 `Slider` 使用 `onValueChange` 直接寫入並刷新；不再等 `onValueChangeFinished`。
+- 文字仍固定白色加陰影，不跟隨背景透明度。
+
+### 24.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.9-m4spike.apk` |
+| APK 大小 | 4,171,345 bytes |
+| APK SHA-256 | `5DD74569409BEFAF6963FE6F919B76A5CFD5DD0D99B9076048FE886578FE8905` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.9-m4spike.aab` |
+| AAB 大小 | 4,733,459 bytes |
+| AAB SHA-256 | `6392CE2903869DF4A2CF43CF66A8D7DCF2558E78A04A7D21703F2E3210A2666C` |
+| versionName / Code | `0.6.9-m4spike` / `15` |
+
+### 24.3 驗證
+
+- 模擬器：拖動水平偏移滑桿，靈動島 frame x 由 335 即時變為 499，不需要放開。
+- 背景透明度滑桿同樣在拖動中更新。
+- 真機未驗證：實際拖動手勢、負偏移邊界與低透明度可讀性。
