@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,12 +20,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -68,6 +72,8 @@ import com.networkcontrol.android.kotlin.core.model.RuleImportMode
 import com.networkcontrol.android.kotlin.core.model.RuleImportPreview
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
+import com.networkcontrol.android.kotlin.core.release.ReleaseNote
+import com.networkcontrol.android.kotlin.core.release.ReleaseNotes
 import com.networkcontrol.android.kotlin.core.update.UpdateChecker
 import com.networkcontrol.android.kotlin.core.update.UpdateInfo
 import com.networkcontrol.android.kotlin.ui.S
@@ -122,6 +128,8 @@ fun SettingsScreen(backend: AppBackend) {
     var showScheduleDialog by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
+    var showReleaseNotes by remember { mutableStateOf(false) }
+    var showReleaseHistory by remember { mutableStateOf(false) }
 
     var timeoutText by remember(settings.promptTimeoutSeconds) {
         mutableStateOf(settings.promptTimeoutSeconds.toString())
@@ -766,7 +774,23 @@ fun SettingsScreen(backend: AppBackend) {
 
         item {
             SectionCard(s[S.About]) {
-                DetailLine(s[S.Version], "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showReleaseHistory = false
+                            showReleaseNotes = true
+                        },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DetailLine(s[S.Version], "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        s[S.ViewDetails],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 DetailLine(s[S.Engine], "AndroidVpn")
                 if (backend.isWorkProfile()) {
                     DetailLine(s[S.WorkProfile], "✓")
@@ -864,6 +888,15 @@ fun SettingsScreen(backend: AppBackend) {
                 backend.setPromptOverlayCustomRatio(ratio)
                 showOverlayPositionDialog = false
             },
+        )
+    }
+
+    if (showReleaseNotes) {
+        ReleaseNotesDialog(
+            currentVersion = BuildConfig.VERSION_NAME,
+            history = showReleaseHistory,
+            onToggleHistory = { showReleaseHistory = !showReleaseHistory },
+            onDismiss = { showReleaseNotes = false },
         )
     }
 
@@ -1374,6 +1407,84 @@ private fun OverlayPositionDialog(
             TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
         },
     )
+}
+
+@Composable
+private fun ReleaseNotesDialog(
+    currentVersion: String,
+    history: Boolean,
+    onToggleHistory: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val s = rememberUiStrings()
+    val current = ReleaseNotes.current(currentVersion)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                if (history) s[S.ReleaseNotesHistory] else "${s[S.ReleaseNotes]} · ${current?.version ?: currentVersion}",
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 480.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (history) {
+                    ReleaseNotes.all.forEach { note -> ReleaseNoteSection(note, s) }
+                } else if (current != null) {
+                    ReleaseNoteSection(current, s)
+                } else {
+                    Text(
+                        s[S.NoReleaseNotes],
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Close]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onToggleHistory) {
+                Text(if (history) s[S.Back] else s[S.ReleaseNotesHistory])
+            }
+        },
+    )
+}
+
+@Composable
+private fun ReleaseNoteSection(
+    note: ReleaseNote,
+    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "${note.version} · ${note.date}",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (note.features.isNotEmpty()) {
+            Text(s[S.NewFeatures], style = MaterialTheme.typography.labelLarge)
+            note.features.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+        }
+        if (note.improvements.isNotEmpty()) {
+            Text(s[S.Improvements], style = MaterialTheme.typography.labelLarge)
+            note.improvements.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+        }
+        if (note.notes.isNotEmpty()) {
+            note.notes.forEach {
+                Text(
+                    "• $it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }
 
 @Composable

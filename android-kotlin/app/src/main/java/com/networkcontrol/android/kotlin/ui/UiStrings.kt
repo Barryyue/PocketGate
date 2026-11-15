@@ -299,6 +299,13 @@ enum class S {
     VivoIslandCompatible,
     VivoIslandHint,
     IslandTopOffset,
+    ViewDetails,
+    ReleaseNotes,
+    NewFeatures,
+    Improvements,
+    ReleaseNotesHistory,
+    Back,
+    NoReleaseNotes,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -616,6 +623,13 @@ private val EN = mapOf(
     S.VivoIslandCompatible to "vivo / iQOO compatibility",
     S.VivoIslandHint to "Places the island below the system island/status bar to avoid overlap. System island APIs are not available to third-party apps.",
     S.IslandTopOffset to "Extra top offset: %1\$d dp",
+    S.ViewDetails to "View",
+    S.ReleaseNotes to "Release notes",
+    S.NewFeatures to "New features",
+    S.Improvements to "Improvements & fixes",
+    S.ReleaseNotesHistory to "Version history",
+    S.Back to "Back",
+    S.NoReleaseNotes to "No release notes for this version.",
 )
 
 private val CN = mapOf(
@@ -913,6 +927,13 @@ private val CN = mapOf(
     S.VivoIslandCompatible to "vivo / iQOO 兼容模式",
     S.VivoIslandHint to "把灵动岛放在系统岛/状态栏下方，减少重叠。第三方应用无法接入系统原子岛 API。",
     S.IslandTopOffset to "额外顶部偏移：%1\$d dp",
+    S.ViewDetails to "查看",
+    S.ReleaseNotes to "版本说明",
+    S.NewFeatures to "新增功能",
+    S.Improvements to "优化与修复",
+    S.ReleaseNotesHistory to "历史版本",
+    S.Back to "返回",
+    S.NoReleaseNotes to "此版本暂无版本说明。",
 )
 
 private val TW = mapOf(
@@ -1210,4 +1231,11 @@ private val TW = mapOf(
     S.VivoIslandCompatible to "vivo / iQOO 相容模式",
     S.VivoIslandHint to "把靈動島放在系統島/狀態列下方，減少重疊。第三方應用程式無法接入系統原子島 API。",
     S.IslandTopOffset to "額外頂部偏移：%1\$d dp",
+    S.ViewDetails to "查看",
+    S.ReleaseNotes to "版本說明",
+    S.NewFeatures to "新增功能",
+    S.Improvements to "最佳化與修正",
+    S.ReleaseNotesHistory to "歷史版本",
+    S.Back to "返回",
+    S.NoReleaseNotes to "此版本暫無版本說明。",
 )
