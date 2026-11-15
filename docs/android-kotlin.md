@@ -549,3 +549,33 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 目前是「所有流量走 SOCKS5」，不是最終 M4；Phase 1 才接入 per-flow 判決、域名傳遞、UDP/QUIC 與按應用控制。
 - 上游建議使用裝置本機的 SOCKS5（例如 FlClash 的 127.0.0.1:7890）；遠端/LAN 上游可能被 VPN 路由環路。
 - 若原生庫載入或啟動失敗，會自動回到黑洞模式並在日誌記錄。
+
+---
+
+## 16. v0.6.1-m4spike（2026-11-15）
+
+### 16.1 「允許一次」語義
+
+- 舊版：`RuleLifetime.Once` 只放行目前詢問批次中的連線（BlockedEvent 另有 60 秒兜底），不是應用會話。
+- 新版：新增 `RuleLifetime.UntilAppExit`，按「允許一次」會建立**應用級暫存規則**；由 `TargetAppSessionTracker` 以 UsageStats `ACTIVITY_STOPPED` 判斷目標應用離開前台，2 秒後移除規則，下次打開會重新詢問。
+- 未取得 UsageStats 權限時，規則最多保留 10 分鐘，之後回收；NetworkControl 重啟時也會消失。
+- `直到重啟` 的語義保持不變：指 **NetworkControl 自身進程 / 服務重啟**，不是目標應用重啟。
+- 限制：Android 一般應用無法可靠觀察其他應用的「滑掉 / 強制停止」，目前以「離開前台」近似；若使用者在應用內快速切換 Activity，2 秒寬限與 RESUMED 事件可避免誤刪。
+
+### 16.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.1-m4spike.apk` |
+| APK 大小 | 4,105,805 bytes |
+| APK SHA-256 | `7C2D6E51225DE43AB1CEC9D8A441F39932D95652C427917CC1ED2128EF100DFA` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.1-m4spike.aab` |
+| AAB 大小 | 4,647,953 bytes |
+| AAB SHA-256 | `10CDDD91606D4C709958DA784BD993974DDDE0F25EA669ECCFBECE8A2ED96159` |
+| versionName / Code | `0.6.1-m4spike` / `7` |
+
+### 16.3 驗證
+
+- JVM 測試新增 `UntilAppExit` 規則建立與非持久化檢查；全部測試通過。
+- Debug / Release / AAB 構建通過。
+- 真機未驗證：允許一次 → 離開應用 → 再次打開是否重新詢問；UsageStats 在 OEM ROM 上的 ACTIVE_STOPPED 事件差異。

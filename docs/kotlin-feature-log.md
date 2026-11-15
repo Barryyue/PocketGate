@@ -67,7 +67,8 @@
 | ID | 功能 | 實作位置 | 驗證 | 備註 |
 |---|---|---|---|---|
 | K-037 | 全域鎖屏斷網：螢幕關閉 / 鎖屏時以 BlockAll 重新規劃；系統 UID 仍保留 | `ScreenStateMonitor`、`VpnEngine`、`SettingsScreen` | 構建 + 代碼審查 | 按應用鎖屏開關尚未做 |
-| K-038 | 「允許一次」：詢問卡片 / 懸浮面板可只放行目前連線，不建立持久規則 | `PromptOverlay`、`PromptOverlayController`、`PromptBroker` | 模擬器詢問卡片顯示 | 會話綁定（離開應用 / 鎖屏失效）尚未做 |
+| K-038 | 「允許一次」：詢問卡片 / 懸浮面板可只放行目前連線，不建立持久規則 | `PromptOverlay`、`PromptOverlayController`、`PromptBroker` | 模擬器詢問卡片顯示 | v0.6.1 改為應用會話語義，見 K-038b |
+| K-038b | 「允許一次」改為應用會話：建立應用級暫存規則，目標應用離開前台（UsageStats `ACTIVITY_STOPPED`）2 秒後移除；下次打開重新詢問；未取得 UsageStats 時 10 分鐘兜底 | `RuleLifetime.UntilAppExit`、`PromptRuleFactory`、`TargetAppSessionTracker`、`PromptOverlay` | JVM 測試 + 構建 | 無法可靠偵測「滑掉 / 強制停止」；以離開前台為近似 |
 | K-039 | 懸浮詢問面板：`SYSTEM_ALERT_WINDOW`；`PromptRouter` 統一決定應用內卡片 / 懸浮面板 / 通知；UsageStats 前景 UID 追蹤；原生 View 面板、頂部 / 底部、hold 計時、安靜通知渠道、addView fallback | `platform/prompt/`、`PromptNotifier`、`NotificationChannels`、`SettingsScreen`、`AndroidManifest.xml` | `PromptPresentationPolicyTest`；模擬器在 Chrome 上顯示面板並按允許成功 | 微信 / OEM ROM / IME 遮擋待真機 |
 | K-040 | 詢問內容顯示設定：連線詳情、說明文字、鎖屏隱藏詳情；通知與懸浮面板同步 | `AppPreferences`、`PromptNotifier`、`PromptOverlayController`、`PromptOverlay`、`SettingsScreen` | 構建 + 模擬器設定頁 | 真機鎖屏待驗證 |
 | K-035 | 專注模式：時長、允許應用選擇、剩餘時間、延長 15 分鐘、結束確認；專注期間 BlockAll 並只放行所選應用 | `FocusController`、`FocusSchedule`、`VpnEngine`、`RoutingPlanner`、`OverviewScreen` | 模擬器開始 15 分鐘、允許 Chrome、剩餘時間顯示 | 結束小結 / 通知尚未做 |
