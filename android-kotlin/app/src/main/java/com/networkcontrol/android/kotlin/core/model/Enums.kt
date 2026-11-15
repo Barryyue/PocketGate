@@ -233,3 +233,24 @@ enum class SpeedIslandMode {
     /** 迷你：狀態欄風格的小字。 */
     Mini,
 }
+
+/** 靈動島顯示內容。 */
+enum class SpeedIslandContent {
+    /** 即時上下行速度。 */
+    Speed,
+    /** 今日流量總計。 */
+    Traffic,
+    /** 今日攔截次數。 */
+    Blocked,
+    /** 待處理詢問數量。 */
+    Pending,
+    /** 目前網路名稱。 */
+    Network,
+}
+
+/** 靈動島字體粗細。 */
+enum class SpeedIslandFontWeight {
+    Normal,
+    Medium,
+    Bold,
+}

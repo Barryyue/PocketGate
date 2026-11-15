@@ -42,6 +42,7 @@ import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
 import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
 import com.networkcontrol.android.kotlin.ui.rules.RulesScreen
 import com.networkcontrol.android.kotlin.ui.settings.SettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.SpeedIslandSettingsScreen
 
 private data class Tab(val label: S, val icon: ImageVector)
 
@@ -60,6 +61,7 @@ fun AppRoot(container: AppContainer) {
     var ready by remember { mutableStateOf(false) }
     var showAppListPermission by remember { mutableStateOf(false) }
     var selected by rememberSaveable { mutableIntStateOf(0) }
+    var islandSettingsOpen by rememberSaveable { mutableStateOf(false) }
     val appListPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
@@ -93,31 +95,46 @@ fun AppRoot(container: AppContainer) {
 
     val backend = container.backend
     Box(Modifier.fillMaxSize()) {
-        Scaffold(
-            bottomBar = {
-                NavigationBar {
-                    tabs.forEachIndexed { index, tab ->
-                        NavigationBarItem(
-                            selected = selected == index,
-                            onClick = { selected = index },
-                            icon = { Icon(tab.icon, contentDescription = s[tab.label]) },
-                            label = { Text(s[tab.label]) },
-                        )
-                    }
-                }
-            },
-        ) { padding ->
+        if (islandSettingsOpen) {
             Box(
-                Modifier.fillMaxSize().padding(padding),
+                Modifier.fillMaxSize().widthIn(max = 760.dp),
                 contentAlignment = Alignment.TopCenter,
             ) {
-                Box(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
-                    when (selected) {
-                        0 -> OverviewScreen(backend)
-                        1 -> AppsScreen(backend)
-                        2 -> RulesScreen(backend)
-                        3 -> LogsScreen(backend)
-                        else -> SettingsScreen(backend)
+                SpeedIslandSettingsScreen(
+                    backend = backend,
+                    onBack = { islandSettingsOpen = false },
+                )
+            }
+        } else {
+            Scaffold(
+                bottomBar = {
+                    NavigationBar {
+                        tabs.forEachIndexed { index, tab ->
+                            NavigationBarItem(
+                                selected = selected == index,
+                                onClick = { selected = index },
+                                icon = { Icon(tab.icon, contentDescription = s[tab.label]) },
+                                label = { Text(s[tab.label]) },
+                            )
+                        }
+                    }
+                },
+            ) { padding ->
+                Box(
+                    Modifier.fillMaxSize().padding(padding),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    Box(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
+                        when (selected) {
+                            0 -> OverviewScreen(backend)
+                            1 -> AppsScreen(backend)
+                            2 -> RulesScreen(backend)
+                            3 -> LogsScreen(backend)
+                            else -> SettingsScreen(
+                                backend = backend,
+                                onOpenIslandSettings = { islandSettingsOpen = true },
+                            )
+                        }
                     }
                 }
             }

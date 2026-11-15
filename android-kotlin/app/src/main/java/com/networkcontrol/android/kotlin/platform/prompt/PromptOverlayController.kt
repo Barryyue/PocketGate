@@ -303,7 +303,9 @@ class PromptOverlayController(
         }
         addChip(strings[S.PromptOnce], RuleLifetime.UntilAppExit)
         addChip(strings[S.PromptPermanent], RuleLifetime.Permanent)
-        addChip(strings.format(S.PromptTimed, timedMinutesProvider()), RuleLifetime.Timed)
+        if (preferences.promptShowTimedOption) {
+            addChip(strings.format(S.PromptTimed, timedMinutesProvider()), RuleLifetime.Timed)
+        }
         root.addView(chips)
         updateChips(chipViews, lifetime, primary, onPrimary, onSurfaceVariant, outline)
 

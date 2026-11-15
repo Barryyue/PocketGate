@@ -95,6 +95,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getInt(KEY_SPEED_ISLAND_DOT_COLOR, 0xFF4CAF50.toInt())
         set(value) = prefs.edit().putInt(KEY_SPEED_ISLAND_DOT_COLOR, value).apply()
 
+    /** 詢問懸浮面板是否顯示「限時允許」選項。 */
+    var promptShowTimedOption: Boolean
+        get() = prefs.getBoolean(KEY_PROMPT_SHOW_TIMED, true)
+        set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_TIMED, value).apply()
+
     var speedIslandMode: com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
         get() = runCatching {
             enumValueOf<com.networkcontrol.android.kotlin.core.model.SpeedIslandMode>(
@@ -102,6 +107,31 @@ class AppPreferences(context: Context) {
             )
         }.getOrDefault(com.networkcontrol.android.kotlin.core.model.SpeedIslandMode.Full)
         set(value) = prefs.edit().putString(KEY_SPEED_ISLAND_MODE, value.name).apply()
+
+    /** 靈動島顯示內容。 */
+    var speedIslandContent: com.networkcontrol.android.kotlin.core.model.SpeedIslandContent
+        get() = runCatching {
+            enumValueOf<com.networkcontrol.android.kotlin.core.model.SpeedIslandContent>(
+                prefs.getString(KEY_SPEED_ISLAND_CONTENT, "Speed").orEmpty(),
+            )
+        }.getOrDefault(com.networkcontrol.android.kotlin.core.model.SpeedIslandContent.Speed)
+        set(value) = prefs.edit().putString(KEY_SPEED_ISLAND_CONTENT, value.name).apply()
+
+    /** 字體縮放百分比（80–160）。 */
+    var speedIslandFontScalePercent: Int
+        get() = prefs.getInt(KEY_SPEED_ISLAND_FONT_SCALE, 100).coerceIn(80, 160)
+        set(value) = prefs.edit()
+            .putInt(KEY_SPEED_ISLAND_FONT_SCALE, value.coerceIn(80, 160))
+            .apply()
+
+    /** 字體粗細。 */
+    var speedIslandFontWeight: com.networkcontrol.android.kotlin.core.model.SpeedIslandFontWeight
+        get() = runCatching {
+            enumValueOf<com.networkcontrol.android.kotlin.core.model.SpeedIslandFontWeight>(
+                prefs.getString(KEY_SPEED_ISLAND_FONT_WEIGHT, "Normal").orEmpty(),
+            )
+        }.getOrDefault(com.networkcontrol.android.kotlin.core.model.SpeedIslandFontWeight.Normal)
+        set(value) = prefs.edit().putString(KEY_SPEED_ISLAND_FONT_WEIGHT, value.name).apply()
 
     /** 嘗試把靈動島放進狀態欄區域；部分 ROM 會用狀態欄蓋住第三方懸浮窗。 */
     var speedIslandStatusBarMode: Boolean
@@ -182,7 +212,11 @@ class AppPreferences(context: Context) {
         const val KEY_SPEED_ISLAND_SHOW_DOT = "speed_island_show_dot"
         const val KEY_SPEED_ISLAND_SWAP_ORDER = "speed_island_swap_order"
         const val KEY_SPEED_ISLAND_DOT_COLOR = "speed_island_dot_color"
+        const val KEY_PROMPT_SHOW_TIMED = "prompt_show_timed"
         const val KEY_SPEED_ISLAND_MODE = "speed_island_mode"
+        const val KEY_SPEED_ISLAND_CONTENT = "speed_island_content"
+        const val KEY_SPEED_ISLAND_FONT_SCALE = "speed_island_font_scale"
+        const val KEY_SPEED_ISLAND_FONT_WEIGHT = "speed_island_font_weight"
         const val KEY_SPEED_ISLAND_STATUSBAR = "speed_island_statusbar"
         const val KEY_PROMPT_SHOW_DETAILS = "prompt_show_details"
         const val KEY_PROMPT_SHOW_EXPLANATION = "prompt_show_explanation"

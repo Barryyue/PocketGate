@@ -11,6 +11,22 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.8.0",
+            date = "2026-11-15",
+            features = listOf(
+                "灵动岛设置独立成页：预览、显示内容、样式、字体、颜色、状态点和位置集中管理。",
+                "显示内容可切换：上下行速度、今日流量、今日拦截、待处理询问、当前网络。",
+                "新增字体大小（80%–160%）与字体粗细（常规 / 中等 / 粗体）。",
+                "悬浮询问可关闭「限时允许」选项，只保留允许一次、永久、拒绝。",
+                "转发模式修复：hev 隧道地址与 VPN 接口一致、关闭不兼容的 offload，HTTP/HTTPS 流量可正常通过 SOCKS5。",
+                "转发设置新增「测试代理」和 DNS 提示，便于排查代理是否可用。",
+            ),
+            notes = listOf(
+                "代理转发仍是实验功能（Phase 0，全流量转发，未接入按应用判决）。",
+                "DNS 需要代理支持 UDP；若网页打不开但 IP 可连，请开启 UDP 转发或配置系统私人 DNS。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.7.0",
             date = "2026-11-15",
             features = listOf(

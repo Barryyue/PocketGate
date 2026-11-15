@@ -56,8 +56,8 @@ object VpnForwardingTransport {
 fun writeForwardingConfig(
     file: File,
     config: VpnTunnelConfig,
-    ipv4: String = "198.18.0.1",
-    ipv6: String = "fc00::1",
+    ipv4: String = FakeDnsPool.Ipv4Address.hostAddress ?: "10.111.222.1",
+    ipv6: String = FakeDnsPool.Ipv6Address.hostAddress ?: "fd00:6e63::1",
 ) {
     val host = config.upstreamHost.ifBlank { "127.0.0.1" }
     val port = config.upstreamPort.coerceIn(1, 65535)
@@ -68,12 +68,16 @@ fun writeForwardingConfig(
             appendLine("  mtu: ${config.mtu}")
             appendLine("  ipv4: $ipv4")
             appendLine("  ipv6: '$ipv6'")
+            appendLine("  offload:")
+            appendLine("    tso: false")
+            appendLine("    uso: false")
+            appendLine("    jumbo: false")
             appendLine("socks5:")
             appendLine("  address: $host")
             appendLine("  port: $port")
             appendLine("  udp: '$udp'")
             appendLine("misc:")
-            appendLine("  task-stack-size: 24576")
+            appendLine("  task-stack-size: 86016")
             appendLine("  log-level: debug")
             appendLine("  log-file: '${file.parentFile?.absolutePath ?: "."}/hev.log'")
         },

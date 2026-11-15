@@ -901,3 +901,47 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - 狀態欄模式仍是盡力而為：第三方 `TYPE_APPLICATION_OVERLAY` 在系統狀態欄之下。
 - 全透明時會加上 `FLAG_NOT_TOUCHABLE`，避免看不見的懸浮窗擋住狀態欄下拉與桌面手勢；此時點擊靈動島不會開啟應用，調高透明度即可恢復點擊。
+
+---
+
+## 27. v0.8.0-m4spike（2026-11-15）
+
+### 27.1 靈動島獨立設定頁
+
+- 設定 → 詢問顯示方式 → 靈動島，只保留啟用開關和「靈動島設定」入口；所有細節移到獨立頁面。
+- 獨立頁面分為預覽、顯示內容、外觀、位置四組，後續新增選項直接往頁面加。
+- 預覽使用與懸浮窗相同的排版（`SpeedIslandFormatter`），即時反映內容、樣式、透明度、字體、顏色與狀態點。
+- 新增顯示內容：速度、今日流量、今日攔截、待處理詢問、目前網路；流量與攔截數每 60 秒從資料庫刷新。
+- 新增字體大小 80%–160%（1% 步進）與字體粗細：常規（sans-serif）、中等（sans-serif-medium）、粗體。
+- 網路名稱太長時用 `maxWidth=320dp` + ellipsize 收尾。
+
+### 27.2 詢問面板
+
+- 新增「顯示『限時允許』選項」開關（預設開）。關閉後，懸浮詢問與應用內詢問都不再顯示限時選項。
+
+### 27.3 代理轉發修復
+
+- **根因**：hev 設定裡的隧道位址是 198.18.0.1 / fc00::1，但 VPN 介面實際位址是 10.111.222.1 / fd00:6e63::1；回包被送到不存在的位址，造成 TCP 握手後逾時。
+- 修正為使用 `FakeDnsPool` 的介面位址，並關閉 TSO / USO / jumbo offload、把 task-stack-size 提高到 86016。
+- 模擬器以 Reqable SOCKS5（127.0.0.1:9000 + `adb reverse`）驗證：tcpdump 可看到完整 HTTP 請求與 Cloudflare 403 回應，證明上下行資料都經過 tun0。
+- 新增「測試代理」按鈕：5 秒內完成 SOCKS5 握手並 CONNECT `www.gstatic.com:443`。
+- **DNS 限制**：`adb reverse` 只轉發 TCP，SOCKS5 UDP ASSOCIATE 的 relay 位址在 PC 上時裝置無法回送；真機使用本機或區網代理時才具備 UDP DNS。若網頁打不開但 IP 能連，請開啟 UDP 轉發或配置系統私人 DNS。
+
+### 27.4 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.0-m4spike.apk` |
+| APK 大小 | 4,236,881 bytes |
+| APK SHA-256 | `77876238B49FE4F1A166F1AF222780F640DC9070F45B565CDB5EFAF95DAC9821` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.0-m4spike.aab` |
+| AAB 大小 | 4,819,110 bytes |
+| AAB SHA-256 | `F80D9398C577006F7B101F14D487B7827286B0F591BCFE13DDEC627D86ED7CD1` |
+| versionName / Code | `0.8.0-m4spike` / `18` |
+
+### 27.5 驗證
+
+- JVM 測試（含新增 `SpeedIslandFormatterTest`）/ Debug / Release / AAB 構建通過。
+- 模擬器：獨立設定頁、預覽、內容籌片、字體滑桿、詢問限時開關均可操作。
+- 轉發：模擬器 + Reqable 的 HTTP 流量已能完整往返；HTTPS/域名受 `adb reverse` 無 UDP 限制影響，真機需再驗證。
+- 真機未驗證：代理 UDP DNS、不同 ROM 的懸浮窗、字體粗細渲染差異。

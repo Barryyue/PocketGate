@@ -127,11 +127,19 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                     { lifetime = RuleLifetime.Permanent },
                     { Text(s[S.PromptPermanent]) },
                 )
-                FilterChip(
-                    lifetime == RuleLifetime.Timed,
-                    { lifetime = RuleLifetime.Timed },
-                    { Text(s.format(S.PromptTimed, timedMinutes)) },
-                )
+                if (prefs.promptShowTimedOption) {
+                    FilterChip(
+                        lifetime == RuleLifetime.Timed,
+                        { lifetime = RuleLifetime.Timed },
+                        { Text(s.format(S.PromptTimed, timedMinutes)) },
+                    )
+                }
+            }
+
+            LaunchedEffect(prefs.promptShowTimedOption) {
+                if (!prefs.promptShowTimedOption && lifetime == RuleLifetime.Timed) {
+                    lifetime = RuleLifetime.Permanent
+                }
             }
 
             if (lifetime == RuleLifetime.UntilAppExit) {

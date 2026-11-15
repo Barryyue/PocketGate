@@ -75,11 +75,13 @@ import com.networkcontrol.android.kotlin.core.model.RuleImportMode
 import com.networkcontrol.android.kotlin.core.model.RuleImportPreview
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
+import com.networkcontrol.android.kotlin.core.model.SpeedIslandContent
 import com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
 import com.networkcontrol.android.kotlin.core.release.ReleaseNote
 import com.networkcontrol.android.kotlin.core.release.ReleaseNotes
 import com.networkcontrol.android.kotlin.core.update.UpdateChecker
 import com.networkcontrol.android.kotlin.core.update.UpdateInfo
+import com.networkcontrol.android.kotlin.platform.Socks5Probe
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
@@ -95,7 +97,7 @@ import java.util.UUID
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsScreen(backend: AppBackend) {
+fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
     val s = rememberUiStrings()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -116,19 +118,8 @@ fun SettingsScreen(backend: AppBackend) {
     var promptRatio by remember { mutableFloatStateOf(backend.promptOverlayCustomRatio()) }
     var showOverlayPositionDialog by remember { mutableStateOf(false) }
     var speedIsland by remember { mutableStateOf(backend.speedIslandEnabled()) }
-    var vivoCompatible by remember { mutableStateOf(backend.vivoIslandCompatible()) }
-    var islandOffsetX by remember { mutableIntStateOf(backend.speedIslandOffsetXDp()) }
-    var islandOffsetY by remember { mutableIntStateOf(backend.speedIslandOffsetYDp()) }
     var islandOpacity by remember { mutableFloatStateOf(backend.speedIslandOpacity()) }
     var islandMode by remember { mutableStateOf(backend.speedIslandMode()) }
-    var statusBarOverlay by remember { mutableStateOf(backend.speedIslandStatusBarMode()) }
-    var islandShowDot by remember { mutableStateOf(backend.speedIslandShowDot()) }
-    var islandSwapOrder by remember { mutableStateOf(backend.speedIslandSwapOrder()) }
-    var islandTextMode by remember { mutableStateOf(backend.speedIslandTextColorMode()) }
-    var islandTextColor by remember { mutableIntStateOf(backend.speedIslandTextColor()) }
-    var islandDotColor by remember { mutableIntStateOf(backend.speedIslandDotColor()) }
-    var showIslandTextColorDialog by remember { mutableStateOf(false) }
-    var showIslandDotColorDialog by remember { mutableStateOf(false) }
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
     var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
@@ -138,6 +129,8 @@ fun SettingsScreen(backend: AppBackend) {
     var socks5Host by remember { mutableStateOf(backend.socks5Host()) }
     var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
     var socks5Udp by remember { mutableStateOf(backend.socks5Udp()) }
+    var proxyTesting by remember { mutableStateOf(false) }
+    var showTimedOption by remember { mutableStateOf(backend.promptShowTimedOption()) }
     val forwardingAvailable = remember { backend.forwardingAvailable() }
     var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
     var showScheduleDialog by remember { mutableStateOf(false) }
@@ -309,6 +302,15 @@ fun SettingsScreen(backend: AppBackend) {
                     ) { Text(s[S.Save]) }
                 }
                 SwitchRow(
+                    title = s[S.PromptTimedVisible],
+                    subtitle = s[S.PromptTimedVisibleHint],
+                    checked = showTimedOption,
+                    onCheckedChange = {
+                        showTimedOption = it
+                        backend.setPromptShowTimedOption(it)
+                    },
+                )
+                SwitchRow(
                     title = s[S.PromptDefaultAction],
                     subtitle = if (settings.promptDefaultAction == VerdictAction.Deny) s[S.Deny] else s[S.Allow],
                     checked = settings.promptDefaultAction == VerdictAction.Allow,
@@ -462,179 +464,33 @@ fun SettingsScreen(backend: AppBackend) {
                     },
                 )
                 if (speedIsland) {
-                    Text(s[S.IslandMode], style = MaterialTheme.typography.bodyMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            islandMode == SpeedIslandMode.Full,
-                            {
-                                islandMode = SpeedIslandMode.Full
-                                backend.setSpeedIslandMode(SpeedIslandMode.Full)
-                            },
-                            { Text(s[S.IslandModeFull]) },
-                        )
-                        FilterChip(
-                            islandMode == SpeedIslandMode.Cycle,
-                            {
-                                islandMode = SpeedIslandMode.Cycle
-                                backend.setSpeedIslandMode(SpeedIslandMode.Cycle)
-                            },
-                            { Text(s[S.IslandModeCycle]) },
-                        )
-                        FilterChip(
-                            islandMode == SpeedIslandMode.Mini,
-                            {
-                                islandMode = SpeedIslandMode.Mini
-                                backend.setSpeedIslandMode(SpeedIslandMode.Mini)
-                            },
-                            { Text(s[S.IslandModeMini]) },
-                        )
+                    val modeLabel = when (islandMode) {
+                        SpeedIslandMode.Full -> s[S.IslandModeFull]
+                        SpeedIslandMode.Cycle -> s[S.IslandModeCycle]
+                        SpeedIslandMode.Mini -> s[S.IslandModeMini]
                     }
-                    SwitchRow(
-                        title = s[S.VivoIslandCompatible],
-                        subtitle = s[S.VivoIslandHint],
-                        checked = vivoCompatible,
-                        onCheckedChange = {
-                            vivoCompatible = it
-                            backend.setVivoIslandCompatible(it)
-                        },
-                    )
-                    SwitchRow(
-                        title = s[S.StatusBarOverlay],
-                        subtitle = s[S.StatusBarOverlayHint],
-                        checked = statusBarOverlay,
-                        onCheckedChange = {
-                            statusBarOverlay = it
-                            backend.setSpeedIslandStatusBarMode(it)
-                            islandTextMode = backend.speedIslandTextColorMode()
-                        },
-                    )
-                    Text(
-                        s.format(S.IslandHorizontalOffset, islandOffsetX),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Slider(
-                        value = islandOffsetX.toFloat(),
-                        onValueChange = {
-                            islandOffsetX = it.roundToInt()
-                            backend.setSpeedIslandOffsetXDp(islandOffsetX)
-                        },
-                        valueRange = -60f..60f,
-                        steps = 119,
-                    )
-                    Text(
-                        s.format(S.IslandVerticalOffset, islandOffsetY),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Slider(
-                        value = islandOffsetY.toFloat(),
-                        onValueChange = {
-                            islandOffsetY = it.roundToInt()
-                            backend.setSpeedIslandOffsetYDp(islandOffsetY)
-                        },
-                        valueRange = -60f..60f,
-                        steps = 119,
-                    )
-                    Text(
-                        s.format(S.IslandOpacity, (islandOpacity * 100).roundToInt()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Slider(
-                        value = islandOpacity,
-                        onValueChange = {
-                            islandOpacity = it
-                            backend.setSpeedIslandOpacity(islandOpacity)
-                        },
-                        valueRange = 0f..1f,
-                        steps = 19,
-                    )
-                    Text(s[S.IslandTextColor], style = MaterialTheme.typography.bodyMedium)
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    val contentLabel = when (backend.speedIslandContent()) {
+                        SpeedIslandContent.Speed -> s[S.IslandContentSpeed]
+                        SpeedIslandContent.Traffic -> s[S.IslandContentTraffic]
+                        SpeedIslandContent.Blocked -> s[S.IslandContentBlocked]
+                        SpeedIslandContent.Pending -> s[S.IslandContentPending]
+                        SpeedIslandContent.Network -> s[S.IslandContentNetwork]
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenIslandSettings() },
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        FilterChip(
-                            islandTextMode == "theme",
-                            {
-                                islandTextMode = "theme"
-                                backend.setSpeedIslandTextColorMode("theme")
-                            },
-                            { Text(s[S.FollowTheme]) },
-                        )
-                        FilterChip(
-                            islandTextMode == "statusbar",
-                            {
-                                islandTextMode = "statusbar"
-                                backend.setSpeedIslandTextColorMode("statusbar")
-                            },
-                            { Text(s[S.FollowStatusBar]) },
-                        )
-                        FilterChip(
-                            islandTextMode == "custom",
-                            {
-                                islandTextMode = "custom"
-                                backend.setSpeedIslandTextColorMode("custom")
-                            },
-                            { Text(s[S.OverlayCustom]) },
-                        )
-                    }
-                    if (islandTextMode == "custom") {
-                        OutlinedButton(onClick = { showIslandTextColorDialog = true }) {
-                            Box(
-                                Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(islandTextColor)),
+                        Column(Modifier.weight(1f)) {
+                            Text(s[S.IslandConfig], style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "$contentLabel · $modeLabel · ${(islandOpacity * 100).roundToInt()}%",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text(s[S.CustomColor])
                         }
-                    }
-                    SwitchRow(
-                        title = s[S.IslandShowDot],
-                        checked = islandShowDot,
-                        onCheckedChange = {
-                            islandShowDot = it
-                            backend.setSpeedIslandShowDot(it)
-                        },
-                    )
-                    if (islandShowDot) {
-                        OutlinedButton(onClick = { showIslandDotColorDialog = true }) {
-                            Box(
-                                Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(islandDotColor)),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(s[S.IslandDotColor])
-                        }
-                    }
-                    SwitchRow(
-                        title = s[S.IslandSwapOrder],
-                        checked = islandSwapOrder,
-                        onCheckedChange = {
-                            islandSwapOrder = it
-                            backend.setSpeedIslandSwapOrder(it)
-                        },
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            s[S.IslandOffsetHint],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(
-                            onClick = {
-                                islandOffsetX = 0
-                                islandOffsetY = 0
-                                backend.setSpeedIslandOffsetXDp(0)
-                                backend.setSpeedIslandOffsetYDp(0)
-                            },
-                        ) { Text(s[S.Reset]) }
+                        TextButton(onClick = onOpenIslandSettings) { Text(s[S.Edit]) }
                     }
                 }
             }
@@ -929,6 +785,33 @@ fun SettingsScreen(backend: AppBackend) {
                             backend.setSocks5Udp(it)
                         },
                     )
+                    OutlinedButton(
+                        onClick = {
+                            proxyTesting = true
+                            scope.launch {
+                                val error = Socks5Probe.test(
+                                    host = socks5Host,
+                                    port = socks5Port.toIntOrNull() ?: 7890,
+                                )
+                                proxyTesting = false
+                                toast(
+                                    if (error == null) {
+                                        s[S.ProxyTestSuccess]
+                                    } else {
+                                        s.format(S.ProxyTestFailed, error)
+                                    },
+                                )
+                            }
+                        },
+                        enabled = !proxyTesting,
+                    ) {
+                        Text(if (proxyTesting) s[S.Loading] else s[S.ProxyTest])
+                    }
+                    Text(
+                        s[S.ForwardingDnsHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Text(
                         s[S.ForwardingAbiHint],
                         style = MaterialTheme.typography.bodySmall,
@@ -1031,32 +914,6 @@ fun SettingsScreen(backend: AppBackend) {
             current = themeColor,
             onDismiss = { showThemeColorDialog = false },
             onSelect = { backend.setThemeColor(it) },
-        )
-    }
-
-    if (showIslandTextColorDialog) {
-        ThemeColorDialog(
-            current = Color(islandTextColor),
-            onDismiss = { showIslandTextColorDialog = false },
-            onSelect = {
-                islandTextColor = it.toArgb()
-                backend.setSpeedIslandTextColor(islandTextColor)
-                showIslandTextColorDialog = false
-            },
-            title = s[S.IslandTextColor],
-        )
-    }
-
-    if (showIslandDotColorDialog) {
-        ThemeColorDialog(
-            current = Color(islandDotColor),
-            onDismiss = { showIslandDotColorDialog = false },
-            onSelect = {
-                islandDotColor = it.toArgb()
-                backend.setSpeedIslandDotColor(islandDotColor)
-                showIslandDotColorDialog = false
-            },
-            title = s[S.IslandDotColor],
         )
     }
 

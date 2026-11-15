@@ -120,6 +120,10 @@ class AppContainer(context: Context) {
         speedMonitor = speedMonitor,
         screenState = screenState,
         themeColor = theme.color,
+        trafficStore = trafficStore,
+        activityStore = activityStore,
+        prompts = prompts,
+        network = network,
         scope = scope,
     )
     val ruleLifetime = RuleLifetimeManager(rules, scope)

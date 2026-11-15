@@ -152,6 +152,17 @@
 | K-063 | 上傳 / 下載順序互換，套用完整、循環、迷你；循環起始方向一併反轉 | `AppPreferences`、`SpeedIslandController`、`SettingsScreen` | 模擬器：順序即時切換 | — |
 | K-064 | 設定頁顏色籌片改用 `FlowRow`，窄屏自動換行 | `SettingsScreen` | 模擬器 1080×2400 設定頁 | — |
 
+### v0.8.0-m4spike（2026-11-15）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-065 | 靈動島設定獨立成頁：頂部即時預覽 + 顯示 / 外觀 / 位置分組，設定頁只保留入口與摘要 | `SpeedIslandSettingsScreen`、`AppRoot`、`SettingsScreen` | 模擬器打開頁面、預覽與設定即時生效 | 後續新選項都放此頁 |
+| K-066 | 顯示內容可切換：速度 / 今日流量 / 今日攔截 / 待處理詢問 / 目前網路 | `SpeedIslandContent`、`SpeedIslandFormatter`、`SpeedIslandController` | JVM 測試 + 模擬器頁面 | 流量與攔截每 60 秒刷新 |
+| K-067 | 字體大小 80–160%、字體粗細常規 / 中等 / 粗體 | `AppPreferences`、`SpeedIslandController`、`SpeedIslandSettingsScreen` | 模擬器預覽與實際懸浮窗 | 迷你樣式同步縮放 |
+| K-068 | 懸浮詢問可隱藏「限時允許」選項 | `AppPreferences`、`PromptOverlayController`、`PromptOverlay`、`SettingsScreen` | 代碼審查 + 頁面開關 | 關閉後只留允許一次 / 永久 / 拒絕 |
+| K-069 | 修復轉發模式：hev 隧道 ipv4/ipv6 改用 VPN 介面實際地址（10.111.222.1 / fd00:6e63::1）、關閉 TSO/USO/jumbo、加大任務堆疊 | `VpnForwardingTransport` | 模擬器 + Reqable SOCKS5：HTTP 請求和回應完整通過 tun0 | 先前位址不一致導致回包被丟棄 |
+| K-070 | 轉發設定新增「測試代理」與 DNS 提示 | `Socks5Probe`、`SettingsScreen` | 代碼審查 | DNS 仍需代理支援 UDP |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

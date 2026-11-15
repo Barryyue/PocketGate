@@ -3,11 +3,13 @@ package com.networkcontrol.android.kotlin.platform.overlay
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -18,19 +20,34 @@ import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.graphics.toArgb
 import com.networkcontrol.android.kotlin.AppPreferences
 import com.networkcontrol.android.kotlin.MainActivity
+import com.networkcontrol.android.kotlin.core.Time
+import com.networkcontrol.android.kotlin.core.island.SpeedIslandFormatter
+import com.networkcontrol.android.kotlin.core.island.SpeedIslandLabels
+import com.networkcontrol.android.kotlin.core.island.SpeedIslandStats
+import com.networkcontrol.android.kotlin.core.model.SpeedIslandFontWeight
 import com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
+import com.networkcontrol.android.kotlin.core.prompts.PromptBroker
+import com.networkcontrol.android.kotlin.core.storage.ActivityStore
+import com.networkcontrol.android.kotlin.core.storage.TrafficStore
+import com.networkcontrol.android.kotlin.engine.network.NetworkMonitor
 import com.networkcontrol.android.kotlin.engine.network.ScreenStateMonitor
 import com.networkcontrol.android.kotlin.engine.protection.ProtectionController
 import com.networkcontrol.android.kotlin.engine.traffic.SpeedMonitor
 import com.networkcontrol.android.kotlin.engine.traffic.SpeedSnapshot
 import com.networkcontrol.android.kotlin.platform.AppLog
+import com.networkcontrol.android.kotlin.ui.S
+import com.networkcontrol.android.kotlin.ui.UiStrings
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
- * 服務啟動後的頂部「速度島」：預設顯示上傳 / 下載速度，點擊開啟主界面。
+ * 服務啟動後的頂部「速度島」：可顯示上下行速度、今日流量、攔截數、待處理詢問或目前網路。
  * 只在保護開啟、螢幕解鎖、使用者開啟設定且有懸浮窗權限時顯示。
  */
 class SpeedIslandController(
@@ -40,10 +57,24 @@ class SpeedIslandController(
     private val speedMonitor: SpeedMonitor,
     private val screenState: ScreenStateMonitor,
     private val themeColor: StateFlow<ComposeColor>,
+    private val trafficStore: TrafficStore,
+    private val activityStore: ActivityStore,
+    private val prompts: PromptBroker,
+    private val network: NetworkMonitor,
     private val scope: CoroutineScope,
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val windowManager = context.getSystemService(WindowManager::class.java)
+    private val strings = UiStrings(
+        context.resources.configuration.locales[0]?.toLanguageTag().orEmpty(),
+    )
+    private val labels: SpeedIslandLabels
+        get() = SpeedIslandLabels(
+            blocked = strings[S.BlockedToday],
+            pending = strings[S.PendingPrompts],
+            networkFallback = strings[S.IslandContentNetwork],
+        )
+
     private var view: View? = null
     private var pillRoot: LinearLayout? = null
     private var params: WindowManager.LayoutParams? = null
@@ -53,6 +84,23 @@ class SpeedIslandController(
     private var currentMode: SpeedIslandMode? = null
     private var currentShowDot: Boolean? = null
     private var cycleDownload = true
+    private var typefaceWeight: SpeedIslandFontWeight? = null
+    private var typefaceCache: Typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+
+    @Volatile
+    private var todayBytesIn = 0L
+
+    @Volatile
+    private var todayBytesOut = 0L
+
+    @Volatile
+    private var blockedToday = 0L
+
+    @Volatile
+    private var pendingCount = 0
+
+    @Volatile
+    private var networkName: String? = null
 
     fun start() {
         scope.launch {
@@ -74,12 +122,40 @@ class SpeedIslandController(
         scope.launch {
             themeColor.collect { refresh() }
         }
+        scope.launch {
+            prompts.pending.collect { pending ->
+                pendingCount = pending.size
+                refresh()
+            }
+        }
+        scope.launch {
+            network.state.collect { state ->
+                networkName = state.displayName
+                refresh()
+            }
+        }
+        scope.launch {
+            while (scope.isActive) {
+                runCatching { refreshStats() }
+                    .onFailure { AppLog.w("speed-island", "stats failed: ${it.message}") }
+                delay(60_000)
+            }
+        }
     }
 
     fun refresh() {
         val visible = protection.enabled.value && !screenState.locked.value &&
             preferences.speedIslandEnabled && Settings.canDrawOverlays(context)
         if (visible) show(speedMonitor.speed.value) else hide()
+    }
+
+    private suspend fun refreshStats() {
+        val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val summary = trafficStore.summarize(start, Time.now(), 24 * 60 * 60 * 1000L, 0)
+        todayBytesIn = summary.bytesIn
+        todayBytesOut = summary.bytesOut
+        blockedToday = activityStore.countBlockedSince(start)
+        refresh()
     }
 
     private fun show(speed: SpeedSnapshot) {
@@ -155,32 +231,24 @@ class SpeedIslandController(
     }
 
     private fun updateText(speed: SpeedSnapshot, mode: SpeedIslandMode) {
-        val swap = preferences.speedIslandSwapOrder
-        val text = when (mode) {
-            SpeedIslandMode.Full -> {
-                if (swap) {
-                    "↑ ${formatRate(speed.uploadBytesPerSecond)}/s   ↓ ${formatRate(speed.downloadBytesPerSecond)}/s"
-                } else {
-                    "↓ ${formatRate(speed.downloadBytesPerSecond)}/s   ↑ ${formatRate(speed.uploadBytesPerSecond)}/s"
-                }
-            }
-            SpeedIslandMode.Cycle -> {
-                val showDownload = if (swap) !cycleDownload else cycleDownload
-                cycleDownload = !cycleDownload
-                if (showDownload) {
-                    "↓ ${formatRate(speed.downloadBytesPerSecond)}/s"
-                } else {
-                    "↑ ${formatRate(speed.uploadBytesPerSecond)}/s"
-                }
-            }
-            SpeedIslandMode.Mini -> {
-                if (swap) {
-                    "↑${formatRateShort(speed.uploadBytesPerSecond)} ↓${formatRateShort(speed.downloadBytesPerSecond)}"
-                } else {
-                    "↓${formatRateShort(speed.downloadBytesPerSecond)} ↑${formatRateShort(speed.uploadBytesPerSecond)}"
-                }
-            }
-        }
+        val stats = SpeedIslandStats(
+            downloadBytesPerSecond = speed.downloadBytesPerSecond,
+            uploadBytesPerSecond = speed.uploadBytesPerSecond,
+            todayBytesIn = todayBytesIn,
+            todayBytesOut = todayBytesOut,
+            blockedToday = blockedToday,
+            pendingPrompts = pendingCount,
+            networkName = networkName,
+        )
+        val text = SpeedIslandFormatter.format(
+            content = preferences.speedIslandContent,
+            mode = mode,
+            stats = stats,
+            swapOrder = preferences.speedIslandSwapOrder,
+            showDownload = cycleDownload,
+            labels = labels,
+        )
+        if (mode == SpeedIslandMode.Cycle) cycleDownload = !cycleDownload
         if (text == lastText) return
         lastText = text
         speedText?.text = text
@@ -247,9 +315,31 @@ class SpeedIslandController(
         }
         root.elevation = if (opacity <= 0.001f) 0f else dp(8).toFloat()
         val color = textColor()
-        speedText?.setTextColor(color)
-        speedText?.setShadowLayer(4f, 0f, 1f, contrastShadow(color))
+        speedText?.apply {
+            setTextColor(color)
+            setShadowLayer(4f, 0f, 1f, contrastShadow(color))
+            setTextSize(
+                TypedValue.COMPLEX_UNIT_SP,
+                scaledTextSize(if (currentMode == SpeedIslandMode.Mini) 10f else 12f),
+            )
+            typeface = labelTypeface()
+        }
         dotView?.setTextColor(preferences.speedIslandDotColor)
+    }
+
+    private fun scaledTextSize(base: Float): Float =
+        base * preferences.speedIslandFontScalePercent / 100f
+
+    private fun labelTypeface(): Typeface {
+        val weight = preferences.speedIslandFontWeight
+        if (typefaceWeight == weight) return typefaceCache
+        typefaceCache = when (weight) {
+            SpeedIslandFontWeight.Normal -> Typeface.create("sans-serif", Typeface.NORMAL)
+            SpeedIslandFontWeight.Medium -> Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            SpeedIslandFontWeight.Bold -> Typeface.create("sans-serif", Typeface.BOLD)
+        }
+        typefaceWeight = weight
+        return typefaceCache
     }
 
     /** 背景全透明時靠陰影拉開與桌布的對比：亮字配黑陰影，暗字配白陰影。 */
@@ -282,7 +372,7 @@ class SpeedIslandController(
         val horizontal = if (mini) 8 else 14
         val vertical = if (mini) 4 else 8
         val radius = if (mini) 12 else 20
-        val textSize = if (mini) 10f else 12f
+        val textSize = scaledTextSize(if (mini) 10f else 12f)
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -323,46 +413,24 @@ class SpeedIslandController(
         val label = TextView(context).apply {
             setTextColor(textColor())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, textSize)
+            typeface = labelTypeface()
             maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            maxWidth = dp(320)
             setShadowLayer(4f, 0f, 1f, Color.BLACK)
-            text = when (mode) {
-                SpeedIslandMode.Full -> "↓ 0 B/s   ↑ 0 B/s"
-                SpeedIslandMode.Cycle -> "↓ 0 B/s"
-                SpeedIslandMode.Mini -> "↓0B ↑0B"
-            }
+            text = SpeedIslandFormatter.format(
+                content = preferences.speedIslandContent,
+                mode = mode,
+                stats = SpeedIslandStats(),
+                swapOrder = preferences.speedIslandSwapOrder,
+                showDownload = true,
+                labels = labels,
+            )
         }
         speedText = label
         if (showDot) root.addView(dot)
         root.addView(label)
         return root
-    }
-
-    private fun formatRate(bytes: Long): String {
-        if (bytes < 1024) return "$bytes B"
-        val units = arrayOf("KB", "MB", "GB")
-        var value = bytes.toDouble()
-        var index = -1
-        while (value >= 1024 && index < units.lastIndex) {
-            value /= 1024
-            index++
-        }
-        return "%.1f %s".format(value, units[index])
-    }
-
-    private fun formatRateShort(bytes: Long): String {
-        if (bytes < 1024) return "${bytes}B"
-        val units = arrayOf("K", "M", "G")
-        var value = bytes.toDouble()
-        var index = -1
-        while (value >= 1024 && index < units.lastIndex) {
-            value /= 1024
-            index++
-        }
-        return if (value >= 10) {
-            "${value.toInt()}${units[index]}"
-        } else {
-            "%.1f%s".format(value, units[index])
-        }
     }
 
     private fun dp(value: Int): Int =

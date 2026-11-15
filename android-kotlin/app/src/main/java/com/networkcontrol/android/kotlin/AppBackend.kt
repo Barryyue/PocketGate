@@ -528,6 +528,31 @@ class AppBackend(val container: AppContainer) {
         container.speedIsland.refresh()
     }
 
+    fun speedIslandContent(): com.networkcontrol.android.kotlin.core.model.SpeedIslandContent =
+        container.preferences.speedIslandContent
+
+    fun setSpeedIslandContent(value: com.networkcontrol.android.kotlin.core.model.SpeedIslandContent) {
+        container.preferences.speedIslandContent = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandFontScalePercent(): Int = container.preferences.speedIslandFontScalePercent
+
+    fun setSpeedIslandFontScalePercent(value: Int) {
+        container.preferences.speedIslandFontScalePercent = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandFontWeight(): com.networkcontrol.android.kotlin.core.model.SpeedIslandFontWeight =
+        container.preferences.speedIslandFontWeight
+
+    fun setSpeedIslandFontWeight(
+        value: com.networkcontrol.android.kotlin.core.model.SpeedIslandFontWeight,
+    ) {
+        container.preferences.speedIslandFontWeight = value
+        container.speedIsland.refresh()
+    }
+
     fun speedIslandStatusBarMode(): Boolean = container.preferences.speedIslandStatusBarMode
 
     fun setSpeedIslandStatusBarMode(enabled: Boolean) {
@@ -573,6 +598,13 @@ class AppBackend(val container: AppContainer) {
     fun setSpeedIslandDotColor(color: Int) {
         container.preferences.speedIslandDotColor = color
         container.speedIsland.refresh()
+    }
+
+    fun promptShowTimedOption(): Boolean = container.preferences.promptShowTimedOption
+
+    fun setPromptShowTimedOption(show: Boolean) {
+        container.preferences.promptShowTimedOption = show
+        container.promptRouter.refresh()
     }
 
     fun promptShowDetails(): Boolean = container.preferences.promptShowDetails
