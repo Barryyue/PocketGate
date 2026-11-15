@@ -539,7 +539,7 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 ### 15.3 驗證
 
 - 60 個 JVM 測試通過；Release APK / AAB 構建通過。
-- 模擬器：自訂懸浮位置拖動 15% → 82% 並保存；專注時長按鈕打開原生圓盤（00:30）；轉發設定頁顯示「原生隧道可用」。
+- 模擬器：自訂懸浮位置拖動 15% → 82% 並保存；專注時長按鈕打開原生圓盤（00:30）；轉發設定頁顯示「原生隧道可用」；一鍵建立「專注」白名單配置文件並切換為 Active。
 - 模擬器轉發：`hev-socks5-tunnel` 載入成功、TUN fd 啟動成功、SOCKS5 握手與會話建立；但經 Reqable + `adb reverse` 的實際 TCP/UDP 數據在 3 秒後 `io timeout`，Chrome 回 `ERR_CONNECTION_CLOSED`。**未通過端到端轉發驗證。**
 - 真機未驗證：本機 FlClash/SOCKS5 轉發、UDP/QUIC、吞吐、耗電、與其他 VPN 共存、懸浮自訂位置、專注配置文件。
 
