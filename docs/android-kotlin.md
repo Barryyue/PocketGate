@@ -1042,3 +1042,30 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 真機未驗證：三個按鈕在窄屏 / 大字體下的換行、限時入口的點擊區域。
+
+---
+
+## 31. v0.8.4-m4spike（2026-11-16）
+
+### 31.1 「稍後」靜默期
+
+- 原因：`PromptBroker.dismiss()` 原本會把同一應用加入 10 分鐘的抑制表，期間新連線直接套用默認動作，不再彈窗。
+- 改為 1 分鐘（`suppressAfterLaterMs = 60_000`）；1 分鐘後同一應用再次聯網會重新詢問。
+- 保留抑制表是為了避免應用立刻重試造成彈窗連發。
+
+### 31.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.4-m4spike.apk` |
+| APK 大小 | 4,236,881 bytes |
+| APK SHA-256 | `A0B74BA30A88450B610E989F2307162D934CFEE744626CE479E2F03C514AE521` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.4-m4spike.aab` |
+| AAB 大小 | 4,830,516 bytes |
+| AAB SHA-256 | `B29E8E205298E0AEE4500C7E6E8DC9E58156A8553BED2CA3DFB0BF6B132DA7C2` |
+| versionName / Code | `0.8.4-m4spike` / `22` |
+
+### 31.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 真機未驗證：稍後 1 分鐘後是否能按預期重新彈窗（取決於應用是否重試連線）。

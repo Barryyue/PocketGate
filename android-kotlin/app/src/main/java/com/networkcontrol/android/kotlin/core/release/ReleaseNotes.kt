@@ -11,6 +11,16 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.8.4",
+            date = "2026-11-16",
+            features = listOf(
+                "「稍后」的静默时间从 10 分钟缩短为 1 分钟；之后该应用再次联网会重新询问。",
+            ),
+            notes = listOf(
+                "避免频繁骚扰的同时，不再出现点了稍后很久都不提醒的情况。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.8.3",
             date = "2026-11-16",
             features = listOf(

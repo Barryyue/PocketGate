@@ -334,6 +334,9 @@ class PromptBroker(
     }
 
     /** 使用者選擇「稍後」：拒絕目前這批連線，10 分鐘內不再詢問同一應用。 */
+    /** 使用者選擇「稍後」後，同一應用在這段時間內不再詢問，避免立刻重複彈窗。 */
+    private val suppressAfterLaterMs = 60_000L
+
     suspend fun dismiss(promptId: String): Boolean {
         var prompt: PendingPrompt? = null
         gate.withLock {
@@ -341,7 +344,7 @@ class PromptBroker(
             removeLocked(prompt!!)
             pendingFlows = (pendingFlows - prompt!!.flows.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
             val key = prompt!!.app?.path ?: prompt!!.firstFlow.executablePath ?: "unknown"
-            suppressedUntil[key] = Time.now() + 10 * 60 * 1000L
+            suppressedUntil[key] = Time.now() + suppressAfterLaterMs
             refreshPendingLocked()
         }
         val dismissed = prompt ?: return false
