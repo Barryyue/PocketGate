@@ -299,6 +299,11 @@ enum class S {
     VivoIslandCompatible,
     VivoIslandHint,
     IslandTopOffset,
+    IslandHorizontalOffset,
+    IslandVerticalOffset,
+    IslandOffsetHint,
+    Reset,
+    IslandOpacity,
     ViewDetails,
     ReleaseNotes,
     NewFeatures,
@@ -308,6 +313,7 @@ enum class S {
     NoReleaseNotes,
     FocusNeedsProtection,
     EnableProtection,
+    DndNeedsProtection,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -625,6 +631,11 @@ private val EN = mapOf(
     S.VivoIslandCompatible to "vivo / iQOO compatibility",
     S.VivoIslandHint to "Places the island below the system island/status bar to avoid overlap. System island APIs are not available to third-party apps.",
     S.IslandTopOffset to "Extra top offset: %1\$d dp",
+    S.IslandHorizontalOffset to "Horizontal offset: %1\$+d dp",
+    S.IslandVerticalOffset to "Vertical offset: %1\$+d dp",
+    S.IslandOffsetHint to "Negative moves left/up, positive moves right/down.",
+    S.Reset to "Reset",
+    S.IslandOpacity to "Island opacity: %1\$d%%",
     S.ViewDetails to "View",
     S.ReleaseNotes to "Release notes",
     S.NewFeatures to "New features",
@@ -634,6 +645,7 @@ private val EN = mapOf(
     S.NoReleaseNotes to "No release notes for this version.",
     S.FocusNeedsProtection to "Protection is off. Focus will not block anything until protection is on.",
     S.EnableProtection to "Turn on protection",
+    S.DndNeedsProtection to "Protection is off. Do not disturb will not pause any prompts until protection is on.",
 )
 
 private val CN = mapOf(
@@ -931,6 +943,11 @@ private val CN = mapOf(
     S.VivoIslandCompatible to "vivo / iQOO 兼容模式",
     S.VivoIslandHint to "把灵动岛放在系统岛/状态栏下方，减少重叠。第三方应用无法接入系统原子岛 API。",
     S.IslandTopOffset to "额外顶部偏移：%1\$d dp",
+    S.IslandHorizontalOffset to "水平偏移：%1\$+d dp",
+    S.IslandVerticalOffset to "垂直偏移：%1\$+d dp",
+    S.IslandOffsetHint to "负值向左/上，正值向右/下。",
+    S.Reset to "重置",
+    S.IslandOpacity to "灵动岛透明度：%1\$d%%",
     S.ViewDetails to "查看",
     S.ReleaseNotes to "版本说明",
     S.NewFeatures to "新增功能",
@@ -940,6 +957,7 @@ private val CN = mapOf(
     S.NoReleaseNotes to "此版本暂无版本说明。",
     S.FocusNeedsProtection to "保护已关闭，专注模式不会阻止任何联网。请先开启保护。",
     S.EnableProtection to "开启保护",
+    S.DndNeedsProtection to "保护已关闭，勿扰模式不会暂停任何询问。请先开启保护。",
 )
 
 private val TW = mapOf(
@@ -1237,6 +1255,11 @@ private val TW = mapOf(
     S.VivoIslandCompatible to "vivo / iQOO 相容模式",
     S.VivoIslandHint to "把靈動島放在系統島/狀態列下方，減少重疊。第三方應用程式無法接入系統原子島 API。",
     S.IslandTopOffset to "額外頂部偏移：%1\$d dp",
+    S.IslandHorizontalOffset to "水平偏移：%1\$+d dp",
+    S.IslandVerticalOffset to "垂直偏移：%1\$+d dp",
+    S.IslandOffsetHint to "負值向左/上，正值向右/下。",
+    S.Reset to "重設",
+    S.IslandOpacity to "靈動島透明度：%1\$d%%",
     S.ViewDetails to "查看",
     S.ReleaseNotes to "版本說明",
     S.NewFeatures to "新增功能",
@@ -1246,4 +1269,5 @@ private val TW = mapOf(
     S.NoReleaseNotes to "此版本暫無版本說明。",
     S.FocusNeedsProtection to "保護已關閉，專注模式不會阻止任何聯網。請先開啟保護。",
     S.EnableProtection to "開啟保護",
+    S.DndNeedsProtection to "保護已關閉，勿擾模式不會暫停任何詢問。請先開啟保護。",
 )

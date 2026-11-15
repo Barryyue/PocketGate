@@ -172,7 +172,7 @@ class PromptOverlayController(
                 position == "custom" -> 0
                 position == "top" && preferences.speedIslandEnabled && Settings.canDrawOverlays(context) ->
                     dp(
-                        58 + preferences.speedIslandTopOffsetDp +
+                        58 + maxOf(0, preferences.speedIslandOffsetYDp) +
                             if (preferences.vivoIslandCompatible) 16 else 0,
                     )
                 else -> dp(8)

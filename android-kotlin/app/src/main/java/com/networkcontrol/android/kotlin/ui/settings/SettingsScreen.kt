@@ -113,7 +113,9 @@ fun SettingsScreen(backend: AppBackend) {
     var showOverlayPositionDialog by remember { mutableStateOf(false) }
     var speedIsland by remember { mutableStateOf(backend.speedIslandEnabled()) }
     var vivoCompatible by remember { mutableStateOf(backend.vivoIslandCompatible()) }
-    var islandOffset by remember { mutableIntStateOf(backend.speedIslandTopOffsetDp()) }
+    var islandOffsetX by remember { mutableIntStateOf(backend.speedIslandOffsetXDp()) }
+    var islandOffsetY by remember { mutableIntStateOf(backend.speedIslandOffsetYDp()) }
+    var islandOpacity by remember { mutableFloatStateOf(backend.speedIslandOpacity()) }
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
     var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
@@ -457,19 +459,63 @@ fun SettingsScreen(backend: AppBackend) {
                         },
                     )
                     Text(
-                        s.format(S.IslandTopOffset, islandOffset),
+                        s.format(S.IslandHorizontalOffset, islandOffsetX),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Slider(
-                        value = islandOffset.toFloat(),
-                        onValueChange = { islandOffset = it.roundToInt() },
+                        value = islandOffsetX.toFloat(),
+                        onValueChange = { islandOffsetX = it.roundToInt() },
                         onValueChangeFinished = {
-                            backend.setSpeedIslandTopOffsetDp(islandOffset)
+                            backend.setSpeedIslandOffsetXDp(islandOffsetX)
                         },
-                        valueRange = 0f..48f,
-                        steps = 47,
+                        valueRange = -60f..60f,
+                        steps = 119,
                     )
+                    Text(
+                        s.format(S.IslandVerticalOffset, islandOffsetY),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Slider(
+                        value = islandOffsetY.toFloat(),
+                        onValueChange = { islandOffsetY = it.roundToInt() },
+                        onValueChangeFinished = {
+                            backend.setSpeedIslandOffsetYDp(islandOffsetY)
+                        },
+                        valueRange = -60f..60f,
+                        steps = 119,
+                    )
+                    Text(
+                        s.format(S.IslandOpacity, (islandOpacity * 100).roundToInt()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Slider(
+                        value = islandOpacity,
+                        onValueChange = { islandOpacity = it },
+                        onValueChangeFinished = {
+                            backend.setSpeedIslandOpacity(islandOpacity)
+                        },
+                        valueRange = 0.2f..1f,
+                        steps = 15,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            s[S.IslandOffsetHint],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(
+                            onClick = {
+                                islandOffsetX = 0
+                                islandOffsetY = 0
+                                backend.setSpeedIslandOffsetXDp(0)
+                                backend.setSpeedIslandOffsetYDp(0)
+                            },
+                        ) { Text(s[S.Reset]) }
+                    }
                 }
             }
         }

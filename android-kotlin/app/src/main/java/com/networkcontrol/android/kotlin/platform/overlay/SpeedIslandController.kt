@@ -40,6 +40,7 @@ class SpeedIslandController(
     private val handler = Handler(Looper.getMainLooper())
     private val windowManager = context.getSystemService(WindowManager::class.java)
     private var view: View? = null
+    private var pillRoot: LinearLayout? = null
     private var params: WindowManager.LayoutParams? = null
     private var speedText: TextView? = null
     private var lastText: String? = null
@@ -83,10 +84,11 @@ class SpeedIslandController(
                     android.graphics.PixelFormat.TRANSLUCENT,
                 ).apply {
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    x = dp(preferences.speedIslandOffsetXDp)
                     y = dp(
-                        8 + preferences.speedIslandTopOffsetDp +
+                        8 + preferences.speedIslandOffsetYDp +
                             if (preferences.vivoIslandCompatible) 16 else 0,
-                    )
+                    ).coerceAtLeast(0)
                     title = "NetworkControl speed"
                     packageName = context.packageName
                     if (Build.VERSION.SDK_INT >= 28) {
@@ -103,8 +105,10 @@ class SpeedIslandController(
                 }
                 if (!added) return@post
                 view = pill
+                pillRoot = pill as? LinearLayout
                 params = layout
             }
+            updateAppearance()
             updateText(speed)
         }
     }
@@ -113,6 +117,7 @@ class SpeedIslandController(
         handler.post {
             view?.let { runCatching { windowManager?.removeView(it) } }
             view = null
+            pillRoot = null
             params = null
             speedText = null
             lastText = null
@@ -126,13 +131,27 @@ class SpeedIslandController(
         speedText?.text = text
     }
 
+    private fun updateAppearance() {
+        val root = pillRoot ?: return
+        root.background = GradientDrawable().apply {
+            setColor(islandBackgroundColor())
+            cornerRadius = dp(20).toFloat()
+            setStroke(dp(1), 0x40FFFFFF)
+        }
+    }
+
+    private fun islandBackgroundColor(): Int {
+        val alpha = (preferences.speedIslandOpacity.coerceIn(0.1f, 1f) * 255).toInt()
+        return (alpha shl 24) or 0x00101010
+    }
+
     private fun buildPill(): View? {
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(14), dp(8), dp(14), dp(8))
             background = GradientDrawable().apply {
-                setColor(0xE6101010.toInt())
+                setColor(islandBackgroundColor())
                 cornerRadius = dp(20).toFloat()
                 setStroke(dp(1), 0x40FFFFFF)
             }
@@ -156,6 +175,7 @@ class SpeedIslandController(
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             maxLines = 1
+            setShadowLayer(4f, 0f, 1f, Color.BLACK)
             text = "↓ 0 B/s   ↑ 0 B/s"
         }
         speedText = label

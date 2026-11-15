@@ -190,6 +190,70 @@ fun OverviewScreen(backend: AppBackend) {
             }
         }
         item {
+            SectionCard(s[S.Mode]) {
+                val options = listOf(FilterMode.Ask, FilterMode.Whitelist, FilterMode.Blacklist)
+                val labels = listOf(s[S.ModeAsk], s[S.ModeWhitelist], s[S.ModeBlacklist])
+                val selected = options.indexOf(runtime.mode)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    options.forEachIndexed { index, mode ->
+                        SegmentedButton(
+                            selected = selected == index,
+                            onClick = { backend.setMode(mode) },
+                            shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                        ) {
+                            Text(labels[index])
+                        }
+                    }
+                }
+                Text(
+                    s[S.ModeHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        var expanded by remember { mutableStateOf(false) }
+                        OutlinedButton(
+                            onClick = { expanded = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("${s[S.Profile]}：${activeProfile?.name ?: "—"}")
+                        }
+                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                            profiles.forEach { profile ->
+                                DropdownMenuItem(
+                                    text = { Text(profile.name) },
+                                    onClick = {
+                                        backend.activateProfile(profile.id)
+                                        expanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    if (runtime.mode == FilterMode.BlockAll) {
+                        Button(onClick = { backend.setBlockAll(false) }) {
+                            Text(s[S.Restore])
+                        }
+                    } else {
+                        OutlinedButton(onClick = { backend.setBlockAll(true) }) {
+                            Text(s[S.BlockAll])
+                        }
+                    }
+                }
+                if (runtime.mode == FilterMode.BlockAll) {
+                    Text(
+                        s[S.BlockAllHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        }
+        item {
             SectionCard(s[S.FocusMode]) {
                 val active = focus
                 if (active == null) {
@@ -256,70 +320,6 @@ fun OverviewScreen(backend: AppBackend) {
             }
         }
         item {
-            SectionCard(s[S.Mode]) {
-                val options = listOf(FilterMode.Ask, FilterMode.Whitelist, FilterMode.Blacklist)
-                val labels = listOf(s[S.ModeAsk], s[S.ModeWhitelist], s[S.ModeBlacklist])
-                val selected = options.indexOf(runtime.mode)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    options.forEachIndexed { index, mode ->
-                        SegmentedButton(
-                            selected = selected == index,
-                            onClick = { backend.setMode(mode) },
-                            shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                        ) {
-                            Text(labels[index])
-                        }
-                    }
-                }
-                Text(
-                    s[S.ModeHint],
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        var expanded by remember { mutableStateOf(false) }
-                        OutlinedButton(
-                            onClick = { expanded = true },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("${s[S.Profile]}：${activeProfile?.name ?: "—"}")
-                        }
-                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            profiles.forEach { profile ->
-                                DropdownMenuItem(
-                                    text = { Text(profile.name) },
-                                    onClick = {
-                                        backend.activateProfile(profile.id)
-                                        expanded = false
-                                    },
-                                )
-                            }
-                        }
-                    }
-                    if (runtime.mode == FilterMode.BlockAll) {
-                        Button(onClick = { backend.setBlockAll(false) }) {
-                            Text(s[S.Restore])
-                        }
-                    } else {
-                        OutlinedButton(onClick = { backend.setBlockAll(true) }) {
-                            Text(s[S.BlockAll])
-                        }
-                    }
-                }
-                if (runtime.mode == FilterMode.BlockAll) {
-                    Text(
-                        s[S.BlockAllHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-        }
-        item {
             SectionCard(s[S.DoNotDisturb]) {
                 val until = runtime.doNotDisturbUntil
                 val active = until != null && until > now
@@ -332,12 +332,26 @@ fun OverviewScreen(backend: AppBackend) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    if (!protection) {
+                        Text(
+                            s[S.DndNeedsProtection],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        OutlinedButton(
+                            onClick = { enableProtection() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(s[S.EnableProtection]) }
+                    }
                     OutlinedButton(onClick = { backend.setDoNotDisturb(null) }) {
                         Text(s[S.Off])
                     }
                 } else {
                     OutlinedButton(
-                        onClick = { backend.setDoNotDisturb(System.currentTimeMillis() + 60 * 60 * 1000L) },
+                        onClick = {
+                            backend.setDoNotDisturb(System.currentTimeMillis() + 60 * 60 * 1000L)
+                            if (!protection) enableProtection()
+                        },
                     ) {
                         Text("${s[S.DoNotDisturb]} ${s[S.OneHour]}")
                     }

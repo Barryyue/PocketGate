@@ -11,6 +11,16 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.6.7",
+            date = "2026-11-15",
+            features = listOf(
+                "靈動島支援水平 / 垂直偏移（-60 至 +60dp），可向上 / 下 / 左 / 右微調，預設回到原本位置。",
+                "靈動島新增透明度滑桿，可調整背景濃淡。",
+                "專注模式與勿擾合併到相鄰位置，不再被模式切換隔開。",
+                "保護關閉時開啟勿擾會自動開啟保護；勿擾期間關閉保護會顯示警告。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.6.6",
             date = "2026-11-15",
             features = listOf(

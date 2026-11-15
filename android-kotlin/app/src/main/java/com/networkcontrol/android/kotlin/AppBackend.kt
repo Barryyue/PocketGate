@@ -499,10 +499,24 @@ class AppBackend(val container: AppContainer) {
         container.speedIsland.refresh()
     }
 
-    fun speedIslandTopOffsetDp(): Int = container.preferences.speedIslandTopOffsetDp
+    fun speedIslandOffsetXDp(): Int = container.preferences.speedIslandOffsetXDp
 
-    fun setSpeedIslandTopOffsetDp(value: Int) {
-        container.preferences.speedIslandTopOffsetDp = value
+    fun setSpeedIslandOffsetXDp(value: Int) {
+        container.preferences.speedIslandOffsetXDp = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandOffsetYDp(): Int = container.preferences.speedIslandOffsetYDp
+
+    fun setSpeedIslandOffsetYDp(value: Int) {
+        container.preferences.speedIslandOffsetYDp = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandOpacity(): Float = container.preferences.speedIslandOpacity
+
+    fun setSpeedIslandOpacity(value: Float) {
+        container.preferences.speedIslandOpacity = value
         container.speedIsland.refresh()
     }
 

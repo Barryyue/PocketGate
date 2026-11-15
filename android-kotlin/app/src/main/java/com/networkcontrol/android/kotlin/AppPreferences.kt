@@ -56,10 +56,23 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_VIVO_ISLAND_COMPAT, isVivoDevice())
         set(value) = prefs.edit().putBoolean(KEY_VIVO_ISLAND_COMPAT, value).apply()
 
-    /** 靈動島額外頂部偏移（dp）。 */
-    var speedIslandTopOffsetDp: Int
-        get() = prefs.getInt(KEY_SPEED_ISLAND_OFFSET, 0).coerceIn(0, 48)
-        set(value) = prefs.edit().putInt(KEY_SPEED_ISLAND_OFFSET, value.coerceIn(0, 48)).apply()
+    /** 靈動島水平偏移（dp），負數向左、正數向右。 */
+    var speedIslandOffsetXDp: Int
+        get() = prefs.getInt(KEY_SPEED_ISLAND_OFFSET_X, 0).coerceIn(-60, 60)
+        set(value) = prefs.edit().putInt(KEY_SPEED_ISLAND_OFFSET_X, value.coerceIn(-60, 60)).apply()
+
+    /** 靈動島垂直偏移（dp），負數向上、正數向下。 */
+    var speedIslandOffsetYDp: Int
+        get() = prefs.getInt(
+            KEY_SPEED_ISLAND_OFFSET_Y,
+            prefs.getInt(KEY_SPEED_ISLAND_OFFSET, 0),
+        ).coerceIn(-60, 60)
+        set(value) = prefs.edit().putInt(KEY_SPEED_ISLAND_OFFSET_Y, value.coerceIn(-60, 60)).apply()
+
+    /** 靈動島背景透明度（0.1–1.0）。 */
+    var speedIslandOpacity: Float
+        get() = prefs.getFloat(KEY_SPEED_ISLAND_OPACITY, 0.9f).coerceIn(0.1f, 1f)
+        set(value) = prefs.edit().putFloat(KEY_SPEED_ISLAND_OPACITY, value.coerceIn(0.1f, 1f)).apply()
 
     fun isVivoDevice(): Boolean {
         val manufacturer = android.os.Build.MANUFACTURER.orEmpty()
@@ -127,6 +140,9 @@ class AppPreferences(context: Context) {
         const val KEY_SPEED_ISLAND = "speed_island"
         const val KEY_VIVO_ISLAND_COMPAT = "vivo_island_compat"
         const val KEY_SPEED_ISLAND_OFFSET = "speed_island_offset"
+        const val KEY_SPEED_ISLAND_OFFSET_X = "speed_island_offset_x"
+        const val KEY_SPEED_ISLAND_OFFSET_Y = "speed_island_offset_y"
+        const val KEY_SPEED_ISLAND_OPACITY = "speed_island_opacity"
         const val KEY_PROMPT_SHOW_DETAILS = "prompt_show_details"
         const val KEY_PROMPT_SHOW_EXPLANATION = "prompt_show_explanation"
         const val KEY_PROMPT_HIDE_DETAILS_LOCK = "prompt_hide_details_lock"
