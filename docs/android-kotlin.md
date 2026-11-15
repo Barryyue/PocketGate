@@ -705,3 +705,32 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 模擬器：設定 → 關於點擊版本，顯示「版本說明 · 0.6.4」與新增功能 / 優化，並有「歷史版本」按鈕。
 - 真機未驗證：小屏 / 大字體下的滾動與排版、TalkBack 朗讀。
+
+---
+
+## 21. v0.6.6-m4spike（2026-11-15）
+
+### 21.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 專注與保護 | 保護關閉時按「開始專注」會先自動開啟保護（必要時彈 VPN 授權）；若使用者在專注期間關閉保護，卡片顯示「保護已關閉，專注模式不會阻止任何聯網」與「開啟保護」按鈕。 |
+| 專注卡片排版 | 「延長 15 分鐘」與「結束專注」改為同一行兩欄；「保存為配置文件」另起一行全寬，修正原本三個按鈕擠在一起造成文字變形。 |
+
+### 21.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.6-m4spike.apk` |
+| APK 大小 | 4,171,341 bytes |
+| APK SHA-256 | `1D9D260AA89EC0CEC87F0B8697C626BA45A53A7081F1A695625EF2F3A6F8455F` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.6-m4spike.aab` |
+| AAB 大小 | 4,722,862 bytes |
+| AAB SHA-256 | `7B6A69A8540FCFF910C26E8A1E8232F53E5C9808709E1EBB5E854844FF275BE4` |
+| versionName / Code | `0.6.6-m4spike` / `12` |
+
+### 21.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器：開始專注後保護自動切換為 On；專注卡片顯示「Remaining / Extend 15 minutes / End focus」並排，`Save as profile` 另起一行，文字不再變形。
+- 真機未驗證：VPN 授權彈窗流程、不同字體縮放下的按鈕寬度。
