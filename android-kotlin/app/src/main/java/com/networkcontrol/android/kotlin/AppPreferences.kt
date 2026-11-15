@@ -48,7 +48,7 @@ class AppPreferences(context: Context) {
 
     /** 服務啟動後在螢幕頂部顯示速度島。 */
     var speedIslandEnabled: Boolean
-        get() = prefs.getBoolean(KEY_SPEED_ISLAND, false)
+        get() = prefs.getBoolean(KEY_SPEED_ISLAND, true)
         set(value) = prefs.edit().putBoolean(KEY_SPEED_ISLAND, value).apply()
 
     var promptShowDetails: Boolean

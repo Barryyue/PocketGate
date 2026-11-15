@@ -95,7 +95,10 @@ fun SettingsScreen(backend: AppBackend) {
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
     val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
     var overlayKey by remember { mutableIntStateOf(0) }
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { overlayKey++ }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        overlayKey++
+        backend.refreshSpeedIsland()
+    }
     val canDrawOverlays = remember(overlayKey) { backend.canDrawOverlays() }
     var promptMode by remember { mutableStateOf(backend.promptPresentationMode()) }
     var promptPosition by remember { mutableStateOf(backend.promptOverlayPosition()) }
