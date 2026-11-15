@@ -490,6 +490,22 @@ class AppBackend(val container: AppContainer) {
         container.speedIsland.refresh()
     }
 
+    fun isVivoDevice(): Boolean = container.preferences.isVivoDevice()
+
+    fun vivoIslandCompatible(): Boolean = container.preferences.vivoIslandCompatible
+
+    fun setVivoIslandCompatible(enabled: Boolean) {
+        container.preferences.vivoIslandCompatible = enabled
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandTopOffsetDp(): Int = container.preferences.speedIslandTopOffsetDp
+
+    fun setSpeedIslandTopOffsetDp(value: Int) {
+        container.preferences.speedIslandTopOffsetDp = value
+        container.speedIsland.refresh()
+    }
+
     fun promptShowDetails(): Boolean = container.preferences.promptShowDetails
 
     fun setPromptShowDetails(show: Boolean) {

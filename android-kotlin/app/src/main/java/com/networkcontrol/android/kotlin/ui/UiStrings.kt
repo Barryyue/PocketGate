@@ -296,6 +296,9 @@ enum class S {
     SpeedIslandHint,
     PromptTimed,
     PromptTimedDuration,
+    VivoIslandCompatible,
+    VivoIslandHint,
+    IslandTopOffset,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -610,6 +613,9 @@ private val EN = mapOf(
     S.SpeedIslandHint to "Show upload and download speed in a small pill at the top of the screen while protection is on. Turn it off here if you do not need it. Tap it to open NetworkControl.",
     S.PromptTimed to "Timed (%1\$d min)",
     S.PromptTimedDuration to "Timed rule duration (minutes)",
+    S.VivoIslandCompatible to "vivo / iQOO compatibility",
+    S.VivoIslandHint to "Places the island below the system island/status bar to avoid overlap. System island APIs are not available to third-party apps.",
+    S.IslandTopOffset to "Extra top offset: %1\$d dp",
 )
 
 private val CN = mapOf(
@@ -904,6 +910,9 @@ private val CN = mapOf(
     S.SpeedIslandHint to "保护开启时在屏幕顶部显示上传/下载速度；不需要时可在这里关闭。点击灵动岛可打开 NetworkControl。",
     S.PromptTimed to "限时（%1\$d 分钟）",
     S.PromptTimedDuration to "限时规则时长（分钟）",
+    S.VivoIslandCompatible to "vivo / iQOO 兼容模式",
+    S.VivoIslandHint to "把灵动岛放在系统岛/状态栏下方，减少重叠。第三方应用无法接入系统原子岛 API。",
+    S.IslandTopOffset to "额外顶部偏移：%1\$d dp",
 )
 
 private val TW = mapOf(
@@ -1198,4 +1207,7 @@ private val TW = mapOf(
     S.SpeedIslandHint to "保護開啟時在螢幕頂部顯示上傳/下載速度；不需要時可在這裡關閉。點擊靈動島可開啟 NetworkControl。",
     S.PromptTimed to "限時（%1\$d 分鐘）",
     S.PromptTimedDuration to "限時規則時長（分鐘）",
+    S.VivoIslandCompatible to "vivo / iQOO 相容模式",
+    S.VivoIslandHint to "把靈動島放在系統島/狀態列下方，減少重疊。第三方應用程式無法接入系統原子島 API。",
+    S.IslandTopOffset to "額外頂部偏移：%1\$d dp",
 )

@@ -51,6 +51,25 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_SPEED_ISLAND, true)
         set(value) = prefs.edit().putBoolean(KEY_SPEED_ISLAND, value).apply()
 
+    /** vivo / iQOO 上把靈動島放在系統島下方，避免重疊。 */
+    var vivoIslandCompatible: Boolean
+        get() = prefs.getBoolean(KEY_VIVO_ISLAND_COMPAT, isVivoDevice())
+        set(value) = prefs.edit().putBoolean(KEY_VIVO_ISLAND_COMPAT, value).apply()
+
+    /** 靈動島額外頂部偏移（dp）。 */
+    var speedIslandTopOffsetDp: Int
+        get() = prefs.getInt(KEY_SPEED_ISLAND_OFFSET, 0).coerceIn(0, 48)
+        set(value) = prefs.edit().putInt(KEY_SPEED_ISLAND_OFFSET, value.coerceIn(0, 48)).apply()
+
+    fun isVivoDevice(): Boolean {
+        val manufacturer = android.os.Build.MANUFACTURER.orEmpty()
+        val brand = android.os.Build.BRAND.orEmpty()
+        return manufacturer.contains("vivo", ignoreCase = true) ||
+            manufacturer.contains("iqoo", ignoreCase = true) ||
+            brand.contains("vivo", ignoreCase = true) ||
+            brand.contains("iqoo", ignoreCase = true)
+    }
+
     var promptShowDetails: Boolean
         get() = prefs.getBoolean(KEY_PROMPT_SHOW_DETAILS, true)
         set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_DETAILS, value).apply()
@@ -106,6 +125,8 @@ class AppPreferences(context: Context) {
         const val KEY_PROMPT_OVERLAY_POSITION = "prompt_overlay_position"
         const val KEY_PROMPT_OVERLAY_RATIO = "prompt_overlay_ratio"
         const val KEY_SPEED_ISLAND = "speed_island"
+        const val KEY_VIVO_ISLAND_COMPAT = "vivo_island_compat"
+        const val KEY_SPEED_ISLAND_OFFSET = "speed_island_offset"
         const val KEY_PROMPT_SHOW_DETAILS = "prompt_show_details"
         const val KEY_PROMPT_SHOW_EXPLANATION = "prompt_show_explanation"
         const val KEY_PROMPT_HIDE_DETAILS_LOCK = "prompt_hide_details_lock"

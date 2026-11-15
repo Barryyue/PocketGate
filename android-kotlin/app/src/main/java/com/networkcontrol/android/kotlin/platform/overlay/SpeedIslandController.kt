@@ -83,7 +83,10 @@ class SpeedIslandController(
                     android.graphics.PixelFormat.TRANSLUCENT,
                 ).apply {
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                    y = dp(8)
+                    y = dp(
+                        8 + preferences.speedIslandTopOffsetDp +
+                            if (preferences.vivoIslandCompatible) 16 else 0,
+                    )
                     title = "NetworkControl speed"
                     packageName = context.packageName
                     if (Build.VERSION.SDK_INT >= 28) {

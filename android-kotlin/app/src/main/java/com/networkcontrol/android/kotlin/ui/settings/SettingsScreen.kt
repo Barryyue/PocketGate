@@ -33,6 +33,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -105,6 +106,8 @@ fun SettingsScreen(backend: AppBackend) {
     var promptRatio by remember { mutableFloatStateOf(backend.promptOverlayCustomRatio()) }
     var showOverlayPositionDialog by remember { mutableStateOf(false) }
     var speedIsland by remember { mutableStateOf(backend.speedIslandEnabled()) }
+    var vivoCompatible by remember { mutableStateOf(backend.vivoIslandCompatible()) }
+    var islandOffset by remember { mutableIntStateOf(backend.speedIslandTopOffsetDp()) }
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
     var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
@@ -435,6 +438,31 @@ fun SettingsScreen(backend: AppBackend) {
                         }
                     },
                 )
+                if (speedIsland) {
+                    SwitchRow(
+                        title = s[S.VivoIslandCompatible],
+                        subtitle = s[S.VivoIslandHint],
+                        checked = vivoCompatible,
+                        onCheckedChange = {
+                            vivoCompatible = it
+                            backend.setVivoIslandCompatible(it)
+                        },
+                    )
+                    Text(
+                        s.format(S.IslandTopOffset, islandOffset),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Slider(
+                        value = islandOffset.toFloat(),
+                        onValueChange = { islandOffset = it.roundToInt() },
+                        onValueChangeFinished = {
+                            backend.setSpeedIslandTopOffsetDp(islandOffset)
+                        },
+                        valueRange = 0f..48f,
+                        steps = 47,
+                    )
+                }
             }
         }
 
