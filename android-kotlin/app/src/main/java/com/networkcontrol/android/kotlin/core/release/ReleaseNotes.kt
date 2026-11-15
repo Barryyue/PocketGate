@@ -11,6 +11,14 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.6.6",
+            date = "2026-11-15",
+            features = listOf(
+                "保護關閉時開始專注會自動開啟保護；若中途關閉保護，專注卡片顯示警告與「開啟保護」。",
+                "修正專注卡片按鈕擠在一起、文字變形的問題：延長 / 結束專注分兩欄，保存配置文件另起一行。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.6.5",
             date = "2026-11-15",
             features = listOf(

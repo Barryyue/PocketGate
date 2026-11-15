@@ -306,6 +306,8 @@ enum class S {
     ReleaseNotesHistory,
     Back,
     NoReleaseNotes,
+    FocusNeedsProtection,
+    EnableProtection,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -630,6 +632,8 @@ private val EN = mapOf(
     S.ReleaseNotesHistory to "Version history",
     S.Back to "Back",
     S.NoReleaseNotes to "No release notes for this version.",
+    S.FocusNeedsProtection to "Protection is off. Focus will not block anything until protection is on.",
+    S.EnableProtection to "Turn on protection",
 )
 
 private val CN = mapOf(
@@ -934,6 +938,8 @@ private val CN = mapOf(
     S.ReleaseNotesHistory to "历史版本",
     S.Back to "返回",
     S.NoReleaseNotes to "此版本暂无版本说明。",
+    S.FocusNeedsProtection to "保护已关闭，专注模式不会阻止任何联网。请先开启保护。",
+    S.EnableProtection to "开启保护",
 )
 
 private val TW = mapOf(
@@ -1238,4 +1244,6 @@ private val TW = mapOf(
     S.ReleaseNotesHistory to "歷史版本",
     S.Back to "返回",
     S.NoReleaseNotes to "此版本暫無版本說明。",
+    S.FocusNeedsProtection to "保護已關閉，專注模式不會阻止任何聯網。請先開啟保護。",
+    S.EnableProtection to "開啟保護",
 )

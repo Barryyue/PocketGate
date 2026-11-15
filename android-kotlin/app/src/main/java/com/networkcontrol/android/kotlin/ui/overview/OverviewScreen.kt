@@ -218,22 +218,40 @@ fun OverviewScreen(backend: AppBackend) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { backend.extendFocus(15) }) {
-                            Text(s[S.FocusExtend])
-                        }
+                    if (!protection) {
+                        Text(
+                            s[S.FocusNeedsProtection],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
                         OutlinedButton(
-                            onClick = {
-                                backend.createFocusProfile(
-                                    allowedPackages = active.allowedPackages,
-                                    copyFromCurrent = false,
-                                )
-                            },
-                        ) { Text(s[S.SaveAsProfile]) }
-                        TextButton(onClick = { confirmEndFocus = true }) {
-                            Text(s[S.FocusStop])
+                            onClick = { enableProtection() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(s[S.EnableProtection]) }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { backend.extendFocus(15) },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(s[S.FocusExtend], maxLines = 1)
+                        }
+                        TextButton(
+                            onClick = { confirmEndFocus = true },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(s[S.FocusStop], maxLines = 1)
                         }
                     }
+                    OutlinedButton(
+                        onClick = {
+                            backend.createFocusProfile(
+                                allowedPackages = active.allowedPackages,
+                                copyFromCurrent = false,
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(s[S.SaveAsProfile]) }
                 }
             }
         }
@@ -505,6 +523,7 @@ fun OverviewScreen(backend: AppBackend) {
             onDismiss = { showFocusDialog = false },
             onStart = { minutes, allowed ->
                 backend.startFocus(minutes, allowed)
+                if (!protection) enableProtection()
                 showFocusDialog = false
             },
         )
