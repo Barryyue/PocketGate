@@ -85,26 +85,43 @@ class SpeedIslandController(
             }
             if (view == null) {
                 val pill = buildPill(mode) ?: return@post
+                val statusBarMode = preferences.speedIslandStatusBarMode
+                var flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+                if (statusBarMode) {
+                    flags = flags or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                }
                 val layout = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                        WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                    flags,
                     android.graphics.PixelFormat.TRANSLUCENT,
                 ).apply {
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                     x = dp(preferences.speedIslandOffsetXDp)
-                    y = dp(
-                        8 + preferences.speedIslandOffsetYDp +
-                            if (preferences.vivoIslandCompatible) 16 else 0,
-                    ).coerceAtLeast(0)
+                    y = if (statusBarMode) {
+                        dp(preferences.speedIslandOffsetYDp)
+                    } else {
+                        dp(
+                            8 + preferences.speedIslandOffsetYDp +
+                                if (preferences.vivoIslandCompatible) 16 else 0,
+                        ).coerceAtLeast(0)
+                    }
                     title = "NetworkControl speed"
                     packageName = context.packageName
                     if (Build.VERSION.SDK_INT >= 28) {
-                        layoutInDisplayCutoutMode =
+                        layoutInDisplayCutoutMode = if (statusBarMode) {
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                        } else {
                             WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
+                        }
+                    }
+                    if (Build.VERSION.SDK_INT >= 30 && statusBarMode) {
+                        fitInsetsTypes = 0
                     }
                 }
                 val added = runCatching {
@@ -161,11 +178,39 @@ class SpeedIslandController(
     private fun applyPosition() {
         val root = view ?: return
         val layout = params ?: return
+        val statusBarMode = preferences.speedIslandStatusBarMode
+        var flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        if (statusBarMode) {
+            flags = flags or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        }
+        layout.flags = flags
         layout.x = dp(preferences.speedIslandOffsetXDp)
-        layout.y = dp(
-            8 + preferences.speedIslandOffsetYDp +
-                if (preferences.vivoIslandCompatible) 16 else 0,
-        ).coerceAtLeast(0)
+        layout.y = if (statusBarMode) {
+            dp(preferences.speedIslandOffsetYDp)
+        } else {
+            dp(
+                8 + preferences.speedIslandOffsetYDp +
+                    if (preferences.vivoIslandCompatible) 16 else 0,
+            ).coerceAtLeast(0)
+        }
+        if (Build.VERSION.SDK_INT >= 30) {
+            layout.fitInsetsTypes = if (statusBarMode) {
+                0
+            } else {
+                android.view.WindowInsets.Type.systemBars()
+            }
+        }
+        if (Build.VERSION.SDK_INT >= 28) {
+            layout.layoutInDisplayCutoutMode = if (statusBarMode) {
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            } else {
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
+            }
+        }
         runCatching { windowManager?.updateViewLayout(root, layout) }
     }
 

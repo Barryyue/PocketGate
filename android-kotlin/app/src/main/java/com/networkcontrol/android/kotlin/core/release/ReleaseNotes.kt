@@ -11,6 +11,16 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.6.10",
+            date = "2026-11-15",
+            features = listOf(
+                "靈動島新增「嘗試放進狀態欄」模式：允許視窗進入狀態欄座標區，垂直偏移可為負值。",
+            ),
+            notes = listOf(
+                "Android 會把系統狀態欄畫在第三方懸浮窗之上，部分 ROM 仍會遮住；若看不到請關閉此模式。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.6.9",
             date = "2026-11-15",
             features = listOf(

@@ -528,6 +528,13 @@ class AppBackend(val container: AppContainer) {
         container.speedIsland.refresh()
     }
 
+    fun speedIslandStatusBarMode(): Boolean = container.preferences.speedIslandStatusBarMode
+
+    fun setSpeedIslandStatusBarMode(enabled: Boolean) {
+        container.preferences.speedIslandStatusBarMode = enabled
+        container.speedIsland.refresh()
+    }
+
     fun promptShowDetails(): Boolean = container.preferences.promptShowDetails
 
     fun setPromptShowDetails(show: Boolean) {

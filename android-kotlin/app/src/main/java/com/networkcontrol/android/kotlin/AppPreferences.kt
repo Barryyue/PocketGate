@@ -82,6 +82,11 @@ class AppPreferences(context: Context) {
         }.getOrDefault(com.networkcontrol.android.kotlin.core.model.SpeedIslandMode.Full)
         set(value) = prefs.edit().putString(KEY_SPEED_ISLAND_MODE, value.name).apply()
 
+    /** 嘗試把靈動島放進狀態欄區域；部分 ROM 會用狀態欄蓋住第三方懸浮窗。 */
+    var speedIslandStatusBarMode: Boolean
+        get() = prefs.getBoolean(KEY_SPEED_ISLAND_STATUSBAR, false)
+        set(value) = prefs.edit().putBoolean(KEY_SPEED_ISLAND_STATUSBAR, value).apply()
+
     fun isVivoDevice(): Boolean {
         val manufacturer = android.os.Build.MANUFACTURER.orEmpty()
         val brand = android.os.Build.BRAND.orEmpty()
@@ -152,6 +157,7 @@ class AppPreferences(context: Context) {
         const val KEY_SPEED_ISLAND_OFFSET_Y = "speed_island_offset_y"
         const val KEY_SPEED_ISLAND_OPACITY = "speed_island_opacity"
         const val KEY_SPEED_ISLAND_MODE = "speed_island_mode"
+        const val KEY_SPEED_ISLAND_STATUSBAR = "speed_island_statusbar"
         const val KEY_PROMPT_SHOW_DETAILS = "prompt_show_details"
         const val KEY_PROMPT_SHOW_EXPLANATION = "prompt_show_explanation"
         const val KEY_PROMPT_HIDE_DETAILS_LOCK = "prompt_hide_details_lock"

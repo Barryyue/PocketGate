@@ -118,6 +118,7 @@ fun SettingsScreen(backend: AppBackend) {
     var islandOffsetY by remember { mutableIntStateOf(backend.speedIslandOffsetYDp()) }
     var islandOpacity by remember { mutableFloatStateOf(backend.speedIslandOpacity()) }
     var islandMode by remember { mutableStateOf(backend.speedIslandMode()) }
+    var statusBarOverlay by remember { mutableStateOf(backend.speedIslandStatusBarMode()) }
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
     var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
@@ -485,6 +486,15 @@ fun SettingsScreen(backend: AppBackend) {
                         onCheckedChange = {
                             vivoCompatible = it
                             backend.setVivoIslandCompatible(it)
+                        },
+                    )
+                    SwitchRow(
+                        title = s[S.StatusBarOverlay],
+                        subtitle = s[S.StatusBarOverlayHint],
+                        checked = statusBarOverlay,
+                        onCheckedChange = {
+                            statusBarOverlay = it
+                            backend.setSpeedIslandStatusBarMode(it)
                         },
                     )
                     Text(
