@@ -765,3 +765,37 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 模擬器：專注與勿擾已在模式切換下方相鄰；設定頁可調整水平 / 垂直偏移與背景透明度。
 - 真機未驗證：負偏移是否會碰到瀏海 / 狀態欄、低透明度下的可讀性、OEM 系統島遮擋。
+
+---
+
+## 23. v0.6.8-m4spike（2026-11-15）
+
+### 23.1 靈動島樣式
+
+| 樣式 | 顯示 |
+|---|---|
+| 完整（Full） | `↓ 下載/s   ↑ 上傳/s`，同時顯示 |
+| 循環（Cycle） | 每次速度更新輪流顯示 `↓ 下載/s` 或 `↑ 上傳/s` |
+| 迷你（Mini） | 狀態欄風格：`↓1.2M ↑30K`，字體 10sp、內距更小、小綠點 |
+
+- 設定 → 詢問顯示方式 → 靈動島開啟後可選「完整 / 循環 / 迷你」。
+- 透明度只影響背景；速度文字固定白色加陰影，保持不透明。
+- 水平 / 垂直偏移與 vivo / iQOO 相容模式對三種樣式都生效。
+
+### 23.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.8-m4spike.apk` |
+| APK 大小 | 4,171,345 bytes |
+| APK SHA-256 | `D8B97C5306BB86CAE2E05BCDC3F7A130D09D45079EF95611801B19ED9E33D31D` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.8-m4spike.aab` |
+| AAB 大小 | 4,733,409 bytes |
+| AAB SHA-256 | `459DCA606903A83F19BBD6D71F1649FF9EFC74619630507239988C83D207FBD3` |
+| versionName / Code | `0.6.8-m4spike` / `14` |
+
+### 23.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器：設定頁可切換三種樣式；模式變更會移除並重建懸浮窗。
+- 真機未驗證：循環節奏是否足夠、迷你模式在窄屏 / 大字體下的寬度、透明背景上的文字可讀性。
