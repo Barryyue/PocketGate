@@ -279,107 +279,85 @@ class PromptOverlayController(
             )
         }
 
-        var lifetime = RuleLifetime.Permanent
-        val chips = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
-        val chipViews = mutableListOf<Triple<TextView, RuleLifetime, String>>()
-        fun addChip(label: String, value: RuleLifetime) {
-            val chip = textView(label, 12f, onSurfaceVariant).apply {
-                setPadding(dp(10), dp(6), dp(10), dp(6))
-                setOnClickListener {
-                    lifetime = value
-                    updateChips(chipViews, lifetime, primary, onPrimary, onSurfaceVariant, outline)
-                }
-            }
-            chipViews += Triple(chip, value, label)
-            chips.addView(
-                chip,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply { marginEnd = dp(6) },
-            )
-        }
-        addChip(strings[S.PromptOnce], RuleLifetime.UntilAppExit)
-        addChip(strings[S.PromptPermanent], RuleLifetime.Permanent)
-        if (preferences.promptShowTimedOption) {
-            addChip(strings.format(S.PromptTimed, timedMinutesProvider()), RuleLifetime.Timed)
-        }
-        root.addView(chips)
-        updateChips(chipViews, lifetime, primary, onPrimary, onSurfaceVariant, outline)
-
-        val buttons = LinearLayout(context).apply {
+        val actions = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(10), 0, 0)
         }
-        val later = textView(strings[S.PromptLater], 13f, onSurfaceVariant).apply {
+        fun actionButton(
+            label: String,
+            filled: Boolean,
+            onClick: () -> Unit,
+        ): TextView = textView(label, 13f, if (filled) onPrimary else onSurface).apply {
+            gravity = Gravity.CENTER
             setPadding(dp(8), dp(10), dp(8), dp(10))
+            background = GradientDrawable().apply {
+                setColor(if (filled) primary else Color.TRANSPARENT)
+                cornerRadius = dp(20).toFloat()
+                setStroke(dp(1), if (filled) primary else outline)
+            }
+            setOnClickListener {
+                dismissedId = prompt.id
+                onClick()
+                hide()
+            }
+        }
+        actions.addView(
+            actionButton(strings[S.Deny], filled = false) {
+                onAnswer?.invoke(prompt.id, VerdictAction.Deny, RuleLifetime.Permanent)
+            },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                .apply { marginEnd = dp(8) },
+        )
+        actions.addView(
+            actionButton(strings[S.PromptOnce], filled = false) {
+                onAnswer?.invoke(prompt.id, VerdictAction.Allow, RuleLifetime.UntilAppExit)
+            },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                .apply { marginEnd = dp(8) },
+        )
+        actions.addView(
+            actionButton(strings[S.Allow], filled = true) {
+                onAnswer?.invoke(prompt.id, VerdictAction.Allow, RuleLifetime.Permanent)
+            },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+        )
+        root.addView(actions)
+
+        val secondary = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(4), 0, 0)
+        }
+        val later = textView(strings[S.PromptLater], 13f, onSurfaceVariant).apply {
+            setPadding(dp(8), dp(8), dp(8), dp(8))
             setOnClickListener {
                 dismissedId = prompt.id
                 onDismiss?.invoke(prompt.id)
                 hide()
             }
         }
-        buttons.addView(later, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        val deny = textView(strings[S.Deny], 13f, onSurface).apply {
-            gravity = Gravity.CENTER
-            setPadding(dp(14), dp(10), dp(14), dp(10))
-            background = GradientDrawable().apply {
-                setColor(Color.TRANSPARENT)
-                cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), outline)
-            }
-            setOnClickListener {
-                dismissedId = prompt.id
-                onAnswer?.invoke(prompt.id, VerdictAction.Deny, lifetime)
-                hide()
-            }
-        }
-        buttons.addView(deny)
-        val allow = textView(strings[S.Allow], 13f, onPrimary).apply {
-            gravity = Gravity.CENTER
-            setPadding(dp(18), dp(10), dp(18), dp(10))
-            background = GradientDrawable().apply {
-                setColor(primary)
-                cornerRadius = dp(20).toFloat()
-            }
-            setOnClickListener {
-                dismissedId = prompt.id
-                onAnswer?.invoke(prompt.id, VerdictAction.Allow, lifetime)
-                hide()
-            }
-        }
-        buttons.addView(
-            allow,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { marginStart = dp(8) },
+        secondary.addView(
+            later,
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
         )
-        root.addView(buttons)
-        return root
-    }
-
-    private fun updateChips(
-        chips: List<Triple<TextView, RuleLifetime, String>>,
-        selected: RuleLifetime,
-        primary: Int,
-        onPrimary: Int,
-        idle: Int,
-        outline: Int,
-    ) {
-        chips.forEach { (view, value, _) ->
-            val active = value == selected
-            view.tag = active
-            view.setTextColor(if (active) onPrimary else idle)
-            view.background = GradientDrawable().apply {
-                setColor(if (active) primary else Color.TRANSPARENT)
-                cornerRadius = dp(14).toFloat()
-                setStroke(dp(1), if (active) primary else outline)
+        if (preferences.promptShowTimedOption) {
+            val timed = textView(
+                strings.format(S.PromptTimed, timedMinutesProvider()),
+                12f,
+                onSurfaceVariant,
+            ).apply {
+                setPadding(dp(8), dp(8), dp(8), dp(8))
+                setOnClickListener {
+                    dismissedId = prompt.id
+                    onAnswer?.invoke(prompt.id, VerdictAction.Allow, RuleLifetime.Timed)
+                    hide()
+                }
             }
+            secondary.addView(timed)
         }
+        root.addView(secondary)
+        return root
     }
 
     private fun textView(text: String, sizeSp: Float, color: Int, bold: Boolean = false): TextView =

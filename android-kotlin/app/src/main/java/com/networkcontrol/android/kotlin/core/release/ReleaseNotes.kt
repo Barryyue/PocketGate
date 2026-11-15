@@ -11,6 +11,17 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.8.3",
+            date = "2026-11-16",
+            features = listOf(
+                "询问面板改为一键决策：禁止 / 仅一次 / 允许，不再需要先选时长再点按钮。",
+                "限时允许改为第二行的快捷入口，使用设置里的限时时长；关闭「显示限时允许」后就是红魔式三个按钮。",
+            ),
+            notes = listOf(
+                "禁止和允许都是一次点击立即生效；稍后仍然只关闭弹窗、不产生规则。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.8.2",
             date = "2026-11-16",
             features = listOf(

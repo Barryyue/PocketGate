@@ -1010,3 +1010,35 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 狀態欄顏色近似需真機確認；桌布 API 在部分 ROM 可能回傳 null，此時退回深色模式判斷。
+
+---
+
+## 30. v0.8.3-m4spike（2026-11-16）
+
+### 30.1 一鍵式詢問面板
+
+- 移除「先選時長、再點允許 / 拒絕」的兩段式操作。
+- 主按鈕改為三個，按下立即生效：
+  - **禁止** → 永久拒絕
+  - **僅一次** → 允許到應用離開前台
+  - **允許** → 永久允許
+- 第二行保留「稍後」；若設定開啟「顯示限時允許」，右側多一個「限時允許（60 分鐘）」，直接使用 `promptTimedMinutes`。
+- 關閉「顯示限時允許」後，面板就是紅魔式三個按鈕 + 稍後。
+- 應用內詢問面板與系統懸浮面板同步改成相同邏輯；`PromptOnceHint` 不再顯示。
+
+### 30.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.3-m4spike.apk` |
+| APK 大小 | 4,236,877 bytes |
+| APK SHA-256 | `EB1CFA47C72B70D63C970A8DF4C3E8CA544558586BD4256DF303867C4EC635BA` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.3-m4spike.aab` |
+| AAB 大小 | 4,830,314 bytes |
+| AAB SHA-256 | `44997A480A00E2BD9E0394D94ECA6378A72080F8B74B8DC32D0AECA3BB5BEB04` |
+| versionName / Code | `0.8.3-m4spike` / `21` |
+
+### 30.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 真機未驗證：三個按鈕在窄屏 / 大字體下的換行、限時入口的點擊區域。
