@@ -121,6 +121,7 @@ class SpeedIslandController(
                 currentMode = mode
             }
             updateAppearance()
+            applyPosition()
             updateText(speed, mode)
         }
     }
@@ -155,6 +156,17 @@ class SpeedIslandController(
         if (text == lastText) return
         lastText = text
         speedText?.text = text
+    }
+
+    private fun applyPosition() {
+        val root = view ?: return
+        val layout = params ?: return
+        layout.x = dp(preferences.speedIslandOffsetXDp)
+        layout.y = dp(
+            8 + preferences.speedIslandOffsetYDp +
+                if (preferences.vivoIslandCompatible) 16 else 0,
+        ).coerceAtLeast(0)
+        runCatching { windowManager?.updateViewLayout(root, layout) }
     }
 
     private fun updateAppearance() {

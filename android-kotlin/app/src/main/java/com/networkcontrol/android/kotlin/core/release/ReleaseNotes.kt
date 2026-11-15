@@ -11,6 +11,13 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.6.9",
+            date = "2026-11-15",
+            features = listOf(
+                "靈動島水平 / 垂直偏移與背景透明度改為拖動時即時生效，不需要放開滑桿。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.6.8",
             date = "2026-11-15",
             features = listOf(

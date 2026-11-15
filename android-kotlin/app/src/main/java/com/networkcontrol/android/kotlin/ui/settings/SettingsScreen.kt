@@ -494,8 +494,8 @@ fun SettingsScreen(backend: AppBackend) {
                     )
                     Slider(
                         value = islandOffsetX.toFloat(),
-                        onValueChange = { islandOffsetX = it.roundToInt() },
-                        onValueChangeFinished = {
+                        onValueChange = {
+                            islandOffsetX = it.roundToInt()
                             backend.setSpeedIslandOffsetXDp(islandOffsetX)
                         },
                         valueRange = -60f..60f,
@@ -508,8 +508,8 @@ fun SettingsScreen(backend: AppBackend) {
                     )
                     Slider(
                         value = islandOffsetY.toFloat(),
-                        onValueChange = { islandOffsetY = it.roundToInt() },
-                        onValueChangeFinished = {
+                        onValueChange = {
+                            islandOffsetY = it.roundToInt()
                             backend.setSpeedIslandOffsetYDp(islandOffsetY)
                         },
                         valueRange = -60f..60f,
@@ -522,8 +522,8 @@ fun SettingsScreen(backend: AppBackend) {
                     )
                     Slider(
                         value = islandOpacity,
-                        onValueChange = { islandOpacity = it },
-                        onValueChangeFinished = {
+                        onValueChange = {
+                            islandOpacity = it
                             backend.setSpeedIslandOpacity(islandOpacity)
                         },
                         valueRange = 0.2f..1f,
