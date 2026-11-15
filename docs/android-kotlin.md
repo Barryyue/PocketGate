@@ -1069,3 +1069,35 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 真機未驗證：稍後 1 分鐘後是否能按預期重新彈窗（取決於應用是否重試連線）。
+
+---
+
+## 32. v0.8.5-m4spike（2026-11-16）
+
+### 32.1 「稍後」按前台會話判斷
+
+- `PromptBroker.dismiss()` 不再寫入固定時間的抑制表，而是把應用加入 `sessionSuppressed`。
+- `PromptRouter` 每秒檢查（僅在有會話抑制時查 UsageStats）目前前台套件：
+  - 使用者按稍後時，應用仍在前台 → 保持抑制。
+  - 切到桌面或其他應用 → 更新前台記錄。
+  - 再次回到該應用 → `clearSessionSuppression()`，下一次連線重新詢問。
+- 無「使用情況訪問」權限時無法判斷前台，退回 60 秒後自動清空抑制。
+- 抑制鍵統一去掉 `android-app://` 前綴，現在是套件名稱。
+
+### 32.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.5-m4spike.apk` |
+| APK 大小 | 4,253,265 bytes |
+| APK SHA-256 | `7D108749227FB52DD92B49F46237CE9AB5B00D6BC3F73C6BBB10B1A26EF6B301` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.5-m4spike.aab` |
+| AAB 大小 | 4,831,759 bytes |
+| AAB SHA-256 | `7CB627DDA8944292E7FA1843E8144EA6263E0ADBC68212742AC0CD3A09D697D4` |
+| versionName / Code | `0.8.5-m4spike` / `23` |
+
+### 32.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器實測：Chrome 觸發詢問 → 點稍後 → 回桌面 → 再打開 Chrome，詢問重新出現。
+- 真機未驗證：UsageStats 在 OEM ROM 的前台判斷延遲。

@@ -11,6 +11,16 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.8.5",
+            date = "2026-11-16",
+            features = listOf(
+                "「稍后」改为按前台会话判断：本次应用会话内不再提醒，切到后台再回到该应用后会重新询问。",
+            ),
+            notes = listOf(
+                "需要「使用情况访问」权限来判断前台应用；未授权时退回短时间冷却。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.8.4",
             date = "2026-11-16",
             features = listOf(

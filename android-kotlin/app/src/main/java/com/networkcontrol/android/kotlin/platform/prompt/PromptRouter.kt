@@ -62,8 +62,39 @@ class PromptRouter(
         scope.launch { broker.pending.collect { render() } }
         scope.launch { protection.enabled.collect { render() } }
         scope.launch(Dispatchers.Default) {
+            var lastPackage: String? = null
+            var seenForeground = false
+            var suppressedSince = 0L
             while (isActive) {
                 if (broker.pending.value.isNotEmpty()) render()
+                if (broker.hasSessionSuppressions()) {
+                    if (!tracker.isAvailable()) {
+                        if (suppressedSince == 0L) {
+                            suppressedSince = System.currentTimeMillis()
+                        } else if (System.currentTimeMillis() - suppressedSince > 60_000L) {
+                            broker.clearAllSessionSuppressions()
+                            suppressedSince = 0L
+                        }
+                        lastPackage = null
+                        seenForeground = false
+                    } else {
+                        suppressedSince = 0L
+                        val packageName = tracker.foregroundPackage()
+                        if (packageName != null) {
+                            if (seenForeground && packageName != lastPackage) {
+                                broker.clearSessionSuppression(packageName)
+                            }
+                            lastPackage = packageName
+                            seenForeground = true
+                        } else {
+                            lastPackage = null
+                        }
+                    }
+                } else {
+                    lastPackage = null
+                    seenForeground = false
+                    suppressedSince = 0L
+                }
                 delay(1_000)
             }
         }

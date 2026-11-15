@@ -106,6 +106,13 @@ class PromptForegroundTracker(private val context: Context) {
         return uid
     }
 
+    /** 取得目前前台套件名稱；會順便刷新 UsageStats。 */
+    @Synchronized
+    fun foregroundPackage(): String? {
+        foregroundUid()
+        return currentPackage
+    }
+
     private fun activityKey(packageName: String, className: String?): String =
         "$packageName/${className.orEmpty()}"
 

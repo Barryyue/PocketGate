@@ -51,7 +51,9 @@ class PromptBroker(
 
     private val _pending = MutableStateFlow<List<PromptSnapshot>>(emptyList())
     val pending: StateFlow<List<PromptSnapshot>> = _pending.asStateFlow()
-    private val suppressedUntil = HashMap<String, Long>()
+    private val sessionSuppressed = HashSet<String>()
+    @Volatile
+    private var sessionSuppressedCount = 0
 
     private val _events = MutableSharedFlow<PromptEvent>(extraBufferCapacity = 64)
     val events = _events.asSharedFlow()
@@ -78,9 +80,8 @@ class PromptBroker(
         var event: PromptEvent? = null
         val deferred = CompletableDeferred<Verdict>()
         gate.withLock {
-            val suppressionKey = app?.path ?: flow.executablePath ?: "unknown"
-            val until = suppressedUntil[suppressionKey]
-            if (until != null && until > Time.now()) {
+            val suppressKey = suppressionKey(app?.path ?: flow.executablePath)
+            if (suppressKey in sessionSuppressed) {
                 deferred.complete(Verdict(settings.state.value.promptDefaultAction, VerdictReason.Mode))
                 return@withLock
             }
@@ -334,17 +335,15 @@ class PromptBroker(
     }
 
     /** 使用者選擇「稍後」：拒絕目前這批連線，10 分鐘內不再詢問同一應用。 */
-    /** 使用者選擇「稍後」後，同一應用在這段時間內不再詢問，避免立刻重複彈窗。 */
-    private val suppressAfterLaterMs = 60_000L
-
+    /** 使用者選擇「稍後」後，同一應用在本次前台會話內不再詢問；切換出去再回來會重新詢問。 */
     suspend fun dismiss(promptId: String): Boolean {
         var prompt: PendingPrompt? = null
         gate.withLock {
             prompt = prompts[promptId] ?: return@withLock
             removeLocked(prompt!!)
             pendingFlows = (pendingFlows - prompt!!.flows.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
-            val key = prompt!!.app?.path ?: prompt!!.firstFlow.executablePath ?: "unknown"
-            suppressedUntil[key] = Time.now() + suppressAfterLaterMs
+            val key = suppressionKey(prompt!!.app?.path ?: prompt!!.firstFlow.executablePath)
+            if (sessionSuppressed.add(key)) sessionSuppressedCount = sessionSuppressed.size
             refreshPendingLocked()
         }
         val dismissed = prompt ?: return false
@@ -362,6 +361,30 @@ class PromptBroker(
         }
         return count
     }
+
+    /** 應用回到前台時呼叫，允許它再次觸發詢問。 */
+    suspend fun clearSessionSuppression(packageName: String) {
+        gate.withLock {
+            if (sessionSuppressed.remove(packageName)) {
+                sessionSuppressedCount = sessionSuppressed.size
+            }
+        }
+    }
+
+    fun hasSessionSuppressions(): Boolean = sessionSuppressedCount > 0
+
+    /** 沒有使用情況權限時的兜底：清空本次會話抑制。 */
+    suspend fun clearAllSessionSuppressions() {
+        gate.withLock {
+            if (sessionSuppressed.isNotEmpty()) {
+                sessionSuppressed.clear()
+                sessionSuppressedCount = 0
+            }
+        }
+    }
+
+    private fun suppressionKey(path: String?): String =
+        path?.removePrefix("android-app://")?.takeIf { it.isNotBlank() } ?: "unknown"
 
     fun getPending(): List<PromptSnapshot> = _pending.value
 
