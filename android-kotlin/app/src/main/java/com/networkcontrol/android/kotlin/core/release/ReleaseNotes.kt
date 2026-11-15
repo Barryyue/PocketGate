@@ -11,6 +11,20 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.7.0",
+            date = "2026-11-15",
+            features = listOf(
+                "靈動島背景透明度可調到 0：背景與邊框完全透明，只留文字；全透明時自動用陰影保持可讀性，並暫停攔截觸控以免擋住狀態欄下拉。",
+                "靈動島文字顏色新增跟隨主題、跟隨狀態欄、自訂顏色三種模式，自訂色可用預設色盤或 HSV 調色。",
+                "狀態欄文字色會依日夜模式自動選黑或白；開啟「嘗試放進狀態欄」時預設切到跟隨狀態欄。",
+                "綠色狀態點可顯示 / 隱藏，並可自訂顏色。",
+                "上傳 / 下載的顯示順序可以互換，套用到完整、循環、迷你三種樣式。",
+            ),
+            notes = listOf(
+                "狀態欄模式仍受 Android 限制：第三方懸浮窗在系統狀態欄之下，部分 ROM 可能遮住。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.6.10",
             date = "2026-11-15",
             features = listOf(

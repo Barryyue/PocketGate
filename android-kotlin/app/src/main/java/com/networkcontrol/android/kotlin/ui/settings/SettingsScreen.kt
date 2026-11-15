@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -54,6 +55,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -119,6 +122,13 @@ fun SettingsScreen(backend: AppBackend) {
     var islandOpacity by remember { mutableFloatStateOf(backend.speedIslandOpacity()) }
     var islandMode by remember { mutableStateOf(backend.speedIslandMode()) }
     var statusBarOverlay by remember { mutableStateOf(backend.speedIslandStatusBarMode()) }
+    var islandShowDot by remember { mutableStateOf(backend.speedIslandShowDot()) }
+    var islandSwapOrder by remember { mutableStateOf(backend.speedIslandSwapOrder()) }
+    var islandTextMode by remember { mutableStateOf(backend.speedIslandTextColorMode()) }
+    var islandTextColor by remember { mutableIntStateOf(backend.speedIslandTextColor()) }
+    var islandDotColor by remember { mutableIntStateOf(backend.speedIslandDotColor()) }
+    var showIslandTextColorDialog by remember { mutableStateOf(false) }
+    var showIslandDotColorDialog by remember { mutableStateOf(false) }
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
     var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
@@ -495,6 +505,7 @@ fun SettingsScreen(backend: AppBackend) {
                         onCheckedChange = {
                             statusBarOverlay = it
                             backend.setSpeedIslandStatusBarMode(it)
+                            islandTextMode = backend.speedIslandTextColorMode()
                         },
                     )
                     Text(
@@ -536,8 +547,78 @@ fun SettingsScreen(backend: AppBackend) {
                             islandOpacity = it
                             backend.setSpeedIslandOpacity(islandOpacity)
                         },
-                        valueRange = 0.2f..1f,
-                        steps = 15,
+                        valueRange = 0f..1f,
+                        steps = 19,
+                    )
+                    Text(s[S.IslandTextColor], style = MaterialTheme.typography.bodyMedium)
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        FilterChip(
+                            islandTextMode == "theme",
+                            {
+                                islandTextMode = "theme"
+                                backend.setSpeedIslandTextColorMode("theme")
+                            },
+                            { Text(s[S.FollowTheme]) },
+                        )
+                        FilterChip(
+                            islandTextMode == "statusbar",
+                            {
+                                islandTextMode = "statusbar"
+                                backend.setSpeedIslandTextColorMode("statusbar")
+                            },
+                            { Text(s[S.FollowStatusBar]) },
+                        )
+                        FilterChip(
+                            islandTextMode == "custom",
+                            {
+                                islandTextMode = "custom"
+                                backend.setSpeedIslandTextColorMode("custom")
+                            },
+                            { Text(s[S.OverlayCustom]) },
+                        )
+                    }
+                    if (islandTextMode == "custom") {
+                        OutlinedButton(onClick = { showIslandTextColorDialog = true }) {
+                            Box(
+                                Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(islandTextColor)),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(s[S.CustomColor])
+                        }
+                    }
+                    SwitchRow(
+                        title = s[S.IslandShowDot],
+                        checked = islandShowDot,
+                        onCheckedChange = {
+                            islandShowDot = it
+                            backend.setSpeedIslandShowDot(it)
+                        },
+                    )
+                    if (islandShowDot) {
+                        OutlinedButton(onClick = { showIslandDotColorDialog = true }) {
+                            Box(
+                                Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(islandDotColor)),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(s[S.IslandDotColor])
+                        }
+                    }
+                    SwitchRow(
+                        title = s[S.IslandSwapOrder],
+                        checked = islandSwapOrder,
+                        onCheckedChange = {
+                            islandSwapOrder = it
+                            backend.setSpeedIslandSwapOrder(it)
+                        },
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -950,6 +1031,32 @@ fun SettingsScreen(backend: AppBackend) {
             current = themeColor,
             onDismiss = { showThemeColorDialog = false },
             onSelect = { backend.setThemeColor(it) },
+        )
+    }
+
+    if (showIslandTextColorDialog) {
+        ThemeColorDialog(
+            current = Color(islandTextColor),
+            onDismiss = { showIslandTextColorDialog = false },
+            onSelect = {
+                islandTextColor = it.toArgb()
+                backend.setSpeedIslandTextColor(islandTextColor)
+                showIslandTextColorDialog = false
+            },
+            title = s[S.IslandTextColor],
+        )
+    }
+
+    if (showIslandDotColorDialog) {
+        ThemeColorDialog(
+            current = Color(islandDotColor),
+            onDismiss = { showIslandDotColorDialog = false },
+            onSelect = {
+                islandDotColor = it.toArgb()
+                backend.setSpeedIslandDotColor(islandDotColor)
+                showIslandDotColorDialog = false
+            },
+            title = s[S.IslandDotColor],
         )
     }
 

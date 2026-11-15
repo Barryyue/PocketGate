@@ -69,10 +69,31 @@ class AppPreferences(context: Context) {
         ).coerceIn(-60, 60)
         set(value) = prefs.edit().putInt(KEY_SPEED_ISLAND_OFFSET_Y, value.coerceIn(-60, 60)).apply()
 
-    /** 靈動島背景透明度（0.1–1.0）。 */
+    /** 靈動島背景透明度（0–1.0）。 */
     var speedIslandOpacity: Float
-        get() = prefs.getFloat(KEY_SPEED_ISLAND_OPACITY, 0.9f).coerceIn(0.1f, 1f)
-        set(value) = prefs.edit().putFloat(KEY_SPEED_ISLAND_OPACITY, value.coerceIn(0.1f, 1f)).apply()
+        get() = prefs.getFloat(KEY_SPEED_ISLAND_OPACITY, 0.9f).coerceIn(0f, 1f)
+        set(value) = prefs.edit().putFloat(KEY_SPEED_ISLAND_OPACITY, value.coerceIn(0f, 1f)).apply()
+
+    /** 靈動島文字顏色：theme（跟隨主題）或 custom。 */
+    var speedIslandTextColorMode: String
+        get() = prefs.getString(KEY_SPEED_ISLAND_TEXT_MODE, "theme") ?: "theme"
+        set(value) = prefs.edit().putString(KEY_SPEED_ISLAND_TEXT_MODE, value).apply()
+
+    var speedIslandTextColor: Int
+        get() = prefs.getInt(KEY_SPEED_ISLAND_TEXT_COLOR, 0xFFFFFFFF.toInt())
+        set(value) = prefs.edit().putInt(KEY_SPEED_ISLAND_TEXT_COLOR, value).apply()
+
+    var speedIslandShowDot: Boolean
+        get() = prefs.getBoolean(KEY_SPEED_ISLAND_SHOW_DOT, true)
+        set(value) = prefs.edit().putBoolean(KEY_SPEED_ISLAND_SHOW_DOT, value).apply()
+
+    var speedIslandSwapOrder: Boolean
+        get() = prefs.getBoolean(KEY_SPEED_ISLAND_SWAP_ORDER, false)
+        set(value) = prefs.edit().putBoolean(KEY_SPEED_ISLAND_SWAP_ORDER, value).apply()
+
+    var speedIslandDotColor: Int
+        get() = prefs.getInt(KEY_SPEED_ISLAND_DOT_COLOR, 0xFF4CAF50.toInt())
+        set(value) = prefs.edit().putInt(KEY_SPEED_ISLAND_DOT_COLOR, value).apply()
 
     var speedIslandMode: com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
         get() = runCatching {
@@ -156,6 +177,11 @@ class AppPreferences(context: Context) {
         const val KEY_SPEED_ISLAND_OFFSET_X = "speed_island_offset_x"
         const val KEY_SPEED_ISLAND_OFFSET_Y = "speed_island_offset_y"
         const val KEY_SPEED_ISLAND_OPACITY = "speed_island_opacity"
+        const val KEY_SPEED_ISLAND_TEXT_MODE = "speed_island_text_mode"
+        const val KEY_SPEED_ISLAND_TEXT_COLOR = "speed_island_text_color"
+        const val KEY_SPEED_ISLAND_SHOW_DOT = "speed_island_show_dot"
+        const val KEY_SPEED_ISLAND_SWAP_ORDER = "speed_island_swap_order"
+        const val KEY_SPEED_ISLAND_DOT_COLOR = "speed_island_dot_color"
         const val KEY_SPEED_ISLAND_MODE = "speed_island_mode"
         const val KEY_SPEED_ISLAND_STATUSBAR = "speed_island_statusbar"
         const val KEY_PROMPT_SHOW_DETAILS = "prompt_show_details"

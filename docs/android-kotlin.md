@@ -856,3 +856,48 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 真機未驗證：狀態欄模式在不同 ROM 的可見性；這是 Android 層級限制，不是位置計算問題。
+
+---
+
+## 26. v0.7.0-m4spike（2026-11-15）
+
+### 26.1 靈動島外觀配置
+
+- 背景透明度下限改為 0：`alpha=0` 時背景與邊框完全透明，`elevation` 也歸零，只留文字與狀態點；此時加上 `FLAG_NOT_TOUCHABLE`，不攔截狀態欄下拉與桌面手勢。
+- 全透明時文字依亮度自動配黑 / 白陰影（`contrastShadow`），避免亮色桌布上看不清；狀態欄模式下文字每秒跟隨日夜模式重算。
+- 文字顏色三種模式：
+  - `theme`（預設）：跟隨 `ThemeController.color`，主題色改變時透過 `StateFlow` 即時刷新。
+  - `statusbar`：夜間白、日間黑，近似狀態欄文字；開啟「嘗試放進狀態欄」時預設切到此模式，關閉時切回 `theme`。
+  - `custom`：`ThemeColorDialog` 提供預設色盤 + HSV 自訂，套用後即時生效並持久化。
+- 綠色狀態點可顯示 / 隱藏，並可自訂顏色。
+- 上傳 / 下載顯示順序可互換，套用完整、循環、迷你三種樣式；循環模式的起始方向也一併反轉。
+- 文字色、圓點色、顯示圓點、互換順序改動都走 `SpeedIslandController.refresh()` → 重建 / 更新視圖。
+
+### 26.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.7.0-m4spike.apk` |
+| APK 大小 | 4,204,113 bytes |
+| APK SHA-256 | `A35D669326C9802A0F35CD59269FD40FBD9F54F59CCFB39DFA5DED727896473B` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.7.0-m4spike.aab` |
+| AAB 大小 | 4,765,526 bytes |
+| AAB SHA-256 | `7CBD0C8D820AAE2140EF8CCF8CC18BA63AA8051EFE09FA008CABAC381D468C69` |
+| versionName / Code | `0.7.0-m4spike` / `17` |
+
+### 26.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器（1080×2400）實測：
+  - 透明度 0：背景、邊框、陰影全部消失，只剩文字。
+  - 跟隨主題：主題色改為藍色後靈動島文字同步變藍。
+  - 跟隨狀態欄：淺色系統下為黑字，位於狀態欄座標區可見。
+  - 自訂色：調色盤選紫色後即時生效；圓點設為紅色、隱藏與顯示均正常。
+  - 互換順序：`↑ … ↓ …` 與 `↓ … ↑ …` 即時切換。
+  - 設定頁籌片改為 `FlowRow`，窄屏不再把「Custom color」擠成兩行。
+- 真機未驗證：不同 ROM 狀態欄遮擋、全透明在淺色桌布上的實際可讀性、vivo 機型。
+
+### 26.4 限制
+
+- 狀態欄模式仍是盡力而為：第三方 `TYPE_APPLICATION_OVERLAY` 在系統狀態欄之下。
+- 全透明時會加上 `FLAG_NOT_TOUCHABLE`，避免看不見的懸浮窗擋住狀態欄下拉與桌面手勢；此時點擊靈動島不會開啟應用，調高透明度即可恢復點擊。

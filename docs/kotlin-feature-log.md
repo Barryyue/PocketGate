@@ -141,6 +141,17 @@
 |---|---|---|---|---|
 | K-058 | 靈動島「嘗試放進狀態欄」：`FLAG_LAYOUT_IN_SCREEN` / `NO_LIMITS`、`fitInsetsTypes=0`、cutout ALWAYS，垂直偏移可負值 | `SpeedIslandController`、`AppPreferences`、`SettingsScreen` | 構建 + 代碼審查 | 第三方懸浮窗仍在系統狀態欄之下，部分 ROM 會遮住；需真機確認 |
 
+### v0.7.0-m4spike（2026-11-15）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-059 | 靈動島透明度可到 0：背景、邊框、elevation 全消失；全透明時加 `FLAG_NOT_TOUCHABLE`，文字用亮度對比陰影 | `AppPreferences`、`SpeedIslandController`、`SettingsScreen` | 模擬器截圖：0% 時只剩文字且不擋觸控 | 淺色桌布可讀性待真機 |
+| K-060 | 文字顏色三模式：跟隨主題（`ThemeController.color` 即時刷新）、跟隨狀態欄（日夜黑白近似）、自訂（預設色盤 + HSV） | `AppPreferences`、`AppBackend`、`SpeedIslandController`、`SettingsScreen`、`ThemeColorDialog` | 模擬器：主題改藍色文字同步變藍、狀態欄模式黑字、自訂紫色即時生效 | ROM 狀態欄圖示色無法直接讀取，日夜近似 |
+| K-061 | 狀態欄模式與文字色聯動：開啟時 `theme` 自動切 `statusbar`，關閉時 `statusbar` 切回 `theme` | `AppBackend.setSpeedIslandStatusBarMode` | 代碼審查 + 設定頁狀態同步 | 手動選過的模式不被覆蓋 |
+| K-062 | 綠色狀態點可顯示 / 隱藏，並可自訂顏色 | `AppPreferences`、`SpeedIslandController`、`SettingsScreen` | 模擬器：隱藏 / 顯示、紅色自訂均正常 | — |
+| K-063 | 上傳 / 下載順序互換，套用完整、循環、迷你；循環起始方向一併反轉 | `AppPreferences`、`SpeedIslandController`、`SettingsScreen` | 模擬器：順序即時切換 | — |
+| K-064 | 設定頁顏色籌片改用 `FlowRow`，窄屏自動換行 | `SettingsScreen` | 模擬器 1080×2400 設定頁 | — |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

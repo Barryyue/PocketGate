@@ -532,6 +532,46 @@ class AppBackend(val container: AppContainer) {
 
     fun setSpeedIslandStatusBarMode(enabled: Boolean) {
         container.preferences.speedIslandStatusBarMode = enabled
+        if (enabled && container.preferences.speedIslandTextColorMode == "theme") {
+            container.preferences.speedIslandTextColorMode = "statusbar"
+        } else if (!enabled && container.preferences.speedIslandTextColorMode == "statusbar") {
+            container.preferences.speedIslandTextColorMode = "theme"
+        }
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandTextColorMode(): String = container.preferences.speedIslandTextColorMode
+
+    fun setSpeedIslandTextColorMode(mode: String) {
+        container.preferences.speedIslandTextColorMode = mode
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandTextColor(): Int = container.preferences.speedIslandTextColor
+
+    fun setSpeedIslandTextColor(color: Int) {
+        container.preferences.speedIslandTextColor = color
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandShowDot(): Boolean = container.preferences.speedIslandShowDot
+
+    fun setSpeedIslandShowDot(show: Boolean) {
+        container.preferences.speedIslandShowDot = show
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandSwapOrder(): Boolean = container.preferences.speedIslandSwapOrder
+
+    fun setSpeedIslandSwapOrder(swap: Boolean) {
+        container.preferences.speedIslandSwapOrder = swap
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandDotColor(): Int = container.preferences.speedIslandDotColor
+
+    fun setSpeedIslandDotColor(color: Int) {
+        container.preferences.speedIslandDotColor = color
         container.speedIsland.refresh()
     }
 
