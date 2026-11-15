@@ -1,7 +1,13 @@
 package com.networkcontrol.android.kotlin.platform.overlay
 
+import android.app.WallpaperColors
+import android.app.WallpaperManager
+import android.content.BroadcastReceiver
+import android.content.ComponentCallbacks
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -102,7 +108,31 @@ class SpeedIslandController(
     @Volatile
     private var networkName: String? = null
 
+    @Volatile
+    private var statusBarTextColor = Color.BLACK
+    private var statusBarColorAt = 0L
+
     fun start() {
+        refreshStatusBarColor(force = true)
+        context.registerComponentCallbacks(object : ComponentCallbacks {
+            override fun onConfigurationChanged(newConfig: Configuration) {
+                refreshStatusBarColor(force = true)
+                refresh()
+            }
+
+            override fun onLowMemory() = Unit
+        })
+        runCatching {
+            context.registerReceiver(
+                object : BroadcastReceiver() {
+                    override fun onReceive(receiverContext: Context?, intent: Intent?) {
+                        refreshStatusBarColor(force = true)
+                        refresh()
+                    }
+                },
+                IntentFilter(Intent.ACTION_WALLPAPER_CHANGED),
+            )
+        }
         scope.launch {
             combine(
                 protection.enabled,
@@ -144,9 +174,17 @@ class SpeedIslandController(
     }
 
     fun refresh() {
+        refreshStatusBarColor()
         val visible = protection.enabled.value && !screenState.locked.value &&
             preferences.speedIslandEnabled && Settings.canDrawOverlays(context)
         if (visible) show(speedMonitor.speed.value) else hide()
+    }
+
+    private fun refreshStatusBarColor(force: Boolean = false) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (!force && now - statusBarColorAt < 60_000) return
+        statusBarColorAt = now
+        statusBarTextColor = computeStatusBarTextColor()
     }
 
     private suspend fun refreshStats() {
@@ -353,8 +391,26 @@ class SpeedIslandController(
 
     private fun textColor(): Int = when (preferences.speedIslandTextColorMode) {
         "custom" -> preferences.speedIslandTextColor
-        "statusbar" -> if (isNightMode()) Color.WHITE else Color.BLACK
+        "statusbar" -> statusBarTextColor
         else -> themeColor.value.toArgb()
+    }
+
+    /**
+     * Android 不提供查詢狀態欄圖示顏色的 API；用系統深色模式 + 桌布色調做近似。
+     * 深色桌布通常配白色狀態欄圖示，淺色桌布配黑色。
+     */
+    private fun computeStatusBarTextColor(): Int {
+        if (isNightMode()) return Color.WHITE
+        val hints = runCatching {
+            context.getSystemService(WallpaperManager::class.java)
+                ?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                ?.colorHints
+        }.getOrNull() ?: 0
+        return when {
+            (hints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0 -> Color.BLACK
+            (hints and WallpaperColors.HINT_SUPPORTS_DARK_THEME) != 0 -> Color.WHITE
+            else -> Color.BLACK
+        }
     }
 
     private fun isNightMode(): Boolean =

@@ -46,26 +46,17 @@ object SpeedIslandFormatter {
         stats: SpeedIslandStats,
         swapOrder: Boolean,
         showDownload: Boolean,
-    ): String = when (mode) {
-        SpeedIslandMode.Full -> pair(
-            formatRate(stats.downloadBytesPerSecond) + "/s",
-            formatRate(stats.uploadBytesPerSecond) + "/s",
-            swapOrder,
-        )
-        SpeedIslandMode.Cycle -> {
-            val download = if (swapOrder) !showDownload else showDownload
-            if (download) {
-                "↓ ${formatRate(stats.downloadBytesPerSecond)}/s"
-            } else {
-                "↑ ${formatRate(stats.uploadBytesPerSecond)}/s"
+    ): String {
+        val download = formatRate(stats.downloadBytesPerSecond) + "/s"
+        val upload = formatRate(stats.uploadBytesPerSecond) + "/s"
+        return when (mode) {
+            SpeedIslandMode.Full -> pair(download, upload, swapOrder)
+            SpeedIslandMode.Cycle -> {
+                val show = if (swapOrder) !showDownload else showDownload
+                if (show) "↓ $download" else "↑ $upload"
             }
+            SpeedIslandMode.Mini -> pair(download, upload, swapOrder, compact = true)
         }
-        SpeedIslandMode.Mini -> pair(
-            formatRateShort(stats.downloadBytesPerSecond),
-            formatRateShort(stats.uploadBytesPerSecond),
-            swapOrder,
-            compact = true,
-        )
     }
 
     private fun formatTraffic(
@@ -73,26 +64,17 @@ object SpeedIslandFormatter {
         stats: SpeedIslandStats,
         swapOrder: Boolean,
         showDownload: Boolean,
-    ): String = when (mode) {
-        SpeedIslandMode.Full -> pair(
-            formatRate(stats.todayBytesIn),
-            formatRate(stats.todayBytesOut),
-            swapOrder,
-        )
-        SpeedIslandMode.Cycle -> {
-            val download = if (swapOrder) !showDownload else showDownload
-            if (download) {
-                "↓ ${formatRate(stats.todayBytesIn)}"
-            } else {
-                "↑ ${formatRate(stats.todayBytesOut)}"
+    ): String {
+        val download = formatRate(stats.todayBytesIn)
+        val upload = formatRate(stats.todayBytesOut)
+        return when (mode) {
+            SpeedIslandMode.Full -> pair(download, upload, swapOrder)
+            SpeedIslandMode.Cycle -> {
+                val show = if (swapOrder) !showDownload else showDownload
+                if (show) "↓ $download" else "↑ $upload"
             }
+            SpeedIslandMode.Mini -> pair(download, upload, swapOrder, compact = true)
         }
-        SpeedIslandMode.Mini -> pair(
-            formatRateShort(stats.todayBytesIn),
-            formatRateShort(stats.todayBytesOut),
-            swapOrder,
-            compact = true,
-        )
     }
 
     private fun pair(download: String, upload: String, swap: Boolean, compact: Boolean = false): String =
@@ -112,21 +94,5 @@ object SpeedIslandFormatter {
             index++
         }
         return "%.1f %s".format(value, units[index])
-    }
-
-    fun formatRateShort(bytes: Long): String {
-        if (bytes < 1024) return "${bytes}B"
-        val units = arrayOf("K", "M", "G", "T")
-        var value = bytes.toDouble()
-        var index = -1
-        while (value >= 1024 && index < units.lastIndex) {
-            value /= 1024
-            index++
-        }
-        return if (value >= 10) {
-            "${value.toInt()}${units[index]}"
-        } else {
-            "%.1f%s".format(value, units[index])
-        }
     }
 }

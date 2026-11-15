@@ -43,8 +43,8 @@ class SpeedIslandFormatterTest {
     }
 
     @Test
-    fun miniUsesCompactUnits() {
-        assertEquals("↓1.2M ↑24K", format(mode = SpeedIslandMode.Mini))
+    fun miniUsesFullUnits() {
+        assertEquals("↓1.2 MB/s ↑24.0 KB/s", format(mode = SpeedIslandMode.Mini))
     }
 
     @Test
@@ -61,7 +61,7 @@ class SpeedIslandFormatterTest {
     fun trafficUsesTodayTotals() {
         assertEquals("↓ 1.8 GB   ↑ 320.0 MB", format(content = SpeedIslandContent.Traffic))
         assertEquals(
-            "↓1.8G ↑320M",
+            "↓1.8 GB ↑320.0 MB",
             format(content = SpeedIslandContent.Traffic, mode = SpeedIslandMode.Mini),
         )
     }

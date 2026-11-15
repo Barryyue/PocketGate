@@ -973,3 +973,40 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 真機未驗證：代理應用繞過後 SOCKS 埠是否保持可用、代理應用是否需要額外保活設定。
+
+---
+
+## 29. v0.8.2-m4spike（2026-11-16）
+
+### 29.1 單位與文案
+
+- 速度單位改為完整形式：`B/s`、`KB/s`、`MB/s`、`GB/s`、`TB/s`；迷你樣式也使用完整單位，不再顯示 `K` / `M` / `G`。
+- 流量總量使用 `B`、`KB`、`MB`、`GB`、`TB`。
+- 詢問面板的「允許一次」改為「僅一次」；`UntilAppExit` 的行為不變。
+
+### 29.2 狀態欄文字色
+
+- Android 沒有查詢狀態欄圖示顏色的公開 API。現在用「系統深色模式 + 桌布色調」近似：
+  - 深色模式 → 白字。
+  - 淺色模式 + 桌布支援深色文字 → 黑字。
+  - 淺色模式 + 桌布支援深色主題 → 白字。
+  - 無桌布資訊 → 依深色模式。
+- 桌布變更與系統配置變更時重新計算；其餘時間每 60 秒最多查詢一次。
+- 部分應用會自行把狀態欄圖示切換為深色或淺色，第三方懸浮窗無法得知；不一致時可在「文字顏色」選自訂色覆蓋。
+
+### 29.3 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.2-m4spike.apk` |
+| APK 大小 | 4,236,881 bytes |
+| APK SHA-256 | `751A1D103B42D7CE10510CE2623F632F1E167C248B7717171C2C7E450A24D027` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.2-m4spike.aab` |
+| AAB 大小 | 4,832,470 bytes |
+| AAB SHA-256 | `F70EA2F04AADA16E857C3E0BB0A6FDC79B7FE7CD0B3F69006FAC46B069322EE8` |
+| versionName / Code | `0.8.2-m4spike` / `20` |
+
+### 29.4 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 狀態欄顏色近似需真機確認；桌布 API 在部分 ROM 可能回傳 null，此時退回深色模式判斷。

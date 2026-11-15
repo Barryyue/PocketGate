@@ -11,6 +11,19 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.8.2",
+            date = "2026-11-16",
+            features = listOf(
+                "速度单位改为完整写法：B/s、KB/s、MB/s、GB/s、TB/s，迷你样式也不再缩写。",
+                "体积单位同样使用完整写法：B、KB、MB、GB、TB。",
+                "状态栏文字颜色改为参考系统深浅色和桌布色调，深色桌布自动使用白字。",
+                "询问面板的「允许一次」改为「仅一次」，与 Android 权限风格一致。",
+            ),
+            notes = listOf(
+                "Android 不提供读取状态栏图示颜色的 API，桌布近似在部分应用内仍可能不一致；可用自定义颜色覆盖。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.8.1",
             date = "2026-11-15",
             features = listOf(

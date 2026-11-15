@@ -169,6 +169,14 @@
 |---|---|---|---|---|
 | K-071 | 轉發模式可選擇「代理應用」，把它加入 VPN 的 `addDisallowedApplication`，避免代理自身流量回環；設定頁顯示代理應用與 VPN 共存提示 | `AppPreferences`、`AppBackend`、`VpnEngine`、`SettingsScreen`、`UiStrings` | 構建 + 設定頁代碼審查 | 代理需關閉 TUN、保持 SOCKS 埠 |
 
+### v0.8.2-m4spike（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-072 | 速度 / 流量單位改為完整寫法：B/s、KB/s、MB/s、GB/s、TB/s，迷你樣式不再縮寫 | `SpeedIslandFormatter`、`SpeedIslandFormatterTest` | JVM 測試 | — |
+| K-073 | 狀態欄文字色改為參考系統深色模式 + 桌布 `WallpaperColors` 色調，並在桌布 / 配置變化時刷新 | `SpeedIslandController` | 代碼審查 | Android 無公開 API 讀取狀態欄圖示色，仍屬近似 |
+| K-074 | 詢問面板「允許一次」改為「僅一次」 | `UiStrings` | 構建 | 只改文案，行為不變 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
