@@ -116,8 +116,8 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
 
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChip(
-                    lifetime == RuleLifetime.Once,
-                    { lifetime = RuleLifetime.Once },
+                    lifetime == RuleLifetime.UntilAppExit,
+                    { lifetime = RuleLifetime.UntilAppExit },
                     { Text(s[S.PromptOnce]) },
                 )
                 FilterChip(
@@ -134,6 +134,14 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                     lifetime == RuleLifetime.UntilRestart,
                     { lifetime = RuleLifetime.UntilRestart },
                     { Text(s[S.PromptUntilRestart]) },
+                )
+            }
+
+            if (lifetime == RuleLifetime.UntilAppExit) {
+                Text(
+                    s[S.PromptOnceHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 

@@ -56,6 +56,7 @@ class AppContainer(context: Context) {
     val settings = SettingsService(settingsStore)
     val runtime = RuntimeStateService(settingsStore)
     val rules = RuleService(ruleStore, runtime, scope)
+    val appSessionTracker = com.networkcontrol.android.kotlin.engine.apps.TargetAppSessionTracker(appContext, rules, scope)
     val profiles = ProfileService(profileStore, runtime, rules)
     val prompts = PromptBroker(rules, runtime, settings, scope)
     val appCatalog = AppCatalog(appContext)

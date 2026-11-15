@@ -49,7 +49,9 @@ enum class RuleLifetime(val code: Int) {
     UntilProcessExit(1),
     Timed(2),
     UntilRestart(3),
-    Permanent(4);
+    Permanent(4),
+    /** 允許直到目標應用離開前台（Android 用 UsageStats 判斷）；不持久化。 */
+    UntilAppExit(5);
 
     companion object {
         fun fromCode(code: Int): RuleLifetime = entries.firstOrNull { it.code == code } ?: Permanent

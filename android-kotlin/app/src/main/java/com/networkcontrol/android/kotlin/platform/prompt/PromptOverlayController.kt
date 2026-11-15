@@ -291,7 +291,7 @@ class PromptOverlayController(
                 ).apply { marginEnd = dp(6) },
             )
         }
-        addChip(strings[S.PromptOnce], RuleLifetime.Once)
+        addChip(strings[S.PromptOnce], RuleLifetime.UntilAppExit)
         addChip(strings[S.PromptPermanent], RuleLifetime.Permanent)
         addChip(strings[S.PromptOneHour], RuleLifetime.Timed)
         addChip(strings[S.PromptUntilRestart], RuleLifetime.UntilRestart)

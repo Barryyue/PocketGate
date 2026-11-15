@@ -177,6 +177,26 @@ class RulesTest {
     }
 
     @Test
+    fun untilAppExitRuleIsAppLevelAndNotPersistent() {
+        val rule = com.networkcontrol.android.kotlin.core.rules.PromptRuleFactory.createRule(
+            decision = com.networkcontrol.android.kotlin.core.model.PromptDecision(
+                action = VerdictAction.Allow,
+                lifetime = RuleLifetime.UntilAppExit,
+            ),
+            flow = flow(),
+            app = app,
+            domains = DomainCandidates(listOf("example.com")),
+            profileId = "p",
+            now = 1_000,
+        )
+        assertNotNull(rule)
+        assertEquals(RuleLifetime.UntilAppExit, rule?.lifetime)
+        assertFalse(rule!!.isPersistent)
+        assertEquals(app.path, rule.app?.pathPattern)
+        assertNull(rule.conditions.remote)
+    }
+
+    @Test
     fun networkConditionsNeedMatchingContext() {
         val rules = RuleSet(
             listOf(

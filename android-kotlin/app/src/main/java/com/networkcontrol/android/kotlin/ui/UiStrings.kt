@@ -291,6 +291,7 @@ enum class S {
     OverlayAdjustPosition,
     OverlayCustomHint,
     OverlayPositionPercent,
+    PromptOnceHint,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -600,6 +601,7 @@ private val EN = mapOf(
     S.OverlayAdjustPosition to "Adjust position",
     S.OverlayCustomHint to "Drag the preview panel up or down to set where the prompt appears.",
     S.OverlayPositionPercent to "Position: %1\$d%%",
+    S.PromptOnceHint to "Allow until this app leaves the foreground. It will ask again next time.",
 )
 
 private val CN = mapOf(
@@ -889,6 +891,7 @@ private val CN = mapOf(
     S.OverlayAdjustPosition to "调整位置",
     S.OverlayCustomHint to "上下拖动预览面板，设置询问出现的位置。",
     S.OverlayPositionPercent to "位置：%1\$d%%",
+    S.PromptOnceHint to "允许到该应用离开前台；下次打开会重新询问。",
 )
 
 private val TW = mapOf(
@@ -1178,4 +1181,5 @@ private val TW = mapOf(
     S.OverlayAdjustPosition to "調整位置",
     S.OverlayCustomHint to "上下拖動預覽面板，設定詢問出現的位置。",
     S.OverlayPositionPercent to "位置：%1\$d%%",
+    S.PromptOnceHint to "允許到該應用程式離開前台；下次開啟會重新詢問。",
 )

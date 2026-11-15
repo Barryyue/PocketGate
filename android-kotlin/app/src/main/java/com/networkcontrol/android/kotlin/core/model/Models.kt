@@ -127,7 +127,9 @@ data class Rule(
     val hitCount: Long = 0,
 ) {
     val isPersistent: Boolean
-        get() = lifetime != RuleLifetime.Once && lifetime != RuleLifetime.UntilRestart
+        get() = lifetime != RuleLifetime.Once &&
+            lifetime != RuleLifetime.UntilRestart &&
+            lifetime != RuleLifetime.UntilAppExit
 
     fun isLiveAt(now: Long): Boolean =
         lifetime != RuleLifetime.Timed || expiresAt == null || expiresAt > now
