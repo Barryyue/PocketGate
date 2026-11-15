@@ -734,3 +734,34 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 模擬器：開始專注後保護自動切換為 On；專注卡片顯示「Remaining / Extend 15 minutes / End focus」並排，`Save as profile` 另起一行，文字不再變形。
 - 真機未驗證：VPN 授權彈窗流程、不同字體縮放下的按鈕寬度。
+
+---
+
+## 22. v0.6.7-m4spike（2026-11-15）
+
+### 22.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 靈動島位置 | 原本只有向下 0–48dp；改為水平 / 垂直各 -60..+60dp，負值向左 / 上，正值向右 / 下；預設 0 回到原本位置；提供「重設」。 |
+| 靈動島透明度 | 只調整**背景**透明度（20–100%）；速度文字固定白色並加陰影，不跟隨透明度；邊框保持可見。 |
+| 版面 | 專注模式移到模式切換下方，與勿擾相鄰，不再被模式切換隔開。 |
+| 勿擾聯動 | 保護關閉時開啟勿擾會自動開啟保護；勿擾期間關閉保護時顯示警告與「開啟保護」。 |
+
+### 22.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.7-m4spike.apk` |
+| APK 大小 | 4,171,345 bytes |
+| APK SHA-256 | `23D746F9DCA1EE4519CE1B5501649A442661CC2B0708138893572F939C1FEB8C` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.7-m4spike.aab` |
+| AAB 大小 | 4,729,365 bytes |
+| AAB SHA-256 | `8130F8E72CE97260F2874E99A1D80D21284251D293BDB95AAC639C04F6D0F358` |
+| versionName / Code | `0.6.7-m4spike` / `13` |
+
+### 22.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器：專注與勿擾已在模式切換下方相鄰；設定頁可調整水平 / 垂直偏移與背景透明度。
+- 真機未驗證：負偏移是否會碰到瀏海 / 狀態欄、低透明度下的可讀性、OEM 系統島遮擋。
