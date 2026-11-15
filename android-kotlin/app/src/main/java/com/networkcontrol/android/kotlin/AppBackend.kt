@@ -479,6 +479,13 @@ class AppBackend(val container: AppContainer) {
         container.promptRouter.refresh()
     }
 
+    fun speedIslandEnabled(): Boolean = container.preferences.speedIslandEnabled
+
+    fun setSpeedIslandEnabled(enabled: Boolean) {
+        container.preferences.speedIslandEnabled = enabled
+        container.speedIsland.refresh()
+    }
+
     fun promptShowDetails(): Boolean = container.preferences.promptShowDetails
 
     fun setPromptShowDetails(show: Boolean) {

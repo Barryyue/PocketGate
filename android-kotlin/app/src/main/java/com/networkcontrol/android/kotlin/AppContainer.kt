@@ -113,11 +113,23 @@ class AppContainer(context: Context) {
 
     val trafficCollector = TrafficCollector(appContext, appCatalog, appStore, trafficStore)
     val speedMonitor = com.networkcontrol.android.kotlin.engine.traffic.SpeedMonitor()
+    val speedIsland = com.networkcontrol.android.kotlin.platform.overlay.SpeedIslandController(
+        context = appContext,
+        preferences = preferences,
+        protection = protection,
+        speedMonitor = speedMonitor,
+        screenState = screenState,
+        scope = scope,
+    )
     val ruleLifetime = RuleLifetimeManager(rules, scope)
     val promptNotifier = com.networkcontrol.android.kotlin.platform.PromptNotifier(appContext, preferences)
     val appUiVisibility = com.networkcontrol.android.kotlin.platform.prompt.AppUiVisibility(appContext)
     val foregroundTracker = com.networkcontrol.android.kotlin.platform.prompt.PromptForegroundTracker(appContext)
-    val promptOverlay = com.networkcontrol.android.kotlin.platform.prompt.PromptOverlayController(appContext, preferences)
+    val promptOverlay = com.networkcontrol.android.kotlin.platform.prompt.PromptOverlayController(
+        context = appContext,
+        preferences = preferences,
+        timedMinutesProvider = { settings.state.value.promptTimedMinutes },
+    )
     val promptRouter = com.networkcontrol.android.kotlin.platform.prompt.PromptRouter(
         scope = scope,
         broker = prompts,
@@ -127,6 +139,7 @@ class AppContainer(context: Context) {
         tracker = foregroundTracker,
         protection = protection,
         preferences = preferences,
+        timedMinutes = { settings.state.value.promptTimedMinutes },
     )
     val backend = AppBackend(this)
     val configBackup = ConfigBackup(appContext, configDatabase)
@@ -160,6 +173,7 @@ class AppContainer(context: Context) {
             runCatching { promptRouter.start() }
             runCatching { quietNotifier.start() }
             runCatching { speedMonitor.start(scope) }
+            runCatching { speedIsland.start() }
             scope.launch {
                 speedMonitor.speed.collect { speed ->
                     vpnNotifier.setSpeed(speed)

@@ -101,6 +101,7 @@ fun SettingsScreen(backend: AppBackend) {
     var promptPosition by remember { mutableStateOf(backend.promptOverlayPosition()) }
     var promptRatio by remember { mutableFloatStateOf(backend.promptOverlayCustomRatio()) }
     var showOverlayPositionDialog by remember { mutableStateOf(false) }
+    var speedIsland by remember { mutableStateOf(backend.speedIslandEnabled()) }
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
     var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
@@ -118,6 +119,9 @@ fun SettingsScreen(backend: AppBackend) {
 
     var timeoutText by remember(settings.promptTimeoutSeconds) {
         mutableStateOf(settings.promptTimeoutSeconds.toString())
+    }
+    var timedMinutesText by remember(settings.promptTimedMinutes) {
+        mutableStateOf(settings.promptTimedMinutes.toString())
     }
     var editingProfile by remember { mutableStateOf<Profile?>(null) }
     var showProfileDialog by remember { mutableStateOf(false) }
@@ -250,6 +254,27 @@ fun SettingsScreen(backend: AppBackend) {
                         onClick = {
                             val seconds = timeoutText.toIntOrNull() ?: settings.promptTimeoutSeconds
                             backend.updateSettings { it.copy(promptTimeoutSeconds = seconds) }
+                            toast(s[S.Done])
+                        },
+                    ) { Text(s[S.Save]) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(s[S.PromptTimedDuration], style = MaterialTheme.typography.bodyMedium)
+                    }
+                    OutlinedTextField(
+                        value = timedMinutesText,
+                        onValueChange = { value ->
+                            timedMinutesText = value.filter { it.isDigit() }.take(4)
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(110.dp),
+                    )
+                    TextButton(
+                        onClick = {
+                            val minutes = timedMinutesText.toIntOrNull() ?: settings.promptTimedMinutes
+                            backend.updateSettings { it.copy(promptTimedMinutes = minutes) }
                             toast(s[S.Done])
                         },
                     ) { Text(s[S.Save]) }
@@ -392,6 +417,19 @@ fun SettingsScreen(backend: AppBackend) {
                     onCheckedChange = {
                         hideOnLock = it
                         backend.setPromptHideDetailsOnLockScreen(it)
+                    },
+                )
+                SwitchRow(
+                    title = s[S.SpeedIsland],
+                    subtitle = s[S.SpeedIslandHint],
+                    checked = speedIsland,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !canDrawOverlays) {
+                            toast(s[S.OverlayDenied])
+                        } else {
+                            speedIsland = enabled
+                            backend.setSpeedIslandEnabled(enabled)
+                        }
                     },
                 )
             }

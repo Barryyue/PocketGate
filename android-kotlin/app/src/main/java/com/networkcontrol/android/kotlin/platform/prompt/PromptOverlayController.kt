@@ -31,6 +31,7 @@ import com.networkcontrol.android.kotlin.ui.UiStrings
 class PromptOverlayController(
     private val context: Context,
     private val preferences: AppPreferences,
+    private val timedMinutesProvider: () -> Int = { 60 },
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val windowManager = context.getSystemService(WindowManager::class.java)
@@ -167,7 +168,11 @@ class PromptOverlayController(
             android.graphics.PixelFormat.TRANSLUCENT,
         ).apply {
             this.gravity = gravity
-            y = if (position == "custom") 0 else dp(8)
+            y = when {
+                position == "custom" -> 0
+                position == "top" && preferences.speedIslandEnabled && Settings.canDrawOverlays(context) -> dp(58)
+                else -> dp(8)
+            }
             title = "NetworkControl prompt"
             packageName = context.packageName
             if (Build.VERSION.SDK_INT >= 28) {
@@ -293,8 +298,7 @@ class PromptOverlayController(
         }
         addChip(strings[S.PromptOnce], RuleLifetime.UntilAppExit)
         addChip(strings[S.PromptPermanent], RuleLifetime.Permanent)
-        addChip(strings[S.PromptOneHour], RuleLifetime.Timed)
-        addChip(strings[S.PromptUntilRestart], RuleLifetime.UntilRestart)
+        addChip(strings.format(S.PromptTimed, timedMinutesProvider()), RuleLifetime.Timed)
         root.addView(chips)
         updateChips(chipViews, lifetime, primary, onPrimary, onSurfaceVariant, outline)
 

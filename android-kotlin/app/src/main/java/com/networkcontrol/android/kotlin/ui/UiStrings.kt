@@ -292,6 +292,10 @@ enum class S {
     OverlayCustomHint,
     OverlayPositionPercent,
     PromptOnceHint,
+    SpeedIsland,
+    SpeedIslandHint,
+    PromptTimed,
+    PromptTimedDuration,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -602,6 +606,10 @@ private val EN = mapOf(
     S.OverlayCustomHint to "Drag the preview panel up or down to set where the prompt appears.",
     S.OverlayPositionPercent to "Position: %1\$d%%",
     S.PromptOnceHint to "Allow until this app leaves the foreground. It will ask again next time.",
+    S.SpeedIsland to "Speed island",
+    S.SpeedIslandHint to "Show upload and download speed in a small pill at the top of the screen while protection is on. Tap it to open NetworkControl.",
+    S.PromptTimed to "Timed (%1\$d min)",
+    S.PromptTimedDuration to "Timed rule duration (minutes)",
 )
 
 private val CN = mapOf(
@@ -892,6 +900,10 @@ private val CN = mapOf(
     S.OverlayCustomHint to "上下拖动预览面板，设置询问出现的位置。",
     S.OverlayPositionPercent to "位置：%1\$d%%",
     S.PromptOnceHint to "允许到该应用离开前台；下次打开会重新询问。",
+    S.SpeedIsland to "速度岛",
+    S.SpeedIslandHint to "保护开启时在屏幕顶部显示上传/下载速度；点击可打开 NetworkControl。",
+    S.PromptTimed to "限时（%1\$d 分钟）",
+    S.PromptTimedDuration to "限时规则时长（分钟）",
 )
 
 private val TW = mapOf(
@@ -1182,4 +1194,8 @@ private val TW = mapOf(
     S.OverlayCustomHint to "上下拖動預覽面板，設定詢問出現的位置。",
     S.OverlayPositionPercent to "位置：%1\$d%%",
     S.PromptOnceHint to "允許到該應用程式離開前台；下次開啟會重新詢問。",
+    S.SpeedIsland to "速度島",
+    S.SpeedIslandHint to "保護開啟時在螢幕頂部顯示上傳/下載速度；點擊可開啟 NetworkControl。",
+    S.PromptTimed to "限時（%1\$d 分鐘）",
+    S.PromptTimedDuration to "限時規則時長（分鐘）",
 )

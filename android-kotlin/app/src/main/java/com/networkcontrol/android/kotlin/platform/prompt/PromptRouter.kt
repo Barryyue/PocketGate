@@ -29,6 +29,7 @@ class PromptRouter(
     private val tracker: PromptForegroundTracker,
     private val protection: ProtectionController,
     private val preferences: AppPreferences,
+    private val timedMinutes: () -> Int = { 60 },
 ) {
     private val gate = Mutex()
     private var started = false
@@ -45,7 +46,7 @@ class PromptRouter(
                     PromptDecision(
                         action = action,
                         lifetime = lifetime,
-                        durationSeconds = if (lifetime == RuleLifetime.Timed) 3600 else null,
+                        durationSeconds = if (lifetime == RuleLifetime.Timed) timedMinutes() * 60 else null,
                     ),
                 )
             }

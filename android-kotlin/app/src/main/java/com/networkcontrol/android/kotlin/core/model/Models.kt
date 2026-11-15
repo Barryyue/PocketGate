@@ -221,6 +221,8 @@ data class UserSettings(
     val maxPendingFlows: Int = 1000,
     val allowIcmpByDefault: Boolean = true,
     val logRetentionDays: Int = 30,
+    /** 詢問選「限時」時的預設時長（分鐘）。 */
+    val promptTimedMinutes: Int = 60,
     /** 系統應用（預裝）在沒有明確規則時默認放行。 */
     val allowSystemAppsByDefault: Boolean = false,
     /** 受信任的簽章者（Android 為簽章 SHA-256）；其應用在沒有明確規則時默認放行。 */
@@ -232,6 +234,7 @@ data class UserSettings(
         onceFallbackSeconds = onceFallbackSeconds.coerceIn(10, 600),
         maxPendingFlows = maxPendingFlows.coerceIn(10, 100_000),
         logRetentionDays = logRetentionDays.coerceIn(1, 3650),
+        promptTimedMinutes = promptTimedMinutes.coerceIn(5, 1440),
     )
 
     companion object {

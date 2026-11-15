@@ -30,6 +30,7 @@ object JsonCodec {
         put("maxPendingFlows", settings.maxPendingFlows)
         put("allowIcmpByDefault", settings.allowIcmpByDefault)
         put("logRetentionDays", settings.logRetentionDays)
+        put("promptTimedMinutes", settings.promptTimedMinutes)
         put("allowSystemAppsByDefault", settings.allowSystemAppsByDefault)
         put("trustedSigners", JSONArray(settings.trustedSigners.toList()))
     }.toString()
@@ -44,6 +45,7 @@ object JsonCodec {
             maxPendingFlows = obj.optInt("maxPendingFlows", 1000),
             allowIcmpByDefault = obj.optBoolean("allowIcmpByDefault", true),
             logRetentionDays = obj.optInt("logRetentionDays", 30),
+            promptTimedMinutes = obj.optInt("promptTimedMinutes", 60),
             allowSystemAppsByDefault = obj.optBoolean("allowSystemAppsByDefault", false),
             trustedSigners = obj.optJSONArray("trustedSigners")?.toStringList()?.toSet() ?: emptySet(),
         ).validated()

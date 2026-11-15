@@ -45,8 +45,10 @@ internal fun promptDisplayName(path: String?): String? = when {
 fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
     val s = rememberUiStrings()
     val prompts by backend.prompts.collectAsStateWithLifecycle()
+    val settings by backend.settings.collectAsStateWithLifecycle()
     val prompt = prompts.firstOrNull() ?: return
     val prefs = backend.container.preferences
+    val timedMinutes = settings.promptTimedMinutes
     var lifetime by remember(prompt.id) { mutableStateOf(RuleLifetime.Permanent) }
 
     LaunchedEffect(prompt.id) {
@@ -128,12 +130,7 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                 FilterChip(
                     lifetime == RuleLifetime.Timed,
                     { lifetime = RuleLifetime.Timed },
-                    { Text(s[S.PromptOneHour]) },
-                )
-                FilterChip(
-                    lifetime == RuleLifetime.UntilRestart,
-                    { lifetime = RuleLifetime.UntilRestart },
-                    { Text(s[S.PromptUntilRestart]) },
+                    { Text(s.format(S.PromptTimed, timedMinutes)) },
                 )
             }
 
@@ -159,7 +156,7 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                             prompt.id,
                             VerdictAction.Deny,
                             lifetime,
-                            if (lifetime == RuleLifetime.Timed) 3600 else null,
+                            if (lifetime == RuleLifetime.Timed) timedMinutes * 60 else null,
                         )
                     },
                 ) { Text(s[S.Deny]) }
@@ -169,7 +166,7 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                             prompt.id,
                             VerdictAction.Allow,
                             lifetime,
-                            if (lifetime == RuleLifetime.Timed) 3600 else null,
+                            if (lifetime == RuleLifetime.Timed) timedMinutes * 60 else null,
                         )
                     },
                 ) { Text(s[S.Allow]) }

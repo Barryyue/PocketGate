@@ -1,0 +1,178 @@
+package com.networkcontrol.android.kotlin.platform.overlay
+
+import android.content.Context
+import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
+import android.widget.LinearLayout
+import android.widget.TextView
+import com.networkcontrol.android.kotlin.AppPreferences
+import com.networkcontrol.android.kotlin.MainActivity
+import com.networkcontrol.android.kotlin.engine.network.ScreenStateMonitor
+import com.networkcontrol.android.kotlin.engine.protection.ProtectionController
+import com.networkcontrol.android.kotlin.engine.traffic.SpeedMonitor
+import com.networkcontrol.android.kotlin.engine.traffic.SpeedSnapshot
+import com.networkcontrol.android.kotlin.platform.AppLog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
+
+/**
+ * 服務啟動後的頂部「速度島」：預設顯示上傳 / 下載速度，點擊開啟主界面。
+ * 只在保護開啟、螢幕解鎖、使用者開啟設定且有懸浮窗權限時顯示。
+ */
+class SpeedIslandController(
+    private val context: Context,
+    private val preferences: AppPreferences,
+    private val protection: ProtectionController,
+    private val speedMonitor: SpeedMonitor,
+    private val screenState: ScreenStateMonitor,
+    private val scope: CoroutineScope,
+) {
+    private val handler = Handler(Looper.getMainLooper())
+    private val windowManager = context.getSystemService(WindowManager::class.java)
+    private var view: View? = null
+    private var params: WindowManager.LayoutParams? = null
+    private var speedText: TextView? = null
+    private var lastText: String? = null
+
+    fun start() {
+        scope.launch {
+            combine(
+                protection.enabled,
+                speedMonitor.speed,
+                screenState.locked,
+            ) { enabled, speed, locked -> Triple(enabled, speed, locked) }
+                .collect { (enabled, speed, locked) ->
+                    val visible = enabled && !locked && preferences.speedIslandEnabled &&
+                        Settings.canDrawOverlays(context)
+                    if (visible) {
+                        show(speed)
+                    } else {
+                        hide()
+                    }
+                }
+        }
+    }
+
+    fun refresh() {
+        val visible = protection.enabled.value && !screenState.locked.value &&
+            preferences.speedIslandEnabled && Settings.canDrawOverlays(context)
+        if (visible) show(speedMonitor.speed.value) else hide()
+    }
+
+    private fun show(speed: SpeedSnapshot) {
+        handler.post {
+            if (view == null) {
+                val pill = buildPill() ?: return@post
+                val layout = WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                    android.graphics.PixelFormat.TRANSLUCENT,
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                    y = dp(8)
+                    title = "NetworkControl speed"
+                    packageName = context.packageName
+                    if (Build.VERSION.SDK_INT >= 28) {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
+                    }
+                }
+                val added = runCatching {
+                    windowManager?.addView(pill, layout)
+                    true
+                }.getOrElse {
+                    AppLog.w("speed-island", "add failed: ${it.message}")
+                    false
+                }
+                if (!added) return@post
+                view = pill
+                params = layout
+            }
+            updateText(speed)
+        }
+    }
+
+    private fun hide() {
+        handler.post {
+            view?.let { runCatching { windowManager?.removeView(it) } }
+            view = null
+            params = null
+            speedText = null
+            lastText = null
+        }
+    }
+
+    private fun updateText(speed: SpeedSnapshot) {
+        val text = "↓ ${formatRate(speed.downloadBytesPerSecond)}/s   ↑ ${formatRate(speed.uploadBytesPerSecond)}/s"
+        if (text == lastText) return
+        lastText = text
+        speedText?.text = text
+    }
+
+    private fun buildPill(): View? {
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+            background = GradientDrawable().apply {
+                setColor(0xE6101010.toInt())
+                cornerRadius = dp(20).toFloat()
+                setStroke(dp(1), 0x40FFFFFF)
+            }
+            elevation = dp(8).toFloat()
+            setOnClickListener {
+                runCatching {
+                    context.startActivity(
+                        Intent(context, MainActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                    )
+                }.onFailure { AppLog.w("speed-island", "open app failed: ${it.message}") }
+            }
+        }
+        val dot = TextView(context).apply {
+            text = "●"
+            setTextColor(0xFF4CAF50.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setPadding(0, 0, dp(6), 0)
+        }
+        val label = TextView(context).apply {
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            maxLines = 1
+            text = "↓ 0 B/s   ↑ 0 B/s"
+        }
+        speedText = label
+        root.addView(dot)
+        root.addView(label)
+        return root
+    }
+
+    private fun formatRate(bytes: Long): String {
+        if (bytes < 1024) return "$bytes B"
+        val units = arrayOf("KB", "MB", "GB")
+        var value = bytes.toDouble()
+        var index = -1
+        while (value >= 1024 && index < units.lastIndex) {
+            value /= 1024
+            index++
+        }
+        return "%.1f %s".format(value, units[index])
+    }
+
+    private fun dp(value: Int): Int =
+        (value * context.resources.displayMetrics.density).toInt()
+}

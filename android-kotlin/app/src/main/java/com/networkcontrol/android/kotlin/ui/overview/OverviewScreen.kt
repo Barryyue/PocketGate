@@ -481,13 +481,14 @@ fun OverviewScreen(backend: AppBackend) {
     if (showBatchPrompts) {
         BatchPromptDialog(
             prompts = prompts,
+            timedMinutes = settings.promptTimedMinutes,
             onDismiss = { showBatchPrompts = false },
             onAnswer = { ids, action, lifetime ->
                 backend.answerPrompts(
                     ids,
                     action,
                     lifetime,
-                    if (lifetime == RuleLifetime.Timed) 3600 else null,
+                    if (lifetime == RuleLifetime.Timed) settings.promptTimedMinutes * 60 else null,
                 )
                 showBatchPrompts = false
             },
@@ -635,6 +636,7 @@ private fun formatDurationMinutes(minutes: Int): String =
 @Composable
 private fun BatchPromptDialog(
     prompts: List<PromptSnapshot>,
+    timedMinutes: Int,
     onDismiss: () -> Unit,
     onAnswer: (Set<String>, VerdictAction, RuleLifetime) -> Unit,
     onLater: (Set<String>) -> Unit,
@@ -702,12 +704,7 @@ private fun BatchPromptDialog(
                     FilterChip(
                         lifetime == RuleLifetime.Timed,
                         { lifetime = RuleLifetime.Timed },
-                        { Text(s[S.PromptOneHour]) },
-                    )
-                    FilterChip(
-                        lifetime == RuleLifetime.UntilRestart,
-                        { lifetime = RuleLifetime.UntilRestart },
-                        { Text(s[S.PromptUntilRestart]) },
+                        { Text(s.format(S.PromptTimed, timedMinutes)) },
                     )
                 }
             }

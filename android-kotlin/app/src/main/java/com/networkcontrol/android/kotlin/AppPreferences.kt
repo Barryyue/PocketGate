@@ -46,6 +46,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getFloat(KEY_PROMPT_OVERLAY_RATIO, 0.15f).coerceIn(0f, 1f)
         set(value) = prefs.edit().putFloat(KEY_PROMPT_OVERLAY_RATIO, value.coerceIn(0f, 1f)).apply()
 
+    /** 服務啟動後在螢幕頂部顯示速度島。 */
+    var speedIslandEnabled: Boolean
+        get() = prefs.getBoolean(KEY_SPEED_ISLAND, false)
+        set(value) = prefs.edit().putBoolean(KEY_SPEED_ISLAND, value).apply()
+
     var promptShowDetails: Boolean
         get() = prefs.getBoolean(KEY_PROMPT_SHOW_DETAILS, true)
         set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_DETAILS, value).apply()
@@ -100,6 +105,7 @@ class AppPreferences(context: Context) {
         const val KEY_PROMPT_PRESENTATION = "prompt_presentation"
         const val KEY_PROMPT_OVERLAY_POSITION = "prompt_overlay_position"
         const val KEY_PROMPT_OVERLAY_RATIO = "prompt_overlay_ratio"
+        const val KEY_SPEED_ISLAND = "speed_island"
         const val KEY_PROMPT_SHOW_DETAILS = "prompt_show_details"
         const val KEY_PROMPT_SHOW_EXPLANATION = "prompt_show_explanation"
         const val KEY_PROMPT_HIDE_DETAILS_LOCK = "prompt_hide_details_lock"
