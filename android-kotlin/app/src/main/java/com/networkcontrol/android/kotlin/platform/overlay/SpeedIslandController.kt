@@ -16,6 +16,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.networkcontrol.android.kotlin.AppPreferences
 import com.networkcontrol.android.kotlin.MainActivity
+import com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
 import com.networkcontrol.android.kotlin.engine.network.ScreenStateMonitor
 import com.networkcontrol.android.kotlin.engine.protection.ProtectionController
 import com.networkcontrol.android.kotlin.engine.traffic.SpeedMonitor
@@ -44,6 +45,8 @@ class SpeedIslandController(
     private var params: WindowManager.LayoutParams? = null
     private var speedText: TextView? = null
     private var lastText: String? = null
+    private var currentMode: SpeedIslandMode? = null
+    private var cycleDownload = true
 
     fun start() {
         scope.launch {
@@ -72,8 +75,16 @@ class SpeedIslandController(
 
     private fun show(speed: SpeedSnapshot) {
         handler.post {
+            val mode = preferences.speedIslandMode
+            if (view != null && currentMode != mode) {
+                view?.let { runCatching { windowManager?.removeView(it) } }
+                view = null
+                pillRoot = null
+                speedText = null
+                lastText = null
+            }
             if (view == null) {
-                val pill = buildPill() ?: return@post
+                val pill = buildPill(mode) ?: return@post
                 val layout = WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.WRAP_CONTENT,
@@ -107,9 +118,10 @@ class SpeedIslandController(
                 view = pill
                 pillRoot = pill as? LinearLayout
                 params = layout
+                currentMode = mode
             }
             updateAppearance()
-            updateText(speed)
+            updateText(speed, mode)
         }
     }
 
@@ -121,11 +133,25 @@ class SpeedIslandController(
             params = null
             speedText = null
             lastText = null
+            currentMode = null
         }
     }
 
-    private fun updateText(speed: SpeedSnapshot) {
-        val text = "↓ ${formatRate(speed.downloadBytesPerSecond)}/s   ↑ ${formatRate(speed.uploadBytesPerSecond)}/s"
+    private fun updateText(speed: SpeedSnapshot, mode: SpeedIslandMode) {
+        val text = when (mode) {
+            SpeedIslandMode.Full ->
+                "↓ ${formatRate(speed.downloadBytesPerSecond)}/s   ↑ ${formatRate(speed.uploadBytesPerSecond)}/s"
+            SpeedIslandMode.Cycle -> {
+                cycleDownload = !cycleDownload
+                if (cycleDownload) {
+                    "↓ ${formatRate(speed.downloadBytesPerSecond)}/s"
+                } else {
+                    "↑ ${formatRate(speed.uploadBytesPerSecond)}/s"
+                }
+            }
+            SpeedIslandMode.Mini ->
+                "↓${formatRateShort(speed.downloadBytesPerSecond)} ↑${formatRateShort(speed.uploadBytesPerSecond)}"
+        }
         if (text == lastText) return
         lastText = text
         speedText?.text = text
@@ -145,17 +171,22 @@ class SpeedIslandController(
         return (alpha shl 24) or 0x00101010
     }
 
-    private fun buildPill(): View? {
+    private fun buildPill(mode: SpeedIslandMode): View? {
+        val mini = mode == SpeedIslandMode.Mini
+        val horizontal = if (mini) 8 else 14
+        val vertical = if (mini) 4 else 8
+        val radius = if (mini) 12 else 20
+        val textSize = if (mini) 10f else 12f
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), dp(8), dp(14), dp(8))
+            setPadding(dp(horizontal), dp(vertical), dp(horizontal), dp(vertical))
             background = GradientDrawable().apply {
                 setColor(islandBackgroundColor())
-                cornerRadius = dp(20).toFloat()
+                cornerRadius = dp(radius).toFloat()
                 setStroke(dp(1), 0x40FFFFFF)
             }
-            elevation = dp(8).toFloat()
+            elevation = dp(if (mini) 4 else 8).toFloat()
             setOnClickListener {
                 runCatching {
                     context.startActivity(
@@ -168,15 +199,19 @@ class SpeedIslandController(
         val dot = TextView(context).apply {
             text = "●"
             setTextColor(0xFF4CAF50.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-            setPadding(0, 0, dp(6), 0)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, if (mini) 7f else 10f)
+            setPadding(0, 0, dp(if (mini) 3 else 6), 0)
         }
         val label = TextView(context).apply {
             setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, textSize)
             maxLines = 1
             setShadowLayer(4f, 0f, 1f, Color.BLACK)
-            text = "↓ 0 B/s   ↑ 0 B/s"
+            text = when (mode) {
+                SpeedIslandMode.Full -> "↓ 0 B/s   ↑ 0 B/s"
+                SpeedIslandMode.Cycle -> "↓ 0 B/s"
+                SpeedIslandMode.Mini -> "↓0B ↑0B"
+            }
         }
         speedText = label
         root.addView(dot)
@@ -194,6 +229,22 @@ class SpeedIslandController(
             index++
         }
         return "%.1f %s".format(value, units[index])
+    }
+
+    private fun formatRateShort(bytes: Long): String {
+        if (bytes < 1024) return "${bytes}B"
+        val units = arrayOf("K", "M", "G")
+        var value = bytes.toDouble()
+        var index = -1
+        while (value >= 1024 && index < units.lastIndex) {
+            value /= 1024
+            index++
+        }
+        return if (value >= 10) {
+            "${value.toInt()}${units[index]}"
+        } else {
+            "%.1f%s".format(value, units[index])
+        }
     }
 
     private fun dp(value: Int): Int =

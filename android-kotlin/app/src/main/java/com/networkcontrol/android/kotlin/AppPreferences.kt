@@ -74,6 +74,14 @@ class AppPreferences(context: Context) {
         get() = prefs.getFloat(KEY_SPEED_ISLAND_OPACITY, 0.9f).coerceIn(0.1f, 1f)
         set(value) = prefs.edit().putFloat(KEY_SPEED_ISLAND_OPACITY, value.coerceIn(0.1f, 1f)).apply()
 
+    var speedIslandMode: com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
+        get() = runCatching {
+            enumValueOf<com.networkcontrol.android.kotlin.core.model.SpeedIslandMode>(
+                prefs.getString(KEY_SPEED_ISLAND_MODE, "Full").orEmpty(),
+            )
+        }.getOrDefault(com.networkcontrol.android.kotlin.core.model.SpeedIslandMode.Full)
+        set(value) = prefs.edit().putString(KEY_SPEED_ISLAND_MODE, value.name).apply()
+
     fun isVivoDevice(): Boolean {
         val manufacturer = android.os.Build.MANUFACTURER.orEmpty()
         val brand = android.os.Build.BRAND.orEmpty()
@@ -143,6 +151,7 @@ class AppPreferences(context: Context) {
         const val KEY_SPEED_ISLAND_OFFSET_X = "speed_island_offset_x"
         const val KEY_SPEED_ISLAND_OFFSET_Y = "speed_island_offset_y"
         const val KEY_SPEED_ISLAND_OPACITY = "speed_island_opacity"
+        const val KEY_SPEED_ISLAND_MODE = "speed_island_mode"
         const val KEY_PROMPT_SHOW_DETAILS = "prompt_show_details"
         const val KEY_PROMPT_SHOW_EXPLANATION = "prompt_show_explanation"
         const val KEY_PROMPT_HIDE_DETAILS_LOCK = "prompt_hide_details_lock"

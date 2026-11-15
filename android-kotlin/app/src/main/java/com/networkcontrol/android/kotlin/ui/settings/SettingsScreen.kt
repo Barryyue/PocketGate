@@ -72,6 +72,7 @@ import com.networkcontrol.android.kotlin.core.model.RuleImportMode
 import com.networkcontrol.android.kotlin.core.model.RuleImportPreview
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
+import com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
 import com.networkcontrol.android.kotlin.core.release.ReleaseNote
 import com.networkcontrol.android.kotlin.core.release.ReleaseNotes
 import com.networkcontrol.android.kotlin.core.update.UpdateChecker
@@ -116,6 +117,7 @@ fun SettingsScreen(backend: AppBackend) {
     var islandOffsetX by remember { mutableIntStateOf(backend.speedIslandOffsetXDp()) }
     var islandOffsetY by remember { mutableIntStateOf(backend.speedIslandOffsetYDp()) }
     var islandOpacity by remember { mutableFloatStateOf(backend.speedIslandOpacity()) }
+    var islandMode by remember { mutableStateOf(backend.speedIslandMode()) }
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
     var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
@@ -449,6 +451,33 @@ fun SettingsScreen(backend: AppBackend) {
                     },
                 )
                 if (speedIsland) {
+                    Text(s[S.IslandMode], style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            islandMode == SpeedIslandMode.Full,
+                            {
+                                islandMode = SpeedIslandMode.Full
+                                backend.setSpeedIslandMode(SpeedIslandMode.Full)
+                            },
+                            { Text(s[S.IslandModeFull]) },
+                        )
+                        FilterChip(
+                            islandMode == SpeedIslandMode.Cycle,
+                            {
+                                islandMode = SpeedIslandMode.Cycle
+                                backend.setSpeedIslandMode(SpeedIslandMode.Cycle)
+                            },
+                            { Text(s[S.IslandModeCycle]) },
+                        )
+                        FilterChip(
+                            islandMode == SpeedIslandMode.Mini,
+                            {
+                                islandMode = SpeedIslandMode.Mini
+                                backend.setSpeedIslandMode(SpeedIslandMode.Mini)
+                            },
+                            { Text(s[S.IslandModeMini]) },
+                        )
+                    }
                     SwitchRow(
                         title = s[S.VivoIslandCompatible],
                         subtitle = s[S.VivoIslandHint],

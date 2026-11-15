@@ -224,3 +224,12 @@ enum class AndroidRuleIneffectiveReason(val code: Int) {
         fun fromCode(code: Int): AndroidRuleIneffectiveReason = entries.firstOrNull { it.code == code } ?: UnsupportedConditions
     }
 }
+
+enum class SpeedIslandMode {
+    /** 同時顯示上傳與下載。 */
+    Full,
+    /** 精簡：上傳 / 下載輪流顯示。 */
+    Cycle,
+    /** 迷你：狀態欄風格的小字。 */
+    Mini,
+}

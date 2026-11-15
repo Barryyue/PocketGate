@@ -520,6 +520,14 @@ class AppBackend(val container: AppContainer) {
         container.speedIsland.refresh()
     }
 
+    fun speedIslandMode(): com.networkcontrol.android.kotlin.core.model.SpeedIslandMode =
+        container.preferences.speedIslandMode
+
+    fun setSpeedIslandMode(value: com.networkcontrol.android.kotlin.core.model.SpeedIslandMode) {
+        container.preferences.speedIslandMode = value
+        container.speedIsland.refresh()
+    }
+
     fun promptShowDetails(): Boolean = container.preferences.promptShowDetails
 
     fun setPromptShowDetails(show: Boolean) {

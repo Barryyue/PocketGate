@@ -11,6 +11,14 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.6.8",
+            date = "2026-11-15",
+            features = listOf(
+                "靈動島新增三種樣式：完整（上下行同時）、循環（上下行輪流）、迷你（狀態欄風格小字）。",
+                "循環模式每 2 秒在 ↓ 與 ↑ 之間切換；迷你模式縮小內距、字體與綠點。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.6.7",
             date = "2026-11-15",
             features = listOf(
