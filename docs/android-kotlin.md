@@ -676,3 +676,32 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試通過；Debug / Release / AAB 構建通過。
 - 模擬器：速度島預設 frame y=84；開啟 vivo 相容後 y=126（+16dp × density），偏移滑桿可調。
 - 真機未驗證：vivo / iQOO 實際原子島高度、挖孔位置、系統島展開時的遮擋；建議在真機上把「額外頂部偏移」調到不重疊的位置。
+
+---
+
+## 20. v0.6.5-m4spike（2026-11-15）
+
+### 20.1 版本說明
+
+- 設定 → 關於的版本號列可點擊，打開「版本說明」對話框。
+- 顯示目前版本的新增功能、優化與修復，以及注意事項。
+- 對話框可切換「歷史版本」，回看 0.1.0 起各版本的變更。
+- 版本內容內建在 `ReleaseNotes`，不依賴網路；後續發版時追加一條記錄即可。
+
+### 20.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.5-m4spike.apk` |
+| APK 大小 | 4,154,961 bytes |
+| APK SHA-256 | `191E38D674C4F41F3C8795D107D5F3433ED436594529DD85EDA94661DC2C0659` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.5-m4spike.aab` |
+| AAB 大小 | 4,720,327 bytes |
+| AAB SHA-256 | `38572E7B5B368CBC12E7F0E80358E95AC399BBBF7CF9D02AC5C4EB58AC90E6A2` |
+| versionName / Code | `0.6.5-m4spike` / `11` |
+
+### 20.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器：設定 → 關於點擊版本，顯示「版本說明 · 0.6.4」與新增功能 / 優化，並有「歷史版本」按鈕。
+- 真機未驗證：小屏 / 大字體下的滾動與排版、TalkBack 朗讀。

@@ -105,6 +105,12 @@
 | K-035e | 詢問壽命精簡：移除「直到重啟」選項，保留允許一次 / 永久 / 限時；限時時長可在設定中心配置（預設 60 分鐘，可改 30 等） | `PromptOverlay`、`PromptOverlayController`、`OverviewScreen`、`UserSettings.promptTimedMinutes`、`SettingsScreen` | 構建 + 模擬器 | `UntilRestart` 枚舉保留以載入舊規則，但不再提供新選擇 |
 | K-052 | 靈動島（速度）：保護開啟後在螢幕頂部顯示上傳/下載速度；預設開啟，可在設定關閉；鎖屏隱藏、點擊開啟主界面；vivo / iQOO 相容模式（系統島下方 + 0–48dp 偏移）；詢問面板自動下移避免重疊 | `SpeedIslandController`、`AppContainer`、`SettingsScreen`、`PromptOverlayController` | 模擬器 `dumpsys window`：預設 frame y=84，vivo 相容後 y=126 | 真機位置 / 遮擋 / 耗電待驗證 |
 
+### v0.6.5-m4spike（2026-11-15，提交 `c29b25c`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-053 | 版本說明：設定 → 關於點擊版本號，查看目前版本新增功能 / 優化，並可切換歷史版本 | `ReleaseNotes.kt`、`SettingsScreen` | 模擬器點擊版本顯示 0.6.4 / 0.6.5 內容與歷史按鈕 | 內容為內建版本記錄，未接遠端更新說明 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
