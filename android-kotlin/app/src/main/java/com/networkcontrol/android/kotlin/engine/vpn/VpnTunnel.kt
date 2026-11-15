@@ -165,6 +165,7 @@ class VpnTunnelController(
     private var service: NcVpnService? = null
     private var ready = CompletableDeferred<NcVpnService>()
     private var reader: TunReader? = null
+    private var relay: ForwardingRelay? = null
     private var pfd: ParcelFileDescriptor? = null
     private var applied: VpnTunnelConfig? = null
     private var generation = 0L
@@ -179,6 +180,9 @@ class VpnTunnelController(
     var lastError: String? = null
         private set
 
+    /** 目前隧道是否真的在轉發（轉發啟動失敗並回退到黑洞模式時為 false）。 */
+    val isForwarding: Boolean get() = forwardingActive
+
     var onStateChanged: (() -> Unit)? = null
     var onRevoked: (() -> Unit)? = null
 
@@ -186,7 +190,17 @@ class VpnTunnelController(
 
     fun createPrepareIntent(): Intent? = VpnService.prepare(appContext)
 
-    suspend fun apply(config: VpnTunnelConfig, sink: PacketSink) {
+    /**
+     * 建立或重建隧道。
+     * @param forwardingFilter 轉發模式的逐連線過濾層；[config] 要求轉發時必須提供。
+     * @param fallback 轉發無法啟動時改用的黑洞模式設定（按路由計畫排除應用、使用假 DNS）。
+     */
+    suspend fun apply(
+        config: VpnTunnelConfig,
+        sink: PacketSink,
+        forwardingFilter: ForwardingPacketFilter? = null,
+        fallback: VpnTunnelConfig? = null,
+    ) {
         gate.withLock {
             if (!isPrepared) {
                 setState(VpnTunnelState.NotPrepared)
@@ -203,70 +217,109 @@ class VpnTunnelController(
             }
 
             val myGeneration = ++generation
-            val descriptor = try {
-                svc.establish(config)
-            } catch (ex: Exception) {
-                lastError = "建立虛擬網卡失敗：${ex.message}"
-                setState(VpnTunnelState.Failed)
-                return
-            } ?: run {
-                lastError = "系統拒絕建立 VPN（可能已被其他 VPN 取代）。"
-                setState(VpnTunnelState.Failed)
-                return
-            }
-            reader?.close()
-            pfd?.close()
-            if (forwardingActive) {
-                VpnForwardingTransport.stop()
-                forwardingActive = false
-            }
-            pfd = descriptor
-            var startedForwarding = false
-            if (config.forwarding) {
-                val file = java.io.File(appContext.filesDir, "hev-forwarding.yml")
-                writeForwardingConfig(file, config)
-                startedForwarding = VpnForwardingTransport.start(file, descriptor.fd)
-                if (!startedForwarding) {
-                    lastError = "轉發啟動失敗（可能是 ABI 不支援或上游設定錯誤），已回到黑洞模式。"
-                    com.networkcontrol.android.kotlin.platform.AppLog.w("forwarding", lastError!!)
-                } else {
-                    forwardingActive = true
+            var effective = config
+            var descriptor = establishOrFail(svc, effective) ?: return
+            releaseLocked()
+            var warning: String? = null
+
+            if (effective.forwarding) {
+                val started = forwardingFilter != null && startForwarding(descriptor, effective, forwardingFilter, myGeneration)
+                if (!started) {
+                    warning = "轉發啟動失敗（可能是 ABI 不支援或上游設定錯誤），已改用黑洞模式。"
+                    com.networkcontrol.android.kotlin.platform.AppLog.w("forwarding", warning)
+                    runCatching { descriptor.close() }
+                    effective = fallback ?: config.copy(forwarding = false)
+                    descriptor = establishOrFail(svc, effective) ?: return
                 }
             }
-            if (!startedForwarding) {
-                val newReader = TunReader(descriptor, sink) { error ->
+            pfd = descriptor
+            if (!forwardingActive) {
+                reader = TunReader(descriptor, sink) { error ->
                     if (myGeneration == generation) {
                         lastError = "讀取虛擬網卡失敗：${error.message}"
                         setState(VpnTunnelState.Failed)
                     }
                 }
-                reader = newReader
-            } else {
-                reader = null
             }
             runCatching { svc.ensureForeground(notifier.notificationId, notifier.build()) }
-                .onFailure { lastError = "無法建立前景通知：${it.message}" }
+                .onFailure { warning = warning ?: "無法建立前景通知：${it.message}" }
             applied = config
-            lastError = null
+            lastError = warning
             setState(VpnTunnelState.Active)
             com.networkcontrol.android.kotlin.platform.AppLog.i(
                 "vpn",
-                "tunnel active bypass=${config.bypassPackages.size}",
+                "tunnel active forwarding=$forwardingActive bypass=${effective.bypassPackages.size}",
             )
         }
+    }
+
+    private fun establishOrFail(svc: NcVpnService, config: VpnTunnelConfig): ParcelFileDescriptor? {
+        val descriptor = try {
+            svc.establish(config)
+        } catch (ex: Exception) {
+            lastError = "建立虛擬網卡失敗：${ex.message}"
+            setState(VpnTunnelState.Failed)
+            return null
+        }
+        if (descriptor == null) {
+            lastError = "系統拒絕建立 VPN（可能已被其他 VPN 取代）。"
+            setState(VpnTunnelState.Failed)
+        }
+        return descriptor
+    }
+
+    private fun startForwarding(
+        descriptor: ParcelFileDescriptor,
+        config: VpnTunnelConfig,
+        filter: ForwardingPacketFilter,
+        myGeneration: Long,
+    ): Boolean {
+        if (!VpnForwardingTransport.isAvailable()) return false
+        val newRelay = runCatching {
+            ForwardingRelay(descriptor, filter) { error ->
+                if (myGeneration == generation) {
+                    lastError = "轉發通道中斷：${error.message}"
+                    setState(VpnTunnelState.Failed)
+                }
+            }
+        }.getOrElse {
+            com.networkcontrol.android.kotlin.platform.AppLog.e("forwarding", "relay create failed", it)
+            return false
+        }
+        val file = java.io.File(appContext.filesDir, "hev-forwarding.yml")
+        val started = runCatching {
+            writeForwardingConfig(file, config)
+            VpnForwardingTransport.start(file, newRelay.hevSide.fd)
+        }.getOrDefault(false)
+        if (!started) {
+            newRelay.close()
+            return false
+        }
+        newRelay.start()
+        relay = newRelay
+        forwardingActive = true
+        filter.invalidate()
+        return true
+    }
+
+    /** 釋放目前的轉發 / 讀取資源；必須在 [gate] 內呼叫。順序：先停 hev，再關轉送與虛擬網卡。 */
+    private fun releaseLocked() {
+        if (forwardingActive) {
+            VpnForwardingTransport.stop()
+            forwardingActive = false
+        }
+        relay?.close()
+        relay = null
+        reader?.close()
+        reader = null
+        pfd?.close()
+        pfd = null
     }
 
     suspend fun close() {
         gate.withLock {
             generation++
-            if (forwardingActive) {
-                VpnForwardingTransport.stop()
-                forwardingActive = false
-            }
-            reader?.close()
-            reader = null
-            pfd?.close()
-            pfd = null
+            releaseLocked()
             service?.shutdown()
             applied = null
             if (state != VpnTunnelState.Revoked && state != VpnTunnelState.NotPrepared) {
@@ -292,14 +345,7 @@ class VpnTunnelController(
         cleanupScope.launch {
             gate.withLock {
                 if (this@VpnTunnelController.service == null) {
-                    if (forwardingActive) {
-                        VpnForwardingTransport.stop()
-                        forwardingActive = false
-                    }
-                    reader?.close()
-                    reader = null
-                    pfd?.close()
-                    pfd = null
+                    releaseLocked()
                     applied = null
                 }
             }
@@ -320,19 +366,20 @@ class VpnTunnelController(
         cleanupScope.launch {
             gate.withLock {
                 if (this@VpnTunnelController.service == null) {
-                    if (forwardingActive) {
-                        VpnForwardingTransport.stop()
-                        forwardingActive = false
-                    }
-                    reader?.close()
-                    reader = null
-                    pfd?.close()
-                    pfd = null
+                    releaseLocked()
                     applied = null
                 }
             }
         }
         onRevoked?.invoke()
+    }
+
+    /** 設定一則不影響隧道狀態的提示（例如上游代理暫時無法連線）；傳 null 清除。 */
+    fun setWarning(message: String?) {
+        if (state != VpnTunnelState.Active) return
+        if (lastError == message) return
+        lastError = message
+        onStateChanged?.invoke()
     }
 
     private suspend fun ensureService(): NcVpnService {
@@ -386,8 +433,8 @@ class NcVpnService : VpnService() {
         builder.addAddress(FakeDnsPool.Ipv4Address.hostAddress!!, 32)
         builder.addAddress(FakeDnsPool.Ipv6Address.hostAddress!!, 128)
         if (config.forwarding) {
-            builder.addDnsServer("1.1.1.1")
-            builder.addDnsServer("8.8.8.8")
+            // hev 的映射 DNS：在本地回答，連線以域名送給上游代理。
+            builder.addDnsServer(ForwardingDefaults.MapDnsAddress.hostAddress!!)
         } else {
             builder.addDnsServer(FakeDnsPool.DnsServer.hostAddress!!)
         }

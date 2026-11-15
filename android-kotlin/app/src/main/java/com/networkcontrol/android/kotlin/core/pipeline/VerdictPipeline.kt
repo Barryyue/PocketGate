@@ -32,6 +32,11 @@ class VerdictPipeline(
     private val scope: CoroutineScope,
     private val selfPackage: String,
     private val currentNetwork: () -> NetworkContext = { NetworkContext.None },
+    /**
+     * 實際生效的模式。專注模式、鎖屏斷網會讓路由計畫變成「全部阻止」而不改動使用者選的模式；
+     * 判決必須跟隨實際生效的模式，否則這段時間會對被攔的應用彈出詢問、記錄也會寫成允許。
+     */
+    private val effectiveMode: () -> FilterMode = { runtime.mode },
 ) {
     private val selfPath = "android-app://$selfPackage"
 
@@ -60,7 +65,7 @@ class VerdictPipeline(
         domains: DomainCandidates,
         zone: NetworkZone,
     ): Verdict {
-        val mode = runtime.mode
+        val mode = effectiveMode()
         if (mode == FilterMode.Disabled) {
             return Verdict.allow(VerdictReason.Mode)
         }

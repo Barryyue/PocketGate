@@ -134,6 +134,9 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
     var proxyTesting by remember { mutableStateOf(false) }
     var proxyPackage by remember { mutableStateOf(backend.socks5BypassPackage()) }
     var showProxyAppDialog by remember { mutableStateOf(false) }
+    var directPackages by remember { mutableStateOf(backend.forwardingDirectPackages()) }
+    var showDirectAppsDialog by remember { mutableStateOf(false) }
+    val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
     var showTimedOption by remember { mutableStateOf(backend.promptShowTimedOption()) }
     val forwardingAvailable = remember { backend.forwardingAvailable() }
     var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
@@ -756,6 +759,20 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                     },
                 )
                 if (forwardingEnabled) {
+                    Text(
+                        if (forwardingActive) s[S.ForwardingStatusActive] else s[S.ForwardingStatusInactive],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (forwardingActive) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                    )
+                    Text(
+                        s[S.ForwardingGuide],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     OutlinedTextField(
                         value = socks5Host,
                         onValueChange = { socks5Host = it },
@@ -783,6 +800,7 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                     }
                     SwitchRow(
                         title = s[S.Socks5Udp],
+                        subtitle = s[S.Socks5UdpHint],
                         checked = socks5Udp,
                         onCheckedChange = {
                             socks5Udp = it
@@ -804,6 +822,24 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                     }
                     Text(
                         s[S.ProxyAppHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(s[S.DirectApps], style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                s.format(S.DirectAppsCount, directPackages.size),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = { showDirectAppsDialog = true }) {
+                            Text(s[S.Select])
+                        }
+                    }
+                    Text(
+                        s[S.DirectAppsHint],
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -948,6 +984,19 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                 proxyPackage = packageName
                 backend.setSocks5BypassPackage(packageName)
                 showProxyAppDialog = false
+            },
+        )
+    }
+
+    if (showDirectAppsDialog) {
+        DirectAppsDialog(
+            apps = remember { backend.installedApps() },
+            initial = directPackages,
+            onDismiss = { showDirectAppsDialog = false },
+            onSave = { packages ->
+                directPackages = packages
+                backend.setForwardingDirectPackages(packages)
+                showDirectAppsDialog = false
             },
         )
     }
@@ -1582,6 +1631,75 @@ private fun DetailLine(label: String, value: String) {
         )
         Text(value, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun DirectAppsDialog(
+    apps: List<InstalledApp>,
+    initial: Set<String>,
+    onDismiss: () -> Unit,
+    onSave: (Set<String>) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var query by remember { mutableStateOf("") }
+    var selected by remember { mutableStateOf(initial) }
+    val filtered = remember(query, apps) {
+        if (query.isBlank()) {
+            apps
+        } else {
+            apps.filter {
+                it.label.contains(query, ignoreCase = true) ||
+                    it.packageName.contains(query, ignoreCase = true)
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.DirectApps]) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text(s[S.SearchApps]) },
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    items(filtered, key = { it.packageName }) { app ->
+                        val checked = app.packageName in selected
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selected = if (checked) selected - app.packageName else selected + app.packageName
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(app.label, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    app.packageName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (checked) {
+                                Text("✓", color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(selected) }) { Text(s[S.Save]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
 }
 
 @Composable

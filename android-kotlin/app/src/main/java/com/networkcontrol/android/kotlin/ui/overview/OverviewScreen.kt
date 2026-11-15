@@ -173,7 +173,8 @@ fun OverviewScreen(backend: AppBackend) {
                     )
                 }
                 val error = backend.tunnelError.collectAsStateWithLifecycle().value
-                if (!error.isNullOrBlank() && status == ProtectionStatus.Failed) {
+                // 保護開啟時也可能有提示（例如轉發回退到黑洞模式、上游代理無法連線）。
+                if (!error.isNullOrBlank() && (status == ProtectionStatus.Failed || status == ProtectionStatus.On)) {
                     Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }

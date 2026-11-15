@@ -192,6 +192,11 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_SOCKS5_UDP, value).apply()
 
     /** 代理應用包名：轉發模式下排除此應用，避免代理自身的流量回環進 VPN。 */
+    /** 轉發模式下直接排除在 VPN 之外的應用：不經代理，也不受防火牆管控。 */
+    var forwardingDirectPackages: Set<String>
+        get() = prefs.getStringSet(KEY_FORWARDING_DIRECT_PACKAGES, emptySet())?.toSet().orEmpty()
+        set(value) = prefs.edit().putStringSet(KEY_FORWARDING_DIRECT_PACKAGES, value.toSet()).apply()
+
     var socks5BypassPackage: String?
         get() = prefs.getString(KEY_SOCKS5_BYPASS_PACKAGE, null)?.takeIf { it.isNotBlank() }
         set(value) = prefs.edit().putString(KEY_SOCKS5_BYPASS_PACKAGE, value).apply()
@@ -235,6 +240,7 @@ class AppPreferences(context: Context) {
         const val KEY_SOCKS5_PORT = "socks5_port"
         const val KEY_SOCKS5_UDP = "socks5_udp"
         const val KEY_SOCKS5_BYPASS_PACKAGE = "socks5_bypass_package"
+        const val KEY_FORWARDING_DIRECT_PACKAGES = "forwarding_direct_packages"
         const val DEFAULT_THEME_COLOR = 0xFF2E7D32.toInt()
     }
 }

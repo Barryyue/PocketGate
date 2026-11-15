@@ -684,6 +684,16 @@ class AppBackend(val container: AppContainer) {
         container.vpnEngine.requestReplan()
     }
 
+    fun forwardingDirectPackages(): Set<String> = container.preferences.forwardingDirectPackages
+
+    fun setForwardingDirectPackages(packages: Set<String>) {
+        container.preferences.forwardingDirectPackages = packages
+        container.vpnEngine.requestReplan()
+    }
+
+    /** 隧道目前是否真的在轉發（啟動失敗回退到黑洞模式時為 false）。 */
+    val forwardingActive = container.vpnEngine.forwardingActive
+
     fun socks5BypassPackage(): String? = container.preferences.socks5BypassPackage
 
     fun setSocks5BypassPackage(packageName: String?) {

@@ -195,6 +195,19 @@
 |---|---|---|---|---|
 | K-077 | 「稍後」改為按前台會話判斷：同一應用本次前台不再詢問，切出再回到前台後重新詢問；無使用情況權限時 1 分鐘兜底 | `PromptBroker`、`PromptRouter`、`PromptForegroundTracker` | 模擬器：點稍後 → 回桌面 → 再開 Chrome，詢問重新出現 | 需要「使用情況訪問」權限 |
 
+### v0.9.0-m4p1（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-078 | 轉發模式接入防火牆：hev 改讀 socketpair，`ForwardingPacketFilter` 在新連線（TCP SYN / UDP 新五元組）上查 UID，按路由計畫轉發 / 拒絕（RST、ICMP）/ 拒絕並詢問；判決按五元組緩存，既有 TCP 連線走快速路徑 | `ForwardingPacketFilter`、`ForwardingRelay`、`ForwardingPolicy`、`VpnTunnel`、`VpnEngine` | JVM 測試；模擬器：Chrome 在詢問模式被攔並彈出懸浮詢問，點允許後經 Reqable SOCKS5 載入 example.org | 規則或計畫改變時清空緩存；已建立的連線不會被新規則切斷 |
+| K-079 | 啟用 hev mapdns：系統 DNS 指向 `10.111.222.3`，A 記錄映射到 `100.64.0.0/10`，連線以域名送給 SOCKS5；過濾層監聽 DNS 回覆，詢問 / 記錄可顯示域名 | `VpnForwardingTransport`、`ForwardingPacketFilter`、`BlockedFlowReporter` | JVM 測試；模擬器：`ping example.org` 解析為 `100.64.0.5`，`nc example.org 80` 經 Reqable 回 200，詢問記錄帶 `beacons5.gvt3.com` 等域名 | 只支援 IPv4（AAAA 回空）；應用自帶 DNS（如 Chrome 直連 `10.0.2.3:53`）仍按普通 UDP 處理 |
+| K-080 | UDP 開關改語義：一律使用標準 UDP ASSOCIATE；關閉時由過濾層拒絕 UDP（ICMP 不可達），不再寫入代理不支援的 `udp: 'tcp'` | `VpnForwardingTransport`、`ForwardingPacketFilter` | JVM 測試 | 映射 DNS 不受開關影響 |
+| K-081 | 轉發啟動失敗時按路由計畫回退黑洞模式（排除名單 + 假 DNS），保留錯誤提示並每 2 分鐘重試；先前的回退實際是整機斷網且清掉錯誤 | `VpnTunnelController.apply`、`VpnEngine.checkForwarding` | 代碼審查 | 未在模擬器觸發真實的 hev 啟動失敗 |
+| K-082 | 上游 SOCKS5 健康檢查（每 30 秒只做方法協商），失敗時總覽顯示提示；設定頁顯示「正在轉發 / 未在轉發」、FlClash 設定指引 | `Socks5Probe.handshake`、`VpnEngine`、`OverviewScreen`、`SettingsScreen` | 模擬器：移除 `adb reverse` 後 30 秒內記錄 `upstream 127.0.0.1:9000 unavailable` | 上游斷開時連線失敗（不會直連） |
+| K-083 | 「直連應用」：選中的應用排除在 VPN 之外，不經代理也不受防火牆管控 | `AppPreferences.forwardingDirectPackages`、`VpnEngine`、`SettingsScreen` | 構建 | — |
+| K-084 | 判決管線跟隨實際生效模式：專注 / 鎖屏斷網時按「全部阻止」判決，不再彈詢問、記錄不再寫成允許 | `VerdictPipeline.effectiveMode`、`AppContainer` | 構建 + 代碼審查 | 黑洞與轉發模式都受益 |
+| K-085 | hev 日誌改為 `warn`，超過 1 MB 時下次啟動清空 | `writeForwardingConfig` | JVM 測試 | 先前 debug 級別在模擬器累積到 3.7 MB |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
@@ -204,7 +217,7 @@
 | K-045b | Baseline Profiles、arm64-only、CI 大小 / 啟動基線 | 待做 |
 | K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 待用戶提供 keystore |
 | K-048b | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | 待真機 |
-| K-051 | 轉發模式 + 上游代理：Phase 0 spike 已打包（實驗）；Phase 1 起需接入 per-flow 判決、UDP/域名、真機性能 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
+| K-051 | 轉發模式 + 上游代理：v0.9.0 已接入按應用判決、mapdns 域名、健康檢查（K-078～K-085）；待做：真機 FlClash 吞吐 / 耗電、IPv6 映射、按域名規則在轉發模式生效、firestack / gVisor 評估 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
 
 ## 3. 維護規則
 

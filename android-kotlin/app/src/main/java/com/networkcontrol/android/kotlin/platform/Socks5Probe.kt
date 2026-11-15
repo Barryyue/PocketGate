@@ -66,6 +66,30 @@ object Socks5Probe {
         }
     }
 
+    /**
+     * 只做 SOCKS5 方法協商（不連外網），用於轉發模式的週期健康檢查。
+     * 成功回傳 null，失敗回傳錯誤訊息。
+     */
+    suspend fun handshake(host: String, port: Int, timeoutMs: Int = 3000): String? = withContext(Dispatchers.IO) {
+        if (host.isBlank()) return@withContext "empty host"
+        runCatching {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(host, port), timeoutMs)
+                socket.soTimeout = timeoutMs
+                socket.getOutputStream().apply {
+                    write(byteArrayOf(0x05, 0x01, 0x00))
+                    flush()
+                }
+                val method = readN(socket.getInputStream(), 2)
+                if (method[0] != 0x05.toByte() || method[1] != 0x00.toByte()) {
+                    "auth rejected (${method[1]})"
+                } else {
+                    null
+                }
+            }
+        }.getOrElse { error -> error.message ?: error.javaClass.simpleName }
+    }
+
     private fun readN(input: InputStream, count: Int): ByteArray {
         val buffer = ByteArray(count)
         var offset = 0

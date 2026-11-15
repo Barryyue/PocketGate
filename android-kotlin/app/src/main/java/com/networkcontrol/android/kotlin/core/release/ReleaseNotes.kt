@@ -11,6 +11,24 @@ data class ReleaseNote(
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.0",
+            date = "2026-11-16",
+            features = listOf(
+                "转发模式可以和防火墙同时工作：每条新连接先按规则、询问、专注模式和锁屏断网判决，只有允许的才转发到本机 SOCKS5（例如关闭 VPN 的 FlClash）。",
+                "DNS 改为本地映射：连接以域名发给代理，代理的域名分流规则能生效，DNS 也不再依赖代理支持 UDP；询问和记录里能看到域名。",
+                "新增「直连应用」：选中的应用完全不经过 VPN。",
+                "上游代理每 30 秒检查一次，连不上时在概览显示提示；转发无法启动时回到黑洞模式并定期重试。",
+            ),
+            improvements = listOf(
+                "关闭「转发 UDP」现在会拒绝 UDP 让应用改用 TCP，不再切换到代理不支持的 UDP-over-TCP。",
+                "专注模式和锁屏断网期间不再对被拦的应用弹出询问，记录也不再显示为允许。",
+                "转发组件日志改为只记警告，超过 1 MB 会在下次启动时清空。",
+            ),
+            notes = listOf(
+                "映射域名目前只支持 IPv4；应用自带的 DNS（不走系统 DNS）仍按普通 UDP 连接处理。",
+            ),
+        ),
+        ReleaseNote(
             version = "0.8.5",
             date = "2026-11-16",
             features = listOf(

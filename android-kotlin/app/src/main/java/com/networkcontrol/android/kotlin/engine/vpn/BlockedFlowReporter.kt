@@ -40,8 +40,10 @@ class BlockedFlowReporter(
     private val counters: VpnEngineCounters,
     private val onFlow: suspend (FlowInfo) -> Unit,
     private val fastFail: Boolean = true,
+    /** 轉發模式下由 hev 映射 DNS 還原的域名。 */
+    private val extraHostname: (InetAddress) -> String? = { null },
 ) : PacketSink {
-    private val channel = Channel<PacketInfo>(capacity = 512)
+    private val channel = Channel<Queued>(capacity = 512)
     private val recent = HashMap<DedupKey, Long>()
     private val lastFastFail = HashMap<FastFailKey, Long>()
     private val identityCache = HashMap<String, AppIdentity>()
@@ -50,8 +52,8 @@ class BlockedFlowReporter(
 
     fun start() {
         scope.launch {
-            for (packet in channel) {
-                runCatching { process(packet) }
+            for (queued in channel) {
+                runCatching { process(queued.info, queued.uid) }
             }
         }
     }
@@ -80,11 +82,17 @@ class BlockedFlowReporter(
         if (fastFail) tryFastFail(packet, length, info, writer)
 
         counters.attempts.incrementAndGet()
-        if (channel.trySend(info).isFailure) counters.queueFull.incrementAndGet()
+        if (channel.trySend(Queued(info, null)).isFailure) counters.queueFull.incrementAndGet()
     }
 
-    private suspend fun process(packet: PacketInfo) {
-        val uid = owners.getOwnerUid(packet.protocol, packet.source, packet.destination)
+    /** 轉發模式：過濾層已經判定拒絕的新連線，交給判決管線記錄 / 詢問。uid 已知時不再查詢。 */
+    fun report(info: PacketInfo, uid: Int?) {
+        counters.attempts.incrementAndGet()
+        if (channel.trySend(Queued(info, uid)).isFailure) counters.queueFull.incrementAndGet()
+    }
+
+    private suspend fun process(packet: PacketInfo, knownUid: Int?) {
+        val uid = knownUid ?: owners.getOwnerUid(packet.protocol, packet.source, packet.destination)
         if (uid == null) {
             counters.unknownOwner.incrementAndGet()
             return
@@ -133,7 +141,8 @@ class BlockedFlowReporter(
             remote = packet.destination,
             app = app,
             executablePath = packageName?.let(AppCatalog::appPath) ?: "android-app://uid:$uid",
-            engineHostname = fakeDns.tryGetName(packet.destination.address),
+            engineHostname = fakeDns.tryGetName(packet.destination.address)
+                ?: extraHostname(packet.destination.address),
             timestamp = now,
             origin = FlowOrigin.BlockedEvent,
             tcpFlags = packet.tcpFlags,
@@ -211,4 +220,6 @@ class BlockedFlowReporter(
     )
 
     private data class FastFailKey(val uid: Int, val address: InetAddress)
+
+    private class Queued(val info: PacketInfo, val uid: Int?)
 }

@@ -1101,3 +1101,49 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試 / Debug / Release / AAB 構建通過。
 - 模擬器實測：Chrome 觸發詢問 → 點稍後 → 回桌面 → 再打開 Chrome，詢問重新出現。
 - 真機未驗證：UsageStats 在 OEM ROM 的前台判斷延遲。
+
+---
+
+## 33. v0.9.0-m4p1（2026-11-16）：轉發模式接入防火牆
+
+### 33.1 架構
+
+按「只有一個 VPN 擁有者、逐連線判決、代理只是出口」的做法調整轉發模式：
+
+```
+應用 → VPN 虛擬網卡 → ForwardingRelay ─ ForwardingPacketFilter ─┬─ 允許 → socketpair → hev（lwIP）→ 本機 SOCKS5（FlClash 僅代理）
+                                                               ├─ 拒絕 → RST / ICMP 不可達，記錄
+                                                               └─ 詢問 → 拒絕 + 建立詢問（允許後下一次連線轉發）
+```
+
+- hev 讀寫的是 `ParcelFileDescriptor.createReliableSocketPair()`（AF_UNIX SOCK_SEQPACKET）的一端；hev 對非 TUN fd 的 `TUNGETIFF` 失敗後使用一般 read/write，封包邊界由 SEQPACKET 保留。
+- 判決沿用黑洞模式的 `VpnRoutingPlanner` 結果（規則、模式、專注、鎖屏、可信應用）：`Bypass` → 轉發，`Block` → 拒絕，`BlockAndAsk` → 拒絕並詢問。系統 UID 放行；查不到擁有者時除「全部阻止」外放行並計數。
+- 只在 TCP SYN 與新 UDP 五元組上查 UID（Binder），結果緩存 10 秒（TCP）/ 60 秒滑動（UDP）；路由計畫每次重算時清空。
+- DNS：VPN 的 DNS 指向 hev 映射 DNS `10.111.222.3`，A 記錄映射到 `100.64.0.0/10`，hev 以域名向 SOCKS5 發 CONNECT；過濾層監聽 hev 回覆的 DNS，把映射位址還原成域名給詢問與記錄。
+- 排除名單：本應用、「代理應用」（避免回環）、「直連應用」。
+- 失敗處理：hev 無法啟動 → 按路由計畫回退黑洞模式並保留提示，每 2 分鐘重試；上游 SOCKS5 每 30 秒協商一次，不可用時總覽提示（連線失敗，不會直連）。
+
+### 33.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.9.0-m4p1.apk` |
+| APK 大小 | 4,269,645 bytes |
+| APK SHA-256 | `0BC47BA255BCA1067EC3BA97FBB14CBFF3418BD1388BC3C2FB9B0F9B645C482C` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.9.0-m4p1.aab` |
+| AAB 大小 | 4,860,217 bytes |
+| AAB SHA-256 | `F80ACD61C0F3959E6B9B98FD28825DACA31EC88887B26FAF1EA665673F358AB3` |
+| versionName / Code | `0.9.0-m4p1` / `24` |
+
+### 33.3 驗證
+
+- JVM 測試 83 個全部通過（新增 `ForwardingTest` 15 個）；Debug / Release / AAB 構建通過；Release APK 在模擬器啟動無崩潰。
+- 模擬器（x86_64，上游為電腦上的 Reqable SOCKS5 經 `adb reverse tcp:9000`）：
+  - `ping example.org` 解析為 `100.64.0.5`（mapdns 生效）；`nc example.org 80`、`nc www.baidu.com 80` 經代理回 `HTTP/1.1 200 OK`。
+  - Chrome（詢問模式、無規則）連線被拒並彈出懸浮詢問，記錄帶域名；點「允許」後 Chrome 經代理載入 example.org。
+  - 移除 `adb reverse` 後，健康檢查在 30 秒內記錄上游不可用。
+- 未驗證：
+  - 真機 + FlClash（僅代理）的吞吐、耗電、UDP / QUIC、長時間穩定性；`adb reverse` 不轉發 UDP，模擬器上無法驗證 UDP ASSOCIATE。
+  - hev 啟動失敗時的黑洞回退（只做了代碼審查）。
+  - 鎖屏斷網 / 專注模式在轉發模式下的實際阻擋（只有 `ForwardingPolicy` 的 JVM 測試）。
+- 已知限制：mapdns 只支援 IPv4；應用自帶的 DNS（不走系統 DNS）按普通 UDP 處理；帶域名 / 端口條件的規則仍只用於記錄，轉發模式下尚未逐連線執行；已建立的連線不會被新規則切斷。

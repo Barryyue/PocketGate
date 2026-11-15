@@ -88,9 +88,16 @@ class AppContainer(context: Context) {
         scope = scope,
         selfPackage = appContext.packageName,
         currentNetwork = { network.current },
+        effectiveMode = {
+            if (vpnEngine.plan.value.mode == com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll) {
+                com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll
+            } else {
+                runtime.mode
+            }
+        },
     )
 
-    val vpnEngine = VpnEngine(
+    val vpnEngine: VpnEngine = VpnEngine(
         context = appContext,
         scope = scope,
         rules = rules,
