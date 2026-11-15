@@ -579,3 +579,40 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試新增 `UntilAppExit` 規則建立與非持久化檢查；全部測試通過。
 - Debug / Release / AAB 構建通過。
 - 真機未驗證：允許一次 → 離開應用 → 再次打開是否重新詢問；UsageStats 在 OEM ROM 上的 ACTIVE_STOPPED 事件差異。
+
+---
+
+## 17. v0.6.2-m4spike（2026-11-15）
+
+### 17.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 詢問壽命 | 移除「直到重啟」選項，保留「允許一次 / 永久 / 限時」；限時時長在設定 → 詢問 → 「限時規則時長（分鐘）」配置，預設 60，可改 30 等。`UntilRestart` 僅保留給舊資料載入，不再提供新選擇。 |
+| 允許一次 | 維持應用會話：目標應用離開前台 2 秒後失效；下次打開重新詢問。 |
+| 速度島 | 保護開啟且螢幕解鎖時，在螢幕頂部顯示黑色膠囊，預設 `↓ 下載 / ↑ 上傳`；點擊開啟 NetworkControl；鎖屏 / 關閉保護時隱藏。 |
+| 詢問面板 | 速度島開啟時，頂部懸浮詢問面板下移 50dp，避免與速度島重疊。 |
+
+### 17.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.2-m4spike.apk` |
+| APK 大小 | 4,122,189 bytes |
+| APK SHA-256 | `88C2C3AAF52632BCB908068145BFF3D5AD557CEFD3E637299C9F9EE0C2ABBEF4` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.2-m4spike.aab` |
+| AAB 大小 | 4,667,698 bytes |
+| AAB SHA-256 | `52648343836BBC6C5D2B8BDEDB97CA04B584E16315D5CDCAD8CB0860DE789C4F` |
+| versionName / Code | `0.6.2-m4spike` / `8` |
+
+### 17.3 驗證
+
+- JVM 測試通過；Debug / Release / AAB 構建通過。
+- 模擬器：設定頁可開啟速度島；`dumpsys window` 可見 `NetworkControl speed` 視窗，overlay 權限與保護狀態正確。
+- 真機未驗證：速度島在瀏海 / 挖孔 / 狀態欄下的位置、與鍵盤和其他懸浮窗的遮擋、常駐耗電、OEM ROM 限制。
+
+### 17.4 已知限制
+
+- 速度島與詢問面板都使用 `TYPE_APPLICATION_OVERLAY`；部分系統敏感頁面或 `setHideOverlayWindows(true)` 會隱藏它們。
+- 速度島是系統懸浮窗，關閉保護或鎖屏時隱藏；若使用者撤銷懸浮窗權限，會自動消失。
+- 「直到重啟」已從 UI 移除，但舊版建立過的 `UntilRestart` 規則仍會在當前 NetworkControl 進程內生效，直到進程重啟。
