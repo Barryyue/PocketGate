@@ -44,6 +44,7 @@ class ForwardingRelay(
         }
     }
 
+    private var filterErrors = 0L
     private var upstream: Thread? = null
     private var downstream: Thread? = null
 
@@ -74,9 +75,14 @@ class ForwardingRelay(
                 val read = tunInput.read(buffer)
                 if (read < 0) break
                 if (read == 0) continue
-                if (filter.onTunPacket(buffer, read, tunWriter)) {
-                    relayOutput.write(buffer, 0, read)
+                // 過濾層的意外例外不能讓整個轉發執行緒結束（那會變成整機斷網）：記錄後照常轉發這個封包。
+                val forward = try {
+                    filter.onTunPacket(buffer, read, tunWriter)
+                } catch (ex: RuntimeException) {
+                    if (filterErrors++ % 1000 == 0L) AppLog.e("forwarding", "filter failed; forwarding packet", ex)
+                    true
                 }
+                if (forward) relayOutput.write(buffer, 0, read)
             }
         } catch (ex: IOException) {
             if (!stopped) onError(ex)

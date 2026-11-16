@@ -37,6 +37,8 @@ class VerdictPipeline(
      * 判決必須跟隨實際生效的模式，否則這段時間會對被攔的應用彈出詢問、記錄也會寫成允許。
      */
     private val effectiveMode: () -> FilterMode = { runtime.mode },
+    /** 本應用合成的位址（轉發模式的映射 DNS 位址）；它們落在 CGNAT 網段，但實際目標是公網域名。 */
+    private val isSyntheticAddress: (java.net.InetAddress) -> Boolean = { false },
 ) {
     private val selfPath = "android-app://$selfPackage"
 
@@ -45,12 +47,23 @@ class VerdictPipeline(
         val domains = flow.engineHostname
             ?.let { DomainCandidates(listOf(DomainName.normalize(it))) }
             ?: DomainCandidates.Empty
-        val zone = NetworkZones.classify(flow.remote.address)
+        val zone = if (flow.engineHostname != null && isSyntheticAddress(flow.remote.address)) {
+            NetworkZone.Internet
+        } else {
+            NetworkZones.classify(flow.remote.address)
+        }
 
-        val verdict = try {
+        val decided = try {
             decideInternal(flow, domains, zone)
         } catch (_: Exception) {
             Verdict.allow(VerdictReason.FailSafe)
+        }
+        // 引擎上報的「已被丟棄」連線：例如黑洞模式下只對部分域名放行的應用無法按應用排除，
+        // 規則雖然判定允許，連線實際上仍被丟棄。記錄必須寫成實際結果，否則使用者會誤以為放行了。
+        val verdict = if (flow.origin == FlowOrigin.BlockedEvent && decided.action == VerdictAction.Allow) {
+            Verdict.deny(VerdictReason.Mode)
+        } else {
+            decided
         }
 
         publish(flow, verdict)

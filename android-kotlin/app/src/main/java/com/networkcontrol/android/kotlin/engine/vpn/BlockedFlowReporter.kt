@@ -53,7 +53,7 @@ class BlockedFlowReporter(
     fun start() {
         scope.launch {
             for (queued in channel) {
-                runCatching { process(queued.info, queued.uid) }
+                runCatching { process(queued) }
             }
         }
     }
@@ -79,20 +79,30 @@ class BlockedFlowReporter(
         }
 
         if (!info.isConnectionAttempt) return
-        if (fastFail) tryFastFail(packet, length, info, writer)
+        // 快速失敗需要同步知道 UID；查到的結果直接交給背景處理，不再查第二次 Binder。
+        val queued = if (fastFail) {
+            Queued(info, tryFastFail(packet, length, info, writer), resolved = true)
+        } else {
+            Queued(info, null, resolved = false)
+        }
 
         counters.attempts.incrementAndGet()
-        if (channel.trySend(Queued(info, null)).isFailure) counters.queueFull.incrementAndGet()
+        if (channel.trySend(queued).isFailure) counters.queueFull.incrementAndGet()
     }
 
     /** 轉發模式：過濾層已經判定拒絕的新連線，交給判決管線記錄 / 詢問。uid 已知時不再查詢。 */
     fun report(info: PacketInfo, uid: Int?) {
         counters.attempts.incrementAndGet()
-        if (channel.trySend(Queued(info, uid)).isFailure) counters.queueFull.incrementAndGet()
+        if (channel.trySend(Queued(info, uid, resolved = uid != null)).isFailure) counters.queueFull.incrementAndGet()
     }
 
-    private suspend fun process(packet: PacketInfo, knownUid: Int?) {
-        val uid = knownUid ?: owners.getOwnerUid(packet.protocol, packet.source, packet.destination)
+    private suspend fun process(queued: Queued) {
+        val packet = queued.info
+        val uid = if (queued.resolved) {
+            queued.uid
+        } else {
+            owners.getOwnerUid(packet.protocol, packet.source, packet.destination)
+        }
         if (uid == null) {
             counters.unknownOwner.incrementAndGet()
             return
@@ -125,10 +135,13 @@ class BlockedFlowReporter(
         val installed = packageName?.let { catalog.find(it) }
         val app: AppIdentity? = packageName?.let { name ->
             installed?.let { found ->
-                identityCache[name] ?: run {
+                // 鍵包含簽名與更新時間：應用被替換（簽名改變）後必須重新取身分，否則會繞過篡改檢測。
+                val cacheKey = "$name|${found.signerSha256.orEmpty()}|${found.lastUpdated}"
+                identityCache[cacheKey] ?: run {
                     val identity = runCatching { apps.upsert(catalog.toIdentity(found)) }
                         .getOrElse { catalog.toIdentity(found) }
-                    identityCache[name] = identity
+                    if (identityCache.size >= 1024) identityCache.clear()
+                    identityCache[cacheKey] = identity
                     identity
                 }
             }
@@ -156,16 +169,17 @@ class BlockedFlowReporter(
         )
     }
 
-    private fun tryFastFail(packet: ByteArray, length: Int, info: PacketInfo, writer: PacketWriter) {
-        val uid = owners.getOwnerUid(info.protocol, info.source, info.destination) ?: return
-        if (VpnRoutingPlanner.isSystemUid(uid)) return
-        val routing = currentPlan().find(uid) ?: return
-        if (routing.decision != AppRoutingDecision.Block) return
+    /** 對「直接阻止」的應用立刻回送 RST / ICMP；回傳查到的 UID（查不到為 null）。 */
+    private fun tryFastFail(packet: ByteArray, length: Int, info: PacketInfo, writer: PacketWriter): Int? {
+        val uid = owners.getOwnerUid(info.protocol, info.source, info.destination) ?: return null
+        if (VpnRoutingPlanner.isSystemUid(uid)) return uid
+        val routing = currentPlan().find(uid) ?: return uid
+        if (routing.decision != AppRoutingDecision.Block) return uid
 
         val now = Time.now()
         val key = FastFailKey(uid, info.destination.address)
         val last = lastFastFail[key]
-        if (last != null && now - last < 1_000) return
+        if (last != null && now - last < 1_000) return uid
         if (lastFastFail.size >= 4096) lastFastFail.clear()
         lastFastFail[key] = now
 
@@ -192,6 +206,7 @@ class BlockedFlowReporter(
             }
             else -> Unit
         }
+        return uid
     }
 
     private fun answerDns(packet: ByteArray, info: PacketInfo, writer: PacketWriter) {
@@ -221,5 +236,6 @@ class BlockedFlowReporter(
 
     private data class FastFailKey(val uid: Int, val address: InetAddress)
 
-    private class Queued(val info: PacketInfo, val uid: Int?)
+    /** [resolved] 為 true 時 [uid] 已經查過（可能為 null，代表查不到擁有者）。 */
+    private class Queued(val info: PacketInfo, val uid: Int?, val resolved: Boolean)
 }

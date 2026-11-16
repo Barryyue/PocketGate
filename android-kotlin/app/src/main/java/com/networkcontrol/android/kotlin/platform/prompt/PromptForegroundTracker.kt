@@ -19,7 +19,7 @@ class PromptForegroundTracker(private val context: Context) {
     private val power = appContext.getSystemService(PowerManager::class.java)
     private val keyguard = appContext.getSystemService(KeyguardManager::class.java)
     private val packageManager = appContext.packageManager
-    private val uidCache = HashMap<String, Int?>()
+    private val uidCache = HashMap<String, Int>()
     private var lastQuery = 0L
     private var currentPackage: String? = null
     private val resumedActivities = LinkedHashMap<String, String>()
@@ -101,7 +101,8 @@ class PromptForegroundTracker(private val context: Context) {
 
     fun uidForPackage(packageName: String): Int? {
         uidCache[packageName]?.let { return it }
-        val uid = runCatching { packageManager.getPackageUid(packageName, 0) }.getOrNull()
+        val uid = runCatching { packageManager.getPackageUid(packageName, 0) }.getOrNull() ?: return null
+        if (uidCache.size >= 512) uidCache.clear()
         uidCache[packageName] = uid
         return uid
     }

@@ -54,6 +54,10 @@ class PromptBroker(
     private val sessionSuppressed = HashSet<String>()
     @Volatile
     private var sessionSuppressedCount = 0
+    private val _busy = MutableStateFlow(false)
+
+    /** 有待決詢問或「稍後」抑制時為 true；PromptRouter 只在這時輪詢前台應用。 */
+    val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
     private val _events = MutableSharedFlow<PromptEvent>(extraBufferCapacity = 64)
     val events = _events.asSharedFlow()
@@ -92,6 +96,11 @@ class PromptBroker(
 
             val pendingFlow = PendingFlow(flow, domains, deferred)
             val existing = byApp[key]
+            if (existing != null && !holdConnection && existing.isRedundant(flow, domains)) {
+                // 黑洞 / 轉發模式的連線已經被丟棄，同一目標重複加入只會讓詢問與快照無限增長。
+                deferred.complete(Verdict(currentSettings.promptDefaultAction, VerdictReason.Mode))
+                return@withLock
+            }
             if (existing != null) {
                 existing.flows += pendingFlow
                 event = PromptEvent(PromptEventKind.Updated, existing.snapshot())
@@ -334,7 +343,6 @@ class PromptBroker(
         }
     }
 
-    /** 使用者選擇「稍後」：拒絕目前這批連線，10 分鐘內不再詢問同一應用。 */
     /** 使用者選擇「稍後」後，同一應用在本次前台會話內不再詢問；切換出去再回來會重新詢問。 */
     suspend fun dismiss(promptId: String): Boolean {
         var prompt: PendingPrompt? = null
@@ -367,6 +375,7 @@ class PromptBroker(
         gate.withLock {
             if (sessionSuppressed.remove(packageName)) {
                 sessionSuppressedCount = sessionSuppressed.size
+                refreshBusyLocked()
             }
         }
     }
@@ -379,6 +388,7 @@ class PromptBroker(
             if (sessionSuppressed.isNotEmpty()) {
                 sessionSuppressed.clear()
                 sessionSuppressedCount = 0
+                refreshBusyLocked()
             }
         }
     }
@@ -418,6 +428,16 @@ class PromptBroker(
 
     private fun refreshPendingLocked() {
         _pending.value = prompts.values.map { it.snapshot() }
+        refreshBusyLocked()
+    }
+
+    private fun refreshBusyLocked() {
+        _busy.value = prompts.isNotEmpty() || sessionSuppressed.isNotEmpty()
+    }
+
+    private companion object {
+        /** 不持有連線的詢問最多保留的連線數；超過的只計入記錄，不再加入詢問。 */
+        const val MAX_DETACHED_FLOWS = 50
     }
 
     private data class MergeKey(
@@ -452,6 +472,16 @@ class PromptBroker(
         val flows: MutableList<PendingFlow> = mutableListOf(),
         var timer: Job? = null,
     ) {
+        /** 已有相同協定、目標與域名的連線，或不持有連線的流已達上限。 */
+        fun isRedundant(flow: FlowInfo, domains: DomainCandidates): Boolean {
+            if (flows.size >= MAX_DETACHED_FLOWS) return true
+            return flows.any {
+                it.flow.protocol == flow.protocol &&
+                    it.flow.remote == flow.remote &&
+                    it.domains.names == domains.names
+            }
+        }
+
         fun snapshot(): PromptSnapshot = PromptSnapshot(
             id = id,
             app = app,

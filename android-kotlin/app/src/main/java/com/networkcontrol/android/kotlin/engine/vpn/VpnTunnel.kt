@@ -186,6 +186,9 @@ class VpnTunnelController(
     var onStateChanged: (() -> Unit)? = null
     var onRevoked: (() -> Unit)? = null
 
+    /** 服務被結束（不是被撤銷）時呼叫；防護仍開啟時由引擎決定是否重建。 */
+    var onDetached: (() -> Unit)? = null
+
     val isPrepared: Boolean get() = VpnService.prepare(appContext) == null
 
     fun createPrepareIntent(): Intent? = VpnService.prepare(appContext)
@@ -353,6 +356,7 @@ class VpnTunnelController(
         if (state == VpnTunnelState.Active || state == VpnTunnelState.Establishing) {
             setState(VpnTunnelState.Closed)
         }
+        onDetached?.invoke()
     }
 
     fun revoke(service: NcVpnService) {

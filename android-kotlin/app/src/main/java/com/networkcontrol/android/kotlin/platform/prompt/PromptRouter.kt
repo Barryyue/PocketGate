@@ -11,6 +11,7 @@ import com.networkcontrol.android.kotlin.platform.PromptNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -66,6 +67,13 @@ class PromptRouter(
             var seenForeground = false
             var suppressedSince = 0L
             while (isActive) {
+                if (!broker.busy.value) {
+                    // 沒有詢問也沒有「稍後」抑制：不輪詢前台應用，等到有工作再繼續。
+                    lastPackage = null
+                    seenForeground = false
+                    suppressedSince = 0L
+                    broker.busy.first { it }
+                }
                 if (broker.pending.value.isNotEmpty()) render()
                 if (broker.hasSessionSuppressions()) {
                     if (!tracker.isAvailable()) {

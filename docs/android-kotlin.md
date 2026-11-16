@@ -1146,4 +1146,32 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
   - 真機 + FlClash（僅代理）的吞吐、耗電、UDP / QUIC、長時間穩定性；`adb reverse` 不轉發 UDP，模擬器上無法驗證 UDP ASSOCIATE。
   - hev 啟動失敗時的黑洞回退（只做了代碼審查）。
   - 鎖屏斷網 / 專注模式在轉發模式下的實際阻擋（只有 `ForwardingPolicy` 的 JVM 測試）。
-- 已知限制：mapdns 只支援 IPv4；應用自帶的 DNS（不走系統 DNS）按普通 UDP 處理；帶域名 / 端口條件的規則仍只用於記錄，轉發模式下尚未逐連線執行；已建立的連線不會被新規則切斷。
+- 已知限制：mapdns 只支援 IPv4；應用自帶的 DNS（不走系統 DNS）按普通 UDP 處理；帶域名 / 端口條件的規則仍只用於記錄，轉發模式下尚未逐連線執行（v0.9.1 已補上，見 §34）；已建立的連線不會被新規則切斷。
+
+## 34. v0.9.1-m4p2（2026-11-16）：審查修復、轉發條件規則、省電
+
+### 34.1 改動
+
+- **轉發模式的條件規則**：過濾層在新連線上把 UID、封包與映射域名交給 `VpnEngine.decideForwarding`。規則集含帶連線條件的規則時，用 `RuleSet.evaluate` 比對（映射位址按公網分區），第一條符合的是條件規則才覆寫路由計畫；應用級規則、可信應用、篡改檢測仍由路由計畫決定。專注、全部阻止、停用模式與系統 UID 不套用條件規則。
+- **「僅一次」**：`AppForegroundState` 按 Activity 記錄 RESUMED，只有應用的最後一個 Activity STOPPED（且亮屏）才算離開；應用內切換頁面（舊頁 PAUSED → 新頁 RESUMED → 舊頁 STOPPED）不再撤銷規則。
+- **審查修復**：通知動作 Toast 改在主執行緒；快速設定磁貼鎖屏時要求解鎖；舊版共享規則遷移只執行一次（`legacy_rules_migrated`）；`RuleIdentity.merge` 對臨時規則用新建立時間；黑洞模式下被丟棄的連線不再記成允許；被拦連線只查一次連線歸屬；身分緩存鍵含簽名與更新時間；不持有連線的詢問去重並限 50 條流；`PromptForegroundTracker` 不緩存查不到的 UID。
+- **省電**：`RuleLifetimeManager` 睡到下一條限時規則到期（最多 60 秒寫回命中），規則變更時提前醒來；`SpeedMonitor` 關屏暫停；`PromptRouter` 沒有詢問 / 抑制時掛起在 `PromptBroker.busy`。
+- **轉發性能與穩定**：已放行 UDP 流的快速路徑（不解析、不配置物件、不取鎖；2 秒有效，`invalidate()` 透過 epoch 立即失效）；過濾層例外只記錄並轉發該封包；VPN 服務被系統結束而防護仍開啟時自動重建（10 秒內最多一次）。
+
+### 34.2 產物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.9.1-m4p2.apk` |
+| APK 大小 | 4,269,645 bytes |
+| APK SHA-256 | `C2CBD1823F137D59167DFB7D3A6ED2C67ABC1E9A726E20E79BFDD88790E756F0` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.9.1-m4p2.aab` |
+| AAB 大小 | 4,873,091 bytes |
+| AAB SHA-256 | `C0CFA864BBD32C600A842CC1882BAF1786935D166CC55AFECF231D27BDC7F482` |
+| versionName / Code | `0.9.1-m4p2` / `25` |
+
+### 34.3 驗證
+
+- JVM 測試 93 個全部通過（新增 `ReviewFixesTest` 10 個）；Debug / Release / AAB 構建通過；Release APK 在模擬器升級安裝後啟動無崩潰。
+- 模擬器：Debug 版黑洞模式啟動正常、詢問與記錄正常；升級後 `legacy_rules_migrated=true`。轉發模式（上游 Reqable）下以 sqlite 插入「Chrome 拒絕 example.org」：example.org 被拒、記錄為 Deny / Rule / 該規則 id，同時 baidu.com 經代理連線成功（Reqable 的 MITM 憑證頁）。測試規則與轉發開關已還原。
+- 未驗證：真機耗電與吞吐；通知動作、快速設定磁貼、服務被殺後重建都沒有手動觸發；UsageStats 在各 ROM 上的事件順序。

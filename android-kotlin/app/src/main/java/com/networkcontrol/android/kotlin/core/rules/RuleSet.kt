@@ -121,6 +121,12 @@ class RuleSet(rules: List<Rule>, val version: Long = 0) {
     val rules: List<Rule> = compiled.map { it.rule }
     val count: Int get() = rules.size
 
+    /** 是否有帶連線條件（遠端位址 / 域名 / 端口 / 協定）的規則；沒有時轉發模式不必逐連線比對。 */
+    val hasFlowConditions: Boolean = rules.any {
+        val c = it.conditions
+        c.remote != null || c.remotePort != null || c.localPort != null || c.protocol != null
+    }
+
     fun evaluate(
         flow: FlowInfo,
         app: AppIdentity?,

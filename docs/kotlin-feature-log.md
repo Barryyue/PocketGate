@@ -208,6 +208,20 @@
 | K-084 | 判決管線跟隨實際生效模式：專注 / 鎖屏斷網時按「全部阻止」判決，不再彈詢問、記錄不再寫成允許 | `VerdictPipeline.effectiveMode`、`AppContainer` | 構建 + 代碼審查 | 黑洞與轉發模式都受益 |
 | K-085 | hev 日誌改為 `warn`，超過 1 MB 時下次啟動清空 | `writeForwardingConfig` | JVM 測試 | 先前 debug 級別在模擬器累積到 3.7 MB |
 
+### v0.9.1-m4p2（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-086 | 轉發模式逐連線執行帶域名 / 位址 / 端口 / 協定條件的規則（應用級規則仍由路由計畫處理）；映射位址按公網分區比對 | `ForwardingPolicy.decide(flowRule)`、`ForwardingPolicy.conditionalAction`、`RuleSet.hasFlowConditions`、`VpnEngine.decideForwarding` | JVM 測試；模擬器：Chrome 已有應用級允許，加入「Chrome 拒絕 example.org」後 example.org 被拒（記錄 Deny / Rule / 規則 id），baidu.com 照常經 Reqable 轉發 | 位址條件無法比對映射位址（真實 IP 由代理解析）；專注、全部阻止、停用模式不套用條件規則 |
+| K-087 | 「僅一次」改按 Activity 追蹤前台：應用內切換頁面不再被當成離開；沒有目標時重置狀態，不沿用過期前台 | `AppForegroundState`、`TargetAppSessionTracker` | JVM 測試 | 真機上的 UsageStats 事件順序未逐一驗證 |
+| K-088 | 審查修復：通知動作的 Toast 改在主執行緒（原本必崩）；快速設定磁貼鎖屏時先 `unlockAndRun`；舊版共享規則遷移只做一次；`RuleIdentity.merge` 對臨時規則採用新建立時間 | `NotificationActionReceiver`、`ProtectionTileService`、`AppContainer`、`AppPreferences.legacyRulesMigrated`、`RuleIdentity` | JVM 測試（merge）；模擬器：升級後 `legacy_rules_migrated=true` | 磁貼與通知動作未在模擬器手動觸發 |
+| K-089 | 黑洞模式下被丟棄的連線即使規則判定允許也記錄為拒絕（只放行部分域名的應用無法按應用排除） | `VerdictPipeline` | 構建 + 代碼審查 | — |
+| K-090 | 被拦連線只做一次 `getConnectionOwnerUid`（快速失敗查到的 UID 直接交給背景處理）；應用身分緩存鍵含簽名與更新時間，防止替換應用後沿用舊身分 | `BlockedFlowReporter` | 構建 + 模擬器黑洞模式記錄正常 | — |
+| K-091 | 不持有連線的詢問：相同目標去重，最多 50 條流，避免快照無限增長 | `PromptBroker.isRedundant` | 構建 | — |
+| K-092 | 省電：過期規則按下一個到期時間喚醒（規則變更時重算），不再每秒輪詢；關屏時暫停網速取樣；沒有詢問 / 抑制時 PromptRouter 掛起等待 | `RuleLifetimeManager`、`SpeedMonitor`、`ScreenStateMonitor.interactive`、`PromptBroker.busy`、`PromptRouter` | 構建 + 模擬器啟動 | 未量測真機耗電 |
+| K-093 | 轉發性能：同一條已放行 UDP 流的後續封包走快速路徑（比對原始位址 / 端口位元組，2 秒有效，規則變更即失效）；過濾層例外不再結束轉發執行緒 | `ForwardingPacketFilter`、`ForwardingRelay` | JVM 測試 | 未在真機量測吞吐 |
+| K-094 | VPN 服務被系統結束（非撤銷）而防護仍開啟時自動重建隧道（10 秒內最多一次） | `VpnTunnelController.onDetached`、`VpnEngine` | 代碼審查 | 未在模擬器觸發服務被殺 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
@@ -217,7 +231,7 @@
 | K-045b | Baseline Profiles、arm64-only、CI 大小 / 啟動基線 | 待做 |
 | K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 待用戶提供 keystore |
 | K-048b | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | 待真機 |
-| K-051 | 轉發模式 + 上游代理：v0.9.0 已接入按應用判決、mapdns 域名、健康檢查（K-078～K-085）；待做：真機 FlClash 吞吐 / 耗電、IPv6 映射、按域名規則在轉發模式生效、firestack / gVisor 評估 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
+| K-051 | 轉發模式 + 上游代理：v0.9.0 已接入按應用判決、mapdns 域名、健康檢查（K-078～K-085），v0.9.1 按域名 / 端口規則逐連線生效（K-086）；待做：真機 FlClash 吞吐 / 耗電、IPv6 映射、應用自帶 DNS 重導、firestack / gVisor 評估 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
 
 ## 3. 維護規則
 

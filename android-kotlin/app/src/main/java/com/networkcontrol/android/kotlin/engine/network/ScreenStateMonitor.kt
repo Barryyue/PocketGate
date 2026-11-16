@@ -17,10 +17,15 @@ class ScreenStateMonitor(private val context: Context) {
     private val keyguard = appContext.getSystemService(KeyguardManager::class.java)
     private val _locked = MutableStateFlow(computeLocked())
     val locked: StateFlow<Boolean> = _locked.asStateFlow()
+    private val _interactive = MutableStateFlow(power?.isInteractive ?: true)
+
+    /** 螢幕是否亮著（不管是否鎖屏）；用於關屏時暫停只為顯示服務的取樣。 */
+    val interactive: StateFlow<Boolean> = _interactive.asStateFlow()
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             _locked.value = computeLocked()
+            _interactive.value = power?.isInteractive ?: true
         }
     }
 
@@ -32,6 +37,7 @@ class ScreenStateMonitor(private val context: Context) {
         }
         runCatching { appContext.registerReceiver(receiver, filter) }
         _locked.value = computeLocked()
+        _interactive.value = power?.isInteractive ?: true
     }
 
     fun stop() {

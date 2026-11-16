@@ -55,7 +55,7 @@ class ForwardingTest {
                 lookups++
                 uid
             },
-            decide = { currentDecision },
+            decide = { _, _, _ -> currentDecision },
             onBlocked = { info, owner, ask -> blocked += Triple(info, owner, ask) },
             blockUdp = { blockUdp },
             clock = { now },

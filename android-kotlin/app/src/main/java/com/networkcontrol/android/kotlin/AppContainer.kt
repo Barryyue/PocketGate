@@ -95,6 +95,7 @@ class AppContainer(context: Context) {
                 runtime.mode
             }
         },
+        isSyntheticAddress = { address -> vpnEngine.forwardingFilter.hostnameFor(address) != null },
     )
 
     val vpnEngine: VpnEngine = VpnEngine(
@@ -184,7 +185,7 @@ class AppContainer(context: Context) {
                 }
             runCatching { promptRouter.start() }
             runCatching { quietNotifier.start() }
-            runCatching { speedMonitor.start(scope) }
+            runCatching { speedMonitor.start(scope, screenState.interactive) }
             runCatching { speedIsland.start() }
             scope.launch {
                 speedMonitor.speed.collect { speed ->
@@ -222,9 +223,11 @@ class AppContainer(context: Context) {
 
     /**
      * v0.2 修正：應用頁三態規則以前沒有寫 profile_id，變成所有配置文件共享。
-     * 啟動時把舊的「使用者 / 詢問產生的應用級規則」遷移到默認配置文件。
+     * 把舊的「使用者 / 詢問產生的應用級規則」遷移到默認配置文件。
+     * 只執行一次：之後使用者刻意建立（或匯入）的全域規則不能每次啟動都被搬走。
      */
     private suspend fun migrateLegacySharedAppRules() {
+        if (preferences.legacyRulesMigrated) return
         val target = com.networkcontrol.android.kotlin.core.model.Profile.DEFAULT_ID
         val legacy = rules.all.filter { rule ->
             (rule.source == com.networkcontrol.android.kotlin.core.model.RuleSource.User ||
@@ -248,5 +251,6 @@ class AppContainer(context: Context) {
                 "migrated ${legacy.size} shared app rules to default profile",
             )
         }
+        preferences.legacyRulesMigrated = true
     }
 }

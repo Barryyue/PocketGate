@@ -7,6 +7,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -31,13 +32,26 @@ class SpeedMonitor {
     private var lastTx = -1L
     private var lastAt = 0L
 
-    fun start(scope: CoroutineScope) {
+    /** @param interactive 亮屏狀態；為 false 時暫停取樣並歸零，避免關屏後每 2 秒更新一次通知。 */
+    fun start(scope: CoroutineScope, interactive: StateFlow<Boolean>? = null) {
         scope.launch {
             while (scope.isActive) {
+                if (interactive != null && !interactive.value) {
+                    reset()
+                    interactive.first { it }
+                }
                 sample()
                 delay(2_000)
             }
         }
+    }
+
+    @Synchronized
+    private fun reset() {
+        lastRx = -1L
+        lastTx = -1L
+        lastAt = 0L
+        _speed.value = SpeedSnapshot.Zero
     }
 
     @Synchronized

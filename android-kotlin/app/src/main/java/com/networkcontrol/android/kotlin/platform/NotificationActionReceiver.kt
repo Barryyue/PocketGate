@@ -18,6 +18,7 @@ import com.networkcontrol.android.kotlin.core.rules.AppMatcherFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 通知動作。進程被回收後，詢問本身已經不存在，但通知仍可能留在通知欄。
@@ -49,9 +50,15 @@ class NotificationActionReceiver : BroadcastReceiver() {
                         action = action,
                     )
                     if (!created) {
-                        Toast.makeText(context, R.string.prompt_expired, Toast.LENGTH_LONG).show()
+                        // Toast 只能在有 Looper 的執行緒顯示；在 Dispatchers.Default 上呼叫會直接崩潰。
+                        val appContext = context.applicationContext
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(appContext, R.string.prompt_expired, Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
+            } catch (ex: Exception) {
+                AppLog.e("prompt", "notification action failed", ex)
             } finally {
                 pending.finish()
             }

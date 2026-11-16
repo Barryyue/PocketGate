@@ -67,8 +67,17 @@ object RuleIdentity {
         }
     }
 
-    /** 保留舊規則的 id 與建立時間，套用新規則的內容。 */
+    /**
+     * 保留舊規則的 id，套用新規則的內容。
+     * 永久規則保留原建立時間；臨時規則（僅一次、限時等）的有效期從建立時間起算，
+     * 沿用舊時間會讓新答覆的「允許一次」立刻被當成過期回收。
+     */
     fun merge(existing: Rule, incoming: Rule, now: Long): Rule = existing.copy(
+        createdAt = if (incoming.lifetime == com.networkcontrol.android.kotlin.core.model.RuleLifetime.Permanent) {
+            existing.createdAt
+        } else {
+            incoming.createdAt
+        },
         app = incoming.app,
         conditions = incoming.conditions,
         action = incoming.action,

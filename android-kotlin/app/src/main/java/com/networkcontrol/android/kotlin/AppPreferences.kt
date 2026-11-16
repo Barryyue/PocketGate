@@ -193,6 +193,11 @@ class AppPreferences(context: Context) {
 
     /** 代理應用包名：轉發模式下排除此應用，避免代理自身的流量回環進 VPN。 */
     /** 轉發模式下直接排除在 VPN 之外的應用：不經代理，也不受防火牆管控。 */
+    /** v0.2 共享應用規則遷移是否已經完成；完成後不再每次啟動都執行。 */
+    var legacyRulesMigrated: Boolean
+        get() = prefs.getBoolean(KEY_LEGACY_RULES_MIGRATED, false)
+        set(value) = prefs.edit().putBoolean(KEY_LEGACY_RULES_MIGRATED, value).apply()
+
     var forwardingDirectPackages: Set<String>
         get() = prefs.getStringSet(KEY_FORWARDING_DIRECT_PACKAGES, emptySet())?.toSet().orEmpty()
         set(value) = prefs.edit().putStringSet(KEY_FORWARDING_DIRECT_PACKAGES, value.toSet()).apply()
@@ -241,6 +246,7 @@ class AppPreferences(context: Context) {
         const val KEY_SOCKS5_UDP = "socks5_udp"
         const val KEY_SOCKS5_BYPASS_PACKAGE = "socks5_bypass_package"
         const val KEY_FORWARDING_DIRECT_PACKAGES = "forwarding_direct_packages"
+        const val KEY_LEGACY_RULES_MIGRATED = "legacy_rules_migrated"
         const val DEFAULT_THEME_COLOR = 0xFF2E7D32.toInt()
     }
 }

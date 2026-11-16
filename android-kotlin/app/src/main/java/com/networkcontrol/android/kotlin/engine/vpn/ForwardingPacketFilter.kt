@@ -26,6 +26,7 @@ class ForwardingCounters {
     val lookups = AtomicLong()
     val unknownOwner = AtomicLong()
     val dnsMapped = AtomicLong()
+    val udpFastPath = AtomicLong()
 }
 
 /**
@@ -42,7 +43,7 @@ class ForwardingCounters {
  */
 class ForwardingPacketFilter(
     private val ownerOf: (L4Protocol, InetSocketAddress, InetSocketAddress) -> Int?,
-    private val decide: (uid: Int?) -> ForwardingDecision,
+    private val decide: (uid: Int?, info: PacketInfo, hostname: String?) -> ForwardingDecision,
     private val onBlocked: (PacketInfo, uid: Int?, ask: Boolean) -> Unit,
     private val blockUdp: () -> Boolean,
     private val dnsAddress: InetAddress = ForwardingDefaults.MapDnsAddress,
@@ -60,9 +61,25 @@ class ForwardingPacketFilter(
             size > maxEntries
     }
 
+    /**
+     * UDP 快速路徑：記住最近一條「已放行」UDP 流的原始位址 / 端口位元組，
+     * 同一條流（QUIC、影音）的後續封包不必完整解析、配置物件或取鎖。
+     * 只由虛擬網卡讀取執行緒存取；[invalidate] 透過 [epoch] 讓它失效。
+     */
+    private val lastUdpKey = ByteArray(UDP_KEY_MAX)
+    private var lastUdpKeyLength = 0
+    private var lastUdpEpoch = -1
+    private var lastUdpUntil = 0L
+
+    @Volatile
+    private var epoch = 0
+
     /** 規則或路由計畫改變時清空判決緩存，讓下一條連線重新判決。 */
     fun invalidate() {
-        synchronized(cacheLock) { decisions.clear() }
+        synchronized(cacheLock) {
+            decisions.clear()
+            epoch++
+        }
     }
 
     fun hostnameFor(address: InetAddress): String? = synchronized(namesLock) { names[address] }
@@ -74,6 +91,11 @@ class ForwardingPacketFilter(
     fun onTunPacket(packet: ByteArray, length: Int, writer: PacketWriter): Boolean {
         counters.packets.incrementAndGet()
         if (isEstablishedTcp(packet, length)) {
+            counters.forwarded.incrementAndGet()
+            return true
+        }
+        if (isRecentForwardedUdp(packet, length)) {
+            counters.udpFastPath.incrementAndGet()
             counters.forwarded.incrementAndGet()
             return true
         }
@@ -115,7 +137,7 @@ class ForwardingPacketFilter(
             counters.lookups.incrementAndGet()
             val uid = ownerOf(info.protocol, info.source, info.destination)
             if (uid == null) counters.unknownOwner.incrementAndGet()
-            val fresh = decide(uid)
+            val fresh = decide(uid, info, hostnameFor(info.destination.address))
             remember(key, fresh, now, info.protocol)
             if (fresh != ForwardingDecision.Forward) {
                 onBlocked(info, uid, fresh == ForwardingDecision.BlockAndAsk)
@@ -124,12 +146,72 @@ class ForwardingPacketFilter(
         }
 
         if (decision == ForwardingDecision.Forward) {
+            if (info.protocol == L4Protocol.Udp) rememberForwardedUdp(packet, length, now)
             counters.forwarded.incrementAndGet()
             return true
         }
         counters.blocked.incrementAndGet()
         reject(packet, length, info, writer)
         return false
+    }
+
+    private fun isRecentForwardedUdp(packet: ByteArray, length: Int): Boolean {
+        if (lastUdpKeyLength == 0 || lastUdpEpoch != epoch) return false
+        val keyLength = udpKeyLength(packet, length)
+        if (keyLength != lastUdpKeyLength) return false
+        if (!udpKeyEquals(packet, keyLength)) return false
+        if (clock() >= lastUdpUntil) {
+            lastUdpKeyLength = 0
+            return false
+        }
+        return true
+    }
+
+    private fun rememberForwardedUdp(packet: ByteArray, length: Int, now: Long) {
+        val keyLength = udpKeyLength(packet, length)
+        if (keyLength == 0) return
+        copyUdpKey(packet, keyLength)
+        lastUdpKeyLength = keyLength
+        lastUdpEpoch = epoch
+        // 快速路徑期限較短：到期後走完整路徑，順便刷新五元組緩存的滑動期限。
+        lastUdpUntil = now + UDP_FAST_PATH_MS
+    }
+
+    /** IPv4（無分片）回傳 12（兩個位址 + 兩個端口），IPv6（無擴展頭）回傳 36；其他回傳 0。 */
+    private fun udpKeyLength(packet: ByteArray, length: Int): Int {
+        if (length < 1) return 0
+        return when ((packet[0].toInt() ushr 4) and 0x0F) {
+            4 -> {
+                if (length < 28 || (packet[9].toInt() and 0xFF) != PROTOCOL_UDP) return 0
+                if ((readU16(packet, 6) and 0x3FFF) != 0) return 0
+                val ihl = (packet[0].toInt() and 0x0F) * 4
+                if (ihl < 20 || ihl + 8 > length) 0 else 12
+            }
+            6 -> if (length >= 48 && (packet[6].toInt() and 0xFF) == PROTOCOL_UDP) 36 else 0
+            else -> 0
+        }
+    }
+
+    private fun udpKeyEquals(packet: ByteArray, keyLength: Int): Boolean {
+        var k = 0
+        forEachUdpKeyByte(packet, keyLength) { index -> if (packet[index] != lastUdpKey[k++]) return false }
+        return true
+    }
+
+    private fun copyUdpKey(packet: ByteArray, keyLength: Int) {
+        var k = 0
+        forEachUdpKeyByte(packet, keyLength) { index -> lastUdpKey[k++] = packet[index] }
+    }
+
+    private inline fun forEachUdpKeyByte(packet: ByteArray, keyLength: Int, action: (Int) -> Unit) {
+        if (keyLength == 12) {
+            for (i in 12 until 20) action(i)
+            val ihl = (packet[0].toInt() and 0x0F) * 4
+            for (i in ihl until ihl + 4) action(i)
+        } else {
+            for (i in 8 until 40) action(i)
+            for (i in 40 until 44) action(i)
+        }
     }
 
     /** 處理一個 hev 寫回虛擬網卡的封包：只監聽映射 DNS 的回覆。 */
@@ -183,6 +265,11 @@ class ForwardingPacketFilter(
 
         /** UDP 沒有握手，每個封包都會刷新期限。 */
         const val UDP_TTL_MS = 60_000L
+
+        /** UDP 快速路徑的有效期；到期後重新走完整路徑（含緩存期限刷新）。 */
+        const val UDP_FAST_PATH_MS = 2_000L
+
+        private const val UDP_KEY_MAX = 36
 
         private const val PROTOCOL_TCP = 6
         private const val PROTOCOL_UDP = 17
@@ -325,8 +412,57 @@ object DnsAnswers {
 /**
  * 轉發模式的判決：沿用黑洞模式的路由計畫（規則、模式、專注、鎖屏、可信應用），
  * 差別只在「放行」改為交給上游代理，「阻止 / 詢問」改由過濾層逐連線丟棄。
+ *
+ * 黑洞模式只能按應用路由，帶域名 / 端口條件的規則無法生效；轉發模式逐連線判決，
+ * 所以這類規則可以在這裡套用（見 [decide] 的 `flowRule`）。
  */
 object ForwardingPolicy {
+    /**
+     * @param flowRule 計算「帶連線條件的規則」對這條連線的判決；沒有符合時回傳 null。
+     *   只在可以按規則判決時才會呼叫（專注模式、全部阻止、停用、系統 UID 時不呼叫）。
+     */
+    fun decide(
+        plan: com.networkcontrol.android.kotlin.core.model.VpnRoutingPlan,
+        uid: Int?,
+        flowRule: () -> com.networkcontrol.android.kotlin.core.model.VerdictAction?,
+    ): ForwardingDecision {
+        val base = decide(plan, uid)
+        if (uid == null || VpnRoutingPlanner.isSystemUid(uid)) return base
+        when (plan.mode) {
+            com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll,
+            com.networkcontrol.android.kotlin.core.model.FilterMode.Disabled,
+            -> return base
+            else -> Unit
+        }
+        val reason = plan.find(uid)?.reason
+        if (reason == com.networkcontrol.android.kotlin.core.model.AppRoutingReason.Focus ||
+            reason == com.networkcontrol.android.kotlin.core.model.AppRoutingReason.Self
+        ) {
+            return base
+        }
+        return when (flowRule()) {
+            com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow -> ForwardingDecision.Forward
+            com.networkcontrol.android.kotlin.core.model.VerdictAction.Deny -> ForwardingDecision.Block
+            null -> base
+        }
+    }
+
+    /**
+     * 只回傳帶連線條件的規則的判決：應用級規則已經反映在路由計畫中（含可信應用、篡改檢測）。
+     * 第一條符合的規則是應用級規則時回傳 null，交給路由計畫。
+     */
+    fun conditionalAction(
+        ruleSet: com.networkcontrol.android.kotlin.core.rules.RuleSet,
+        flow: com.networkcontrol.android.kotlin.core.model.FlowInfo,
+        domains: com.networkcontrol.android.kotlin.core.model.DomainCandidates,
+        zone: com.networkcontrol.android.kotlin.core.model.NetworkZone,
+        network: com.networkcontrol.android.kotlin.core.model.NetworkContext,
+    ): com.networkcontrol.android.kotlin.core.model.VerdictAction? {
+        if (!ruleSet.hasFlowConditions) return null
+        val rule = ruleSet.evaluate(flow, flow.app, domains, zone, network).rule ?: return null
+        return if (VpnRoutingPlanner.isEnforceable(rule)) null else rule.action
+    }
+
     fun decide(plan: com.networkcontrol.android.kotlin.core.model.VpnRoutingPlan, uid: Int?): ForwardingDecision {
         val mode = plan.mode
         // 查不到擁有者（getConnectionOwnerUid 失敗）時無法詢問：除「全部阻止」外一律放行，並計數。

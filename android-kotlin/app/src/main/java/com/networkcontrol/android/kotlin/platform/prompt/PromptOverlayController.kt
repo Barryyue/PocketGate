@@ -145,7 +145,8 @@ class PromptOverlayController(
         }
     }
 
-    private fun buildParams(): WindowManager.LayoutParams {        val bounds = if (Build.VERSION.SDK_INT >= 30) {
+    private fun buildParams(): WindowManager.LayoutParams {
+        val bounds = if (Build.VERSION.SDK_INT >= 30) {
             windowManager?.currentWindowMetrics?.bounds
         } else {
             null

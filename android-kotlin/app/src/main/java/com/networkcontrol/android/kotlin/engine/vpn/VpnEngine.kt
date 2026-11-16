@@ -58,6 +58,9 @@ class VpnEngine(
     private var lastForwardingRetry = 0L
 
     private val replanSignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** 也會被服務生命週期回呼（主執行緒）清空，所以要 volatile。 */
+    @Volatile
     private var applied: VpnTunnelConfig? = null
 
     private val reporter: BlockedFlowReporter = BlockedFlowReporter(
@@ -74,12 +77,66 @@ class VpnEngine(
     /** 轉發模式的逐連線過濾層：路由計畫決定放行（轉發）、阻止或詢問。 */
     val forwardingFilter: ForwardingPacketFilter = ForwardingPacketFilter(
         ownerOf = { protocol, local, remote -> owners.getOwnerUid(protocol, local, remote) },
-        decide = { uid -> ForwardingPolicy.decide(_plan.value, uid) },
+        decide = { uid, info, hostname -> decideForwarding(uid, info, hostname) },
         onBlocked = { info, uid, _ -> reporter.report(info, uid) },
         blockUdp = { !preferences.socks5Udp },
     )
 
+    /** 轉發判決用的應用身分，按 UID 緩存；重新規劃時清空。 */
+    private val identities = java.util.concurrent.ConcurrentHashMap<Int, com.networkcontrol.android.kotlin.core.model.AppIdentity>()
+    private var lastDetachRebuild = 0L
+
+    /** 在虛擬網卡讀取執行緒上呼叫：只有存在帶連線條件的規則時才建立 FlowInfo 比對。 */
+    private fun decideForwarding(uid: Int?, info: PacketInfo, hostname: String?): ForwardingDecision {
+        val plan = _plan.value
+        val ruleSet = rules.ruleSet.value
+        if (!ruleSet.hasFlowConditions) return ForwardingPolicy.decide(plan, uid)
+        return ForwardingPolicy.decide(plan, uid) {
+            val app = uid?.let { identityFor(plan, it) }
+            val flow = FlowInfo(
+                flowId = 0,
+                direction = com.networkcontrol.android.kotlin.core.model.Direction.Outbound,
+                protocol = info.protocol,
+                local = info.source,
+                remote = info.destination,
+                app = app,
+                executablePath = app?.path,
+                engineHostname = hostname,
+                timestamp = System.currentTimeMillis(),
+                origin = com.networkcontrol.android.kotlin.core.model.FlowOrigin.BlockedEvent,
+            )
+            val domains = hostname
+                ?.let { com.networkcontrol.android.kotlin.core.model.DomainCandidates(listOf(com.networkcontrol.android.kotlin.core.matching.DomainName.normalize(it))) }
+                ?: com.networkcontrol.android.kotlin.core.model.DomainCandidates.Empty
+            // 映射位址（100.64.0.0/10）屬於 CGNAT 網段，但實際目標是域名對應的公網主機。
+            val zone = if (hostname != null) {
+                com.networkcontrol.android.kotlin.core.model.NetworkZone.Internet
+            } else {
+                com.networkcontrol.android.kotlin.core.matching.NetworkZones.classify(info.destination.address)
+            }
+            ForwardingPolicy.conditionalAction(ruleSet, flow, domains, zone, network.current)
+        }
+    }
+
+    private fun identityFor(plan: VpnRoutingPlan, uid: Int): com.networkcontrol.android.kotlin.core.model.AppIdentity? {
+        identities[uid]?.let { return it }
+        val packageName = plan.find(uid)?.packageName ?: catalog.packagesForUid(uid).firstOrNull() ?: return null
+        val identity = catalog.find(packageName)?.let(catalog::toIdentity) ?: return null
+        identities[uid] = identity
+        return identity
+    }
+
     fun start() {
+        tunnel.onDetached = {
+            // 系統結束了 VPN 服務（例如記憶體不足）而防護仍開啟：重建隧道。限制頻率，避免反覆崩潰時打轉。
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (protection.isEnabled && now - lastDetachRebuild >= DETACH_REBUILD_INTERVAL_MS) {
+                lastDetachRebuild = now
+                applied = null
+                com.networkcontrol.android.kotlin.platform.AppLog.w("vpn", "service detached while protection on; rebuilding")
+                requestReplan()
+            }
+        }
         tunnel.onStateChanged = {
             _tunnelState.value = tunnel.state
             _tunnelError.value = tunnel.lastError
@@ -90,7 +147,10 @@ class VpnEngine(
             _tunnelState.value = VpnTunnelState.Revoked
             _tunnelError.value = tunnel.lastError
         }
-        catalog.onChange = { requestReplan() }
+        catalog.onChange = {
+            identities.clear()
+            requestReplan()
+        }
 
         scope.launch { protection.enabled.collect { requestReplan() } }
         scope.launch { rules.ruleSet.collect { requestReplan() } }
@@ -167,6 +227,7 @@ class VpnEngine(
             focusAllowedPackages = focusSession?.allowedPackages ?: emptySet(),
         )
         _plan.value = plan
+        identities.clear()
         forwardingFilter.invalidate()
 
         if (!protection.isEnabled) {
@@ -242,6 +303,7 @@ class VpnEngine(
     private companion object {
         const val UPSTREAM_CHECK_INTERVAL_MS = 30_000L
         const val FORWARDING_RETRY_INTERVAL_MS = 120_000L
+        const val DETACH_REBUILD_INTERVAL_MS = 10_000L
     }
 
     fun status(): com.networkcontrol.android.kotlin.core.model.ProtectionStatus {
