@@ -32,6 +32,7 @@ class ForwardingCounters {
     val udpFastPath = AtomicLong()
     val dnsRedirected = AtomicLong()
     val dnsBypassBlocked = AtomicLong()
+    val connectionsCut = AtomicLong()
 }
 
 /**
@@ -86,12 +87,94 @@ class ForwardingPacketFilter(
     @Volatile
     private var epoch = 0
 
-    /** 規則或路由計畫改變時清空判決緩存，讓下一條連線重新判決。 */
+    /**
+     * 已轉發的 TCP 連線（判決時的輸入），用於規則改變後重新判決並切斷已不允許的連線。
+     * 只在新連線上寫入；連線結束後殘留的項目無害（切斷一條已經不存在的連線不會有任何效果）。
+     */
+    private class ActiveFlow(val uid: Int?, val info: PacketInfo, val hostname: String?, val createdAt: Long)
+
+    private val activeTcp = object : LinkedHashMap<FlowKey, ActiveFlow>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<FlowKey, ActiveFlow>?) = size > maxEntries
+    }
+
+    /** 待切斷的連線；只有非空時，既有連線的快速路徑才需要解析封包。 */
+    private val doomed = HashSet<FlowKey>()
+
+    @Volatile
+    private var killPending = false
+
+    /** 寫往 hev 側的出口（由轉送層設定）；切斷連線時用來通知 lwIP 關閉對上游的連線。 */
+    @Volatile
+    var toHev: PacketWriter? = null
+
+    /**
+     * 規則或路由計畫改變時呼叫：清空判決緩存，並重新判決已轉發的 TCP 連線；
+     * 已不再允許的連線在下一個封包經過時被切斷（雙向送出精確序號的 RST）。
+     */
     fun invalidate() {
+        val snapshot: List<Pair<FlowKey, ActiveFlow>>
         synchronized(cacheLock) {
             decisions.clear()
             epoch++
+            snapshot = activeTcp.entries.map { it.key to it.value }
         }
+        if (snapshot.isEmpty()) return
+        val now = clock()
+        val cut = snapshot.filter { (_, flow) ->
+            now - flow.createdAt < ACTIVE_TTL_MS &&
+                runCatching { decide(flow.uid, flow.info, flow.hostname) }.getOrDefault(ForwardingDecision.Forward) != ForwardingDecision.Forward
+        }.map { it.first }
+        synchronized(cacheLock) {
+            activeTcp.entries.removeAll { now - it.value.createdAt >= ACTIVE_TTL_MS }
+            cut.forEach { key ->
+                activeTcp.remove(key)
+                doomed += key
+            }
+            killPending = doomed.isNotEmpty()
+        }
+    }
+
+    /** 新的隧道：舊連線都已經不存在，清空所有狀態。 */
+    fun reset() {
+        synchronized(cacheLock) {
+            decisions.clear()
+            activeTcp.clear()
+            doomed.clear()
+            killPending = false
+            epoch++
+        }
+    }
+
+    /** 從虛擬網卡來的既有連線封包：若屬於待切斷的連線，回 RST 給應用、送 RST 給 hev，並丟棄原封包。 */
+    private fun cutFromClient(packet: ByteArray, length: Int, writer: PacketWriter): Boolean {
+        val info = IpPacketParser.tryParse(packet, length) ?: return false
+        if (info.protocol != L4Protocol.Tcp) return false
+        val key = FlowKey(L4Protocol.Tcp, info.source, info.destination)
+        if (!takeDoomed(key)) return false
+        val ack = tcpAcknowledgment(packet, length) ?: return false
+        writer.write(IpPacketBuilder.tcpReset(info.destination, info.source, info.tcpSequence, sequence = ack))
+        toHev?.write(IpPacketBuilder.tcpReset(info.source, info.destination, ack, sequence = info.tcpSequence))
+        counters.connectionsCut.incrementAndGet()
+        return true
+    }
+
+    /** 從 hev 來的封包（伺服器 → 應用）：若屬於待切斷的連線，同樣雙向 RST 並丟棄。 */
+    private fun cutFromHev(packet: ByteArray, length: Int, writer: PacketWriter): Boolean {
+        val info = IpPacketParser.tryParse(packet, length) ?: return false
+        if (info.protocol != L4Protocol.Tcp) return false
+        val key = FlowKey(L4Protocol.Tcp, info.destination, info.source)
+        if (!takeDoomed(key)) return false
+        val ack = tcpAcknowledgment(packet, length) ?: return false
+        writer.write(IpPacketBuilder.tcpReset(info.source, info.destination, ack, sequence = info.tcpSequence))
+        toHev?.write(IpPacketBuilder.tcpReset(info.destination, info.source, info.tcpSequence, sequence = ack))
+        counters.connectionsCut.incrementAndGet()
+        return true
+    }
+
+    private fun takeDoomed(key: FlowKey): Boolean = synchronized(cacheLock) {
+        val removed = doomed.remove(key)
+        if (doomed.isEmpty()) killPending = false
+        removed
     }
 
     fun hostnameFor(address: InetAddress): String? = synchronized(namesLock) { names[address] }
@@ -103,6 +186,7 @@ class ForwardingPacketFilter(
     fun onTunPacket(packet: ByteArray, length: Int, writer: PacketWriter): Boolean {
         counters.packets.incrementAndGet()
         if (isEstablishedTcp(packet, length)) {
+            if (killPending && cutFromClient(packet, length, writer)) return false
             counters.forwarded.incrementAndGet()
             return true
         }
@@ -167,6 +251,7 @@ class ForwardingPacketFilter(
         val decision = cached?.decision ?: run {
             counters.lookups.incrementAndGet()
             val uid = ownerOf(info.protocol, info.source, info.destination)
+            lastUid = uid
             if (uid == null) counters.unknownOwner.incrementAndGet()
             val fresh = decide(uid, info, hostnameFor(info.destination.address))
             remember(key, fresh, now, info.protocol)
@@ -180,6 +265,10 @@ class ForwardingPacketFilter(
 
         if (decision == ForwardingDecision.Forward) {
             if (info.protocol == L4Protocol.Udp) rememberForwardedUdp(packet, length, now)
+            if (info.protocol == L4Protocol.Tcp && cached == null) {
+                val hostname = hostnameFor(info.destination.address)
+                synchronized(cacheLock) { activeTcp[key] = ActiveFlow(lastUid, info, hostname, now) }
+            }
             counters.forwarded.incrementAndGet()
             return true
         }
@@ -247,8 +336,20 @@ class ForwardingPacketFilter(
         }
     }
 
-    /** 處理一個 hev 寫回虛擬網卡的封包：只監聽映射 DNS 的回覆。 */
-    fun onHevPacket(packet: ByteArray, length: Int) {
+    /** 只在虛擬網卡讀取執行緒上使用：最近一次查詢到的 UID（記錄到已轉發連線）。 */
+    private var lastUid: Int? = null
+
+    /**
+     * 處理一個 hev 寫回虛擬網卡的封包：監聽映射 DNS 的回覆、還原被改寫的 DNS，並切斷待切斷的連線。
+     * @return false 表示丟棄這個封包（已經另外送出 RST）。
+     */
+    fun onHevPacket(packet: ByteArray, length: Int, writer: PacketWriter? = null): Boolean {
+        if (killPending && writer != null && cutFromHev(packet, length, writer)) return false
+        handleHevDns(packet, length)
+        return true
+    }
+
+    private fun handleHevDns(packet: ByteArray, length: Int) {
         if (!isUdpFromPort(packet, length, dnsPort)) return
         val info = IpPacketParser.tryParse(packet, length) ?: return
         if (info.protocol != L4Protocol.Udp || info.source.address != dnsAddress) return
@@ -301,6 +402,20 @@ class ForwardingPacketFilter(
 
         /** UDP 沒有握手，每個封包都會刷新期限。 */
         const val UDP_TTL_MS = 60_000L
+
+        /** 已轉發 TCP 連線的追蹤期限；更久的長連線不再於規則改變時重新判決。 */
+        const val ACTIVE_TTL_MS = 6 * 60 * 60 * 1000L
+
+        private fun tcpAcknowledgment(packet: ByteArray, length: Int): Long? {
+            val offset = when ((packet[0].toInt() ushr 4) and 0x0F) {
+                4 -> (packet[0].toInt() and 0x0F) * 4
+                6 -> 40
+                else -> return null
+            }
+            if (offset + 12 > length) return null
+            return ((packet[offset + 8].toLong() and 0xFF) shl 24) or ((packet[offset + 9].toLong() and 0xFF) shl 16) or
+                ((packet[offset + 10].toLong() and 0xFF) shl 8) or (packet[offset + 11].toLong() and 0xFF)
+        }
 
         /** UDP 快速路徑的有效期；到期後重新走完整路徑（含緩存期限刷新）。 */
         const val UDP_FAST_PATH_MS = 2_000L

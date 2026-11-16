@@ -45,16 +45,30 @@ object IpPacketBuilder {
         return packet
     }
 
-    fun tcpReset(source: InetSocketAddress, destination: InetSocketAddress, acknowledgment: Long): ByteArray =
+    /**
+     * @param sequence RST 的序號。回應 SYN 時為 0；切斷已建立的連線時必須等於對方的 RCV.NXT
+     *   （RFC 5961：序號不精確的 RST 會被忽略或只換來 challenge ACK）。
+     */
+    fun tcpReset(
+        source: InetSocketAddress,
+        destination: InetSocketAddress,
+        acknowledgment: Long,
+        sequence: Long = 0,
+    ): ByteArray =
         when {
             source.address is Inet4Address && destination.address is Inet4Address ->
-                tcpReset4(source, destination, acknowledgment)
+                tcpReset4(source, destination, acknowledgment, sequence)
             source.address is Inet6Address && destination.address is Inet6Address ->
-                tcpReset6(source, destination, acknowledgment)
+                tcpReset6(source, destination, acknowledgment, sequence)
             else -> throw IllegalArgumentException("只支援 IPv4 或 IPv6。")
         }
 
-    fun tcpReset4(source: InetSocketAddress, destination: InetSocketAddress, acknowledgment: Long): ByteArray {
+    fun tcpReset4(
+        source: InetSocketAddress,
+        destination: InetSocketAddress,
+        acknowledgment: Long,
+        sequence: Long = 0,
+    ): ByteArray {
         val packet = ByteArray(IPV4_HEADER + TCP_HEADER)
         packet[0] = 0x45
         writeU16(packet, 2, packet.size)
@@ -64,7 +78,7 @@ object IpPacketBuilder {
         source.address.address.copyInto(packet, 12)
         destination.address.address.copyInto(packet, 16)
         writeU16(packet, 10, checksum(packet, 0, IPV4_HEADER, 0))
-        writeTcpReset(packet, IPV4_HEADER, source.port, destination.port, acknowledgment)
+        writeTcpReset(packet, IPV4_HEADER, source.port, destination.port, acknowledgment, sequence)
         val addresses = packet.copyOfRange(12, 20)
         val sum = checksum(
             packet,
@@ -76,7 +90,12 @@ object IpPacketBuilder {
         return packet
     }
 
-    fun tcpReset6(source: InetSocketAddress, destination: InetSocketAddress, acknowledgment: Long): ByteArray {
+    fun tcpReset6(
+        source: InetSocketAddress,
+        destination: InetSocketAddress,
+        acknowledgment: Long,
+        sequence: Long = 0,
+    ): ByteArray {
         val packet = ByteArray(IPV6_HEADER + TCP_HEADER)
         packet[0] = 0x60
         writeU16(packet, 4, TCP_HEADER)
@@ -84,7 +103,7 @@ object IpPacketBuilder {
         packet[7] = 64
         source.address.address.copyInto(packet, 8)
         destination.address.address.copyInto(packet, 24)
-        writeTcpReset(packet, IPV6_HEADER, source.port, destination.port, acknowledgment)
+        writeTcpReset(packet, IPV6_HEADER, source.port, destination.port, acknowledgment, sequence)
         val addresses = packet.copyOfRange(8, 40)
         val sum = checksum(
             packet,
@@ -159,10 +178,11 @@ object IpPacketBuilder {
         sourcePort: Int,
         destinationPort: Int,
         acknowledgment: Long,
+        sequence: Long,
     ) {
         writeU16(packet, offset, sourcePort)
         writeU16(packet, offset + 2, destinationPort)
-        writeU32(packet, offset + 4, 0)
+        writeU32(packet, offset + 4, sequence)
         writeU32(packet, offset + 8, acknowledgment)
         packet[offset + 12] = 0x50
         packet[offset + 13] = (TcpFlags.RST or TcpFlags.ACK).toByte()
