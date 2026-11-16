@@ -1439,3 +1439,14 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
   - 設定頁顯示是否已啟用關閉偵測，未啟用時附上授權指令 `adb shell pm grant com.networkcontrol.android.kotlin android.permission.DUMP`。
 - **驗證**：JVM 測試 `OnceSessionGraceTest`；模擬器（已授予 DUMP）：Chrome 點「僅一次」→ 回桌面 20 秒再打開不再詢問 → 從最近任務移除 Chrome，主進程結束後約 2 秒規則被移除（日誌 `removed 1 until-app-exit rules after the app process ended`）。
 - **未驗證**：實機（紅魔 / Android 版本）上 `pm grant DUMP` 與進程結束記錄是否同樣可用；未授權時 10 分鐘近似的實際體驗。
+
+## 49. v0.10.6-m4p12（2026-11-17）：用 Shizuku / Root 一鍵開啟關閉偵測
+
+- **目的**：給別人安裝時不必接電腦就能授予 DUMP（§48 的關閉偵測）。
+- **做法**（`DumpPermissionGranter`）：
+  - 設定頁「關閉偵測」一行加「授權」按鈕；Shizuku 正在執行 → 請求 Shizuku 授權（已授權則略過）→ 以 shell 身分執行 `pm grant <本應用> android.permission.DUMP`；
+  - 沒有 Shizuku → 嘗試 `su -c pm grant …`；沒有 `su` → 顯示引導（Shizuku 無線偵錯啟動，或電腦 adb 命令，可一鍵複製）。
+  - Shizuku 13 的 `Shizuku.newProcess` 是私有方法，改用公開的 `Shizuku.getBinder()` + `IShizukuService.newProcess`；manifest 宣告 `rikka.shizuku.ShizukuProvider` 接收 binder。依賴 `dev.rikka.shizuku:api` / `provider` 13.1.5（Apache-2.0），APK 增加約 16 KB。
+  - 授權後 `checkSelfPermission` 立即生效，不必重啟應用。
+- **驗證**：模擬器：沒有 Shizuku / root 時點「授權」顯示引導並可複製命令；用 adb 授權後回到設定頁顯示「已啟用關閉偵測」。
+- **未驗證**：Shizuku 一鍵授權（模擬器上啟動 Shizuku 服務的操作未獲允許，待用戶在實機測試）；Root 授權。

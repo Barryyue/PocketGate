@@ -324,6 +324,7 @@
 | K-130 | hev 原生庫補丁：寫入遇 EAGAIN 時 poll 等待後重試（最多約 100 ms）而不是丟包；轉送執行緒提高優先級；socket 緩衝要求 8 MB | `android-kotlin/native/hev-socks5-tunnel/`、`jniLibs/*/libhev-socks5-tunnel.so`、`ForwardingRelay` | 以 NDK 30 重新編譯 arm64-v8a / x86_64，APK 內的庫與編譯產物雜湊一致 | 升級 hev 時要重新套用補丁 |
 | K-131 | 詢問改為紅魔邏輯與樣式：禁止 = 到應用關閉、勾選「禁止後不再提示」= 永久禁止、允許 = 永久、僅一次 = 到應用關閉，可選限時；移除「稍後」；新增「「禁止」預設為永久」設定；懸浮窗預設貼底、全寬、背景變暗 | `PromptOverlayController`、`PromptOverlay`、`PromptPresentationPolicy`（`PromptDenyPolicy` / `PromptSheetText`）、`AppPreferences`、`SettingsScreen`、`UiStrings` | JVM 測試；模擬器：懸浮窗外觀、觸控穿透、禁止 → UntilAppExit 並在離開後回收、勾選後 → 永久 | 實機（紅魔）外觀待用戶確認 |
 | K-132 | 「僅一次」「禁止」持續到應用真正關閉：授予 DUMP 後以 `getHistoricalProcessExitReasons` 偵測目標主進程結束；未授權時以背景停留時間近似（預設 10 分鐘，可設定，0 = 舊行為） | `ProcessExitWatcher`、`TargetAppSessionTracker`、`AppPreferences`、`SettingsScreen`、`AndroidManifest.xml` | JVM 測試；模擬器：背景 20 秒回來不再詢問、劃掉 Chrome 後約 2 秒移除規則 | 實機 DUMP 授權待驗證 |
+| K-133 | 關閉偵測一鍵授權：設定頁「授權」按鈕先用 Shizuku（`IShizukuService.newProcess` 執行 `pm grant`），再試 root，都沒有時顯示引導與可複製的 adb 命令 | `DumpPermissionGranter`、`SettingsScreen`、`AndroidManifest.xml`（ShizukuProvider）、`build.gradle.kts` | 模擬器：無工具時的引導、複製、授權後狀態即時更新 | Shizuku / Root 實際授權待實機驗證 |
 
 ### 尚未完成（待辦，不屬於完成項）
 
