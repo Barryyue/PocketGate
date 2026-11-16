@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.10",
+            date = "2026-11-16",
+            features = listOf(),
+            improvements = listOf(
+                t(
+                    "Fixed: in per-connection mode with DNS bypass protection, some DNS lookups were delayed by 3 seconds when many apps resolved names at once, making pages that open many connections (such as Google) feel slow.",
+                    "修正：逐连接模式开启防止绕过 DNS 时，多个应用同时解析域名，部分解析会多等 3 秒，导致 Google 这类一次发起很多连接的网页变卡。",
+                    "修正：逐連線模式開啟防止繞過 DNS 時，多個應用程式同時解析網域，部分解析會多等 3 秒，導致 Google 這類一次發起很多連線的網頁變卡。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.9",
             date = "2026-11-16",
             features = listOf(

@@ -197,6 +197,25 @@ class DnsProtectionTest {
         assertArrayEquals(copy, other)
     }
 
+    @Test
+    fun replyToDirectQueryOnSamePortIsNotRewritten() {
+        val nat = DnsRedirect()
+        // 應用 A 用埠 53000 直連 8.8.8.8，被改寫（事務 ID 0x1234）
+        val redirected = DnsMessage.buildQuery("a.example", 1, id = 0x1234)
+        val query = IpPacketBuilder.udp4(client, google, redirected)
+        assertTrue(nat.redirectQuery(query, query.size))
+        // 系統解析器之後用同一個埠直接查映射 DNS（事務 ID 0x5678），它的回覆必須保持來自映射 DNS
+        val direct = DnsMessage.buildQuery("b.example", 1, id = 0x5678)
+        val directReply = IpPacketBuilder.udp4(mapDns, client, direct)
+        assertFalse(nat.restoreReply(directReply, directReply.size))
+        assertEquals(ForwardingDefaults.MapDnsAddress, IpPacketParser.tryParse(directReply, directReply.size)!!.source.address)
+        // 被改寫查詢的回覆照常還原，且只還原一次
+        val reply = IpPacketBuilder.udp4(mapDns, client, redirected)
+        assertTrue(nat.restoreReply(reply, reply.size))
+        val again = IpPacketBuilder.udp4(mapDns, client, redirected)
+        assertFalse(nat.restoreReply(again, again.size))
+    }
+
     private class Writer : PacketWriter {
         val packets = mutableListOf<ByteArray>()
         override fun write(packet: ByteArray) {

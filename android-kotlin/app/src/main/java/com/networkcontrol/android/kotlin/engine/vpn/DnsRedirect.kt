@@ -24,27 +24,37 @@ class DnsRedirect(
         val ihl = ipv4UdpHeaderLength(packet, length) ?: return false
         val client = readInt(packet, 12)
         val clientPort = readU16(packet, ihl)
+        val transaction = readU16(packet, ihl + 8)
         val server = readInt(packet, 16)
-        synchronized(table) { table[key(client, clientPort)] = Entry(server, clock()) }
+        synchronized(table) { table[key(client, clientPort, transaction)] = Entry(server, clock()) }
         mapDns.copyInto(packet, 16)
         fixChecksums(packet, length, ihl)
         return true
     }
 
-    /** 若這是被改寫查詢的回覆，把來源改回原伺服器並回傳 true。 */
+    /**
+     * 若這是被改寫查詢的回覆，把來源改回原伺服器並回傳 true。
+     *
+     * 鍵必須包含 DNS 事務 ID：所有應用共用同一個虛擬網卡位址，只用「用戶端埠」當鍵時，
+     * 系統解析器之後正好用到同一個埠、直接發給映射 DNS 的查詢，回覆會被誤改成來自別的伺服器，
+     * 解析器丟棄這個回覆並在 3 秒後重送（實機上表現為並發解析時部分查詢多等 3 秒）。
+     */
     fun restoreReply(packet: ByteArray, length: Int): Boolean {
         val ihl = ipv4UdpHeaderLength(packet, length) ?: return false
         val client = readInt(packet, 16)
         val clientPort = readU16(packet, ihl + 2)
+        val transaction = readU16(packet, ihl + 8)
         val now = clock()
-        val entry = synchronized(table) { table[key(client, clientPort)] } ?: return false
+        // 一個查詢只有一個回覆：還原後立即移除，表也不會累積。
+        val entry = synchronized(table) { table.remove(key(client, clientPort, transaction)) } ?: return false
         if (now - entry.touchedAt > ENTRY_TTL_MS) return false
         writeInt(packet, 12, entry.originalServer)
         fixChecksums(packet, length, ihl)
         return true
     }
 
-    private fun key(address: Int, port: Int): Long = (address.toLong() and 0xFFFFFFFFL shl 16) or port.toLong()
+    private fun key(address: Int, port: Int, transaction: Int): Long =
+        ((address.toLong() and 0xFFFFFFFFL) shl 32) or (port.toLong() shl 16) or transaction.toLong()
 
     companion object {
         private const val ENTRY_TTL_MS = 60_000L
@@ -54,7 +64,8 @@ class DnsRedirect(
             if ((packet[9].toInt() and 0xFF) != 17) return null
             if ((readU16(packet, 6) and 0x3FFF) != 0) return null // 分片
             val ihl = (packet[0].toInt() and 0x0F) * 4
-            return if (ihl >= 20 && ihl + 8 <= length) ihl else null
+            // 需要 UDP 標頭（8）+ DNS 事務 ID（2）
+            return if (ihl >= 20 && ihl + 10 <= length) ihl else null
         }
 
         /** 重算 IPv4 標頭與 UDP 檢查碼（UDP 檢查碼為 0 表示未使用，保持 0）。 */

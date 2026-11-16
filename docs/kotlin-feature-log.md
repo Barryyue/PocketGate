@@ -292,6 +292,12 @@
 | K-123 | 清理全部編譯警告（完整重新編譯為零警告）：桌布變化改用 `WallpaperManager.OnColorsChangedListener`；`onLowMemory`、`createConfirmDeviceCredentialIntent`、NetworkStats 的舊網路類型常數加註說明後壓下；`arrayOf<Any>` 明確型別；多餘條件 | `SpeedIslandController`、`AppLockGate`、`TrafficCollector`、`Databases`、`BlocklistSettingsScreen` | 刪除編譯快取後完整重編 | — |
 | K-124 | K-045b：Release 按 ABI 拆分（arm64 為主安裝包，另附 x86_64 模擬器包；Debug 與 AAB 不變）；Baseline Profile（`:baselineprofile` 模組 + `profileinstaller`，冷啟動後依序打開各分頁），生成檔提交於 `app/src/release/generated`；腳本新增 `baseline`、`startup` 命令；CI 新增 `android-kotlin.yml`（單元測試、Release、體積上限 5.5 MB、檢查 baseline.prof） | `app/build.gradle.kts`、`baselineprofile/`、`scripts/android-kotlin.ps1`、`.github/workflows/android-kotlin.yml` | 模擬器生成 Profile 成功；安裝包含 `assets/dexopt/baseline.prof`；arm64 包 4,287,546 bytes（原通用包 4,450,329）；冷啟動在模擬器上量不出差異（全新安裝中位數 526 / 493 ms，強制編譯後 902 / 892 ms，均在雜訊內） | 側載安裝時配置要等首次啟動後由系統背景編譯才生效；CI 工作流未在 GitHub 上實際執行過 |
 
+### v0.9.10-m4p11（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-125 | 修正 DNS 導回的 NAT 鍵：原本只用「用戶端位址 + 埠」（所有應用共用虛擬網卡位址，等於只有埠），系統解析器之後用到同一個埠直接查映射 DNS 時，回覆被誤改成來自別的伺服器而被丟棄，3 秒後重送。改為「位址 + 埠 + DNS 事務 ID」，回覆還原後立即移除 | `DnsRedirect` | 新增回歸測試（舊代碼會失敗）；實機（vivo V2509A，純 IPv6 行動網路，逐連線 + FlClash）修正前：20 條並發連線 3 條失敗、其餘 0.34～9.4 秒，直接走 FlClash 全部 0.29～0.98 秒；單獨並發解析每批有 5～20% 多等 3 秒；本應用轉發寫入無錯誤 | 修正版已安裝到實機，但 adb 無線連線中斷，修正後的實機複測未完成 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
