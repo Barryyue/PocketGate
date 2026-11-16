@@ -402,6 +402,7 @@ class AppBackend(val container: AppContainer) {
     fun dismissQuietPeriod() = container.quietPeriods.dismiss()
 
     fun startFocus(minutes: Int, allowedPackages: Set<String>) {
+        container.preferences.focusLastAllowed = allowedPackages
         container.focus.start(minutes, allowedPackages)
         container.vpnEngine.requestReplan()
     }

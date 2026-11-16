@@ -68,12 +68,113 @@
             android:name=".platform.ProtectionTileService"
             android:exported="true"
             android:icon="@drawable/ic_shield"
-            android:label="@string/tile_label"
+            android:label="@string/tile_protection"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".platform.quick.ModeTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tune"
+            android:label="@string/tile_mode"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".platform.quick.BlockAllTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_block"
+            android:label="@string/tile_block_all"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".platform.quick.DndTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_dnd"
+            android:label="@string/tile_dnd"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".platform.quick.FocusTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_focus"
+            android:label="@string/tile_focus"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- 快捷操作跳板（桌面掛件 / 磁貼 / 捷徑需要驗證或 VPN 同意時）；不匯出，其他應用無法藉它關閉防護。 -->
+        <activity
+            android:name=".platform.quick.QuickActionActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:noHistory="false"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <receiver
+            android:name=".widget.StatusWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_status">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_status" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.OverviewWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_overview">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_overview" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.ControlsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_controls">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_controls" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.TrafficWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_traffic">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_traffic" />
+        </receiver>
 
         <receiver
             android:name=".platform.BootReceiver"

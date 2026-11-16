@@ -172,6 +172,8 @@ class AppContainer(context: Context) {
         timedMinutes = { settings.state.value.promptTimedMinutes },
     )
     val backend = AppBackend(this)
+    /** 桌面掛件、控制中心磁貼、長按捷徑的同步中心。 */
+    val quickSurfaces = com.networkcontrol.android.kotlin.platform.quick.QuickSurfaces(this)
     val configBackup = ConfigBackup(appContext, configDatabase)
     val diagnostics = DiagnosticsExporter(appContext, this)
 
@@ -205,6 +207,7 @@ class AppContainer(context: Context) {
                 }
             runCatching { blocklists.start() }
             runCatching { promptRouter.start() }
+            runCatching { quickSurfaces.start() }
             runCatching { quietNotifier.start() }
             runCatching { speedMonitor.start(scope, screenState.interactive) }
             runCatching { speedIsland.start() }

@@ -25,4 +25,16 @@
     <string name="nav_apps">Apps</string>
     <string name="nav_logs">Records</string>
     <string name="nav_settings">Settings</string>
+    <string name="tile_mode">Filter mode</string>
+    <string name="tile_block_all">Block all</string>
+    <string name="tile_dnd">Do not disturb (1 h)</string>
+    <string name="tile_focus">Focus</string>
+    <string name="widget_status">Protection</string>
+    <string name="widget_status_desc">Protection status, blocks today and an on/off button</string>
+    <string name="widget_overview">Today at a glance</string>
+    <string name="widget_overview_desc">Status, mode, blocks, traffic and pending prompts</string>
+    <string name="widget_controls">Quick controls</string>
+    <string name="widget_controls_desc">Protection, mode, block all, do not disturb and focus in one row</string>
+    <string name="widget_traffic">Traffic ranking</string>
+    <string name="widget_traffic_desc">Traffic today and the apps using the most</string>
 </resources>

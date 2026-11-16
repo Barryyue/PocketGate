@@ -25,8 +25,8 @@ android {
         applicationId = "com.networkcontrol.android.kotlin"
         minSdk = 29
         targetSdk = 36
-        versionCode = 42
-        versionName = "0.10.7-m4p12"
+        versionCode = 43
+        versionName = "0.11.0-m4p12"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -113,6 +113,9 @@ dependencies {
     // Shizuku：讓使用者不用電腦就能授予 DUMP（關閉偵測）；Apache-2.0
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    // 桌面掛件（Jetpack Glance，Compose 風格的 App Widget）
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

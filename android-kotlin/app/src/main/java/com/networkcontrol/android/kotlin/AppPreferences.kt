@@ -190,6 +190,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_FOCUS_SCHEDULES, null)
         set(value) = prefs.edit().putString(KEY_FOCUS_SCHEDULES, value).apply()
 
+    /** 上次專注允許的應用；桌面掛件 / 磁貼的「一鍵專注」沿用。 */
+    var focusLastAllowed: Set<String>
+        get() = prefs.getStringSet(KEY_FOCUS_LAST_ALLOWED, emptySet()).orEmpty().toSet()
+        set(value) = prefs.edit().putStringSet(KEY_FOCUS_LAST_ALLOWED, value).apply()
+
     var appLockEnabled: Boolean
         get() = prefs.getBoolean(KEY_APP_LOCK, false)
         set(value) = prefs.edit().putBoolean(KEY_APP_LOCK, value).apply()
@@ -315,6 +320,7 @@ class AppPreferences(context: Context) {
         const val KEY_PROMPT_SHOW_TIMED = "prompt_show_timed"
         const val KEY_PROMPT_DENY_PERMANENT = "prompt_deny_permanent"
         const val KEY_ONCE_BACKGROUND_MINUTES = "once_background_minutes"
+        const val KEY_FOCUS_LAST_ALLOWED = "focus_last_allowed"
         const val KEY_SPEED_ISLAND_MODE = "speed_island_mode"
         const val KEY_SPEED_ISLAND_CONTENT = "speed_island_content"
         const val KEY_SPEED_ISLAND_FONT_SCALE = "speed_island_font_scale"
