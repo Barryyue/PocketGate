@@ -34,6 +34,15 @@ class ForwardingCounters {
     val dnsBypassBlocked = AtomicLong()
     val connectionsCut = AtomicLong()
     val dnsQueued = AtomicLong()
+
+    /** 重放中、暫時丟棄的新連線（發往尚未恢復的假位址）。 */
+    val fakeIpHeld = AtomicLong()
+
+    /** 發往 hev 不認識的假位址而被拒絕的新連線。 */
+    val fakeIpRejected = AtomicLong()
+
+    /** hev 啟動時重放的映射數。 */
+    val mappingsReplayed = AtomicLong()
 }
 
 /**
@@ -70,7 +79,38 @@ class ForwardingPacketFilter(
     /**
      * 映射 DNS 查詢一次只交給 hev 一個、回覆後間隔 2 ms 再放行下一個，逾時未回覆自己重送（原因見 [DnsPacer]）。
      */
-    private val dnsPacer = DnsPacer()
+    private val fakeIps = FakeIpMappings()
+
+    private val dnsPacer = DnsPacer(
+        onGiveUp = { packet ->
+            if ((DnsPacer.queryKey(packet, packet.size) ushr 16) == FakeIpMappings.REPLAY_PORT.toLong()) {
+                com.networkcontrol.android.kotlin.platform.AppLog.w("forwarding", "mapping replay gave up; remaining addresses dropped")
+                fakeIps.abort()
+            }
+        },
+    )
+
+    /**
+     * hev 剛啟動（映射表是空的）：按原位址順序重新查詢已知網域，讓應用快取中的假位址繼續有效。
+     * 由轉送層在開始讀取虛擬網卡之前呼叫，重放的查詢排在所有應用查詢之前。
+     */
+    fun beginMappingReplay() {
+        val plan = fakeIps.beginSession()
+        if (plan.isEmpty()) return
+        val source = InetSocketAddress(FakeDnsPool.Ipv4Address, FakeIpMappings.REPLAY_PORT)
+        val target = InetSocketAddress(dnsAddress, dnsPort)
+        val packets = plan.mapIndexedNotNull { index, name ->
+            FakeIpMappings.buildQuery(name, (index + 1) and 0xFFFF)?.let { IpPacketBuilder.udp4(source, target, it) }
+        }
+        if (packets.size != plan.size) {
+            // 有網域無法組成查詢：位址順序無法保證，放棄重放
+            fakeIps.abort()
+            return
+        }
+        dnsPacer.enqueuePriority(packets)
+        counters.mappingsReplayed.addAndGet(packets.size.toLong())
+        com.networkcontrol.android.kotlin.platform.AppLog.i("forwarding", "replaying ${packets.size} mapped names")
+    }
 
     /** 由轉送層的放行執行緒呼叫：放行排隊中的查詢、重送逾時未回覆的查詢；回傳是否仍有待處理的查詢。 */
     fun drainDns(): Boolean {
@@ -229,6 +269,7 @@ class ForwardingPacketFilter(
                     counters.forwarded.incrementAndGet()
                     return true
                 }
+                if (!admitFakeIp(packet, length, info, writer)) return false
                 // DNS over TCP 到其他伺服器：拒絕，讓解析器改用（會被改寫的）UDP。
                 if (info.destination.port == dnsPort && info.destination.address != dnsAddress && redirectDns()) {
                     counters.dnsBypassBlocked.incrementAndGet()
@@ -252,6 +293,7 @@ class ForwardingPacketFilter(
                     reject(packet, length, info, writer)
                     return false
                 }
+                if (!admitFakeIp(packet, length, info, writer)) return false
                 if (blockUdp()) {
                     counters.udpDropped.incrementAndGet()
                     writer.write(IpPacketBuilder.icmpPortUnreachable(info.destination, info.source, packet.copyOfRange(0, length)))
@@ -368,14 +410,14 @@ class ForwardingPacketFilter(
      */
     fun onHevPacket(packet: ByteArray, length: Int, writer: PacketWriter? = null): Boolean {
         if (killPending && writer != null && cutFromHev(packet, length, writer)) return false
-        handleHevDns(packet, length)
-        return true
+        return !handleHevDns(packet, length)
     }
 
-    private fun handleHevDns(packet: ByteArray, length: Int) {
-        if (!isUdpFromPort(packet, length, dnsPort)) return
-        val info = IpPacketParser.tryParse(packet, length) ?: return
-        if (info.protocol != L4Protocol.Udp || info.source.address != dnsAddress) return
+    /** @return true 表示這是映射重放的回覆（不寫回虛擬網卡）。 */
+    private fun handleHevDns(packet: ByteArray, length: Int): Boolean {
+        if (!isUdpFromPort(packet, length, dnsPort)) return false
+        val info = IpPacketParser.tryParse(packet, length) ?: return false
+        if (info.protocol != L4Protocol.Udp || info.source.address != dnsAddress) return false
         // 一個映射 DNS 回覆：讓出在途名額（下一個查詢由放行執行緒依間隔送出）。
         dnsPacer.onResponse(packet, length, clock())
         val end = (info.payloadOffset + info.payloadLength).coerceAtMost(length)
@@ -384,10 +426,21 @@ class ForwardingPacketFilter(
             synchronized(namesLock) {
                 answers.forEach { (name, address) -> names[address] = name }
             }
+            answers.forEach { (name, address) ->
+                if (!fakeIps.record(name, address)) {
+                    com.networkcontrol.android.kotlin.platform.AppLog.w("forwarding", "mapping replay mismatch; remaining addresses dropped")
+                }
+            }
             counters.dnsMapped.addAndGet(answers.size.toLong())
+        }
+        if (info.destination.port == FakeIpMappings.REPLAY_PORT) {
+            // 重放的查詢沒有得到位址：後面的位址順序已無法保證
+            if (answers.isEmpty()) fakeIps.abort()
+            return true
         }
         // 被改寫的查詢：把回覆的來源改回應用原本詢問的伺服器（就地修改，轉送層隨後寫回虛擬網卡）。
         dnsRedirect.restoreReply(packet, length)
+        return false
     }
 
     private fun remember(key: FlowKey, decision: ForwardingDecision, now: Long, protocol: L4Protocol) {
@@ -400,6 +453,24 @@ class ForwardingPacketFilter(
             decisions[key] = CachedDecision(decision, now + ttl)
         }
     }
+
+    /**
+     * 新連線的目的地是假位址時，確認 hev 認得它（見 [FakeIpMappings]）。
+     * @return false 表示不轉發：重放中尚未恢復的位址直接丟棄（應用會重送），hev 不認得的位址回拒絕。
+     */
+    private fun admitFakeIp(packet: ByteArray, length: Int, info: PacketInfo, writer: PacketWriter): Boolean =
+        when (fakeIps.state(info.destination.address)) {
+            FakeIpMappings.State.Pending -> {
+                counters.fakeIpHeld.incrementAndGet()
+                false
+            }
+            FakeIpMappings.State.Unknown -> {
+                counters.fakeIpRejected.incrementAndGet()
+                reject(packet, length, info, writer)
+                false
+            }
+            else -> true
+        }
 
     private fun reject(packet: ByteArray, length: Int, info: PacketInfo, writer: PacketWriter) {
         when (info.protocol) {

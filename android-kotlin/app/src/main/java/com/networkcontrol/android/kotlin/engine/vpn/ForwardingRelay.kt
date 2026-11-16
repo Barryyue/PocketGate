@@ -89,6 +89,8 @@ class ForwardingRelay(
 
     fun start() {
         filter.toHev = hevWriter
+        // hev 的映射表是空的：在讀取虛擬網卡之前排入重放，應用的查詢都排在它之後。
+        filter.beginMappingReplay()
         startDnsPump()
         upstream = Thread({ pumpUpstream() }, "NetworkControlKT.FwdUp").apply {
             isDaemon = true
