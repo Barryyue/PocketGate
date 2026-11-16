@@ -424,6 +424,7 @@ enum class S {
     TrackerLabel,
     Socks5Username,
     Socks5Password,
+    AppLockConfirmAction,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -710,7 +711,7 @@ private val EN = mapOf(
     S.PrivateDnsTitle to "Private DNS is enabled",
     S.PrivateDnsHint to "With strict private DNS, hostnames may bypass domain rules. Use IP rules or turn it off if DNS-based rules do not work.",
     S.AppLock to "App lock",
-    S.AppLockHint to "Require the device screen lock when opening NetworkControl.",
+    S.AppLockHint to "Require the device screen lock to open NetworkControl and to change protection, modes or rules, so others cannot change settings or read your records. It cannot stop anyone from turning off the VPN in system settings.",
     S.AppLockedTitle to "NetworkControl is locked",
     S.Unlock to "Unlock",
     S.AppLockNoCredential to "Set a screen lock (PIN, pattern or password) first.",
@@ -870,6 +871,7 @@ private val EN = mapOf(
     S.TrackerLabel to "Tracker",
     S.Socks5Username to "Username (optional)",
     S.Socks5Password to "Password",
+    S.AppLockConfirmAction to "Confirm it's you to change this setting.",
 )
 
 private val CN = mapOf(
@@ -1132,7 +1134,7 @@ private val CN = mapOf(
     S.PrivateDnsTitle to "已开启私人 DNS",
     S.PrivateDnsHint to "严格私人 DNS 可能让域名规则失效。若域名规则不生效，请改用 IP 规则或关闭私人 DNS。",
     S.AppLock to "应用锁",
-    S.AppLockHint to "打开 NetworkControl 时要求验证设备锁屏。",
+    S.AppLockHint to "打开 NetworkControl，以及关闭保护、切换模式、修改规则时，要求验证设备锁屏，防止别人随手改设置或查看记录。无法阻止别人在系统设置里关闭 VPN。",
     S.AppLockedTitle to "NetworkControl 已锁定",
     S.Unlock to "解锁",
     S.AppLockNoCredential to "请先设置锁屏密码、图案或 PIN。",
@@ -1292,6 +1294,7 @@ private val CN = mapOf(
     S.TrackerLabel to "追踪器",
     S.Socks5Username to "用户名（可选）",
     S.Socks5Password to "密码",
+    S.AppLockConfirmAction to "请验证身份以更改此设置。",
 )
 
 private val TW = mapOf(
@@ -1554,7 +1557,7 @@ private val TW = mapOf(
     S.PrivateDnsTitle to "已開啟私人 DNS",
     S.PrivateDnsHint to "嚴格私人 DNS 可能讓網域規則失效。若網域規則不生效，請改用 IP 規則或關閉私人 DNS。",
     S.AppLock to "應用程式鎖",
-    S.AppLockHint to "開啟 NetworkControl 時要求驗證裝置鎖屏。",
+    S.AppLockHint to "開啟 NetworkControl，以及關閉保護、切換模式、修改規則時，要求驗證裝置鎖屏，防止別人隨手改設定或查看紀錄。無法阻止別人在系統設定裡關閉 VPN。",
     S.AppLockedTitle to "NetworkControl 已鎖定",
     S.Unlock to "解鎖",
     S.AppLockNoCredential to "請先設定鎖屏密碼、圖案或 PIN。",
@@ -1714,4 +1717,5 @@ private val TW = mapOf(
     S.TrackerLabel to "追蹤器",
     S.Socks5Username to "使用者名稱（選填）",
     S.Socks5Password to "密碼",
+    S.AppLockConfirmAction to "請驗證身分以變更此設定。",
 )

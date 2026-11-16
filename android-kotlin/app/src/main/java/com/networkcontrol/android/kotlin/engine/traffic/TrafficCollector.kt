@@ -66,7 +66,7 @@ class TrafficCollector(
             }
 
             val usages = mutableListOf<Usage>()
-            collectType(ConnectivityManager.TYPE_WIFI, null, NetworkKind.Wifi, null, since, now, usages)
+            collectType(LEGACY_TYPE_WIFI, null, NetworkKind.Wifi, null, since, now, usages)
             collectMobile(since, now, usages)
 
             usages.forEach { usage ->
@@ -99,7 +99,7 @@ class TrafficCollector(
                 }.getOrNull()
                 if (!subscriberId.isNullOrBlank()) {
                     collected = collectType(
-                        ConnectivityManager.TYPE_MOBILE,
+                        LEGACY_TYPE_MOBILE,
                         subscriberId,
                         NetworkKind.Cellular,
                         info.subscriptionId,
@@ -112,7 +112,7 @@ class TrafficCollector(
         }
         if (!collected) {
             collectType(
-                ConnectivityManager.TYPE_MOBILE,
+                LEGACY_TYPE_MOBILE,
                 null,
                 NetworkKind.Cellular,
                 null,
@@ -156,3 +156,13 @@ class TrafficCollector(
         const val KEY_LAST_COLLECTED = "last_collected"
     }
 }
+
+/**
+ * `NetworkStatsManager.querySummary` 的 networkType 參數至今仍只接受舊的 `ConnectivityManager.TYPE_*`
+ * （公開 API 沒有以 NetworkCapabilities 取代的版本），所以在這裡集中壓下棄用警告。
+ */
+@Suppress("DEPRECATION")
+private val LEGACY_TYPE_WIFI = ConnectivityManager.TYPE_WIFI
+
+@Suppress("DEPRECATION")
+private val LEGACY_TYPE_MOBILE = ConnectivityManager.TYPE_MOBILE

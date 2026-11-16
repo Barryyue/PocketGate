@@ -49,6 +49,7 @@ import java.text.NumberFormat
 
 @Composable
 fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
+    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -99,7 +100,12 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(s[S.BlocklistsEnable], style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        Switch(checked = state.enabled, onCheckedChange = { backend.setBlocklistsEnabled(it) })
+                        Switch(
+                            checked = state.enabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled) backend.setBlocklistsEnabled(true) else guard.run { backend.setBlocklistsEnabled(false) }
+                            },
+                        )
                     }
                     if (state.enabled) {
                         Text(
@@ -283,7 +289,7 @@ private fun TrackerCard(
     onToggle: (Boolean) -> Unit,
     onCategory: (String, Boolean) -> Unit,
 ) {
-    val enabled = source?.enabled == true
+    val enabled = source != null && source.enabled
     SectionCard(s[S.Trackers]) {
         Text(
             BlocklistCatalog.trackers.description[s.noteLanguage],
@@ -294,7 +300,7 @@ private fun TrackerCard(
             Text(s[S.TrackersEnable], style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             Switch(checked = enabled, onCheckedChange = onToggle)
         }
-        if (enabled && source != null) {
+        if (source != null && source.enabled) {
             val status = when {
                 database != null -> s.format(
                     S.TrackersStatus,

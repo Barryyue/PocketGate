@@ -84,6 +84,7 @@ private fun RuleGroupCard(
     onChanged: () -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
+    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
@@ -119,15 +120,19 @@ private fun RuleGroupCard(
                     rule = rule,
                     sims = sims,
                     onToggle = { enabled ->
-                        scope.launch {
-                            backend.setRuleEnabled(rule.id, enabled)
-                            onChanged()
+                        guard.run {
+                            scope.launch {
+                                backend.setRuleEnabled(rule.id, enabled)
+                                onChanged()
+                            }
                         }
                     },
                     onDelete = {
-                        scope.launch {
-                            backend.deleteRule(rule.id)
-                            onChanged()
+                        guard.run {
+                            scope.launch {
+                                backend.deleteRule(rule.id)
+                                onChanged()
+                            }
                         }
                     },
                 )

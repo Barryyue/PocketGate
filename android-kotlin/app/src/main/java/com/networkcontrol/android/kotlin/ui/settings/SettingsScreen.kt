@@ -105,6 +105,7 @@ fun SettingsScreen(
     onOpenIslandSettings: () -> Unit = {},
     onOpenBlocklists: () -> Unit = {},
 ) {
+    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -149,6 +150,19 @@ fun SettingsScreen(
     var showProxyAppDialog by remember { mutableStateOf(false) }
     var directPackages by remember { mutableStateOf(backend.forwardingDirectPackages()) }
     var showDirectAppsDialog by remember { mutableStateOf(false) }
+    // 已安裝應用列表需要 PackageManager：在背景載入，不在主執行緒上卡住界面。
+    val pickerApps by androidx.compose.runtime.produceState<List<com.networkcontrol.android.kotlin.core.model.InstalledApp>?>(
+        initialValue = null,
+        showProxyAppDialog,
+        showDirectAppsDialog,
+    ) {
+        if (showProxyAppDialog || showDirectAppsDialog) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.installedApps() }
+        }
+    }
+    val installedCount by androidx.compose.runtime.produceState(initialValue = -1) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.container.appCatalog.getApps().size }
+    }
     val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
     var showTimedOption by remember { mutableStateOf(backend.promptShowTimedOption()) }
     val forwardingAvailable = remember { backend.forwardingAvailable() }
@@ -582,9 +596,15 @@ fun SettingsScreen(
                     onCheckedChange = { enabled ->
                         if (enabled && !backend.isDeviceSecure()) {
                             toast(s[S.AppLockNoCredential])
+                        } else if (!enabled) {
+                            // 關閉應用鎖本身就是敏感操作
+                            guard.run {
+                                appLock = false
+                                backend.setAppLockEnabled(false)
+                            }
                         } else {
-                            appLock = enabled
-                            backend.setAppLockEnabled(enabled)
+                            appLock = true
+                            backend.setAppLockEnabled(true)
                         }
                     },
                 )
@@ -766,8 +786,10 @@ fun SettingsScreen(
                         if (enabled && !forwardingAvailable) {
                             toast(s[S.ForwardingUnavailable])
                         } else {
-                            forwardingEnabled = enabled
-                            backend.setForwardingEnabled(enabled)
+                            guard.run {
+                                forwardingEnabled = enabled
+                                backend.setForwardingEnabled(enabled)
+                            }
                         }
                     },
                 )
@@ -871,8 +893,11 @@ fun SettingsScreen(
                         subtitle = s[S.DnsBypassProtectionHint],
                         checked = dnsBypass,
                         onCheckedChange = {
-                            dnsBypass = it
-                            backend.setDnsBypassProtection(it)
+                            val value = it
+                            guard.run {
+                                dnsBypass = value
+                                backend.setDnsBypassProtection(value)
+                            }
                         },
                     )
                     if (!viaProxy) {
@@ -1064,7 +1089,7 @@ fun SettingsScreen(
                 }
                 DetailLine(s[S.Status], "${runtime.mode.name} / ${backend.protectionStatus().name}")
                 DetailLine(s[S.SkippedRules], plan.skippedRules.size.toString())
-                DetailLine(s[S.AppsCount], backend.container.appCatalog.getApps().size.toString())
+                DetailLine(s[S.AppsCount], if (installedCount < 0) "…" else installedCount.toString())
                 OutlinedButton(
                     onClick = {
                         if (checkingUpdate) return@OutlinedButton
@@ -1130,9 +1155,10 @@ fun SettingsScreen(
         )
     }
 
-    if (showProxyAppDialog) {
+    val proxyApps = pickerApps
+    if (showProxyAppDialog && proxyApps != null) {
         ProxyAppDialog(
-            apps = remember { backend.installedApps() },
+            apps = proxyApps,
             selected = proxyPackage,
             onDismiss = { showProxyAppDialog = false },
             onSelect = { packageName ->
@@ -1143,14 +1169,15 @@ fun SettingsScreen(
         )
     }
 
-    if (showDirectAppsDialog) {
+    val directApps = pickerApps
+    if (showDirectAppsDialog && directApps != null) {
         DirectAppsDialog(
-            apps = remember { backend.installedApps() },
+            apps = directApps,
             initial = directPackages,
             onDismiss = { showDirectAppsDialog = false },
             onSave = { packages ->
                 directPackages = packages
-                backend.setForwardingDirectPackages(packages)
+                guard.run { backend.setForwardingDirectPackages(packages) }
                 showDirectAppsDialog = false
             },
         )
