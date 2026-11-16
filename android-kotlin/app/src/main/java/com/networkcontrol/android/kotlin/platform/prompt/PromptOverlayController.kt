@@ -303,7 +303,10 @@ class PromptOverlayController(
             }
             val button = textView(label, 17f, accent).apply {
                 gravity = Gravity.CENTER
-                setPadding(dp(4), dp(14), dp(4), dp(14))
+                setPadding(dp(4), 0, dp(4), 0)
+                // 一律單行；四個按鈕或大字體放不下時自動縮小，不換行。
+                maxLines = 1
+                setAutoSizeTextTypeUniformWithConfiguration(11, 17, 1, TypedValue.COMPLEX_UNIT_SP)
                 background = RippleDrawable(
                     ColorStateList.valueOf((accent and 0x00FFFFFF) or 0x33000000),
                     null,
@@ -315,7 +318,7 @@ class PromptOverlayController(
                     hide()
                 }
             }
-            actions.addView(button, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            actions.addView(button, LinearLayout.LayoutParams(0, dp(52), 1f))
         }
         addAction(strings[S.PromptDeny]) {
             onAnswer?.invoke(prompt.id, VerdictAction.Deny, PromptDenyPolicy.lifetime(dontAskAgain, denyPermanent))

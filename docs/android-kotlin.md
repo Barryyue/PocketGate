@@ -1464,3 +1464,10 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - **已提出、待用戶決定**：狀態列顯示目前代理出口；「測試代理」逐步顯示結果；預設阻擋 UDP 443（QUIC）；應用內自行實作無線偵錯配對（免 Shizuku，工作量大，暫不建議）。
 - **小清理**：`promptShowExplanation` 偏好與 `AppBackend.promptShowExplanation()` 已無界面使用，可刪除。
 - **未推送**：0.10.1～0.10.6 只在本機（`agent/claude/forwarding-firewall` → `agent/opencode/android-kotlin-v0.3` → `main`），推送需用戶同意。
+
+## 51. v0.10.7-m4p12（2026-11-17）：詢問按鈕不換行
+
+- **現象**（實機）：開啟「限時允許」後第四個按鈕「限時 60 分鐘」換成兩行。
+- **修正**：文字縮短為「60分鐘」（英文「60 min」）；系統懸浮窗按鈕固定高度、單行並開啟 TextView 自動縮小（11～17sp），應用內卡片改用 `BasicText` + `TextAutoSize.StepBased`，大字體或長時長時也不換行。
+- **驗證**：模擬器 zh-TW：四個按鈕單行、字號一致（截取模擬器畫面確認）。
+- **未驗證**：實機。

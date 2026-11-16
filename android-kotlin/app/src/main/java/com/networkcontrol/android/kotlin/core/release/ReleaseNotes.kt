@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.10.7",
+            date = "2026-11-17",
+            features = listOf(),
+            improvements = listOf(
+                t(
+                    "Prompt buttons no longer wrap onto two lines when timed allow is shown: the label is shortened to \"60 min\" and button text shrinks to fit when space is tight.",
+                    "显示「限时允许」时，询问按钮不再换行：文字缩短为「60分钟」，空间不够时自动缩小字号。",
+                    "顯示「限時允許」時，詢問按鈕不再換行：文字縮短為「60分鐘」，空間不夠時自動縮小字號。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.10.6",
             date = "2026-11-17",
             features = listOf(
