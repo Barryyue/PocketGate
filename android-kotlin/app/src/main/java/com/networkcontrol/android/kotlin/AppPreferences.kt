@@ -109,6 +109,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_PROMPT_SHOW_TIMED, true)
         set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_TIMED, value).apply()
 
+    /** 「僅一次」「禁止（到應用關閉）」在應用切到背景後保留的分鐘數；0 = 一離開前台就失效。 */
+    var onceBackgroundMinutes: Int
+        get() = prefs.getInt(KEY_ONCE_BACKGROUND_MINUTES, 10)
+        set(value) = prefs.edit().putInt(KEY_ONCE_BACKGROUND_MINUTES, value.coerceIn(0, 24 * 60)).apply()
+
     /** 詢問面板的「拒絕」是否一律永久；預設 false：只拒絕到應用關閉，勾選「不再詢問」才永久。 */
     var promptDenyPermanent: Boolean
         get() = prefs.getBoolean(KEY_PROMPT_DENY_PERMANENT, false)
@@ -309,6 +314,7 @@ class AppPreferences(context: Context) {
         const val KEY_SPEED_ISLAND_DOT_COLOR = "speed_island_dot_color"
         const val KEY_PROMPT_SHOW_TIMED = "prompt_show_timed"
         const val KEY_PROMPT_DENY_PERMANENT = "prompt_deny_permanent"
+        const val KEY_ONCE_BACKGROUND_MINUTES = "once_background_minutes"
         const val KEY_SPEED_ISLAND_MODE = "speed_island_mode"
         const val KEY_SPEED_ISLAND_CONTENT = "speed_island_content"
         const val KEY_SPEED_ISLAND_FONT_SCALE = "speed_island_font_scale"

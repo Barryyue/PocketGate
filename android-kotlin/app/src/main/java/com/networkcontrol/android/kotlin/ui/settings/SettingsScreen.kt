@@ -180,6 +180,7 @@ fun SettingsScreen(
     var timeoutText by remember(settings.promptTimeoutSeconds) {
         mutableStateOf(settings.promptTimeoutSeconds.toString())
     }
+    var onceBackgroundText by remember { mutableStateOf(backend.onceBackgroundMinutes().toString()) }
     var timedMinutesText by remember(settings.promptTimedMinutes) {
         mutableStateOf(settings.promptTimedMinutes.toString())
     }
@@ -335,6 +336,41 @@ fun SettingsScreen(
                         onClick = {
                             val minutes = timedMinutesText.toIntOrNull() ?: settings.promptTimedMinutes
                             backend.updateSettings { it.copy(promptTimedMinutes = minutes) }
+                            toast(s[S.Done])
+                        },
+                    ) { Text(s[S.Save]) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(s[S.OnceBackgroundMinutes], style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            s[S.OnceBackgroundMinutesHint],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        val exitDetection = remember { backend.processExitDetection() }
+                        androidx.compose.foundation.text.selection.SelectionContainer {
+                            Text(
+                                if (exitDetection) s[S.OnceExitDetectionOn] else s[S.OnceExitDetectionOff],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (exitDetection) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = onceBackgroundText,
+                        onValueChange = { value ->
+                            onceBackgroundText = value.filter { it.isDigit() }.take(4)
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(110.dp),
+                    )
+                    TextButton(
+                        onClick = {
+                            val minutes = onceBackgroundText.toIntOrNull() ?: backend.onceBackgroundMinutes()
+                            backend.setOnceBackgroundMinutes(minutes)
+                            onceBackgroundText = backend.onceBackgroundMinutes().toString()
                             toast(s[S.Done])
                         },
                     ) { Text(s[S.Save]) }

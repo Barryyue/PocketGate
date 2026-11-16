@@ -442,6 +442,10 @@ enum class S {
     PromptNetAny,
     PromptTimedShort,
     PromptDeny,
+    OnceBackgroundMinutes,
+    OnceBackgroundMinutesHint,
+    OnceExitDetectionOn,
+    OnceExitDetectionOff,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -906,6 +910,10 @@ private val EN = mapOf(
     S.PromptNetAny to "the network",
     S.PromptTimedShort to "%1\$d min",
     S.PromptDeny to "Deny",
+    S.OnceBackgroundMinutes to "Keep \"Only once\" and \"Deny\" in the background (minutes)",
+    S.OnceBackgroundMinutesHint to "After the app goes to the background, the decision ends only when it stays there longer than this. 0 ends it as soon as you leave the app. Android does not tell other apps when an app is really closed, so this is an approximation.",
+    S.OnceExitDetectionOn to "Close detection is on: decisions end when the app is really closed, and the time above is not used.",
+    S.OnceExitDetectionOff to "Close detection is off. To end decisions only when the app is really closed (like Red Magic), grant this once from a computer: adb shell pm grant com.networkcontrol.android.kotlin android.permission.DUMP",
 )
 
 private val CN = mapOf(
@@ -1346,6 +1354,10 @@ private val CN = mapOf(
     S.PromptNetAny to "网络",
     S.PromptTimedShort to "限时%1\$d分钟",
     S.PromptDeny to "禁止",
+    S.OnceBackgroundMinutes to "「仅一次」「禁止」在后台保留（分钟）",
+    S.OnceBackgroundMinutesHint to "应用切到后台后，超过这段时间才算关闭并失效，期间回到应用不会再询问；0 表示一离开就失效。Android 无法得知其他应用是否真正被关闭，这是近似做法。",
+    S.OnceExitDetectionOn to "已启用关闭检测：应用真正关闭时才失效，上面的时间不再使用。",
+    S.OnceExitDetectionOff to "未启用关闭检测。想和红魔一样在应用真正关闭时才失效，请用电脑执行一次：adb shell pm grant com.networkcontrol.android.kotlin android.permission.DUMP",
 )
 
 private val TW = mapOf(
@@ -1786,4 +1798,8 @@ private val TW = mapOf(
     S.PromptNetAny to "網路",
     S.PromptTimedShort to "限時 %1\$d 分鐘",
     S.PromptDeny to "禁止",
+    S.OnceBackgroundMinutes to "「僅一次」「禁止」在背景保留（分鐘）",
+    S.OnceBackgroundMinutesHint to "應用程式切到背景後，超過這段時間才算關閉並失效，期間回到應用程式不會再詢問；0 表示一離開就失效。Android 無法得知其他應用程式是否真正被關閉，這是近似做法。",
+    S.OnceExitDetectionOn to "已啟用關閉偵測：應用程式真正關閉時才失效，上面的時間不再使用。",
+    S.OnceExitDetectionOff to "未啟用關閉偵測。想和紅魔一樣在應用程式真正關閉時才失效，請用電腦執行一次：adb shell pm grant com.networkcontrol.android.kotlin android.permission.DUMP",
 )
