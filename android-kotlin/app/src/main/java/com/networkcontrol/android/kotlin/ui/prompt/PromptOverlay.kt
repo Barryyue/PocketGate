@@ -153,8 +153,24 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
 
 @Composable
 private fun RowScope.SheetAction(label: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, modifier = Modifier.weight(1f)) {
-        Text(label, fontSize = 17.sp, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.primary)
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.weight(1f),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+    ) {
+        // 一律單行；四個按鈕或大字體放不下時自動縮小，不換行。
+        androidx.compose.foundation.text.BasicText(
+            label,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+            ),
+            maxLines = 1,
+            autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(
+                minFontSize = 11.sp,
+                maxFontSize = 17.sp,
+            ),
+        )
     }
 }
 
