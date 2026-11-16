@@ -3,6 +3,15 @@ package com.networkcontrol.android.kotlin
 import android.content.Context
 import android.content.SharedPreferences
 
+/** 逐連線（轉發）模式的出口類型。 */
+object ForwardingUpstream {
+    /** 內建直連出口：不需要其他應用。 */
+    const val DIRECT = "direct"
+
+    /** 外部 SOCKS5 代理（例如關閉 VPN 的 FlClash）。 */
+    const val SOCKS5 = "socks5"
+}
+
 class AppPreferences(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("networkcontrol-kotlin", Context.MODE_PRIVATE)
@@ -191,22 +200,36 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_SOCKS5_UDP, true)
         set(value) = prefs.edit().putBoolean(KEY_SOCKS5_UDP, value).apply()
 
-    /** 代理應用包名：轉發模式下排除此應用，避免代理自身的流量回環進 VPN。 */
-    /** 轉發模式下直接排除在 VPN 之外的應用：不經代理，也不受防火牆管控。 */
     /** v0.2 共享應用規則遷移是否已經完成；完成後不再每次啟動都執行。 */
     var legacyRulesMigrated: Boolean
         get() = prefs.getBoolean(KEY_LEGACY_RULES_MIGRATED, false)
         set(value) = prefs.edit().putBoolean(KEY_LEGACY_RULES_MIGRATED, value).apply()
 
+    /**
+     * 逐連線模式的出口：[ForwardingUpstream.DIRECT] 為內建直連（不需要其他應用），[ForwardingUpstream.SOCKS5] 為外部 SOCKS5 代理。
+     * 舊版只有外部代理：升級前已經開啟轉發的使用者保留外部代理，其他人預設直連。
+     */
+    var forwardingUpstream: String
+        get() = prefs.getString(KEY_FORWARDING_UPSTREAM, null)
+            ?: (if (forwardingEnabled) UPSTREAM_SOCKS5 else UPSTREAM_DIRECT).also { forwardingUpstream = it }
+        set(value) = prefs.edit().putString(KEY_FORWARDING_UPSTREAM, value).apply()
+
+    val usesDirectUpstream: Boolean get() = forwardingUpstream != UPSTREAM_SOCKS5
+
+    /** 轉發模式下直接排除在 VPN 之外的應用：不經代理，也不受防火牆管控。 */
     var forwardingDirectPackages: Set<String>
         get() = prefs.getStringSet(KEY_FORWARDING_DIRECT_PACKAGES, emptySet())?.toSet().orEmpty()
         set(value) = prefs.edit().putStringSet(KEY_FORWARDING_DIRECT_PACKAGES, value.toSet()).apply()
 
+    /** 代理應用包名：使用外部代理時排除此應用，避免代理自身的流量回環進 VPN。 */
     var socks5BypassPackage: String?
         get() = prefs.getString(KEY_SOCKS5_BYPASS_PACKAGE, null)?.takeIf { it.isNotBlank() }
         set(value) = prefs.edit().putString(KEY_SOCKS5_BYPASS_PACKAGE, value).apply()
 
     private companion object {
+        const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
+        const val UPSTREAM_SOCKS5 = ForwardingUpstream.SOCKS5
+        const val KEY_FORWARDING_UPSTREAM = "forwarding_upstream"
         const val KEY_THEME = "theme"
         const val KEY_LANGUAGE = "language"
         const val KEY_PROTECTION = "protection"

@@ -235,6 +235,16 @@
 | K-096 | 轉發中繼 / 虛擬網卡讀取失敗而防護仍開啟時，自動重建隧道（10 秒內最多一次），避免 VPN 顯示 Active 但實際已斷 | `VpnEngine.onStateChanged` | 構建 + 代碼審查 | 未模擬執行緒失敗 |
 | K-097 | 「稍後」的會話抑制在應用內 Activity 暫時為 null 時保留，不把換頁誤判成重新進入 | `PromptRouter` | 構建 | 與 K-087 的「僅一次」Activity 追蹤互補 |
 
+### v0.9.4-m4p5（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-098 | 內建直連出口：逐連線模式可選「直接連出」，hev 把已判決的連線交給本進程的 SOCKS5（只監聽 127.0.0.1、每次啟動隨機帳密、拒絕無驗證），支援 CONNECT 與 UDP ASSOCIATE、IPv4 / IPv6 / 域名；不再依賴 FlClash 等外部代理 | `DirectSocksServer`、`Socks5Wire`、`VpnEngine`、`VpnTunnelConfig.upstreamUsername/Password`、`writeForwardingConfig` | JVM 測試（真 socket：拒絕無密碼 / 錯密碼、按 IP / 域名 CONNECT、半關閉後下行完整、連線被拒、UDP 關聯、hev 設定帳密）；模擬器：hev debug 日誌確認帳密驗證通過，shell 與 Chrome 按 IP 經內建出口連到 Akamai 並回應 | 本機模擬器的系統 DNS 本身不可用（關閉 VPN 時 `ping example.org` 也是 unknown host），按域名的直連只做了 JVM 測試；未量測真機吞吐 / 耗電 |
+| K-099 | 內建出口在實體網路上解析與連線（`Network.getAllByName` / `bindSocket`，結果緩存 2 秒），IPv4 優先，多個位址時單一位址 3 秒逾時 | `UnderlyingNetwork`、`DirectSocksServer` | 構建 + 模擬器 | — |
+| K-100 | 逐連線模式記錄已允許的連線：過濾層在轉發新連線時通知回報器，判決管線只寫記錄（有允許規則時記規則 id 並計命中） | `ForwardingPacketFilter.onForwarded`、`BlockedFlowReporter.reportAllowed`、`VerdictPipeline.recordAllowed` | 模擬器：Chrome 經內建出口的連線寫入 connection_log（Allow / Rule / Chrome 規則 id） | 同一目標 5 秒內去重 |
+| K-101 | 設定頁「逐連線模式」：出口可選「直接連出 / 經 SOCKS5 代理」；直連時隱藏代理相關設定。升級前已開啟轉發的使用者保留外部代理 | `AppPreferences.forwardingUpstream`、`SettingsScreen`、`UiStrings`（三語） | 構建 | 界面未截圖檢查，請用戶目視確認 |
+| K-102 | 診斷：`files/hev-debug` 存在時 hev 以 debug 級別記錄；JVM 測試啟用 `isReturnDefaultValues` | `VpnTunnelController.startForwarding`、`build.gradle.kts` | 模擬器 | — |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

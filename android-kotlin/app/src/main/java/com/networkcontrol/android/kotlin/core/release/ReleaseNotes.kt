@@ -40,6 +40,41 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.4",
+            date = "2026-11-16",
+            features = listOf(
+                t(
+                    "Per-connection mode no longer needs another app: choose \"Directly\" and allowed connections go out through a built-in exit. Every app's connections are checked one by one, and domain / port rules apply to all apps.",
+                    "逐连接模式不再需要其他应用：选「直接连出」后，允许的连接经内置出口直接发出。所有应用的连接都会逐条判决，域名 / 端口规则对所有应用生效。",
+                    "逐連線模式不再需要其他應用程式：選「直接連出」後，允許的連線經內建出口直接發出。所有應用程式的連線都會逐條判決，網域 / 連接埠規則對所有應用程式生效。",
+                ),
+                t(
+                    "Allowed connections are now recorded in per-connection mode, not just blocked ones.",
+                    "逐连接模式下，已允许的连接也会写入记录，不再只有被拦的连接。",
+                    "逐連線模式下，已允許的連線也會寫入紀錄，不再只有被攔的連線。",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "The built-in exit listens only on the device itself and requires a random password generated at each start, so other apps cannot use it to bypass the firewall.",
+                    "内置出口只监听本机，并要求每次启动随机生成的密码，其他应用无法借它绕过防火墙。",
+                    "內建出口只監聽本機，並要求每次啟動隨機產生的密碼，其他應用程式無法借它繞過防火牆。",
+                ),
+                t(
+                    "The built-in exit resolves and connects on the physical network, tries IPv4 first and gives up on a bad address after 3 seconds.",
+                    "内置出口在实体网络上解析和连接，优先 IPv4，单个地址 3 秒连不上就换下一个。",
+                    "內建出口在實體網路上解析和連線，優先 IPv4，單一位址 3 秒連不上就換下一個。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "Still experimental: the built-in exit is written in Kotlin and has not been measured for throughput or battery on real devices.",
+                    "仍是实验功能：内置出口以 Kotlin 实现，尚未在真机上测量吞吐和耗电。",
+                    "仍是實驗功能：內建出口以 Kotlin 實作，尚未在實機上測量吞吐和耗電。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.3",
             date = "2026-11-16",
             features = listOf(

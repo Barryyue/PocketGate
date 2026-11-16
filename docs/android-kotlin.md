@@ -1217,3 +1217,30 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - `ReleaseNotesTest` 保證三語都有內容、英文不含中文、簡繁常用對應字不混用；以後新增版本說明時缺任何一種語言都會測試失敗。
 - 產物：`artifacts\kotlin-android\NetworkControl-KT-0.9.2-m4p3.apk`（4,302,413 bytes，SHA-256 `232546CBBB2D0C75B91AFD0DA247D8FEB12D5F85BC352443C4609E0A82C2E2D7`）、同名 `.aab`（4,884,736 bytes，SHA-256 `AF44E30539DD322F95187928F10F7EDDE3861171B09E3A279A1CEA5FF33B1727`）；versionName / Code `0.9.2-m4p3` / `26`。
 - 驗證：JVM 測試 97 個通過；模擬器 Release 版用 `cmd locale set-app-locales` 依次切到 en、zh-TW、zh-CN，透過 UI 樹確認本版說明與歷史版本的文字語言正確，驗證後已還原應用語言。
+
+## 36. v0.9.4-m4p5（2026-11-16）：內建直連出口
+
+### 36.1 設計
+
+- 逐連線模式（原「轉發模式」）的資料路徑：虛擬網卡 → `ForwardingPacketFilter`（逐連線判決）→ socketpair → hev（lwIP + mapdns）→ SOCKS5 出口。出口現在有兩種：
+  - **直接連出（預設）**：`DirectSocksServer`，在本進程內監聽 `127.0.0.1` 的隨機埠。本應用被排除在 VPN 之外，對外連線不會回到虛擬網卡；socket 與域名解析綁定到實體網路（`UnderlyingNetwork`）。
+  - **經 SOCKS5 代理**：維持原本的外部代理（FlClash 等）。
+- 安全：本機任何應用都能連 `127.0.0.1`，出口若不驗證就成了繞過防火牆的後門，所以一律要求 RFC 1929 帳號密碼（每次啟動隨機 128 位元，只寫入 hev 設定檔），拒絕無驗證的用戶端。
+- 已允許的連線也寫入記錄（K-100），這是黑洞模式做不到的。
+
+### 36.2 產物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.9.4-m4p5.apk`（4,318,797 bytes） |
+| APK SHA-256 | `8238F00FF8411DFAE817D1BF65C93D552281360E6C5F086985E9B83E2443A4C1` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.9.4-m4p5.aab`（4,912,185 bytes） |
+| AAB SHA-256 | `05F175D0CDC80CB16757EA7807C70C787B7D49354A54978343B1BE5555ED6742` |
+| versionName / Code | `0.9.4-m4p5` / `28` |
+
+### 36.3 驗證與限制
+
+- JVM 測試 105 個通過（新增 `DirectSocksServerTest` 8 個，以真 socket 測試）；Release APK 在模擬器啟動無崩潰。
+- 模擬器 Debug：開啟逐連線模式 + 直接連出，hev debug 日誌確認對內建出口的帳密驗證通過；shell 與 Chrome 按 IP 經內建出口取得 Akamai 回應，Chrome 的連線以「允許 / 規則」寫入記錄。測試後已還原設定。
+- **本機模擬器的系統 DNS 不可用**（關閉 VPN 也解析不了任何域名，是開發機網路環境的問題），所以按域名的直連只有 JVM 測試，真機需要用戶驗證。
+- 未驗證：真機吞吐、耗電與大量並發連線（每條 TCP 連線兩個執行緒，上限 768 個執行緒）；長期方案仍是 firestack / gVisor 或原生出口。

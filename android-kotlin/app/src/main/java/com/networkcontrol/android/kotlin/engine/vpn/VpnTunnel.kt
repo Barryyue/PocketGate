@@ -40,6 +40,9 @@ data class VpnTunnelConfig(
     val upstreamHost: String = "127.0.0.1",
     val upstreamPort: Int = 7890,
     val upstreamUdp: Boolean = true,
+    /** 上游 SOCKS5 的帳號密碼；內建直連出口一律使用，外部代理不使用。 */
+    val upstreamUsername: String? = null,
+    val upstreamPassword: String? = null,
 ) {
     fun equivalentTo(other: VpnTunnelConfig?): Boolean =
         other != null &&
@@ -48,6 +51,8 @@ data class VpnTunnelConfig(
             upstreamHost == other.upstreamHost &&
             upstreamPort == other.upstreamPort &&
             upstreamUdp == other.upstreamUdp &&
+            upstreamUsername == other.upstreamUsername &&
+            upstreamPassword == other.upstreamPassword &&
             bypassPackages == other.bypassPackages
 }
 
@@ -291,7 +296,9 @@ class VpnTunnelController(
         }
         val file = java.io.File(appContext.filesDir, "hev-forwarding.yml")
         val started = runCatching {
-            writeForwardingConfig(file, config)
+            // 診斷用：files 目錄下有 hev-debug 檔案時，hev 以 debug 級別記錄（日誌超過 1 MB 仍會清空）。
+            val debug = java.io.File(appContext.filesDir, "hev-debug").exists()
+            writeForwardingConfig(file, config, logLevel = if (debug) "debug" else "warn")
             VpnForwardingTransport.start(file, newRelay.hevSide.fd)
         }.getOrDefault(false)
         if (!started) {

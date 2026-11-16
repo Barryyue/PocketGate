@@ -72,6 +72,7 @@ class VpnEngine(
         counters = counters,
         onFlow = { flow: FlowInfo -> pipeline.decide(flow) },
         extraHostname = { address -> forwardingFilter.hostnameFor(address) },
+        onAllowed = { flow: FlowInfo -> pipeline.recordAllowed(flow) },
     )
 
     /** 轉發模式的逐連線過濾層：路由計畫決定放行（轉發）、阻止或詢問。 */
@@ -80,7 +81,31 @@ class VpnEngine(
         decide = { uid, info, hostname -> decideForwarding(uid, info, hostname) },
         onBlocked = { info, uid, _ -> reporter.report(info, uid) },
         blockUdp = { !preferences.socks5Udp },
+        onForwarded = { info, uid -> reporter.reportAllowed(info, uid) },
     )
+
+    /** 內建直連出口；只在逐連線模式且選擇直連時執行。 */
+    @Volatile
+    private var directServer: DirectSocksServer? = null
+
+    val directCounters: DirectSocksCounters? get() = directServer?.counters
+
+    private val underlying = UnderlyingNetwork(context)
+
+    private fun ensureDirectServer(): DirectSocksServer =
+        directServer ?: DirectSocksServer(
+            resolve = underlying::resolve,
+            bindSocket = { underlying.bind(it) },
+            bindDatagram = { underlying.bind(it) },
+        ).also {
+            it.start()
+            directServer = it
+        }
+
+    private fun stopDirectServer() {
+        directServer?.close()
+        directServer = null
+    }
 
     /** 轉發判決用的應用身分，按 UID 緩存；重新規劃時清空。 */
     private val identities = java.util.concurrent.ConcurrentHashMap<Int, com.networkcontrol.android.kotlin.core.model.AppIdentity>()
@@ -211,6 +236,11 @@ class VpnEngine(
             }
             return
         }
+        if (preferences.usesDirectUpstream) {
+            // 內建出口在本進程內，不需要探測；只確認它還在。
+            tunnel.setWarning(if (directServer == null) "內建直連出口未啟動。" else null)
+            return
+        }
         val host = preferences.socks5Host
         val port = preferences.socks5Port
         val error = com.networkcontrol.android.kotlin.platform.Socks5Probe.handshake(host, port)
@@ -247,6 +277,7 @@ class VpnEngine(
         if (!protection.isEnabled) {
             applied = null
             tunnel.close()
+            stopDirectServer()
             _tunnelState.value = tunnel.state
             return
         }
@@ -257,17 +288,22 @@ class VpnEngine(
             return
         }
 
+        val direct = preferences.forwardingEnabled && preferences.usesDirectUpstream
+        val server = if (direct) ensureDirectServer() else null
         val config = if (preferences.forwardingEnabled) {
             VpnTunnelConfig(
                 bypassPackages = buildSet {
+                    // 本應用必須排除：內建出口的對外連線才不會回到虛擬網卡。
                     add(selfPackage)
-                    preferences.socks5BypassPackage?.let(::add)
+                    if (!direct) preferences.socks5BypassPackage?.let(::add)
                     addAll(preferences.forwardingDirectPackages)
                 },
                 forwarding = true,
-                upstreamHost = preferences.socks5Host,
-                upstreamPort = preferences.socks5Port,
+                upstreamHost = if (server != null) "127.0.0.1" else preferences.socks5Host,
+                upstreamPort = server?.port ?: preferences.socks5Port,
                 upstreamUdp = preferences.socks5Udp,
+                upstreamUsername = server?.username,
+                upstreamPassword = server?.password,
             )
         } else {
             VpnTunnelConfig(plan.bypassPackages)
@@ -282,6 +318,7 @@ class VpnEngine(
         }
 
         tunnel.apply(config, reporter, forwardingFilter, fallback)
+        if (server == null) stopDirectServer()
         applied = config
         appliedFallback = if (config.forwarding && !tunnel.isForwarding) fallback else null
         _forwardingActive.value = tunnel.isForwarding

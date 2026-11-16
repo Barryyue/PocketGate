@@ -102,6 +102,12 @@ fun writeForwardingConfig(
             appendLine("  address: $host")
             appendLine("  port: $port")
             appendLine("  udp: 'udp'")
+            val user = config.upstreamUsername
+            val pass = config.upstreamPassword
+            if (!user.isNullOrEmpty() && !pass.isNullOrEmpty()) {
+                appendLine("  username: '${user.replace("'", "''")}'")
+                appendLine("  password: '${pass.replace("'", "''")}'")
+            }
             appendLine("mapdns:")
             appendLine("  address: ${ForwardingDefaults.MapDnsAddress.hostAddress}")
             appendLine("  port: ${ForwardingDefaults.MAP_DNS_PORT}")

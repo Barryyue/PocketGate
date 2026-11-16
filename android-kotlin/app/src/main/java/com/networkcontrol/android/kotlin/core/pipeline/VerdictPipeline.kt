@@ -73,6 +73,26 @@ class VerdictPipeline(
         return verdict
     }
 
+    /**
+     * 轉發模式下已經放行的連線：不判決、不詢問，只寫入記錄。
+     * 有符合的允許規則時記錄規則 id（並計入命中次數），否則記為模式放行。
+     */
+    fun recordAllowed(flow: FlowInfo) {
+        val domains = flow.engineHostname
+            ?.let { DomainCandidates(listOf(DomainName.normalize(it))) }
+            ?: DomainCandidates.Empty
+        val zone = if (flow.engineHostname != null && isSyntheticAddress(flow.remote.address)) {
+            NetworkZone.Internet
+        } else {
+            NetworkZones.classify(flow.remote.address)
+        }
+        val rule = runCatching {
+            rules.ruleSet.value.evaluate(flow, flow.app, domains, zone, currentNetwork()).rule
+        }.getOrNull()?.takeIf { it.action == VerdictAction.Allow }
+        rule?.let { rules.recordHit(it.id) }
+        publish(flow, if (rule != null) Verdict(VerdictAction.Allow, VerdictReason.Rule, rule.id) else Verdict.allow(VerdictReason.Mode))
+    }
+
     private suspend fun decideInternal(
         flow: FlowInfo,
         domains: DomainCandidates,
