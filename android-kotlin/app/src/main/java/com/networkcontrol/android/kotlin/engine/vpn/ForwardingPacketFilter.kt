@@ -46,6 +46,8 @@ class ForwardingPacketFilter(
     private val decide: (uid: Int?, info: PacketInfo, hostname: String?) -> ForwardingDecision,
     private val onBlocked: (PacketInfo, uid: Int?, ask: Boolean) -> Unit,
     private val blockUdp: () -> Boolean,
+    /** 新連線被判定轉發時呼叫（只在新連線上，不是每個封包），用於記錄已允許的連線。 */
+    private val onForwarded: (PacketInfo, uid: Int?) -> Unit = { _, _ -> },
     private val dnsAddress: InetAddress = ForwardingDefaults.MapDnsAddress,
     private val dnsPort: Int = ForwardingDefaults.MAP_DNS_PORT,
     private val clock: () -> Long = System::currentTimeMillis,
@@ -141,6 +143,8 @@ class ForwardingPacketFilter(
             remember(key, fresh, now, info.protocol)
             if (fresh != ForwardingDecision.Forward) {
                 onBlocked(info, uid, fresh == ForwardingDecision.BlockAndAsk)
+            } else {
+                onForwarded(info, uid)
             }
             fresh
         }

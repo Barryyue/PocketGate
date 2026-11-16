@@ -661,6 +661,13 @@ class AppBackend(val container: AppContainer) {
         container.vpnEngine.requestReplan()
     }
 
+    fun forwardingUpstream(): String = container.preferences.forwardingUpstream
+
+    fun setForwardingUpstream(upstream: String) {
+        container.preferences.forwardingUpstream = upstream
+        container.vpnEngine.requestReplan()
+    }
+
     fun forwardingAvailable(): Boolean = com.networkcontrol.android.kotlin.engine.vpn.VpnForwardingTransport.isAvailable()
 
     fun socks5Host(): String = container.preferences.socks5Host

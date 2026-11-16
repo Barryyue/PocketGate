@@ -228,16 +228,39 @@
 |---|---|---|---|---|
 | K-095 | 版本說明三語化：每則內容都有英文 / 簡體 / 繁體（台灣用語），跟隨應用界面語言（與 `UiStrings` 相同的語言判斷）；補齊 0.1.0～0.9.1 全部歷史條目 | `NoteText`、`NoteLanguage`、`ReleaseNotes`、`UiStrings.noteLanguage`、`SettingsScreen.ReleaseNoteSection` | JVM 測試（三語不缺、簡繁常用字不混用、語言標籤對應）；模擬器 Release：`cmd locale set-app-locales` 切到 en / zh-TW / zh-CN，本版說明與歷史版本都顯示對應語言 | 新增版本說明時三種語言都必須填寫，否則測試失敗 |
 
+### v0.9.3-m4p4（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-096 | 轉發中繼 / 虛擬網卡讀取失敗而防護仍開啟時，自動重建隧道（10 秒內最多一次），避免 VPN 顯示 Active 但實際已斷 | `VpnEngine.onStateChanged` | 構建 + 代碼審查 | 未模擬執行緒失敗 |
+| K-097 | 「稍後」的會話抑制在應用內 Activity 暫時為 null 時保留，不把換頁誤判成重新進入 | `PromptRouter` | 構建 | 與 K-087 的「僅一次」Activity 追蹤互補 |
+
+### v0.9.4-m4p5（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-098 | 內建直連出口：逐連線模式可選「直接連出」，hev 把已判決的連線交給本進程的 SOCKS5（只監聽 127.0.0.1、每次啟動隨機帳密、拒絕無驗證），支援 CONNECT 與 UDP ASSOCIATE、IPv4 / IPv6 / 域名；不再依賴 FlClash 等外部代理 | `DirectSocksServer`、`Socks5Wire`、`VpnEngine`、`VpnTunnelConfig.upstreamUsername/Password`、`writeForwardingConfig` | JVM 測試（真 socket：拒絕無密碼 / 錯密碼、按 IP / 域名 CONNECT、半關閉後下行完整、連線被拒、UDP 關聯、hev 設定帳密）；模擬器：hev debug 日誌確認帳密驗證通過，shell 與 Chrome 按 IP 經內建出口連到 Akamai 並回應 | 本機模擬器的系統 DNS 本身不可用（關閉 VPN 時 `ping example.org` 也是 unknown host），按域名的直連只做了 JVM 測試；未量測真機吞吐 / 耗電 |
+| K-099 | 內建出口在實體網路上解析與連線（`Network.getAllByName` / `bindSocket`，結果緩存 2 秒），IPv4 優先，多個位址時單一位址 3 秒逾時 | `UnderlyingNetwork`、`DirectSocksServer` | 構建 + 模擬器 | — |
+| K-100 | 逐連線模式記錄已允許的連線：過濾層在轉發新連線時通知回報器，判決管線只寫記錄（有允許規則時記規則 id 並計命中） | `ForwardingPacketFilter.onForwarded`、`BlockedFlowReporter.reportAllowed`、`VerdictPipeline.recordAllowed` | 模擬器：Chrome 經內建出口的連線寫入 connection_log（Allow / Rule / Chrome 規則 id） | 同一目標 5 秒內去重 |
+| K-101 | 設定頁「逐連線模式」：出口可選「直接連出 / 經 SOCKS5 代理」；直連時隱藏代理相關設定。升級前已開啟轉發的使用者保留外部代理 | `AppPreferences.forwardingUpstream`、`SettingsScreen`、`UiStrings`（三語） | 構建 | 界面未截圖檢查，請用戶目視確認 |
+| K-102 | 診斷：`files/hev-debug` 存在時 hev 以 debug 級別記錄；JVM 測試啟用 `isReturnDefaultValues` | `VpnTunnelController.startForwarding`、`build.gradle.kts` | 模擬器 | — |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
 |---|---|---|
-| K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 部分完成（應用列表的 SIM 查詢已提升），其餘待做 |
+| K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 部分完成（應用列表的 SIM 查詢已提升），其餘待做；新增：代理應用選擇器 `installedApps()` 仍在主執行緒載入 |
 | K-043b | 應用鎖在修改規則 / 模式前的即時驗證 | 待做（第一版只鎖啟動與背景超過 1 分鐘） |
 | K-045b | Baseline Profiles、arm64-only、CI 大小 / 啟動基線 | 待做 |
 | K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 待用戶提供 keystore |
 | K-048b | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | 待真機 |
-| K-051 | 轉發模式 + 上游代理：v0.9.0 已接入按應用判決、mapdns 域名、健康檢查（K-078～K-085），v0.9.1 按域名 / 端口規則逐連線生效（K-086）；待做：真機 FlClash 吞吐 / 耗電、IPv6 映射、應用自帶 DNS 重導、firestack / gVisor 評估 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
+| K-051 | 轉發模式 + 上游代理：v0.9.0 接入按應用判決、mapdns、健康檢查；v0.9.1 條件規則逐連線生效；v0.9.2 三語版本說明；v0.9.3 失敗自動重建 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
+| K-051a | mapdns 只支援 IPv4；IPv6 AAAA 回空，IPv6 擴展頭也未解析 | 待做 |
+| K-051b | 安全加固：查不到 UID 時除「全部阻止」外放行；ICMP / 非 TCP-UDP / 解析失敗封包直接轉發 | 待做 |
+| K-051c | 應用自帶 DNS / DoH 不經 mapdns，域名規則與記錄拿不到域名；映射位址也無法比對遠端位址條件 | 待做 |
+| K-051d | 上游 SOCKS5 不支援帳號密碼認證（只有無認證握手） | 待做 |
+| K-051e | 規則變更不會切斷既有 TCP 連線（設計取捨） | 待確認是否需要主動 RST |
+| K-051f | 真機 FlClash 吞吐 / 耗電 / UDP / QUIC / 長時間穩定性；firestack / gVisor 評估 | 待真機 |
 
 ## 3. 維護規則
 

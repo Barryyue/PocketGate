@@ -42,6 +42,8 @@ class BlockedFlowReporter(
     private val fastFail: Boolean = true,
     /** 轉發模式下由 hev 映射 DNS 還原的域名。 */
     private val extraHostname: (InetAddress) -> String? = { null },
+    /** 轉發模式下已放行的連線：只寫入記錄。 */
+    private val onAllowed: suspend (FlowInfo) -> Unit = {},
 ) : PacketSink {
     private val channel = Channel<Queued>(capacity = 512)
     private val recent = HashMap<DedupKey, Long>()
@@ -96,6 +98,14 @@ class BlockedFlowReporter(
         if (channel.trySend(Queued(info, uid, resolved = uid != null)).isFailure) counters.queueFull.incrementAndGet()
     }
 
+    /** 轉發模式：已放行的新連線，只記錄。佇列滿時直接丟棄（記錄不能拖慢轉發）。 */
+    fun reportAllowed(info: PacketInfo, uid: Int?) {
+        if (uid == null || VpnRoutingPlanner.isSystemUid(uid)) return
+        if (channel.trySend(Queued(info, uid, resolved = true, allowed = true)).isFailure) {
+            counters.queueFull.incrementAndGet()
+        }
+    }
+
     private suspend fun process(queued: Queued) {
         val packet = queued.info
         val uid = if (queued.resolved) {
@@ -113,7 +123,7 @@ class BlockedFlowReporter(
         }
 
         val now = Time.now()
-        val key = DedupKey(uid, packet.protocol, packet.destination.address, packet.destination.port)
+        val key = DedupKey(uid, packet.protocol, packet.destination.address, packet.destination.port, queued.allowed)
         val last = recent[key]
         if (last != null && now - last < 5_000) {
             counters.deduplicated.incrementAndGet()
@@ -157,10 +167,14 @@ class BlockedFlowReporter(
             engineHostname = fakeDns.tryGetName(packet.destination.address)
                 ?: extraHostname(packet.destination.address),
             timestamp = now,
-            origin = FlowOrigin.BlockedEvent,
+            origin = if (queued.allowed) FlowOrigin.Pending else FlowOrigin.BlockedEvent,
             tcpFlags = packet.tcpFlags,
             tcpSequence = packet.tcpSequence,
         )
+        if (queued.allowed) {
+            onAllowed(flow)
+            return
+        }
         onFlow(flow)
         counters.reported.incrementAndGet()
         com.networkcontrol.android.kotlin.platform.AppLog.d(
@@ -232,10 +246,11 @@ class BlockedFlowReporter(
         val protocol: L4Protocol,
         val address: InetAddress,
         val port: Int,
+        val allowed: Boolean,
     )
 
     private data class FastFailKey(val uid: Int, val address: InetAddress)
 
     /** [resolved] 為 true 時 [uid] 已經查過（可能為 null，代表查不到擁有者）。 */
-    private class Queued(val info: PacketInfo, val uid: Int?, val resolved: Boolean)
+    private class Queued(val info: PacketInfo, val uid: Int?, val resolved: Boolean, val allowed: Boolean = false)
 }

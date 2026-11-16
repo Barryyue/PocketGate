@@ -24,8 +24,8 @@ android {
         applicationId = "com.networkcontrol.android.kotlin"
         minSdk = 29
         targetSdk = 36
-        versionCode = 26
-        versionName = "0.9.2-m4p3"
+        versionCode = 28
+        versionName = "0.9.4-m4p5"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -70,6 +70,8 @@ android {
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
+        // 讓 JVM 測試中的 android.util.Log 等呼叫回傳預設值，而不是拋出「not mocked」。
+        unitTests.isReturnDefaultValues = true
     }
 }
 

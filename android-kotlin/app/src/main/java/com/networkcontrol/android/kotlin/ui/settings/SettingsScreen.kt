@@ -128,6 +128,8 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
     var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
     var forwardingEnabled by remember { mutableStateOf(backend.forwardingEnabled()) }
+    var forwardingUpstream by remember { mutableStateOf(backend.forwardingUpstream()) }
+    val viaProxy = forwardingUpstream == com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
     var socks5Host by remember { mutableStateOf(backend.socks5Host()) }
     var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
     var socks5Udp by remember { mutableStateOf(backend.socks5Udp()) }
@@ -768,6 +770,33 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                             MaterialTheme.colorScheme.error
                         },
                     )
+                    Text(s[S.ForwardingUpstream], style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = !viaProxy,
+                            onClick = {
+                                forwardingUpstream = com.networkcontrol.android.kotlin.ForwardingUpstream.DIRECT
+                                backend.setForwardingUpstream(forwardingUpstream)
+                            },
+                            label = { Text(s[S.UpstreamDirect]) },
+                        )
+                        FilterChip(
+                            selected = viaProxy,
+                            onClick = {
+                                forwardingUpstream = com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
+                                backend.setForwardingUpstream(forwardingUpstream)
+                            },
+                            label = { Text(s[S.UpstreamSocks5]) },
+                        )
+                    }
+                    if (!viaProxy) {
+                        Text(
+                            s[S.UpstreamDirectHint],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (viaProxy) {
                     Text(
                         s[S.ForwardingGuide],
                         style = MaterialTheme.typography.bodySmall,
@@ -798,6 +827,7 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                             },
                         ) { Text(s[S.Save]) }
                     }
+                    }
                     SwitchRow(
                         title = s[S.Socks5Udp],
                         subtitle = s[S.Socks5UdpHint],
@@ -807,6 +837,7 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                             backend.setSocks5Udp(it)
                         },
                     )
+                    if (viaProxy) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(s[S.ProxyApp], style = MaterialTheme.typography.bodyMedium)
@@ -825,6 +856,7 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(s[S.DirectApps], style = MaterialTheme.typography.bodyMedium)
@@ -843,6 +875,7 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (viaProxy) {
                     OutlinedButton(
                         onClick = {
                             proxyTesting = true
@@ -870,6 +903,7 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    }
                     Text(
                         s[S.ForwardingAbiHint],
                         style = MaterialTheme.typography.bodySmall,
