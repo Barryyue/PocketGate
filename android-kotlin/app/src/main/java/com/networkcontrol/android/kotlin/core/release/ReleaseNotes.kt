@@ -40,6 +40,56 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.5",
+            date = "2026-11-16",
+            features = listOf(
+                t(
+                    "Blocklists: subscribe to community lists (anti-AD, HaGeZi, OISD, AdGuard DNS filter, StevenBlack) to block ads, trackers and malicious domains for every app. Lists are downloaded straight from their authors with mirror fallback, and matching happens on this device.",
+                    "拦截列表：订阅社区名单（anti-AD、HaGeZi、OISD、AdGuard DNS filter、StevenBlack），为所有应用拦截广告、追踪和恶意域名。名单直接从作者处下载并自动切换镜像，匹配在本机完成。",
+                    "攔截列表：訂閱社群名單（anti-AD、HaGeZi、OISD、AdGuard DNS filter、StevenBlack），為所有應用程式攔截廣告、追蹤和惡意網域。名單直接從作者處下載並自動切換鏡像，比對在本機完成。",
+                ),
+                t(
+                    "Add your own subscription address or import a list file; hosts, plain domains and AdBlock / AdGuard DNS syntax are supported.",
+                    "可以添加自己的订阅地址或从文件导入；支持 hosts、纯域名和 AdBlock / AdGuard DNS 语法。",
+                    "可以新增自己的訂閱位址或從檔案匯入；支援 hosts、純網域和 AdBlock / AdGuard DNS 語法。",
+                ),
+                t(
+                    "Records can show allowed connections too, can be filtered by blocklist, and a domain blocked by mistake can be allowed for all apps in one tap.",
+                    "记录可以查看已允许的连接、按拦截列表筛选，误拦的域名可以一键为所有应用放行。",
+                    "紀錄可以查看已允許的連線、按攔截列表篩選，誤攔的網域可以一鍵為所有應用程式放行。",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Lists update automatically (weekly by default, Wi-Fi only by default) using conditional requests, so unchanged lists are not downloaded again; a failed update keeps the previous list.",
+                    "名单自动更新（默认每周、仅 Wi-Fi），使用条件请求，没有变化就不重新下载；更新失败时继续使用上一份。",
+                    "名單自動更新（預設每週、僅 Wi-Fi），使用條件請求，沒有變化就不重新下載；更新失敗時繼續使用上一份。",
+                ),
+                t(
+                    "Lists are stored as compact hashes (8 bytes per domain), so large lists load quickly and use little memory.",
+                    "名单以紧凑的哈希形式保存（每个域名 8 字节），大名单也能快速加载、占用内存少。",
+                    "名單以緊湊的雜湊形式儲存（每個網域 8 位元組），大名單也能快速載入、佔用記憶體少。",
+                ),
+                t(
+                    "Blocklisted domains are rejected without prompting, and your own allow rules always take priority.",
+                    "命中名单的域名直接拒绝、不弹询问；你自己的允许规则永远优先。",
+                    "命中名單的網域直接拒絕、不跳出詢問；你自己的允許規則永遠優先。",
+                ),
+                t(
+                    "Fixed a possible crash when the built-in exit stops while connections are closing.",
+                    "修正内置出口停止时、连接同时关闭可能导致的崩溃。",
+                    "修正內建出口停止時、連線同時關閉可能導致的當機。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "Blocklists require per-connection mode; in blackhole mode allowed apps bypass the VPN and cannot be checked.",
+                    "拦截列表需要逐连接模式；黑洞模式下被允许的应用不经过 VPN，无法检查。",
+                    "攔截列表需要逐連線模式；黑洞模式下被允許的應用程式不經過 VPN，無法檢查。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.4",
             date = "2026-11-16",
             features = listOf(

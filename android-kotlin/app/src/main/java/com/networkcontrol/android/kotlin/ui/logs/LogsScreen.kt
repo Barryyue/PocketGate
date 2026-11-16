@@ -53,7 +53,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-private enum class ReasonFilter { All, Rule, Mode, Prompt, Dnd }
+private enum class ReasonFilter { All, Rule, Mode, Prompt, Dnd, Blocklist }
 
 @Composable
 fun LogsScreen(backend: AppBackend) {
@@ -62,6 +62,8 @@ fun LogsScreen(backend: AppBackend) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(ReasonFilter.All) }
+    // 逐連線模式下也會記錄已允許的連線；預設顯示已攔截的。
+    var showAllowed by remember { mutableStateOf(false) }
     var entries by remember { mutableStateOf<List<LogEntry>>(emptyList()) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<LogEntry?>(null) }
@@ -91,9 +93,14 @@ fun LogsScreen(backend: AppBackend) {
         }
     }
 
-    LaunchedEffect(refreshKey) {
+    LaunchedEffect(refreshKey, showAllowed) {
         entries = withContext(Dispatchers.IO) {
-            runCatching { backend.getLogs(limit = 500) }.getOrDefault(emptyList())
+            val action = if (showAllowed) {
+                com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow
+            } else {
+                com.networkcontrol.android.kotlin.core.model.VerdictAction.Deny
+            }
+            runCatching { backend.getLogs(limit = 500, action = action) }.getOrDefault(emptyList())
         }
     }
 
@@ -112,6 +119,7 @@ fun LogsScreen(backend: AppBackend) {
                 ReasonFilter.Mode -> entry.verdict.reason == VerdictReason.Mode
                 ReasonFilter.Prompt -> entry.verdict.reason == VerdictReason.Prompt
                 ReasonFilter.Dnd -> entry.verdict.reason == VerdictReason.DoNotDisturb
+                ReasonFilter.Blocklist -> entry.verdict.reason == VerdictReason.Blocklist
             }
         }
         .toList()
@@ -132,6 +140,12 @@ fun LogsScreen(backend: AppBackend) {
             )
         }
         item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(!showAllowed, { showAllowed = false }, { Text(s[S.LogsShowBlocked]) })
+                FilterChip(showAllowed, { showAllowed = true }, { Text(s[S.LogsShowAllowed]) })
+            }
+        }
+        item {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -143,6 +157,7 @@ fun LogsScreen(backend: AppBackend) {
                 FilterChip(filter == ReasonFilter.Mode, { filter = ReasonFilter.Mode }, { Text(s[S.ReasonMode]) })
                 FilterChip(filter == ReasonFilter.Prompt, { filter = ReasonFilter.Prompt }, { Text(s[S.ReasonPrompt]) })
                 FilterChip(filter == ReasonFilter.Dnd, { filter = ReasonFilter.Dnd }, { Text(s[S.ReasonDnd]) })
+                FilterChip(filter == ReasonFilter.Blocklist, { filter = ReasonFilter.Blocklist }, { Text(s[S.ReasonBlocklist]) })
             }
         }
         if (filtered.isEmpty()) {
@@ -171,7 +186,19 @@ fun LogsScreen(backend: AppBackend) {
     }
 
     selected?.let { entry ->
-        LogDetailDialog(entry = entry, onDismiss = { selected = null })
+        LogDetailDialog(
+            entry = entry,
+            listName = { id -> backend.blocklistName(id) },
+            onAllowDomain = { host ->
+                scope.launch {
+                    runCatching { backend.allowDomain(host) }
+                        .onSuccess { Toast.makeText(context, s.format(S.AllowDomainDone, host), Toast.LENGTH_SHORT).show() }
+                        .onFailure { Toast.makeText(context, it.message.orEmpty(), Toast.LENGTH_SHORT).show() }
+                }
+                selected = null
+            },
+            onDismiss = { selected = null },
+        )
     }
 
     if (showExportDialog) {
@@ -245,10 +272,11 @@ private fun LogRow(entry: LogEntry, onClick: () -> Unit) {
             Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
                 Text("×${entry.count}", style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(4.dp))
+                val allowed = entry.verdict.action == com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow
                 Text(
-                    s[S.Deny],
+                    if (allowed) s[S.Allow] else s[S.Deny],
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
+                    color = if (allowed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -256,7 +284,12 @@ private fun LogRow(entry: LogEntry, onClick: () -> Unit) {
 }
 
 @Composable
-private fun LogDetailDialog(entry: LogEntry, onDismiss: () -> Unit) {
+private fun LogDetailDialog(
+    entry: LogEntry,
+    listName: (String) -> String?,
+    onAllowDomain: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val s = rememberUiStrings()
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -270,11 +303,24 @@ private fun LogDetailDialog(entry: LogEntry, onDismiss: () -> Unit) {
                 DetailRow(s[S.Reason], reasonLabel(s, entry.verdict.reason))
                 DetailRow(s[S.Count], entry.count.toString())
                 entry.local?.let { DetailRow("Local", "${it.address.hostAddress}:${it.port}") }
-                entry.verdict.ruleId?.let { DetailRow(s[S.Rule], it) }
+                entry.verdict.ruleId?.let { id ->
+                    if (id.startsWith("blocklist:")) {
+                        val listId = id.removePrefix("blocklist:")
+                        DetailRow(s[S.ReasonBlocklist], listName(listId) ?: listId)
+                    } else {
+                        DetailRow(s[S.Rule], id)
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(s[S.Close]) }
+        },
+        dismissButton = {
+            val host = entry.hostname
+            if (entry.verdict.reason == VerdictReason.Blocklist && host != null) {
+                TextButton(onClick = { onAllowDomain(host) }) { Text(s[S.AllowDomain]) }
+            }
         },
     )
 }

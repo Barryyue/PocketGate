@@ -41,6 +41,10 @@ class VpnEngine(
     private val preferences: com.networkcontrol.android.kotlin.AppPreferences,
     private val notifier: VpnForegroundNotifier,
     private val selfPackage: String,
+    /** 目前生效的攔截列表（不可變快照）。 */
+    private val blocklist: () -> com.networkcontrol.android.kotlin.engine.blocklist.BlocklistMatcher = {
+        com.networkcontrol.android.kotlin.engine.blocklist.BlocklistMatcher.Empty
+    },
 ) {
     val counters = VpnEngineCounters()
     val fakeDns = FakeDnsPool()
@@ -73,6 +77,7 @@ class VpnEngine(
         onFlow = { flow: FlowInfo -> pipeline.decide(flow) },
         extraHostname = { address -> forwardingFilter.hostnameFor(address) },
         onAllowed = { flow: FlowInfo -> pipeline.recordAllowed(flow) },
+        onBlocklisted = { flow: FlowInfo -> pipeline.recordBlocklisted(flow, blocklist().match(flow.engineHostname)) },
     )
 
     /** 轉發模式的逐連線過濾層：路由計畫決定放行（轉發）、阻止或詢問。 */
@@ -82,6 +87,7 @@ class VpnEngine(
         onBlocked = { info, uid, _ -> reporter.report(info, uid) },
         blockUdp = { !preferences.socks5Udp },
         onForwarded = { info, uid -> reporter.reportAllowed(info, uid) },
+        onBlocklisted = { info, uid -> reporter.reportBlocklisted(info, uid) },
     )
 
     /** 內建直連出口；只在逐連線模式且選擇直連時執行。 */
@@ -112,12 +118,38 @@ class VpnEngine(
     private var lastDetachRebuild = 0L
     private var lastFailureRebuild = 0L
 
-    /** 在虛擬網卡讀取執行緒上呼叫：只有存在帶連線條件的規則時才建立 FlowInfo 比對。 */
+    /** 在虛擬網卡讀取執行緒上呼叫：只有存在條件規則或攔截列表時才建立 FlowInfo 比對。 */
     private fun decideForwarding(uid: Int?, info: PacketInfo, hostname: String?): ForwardingDecision {
         val plan = _plan.value
         val ruleSet = rules.ruleSet.value
-        if (!ruleSet.hasFlowConditions) return ForwardingPolicy.decide(plan, uid)
-        return ForwardingPolicy.decide(plan, uid) {
+        val lists = blocklist()
+        val useLists = hostname != null && !lists.isEmpty
+        if (!ruleSet.hasFlowConditions && !useLists) return ForwardingPolicy.decide(plan, uid)
+        val context by lazy { flowContext(plan, uid, info, hostname) }
+        return ForwardingPolicy.decide(
+            plan,
+            uid,
+            blocklisted = {
+                useLists && lists.match(hostname) != null &&
+                    !ruleSet.allowsDomain(context.flow, context.flow.app, context.domains, context.zone, network.current)
+            },
+        ) {
+            if (!ruleSet.hasFlowConditions) {
+                null
+            } else {
+                ForwardingPolicy.conditionalAction(ruleSet, context.flow, context.domains, context.zone, network.current)
+            }
+        }
+    }
+
+    private class FlowContext(
+        val flow: FlowInfo,
+        val domains: com.networkcontrol.android.kotlin.core.model.DomainCandidates,
+        val zone: com.networkcontrol.android.kotlin.core.model.NetworkZone,
+    )
+
+    private fun flowContext(plan: VpnRoutingPlan, uid: Int?, info: PacketInfo, hostname: String?): FlowContext {
+        run {
             val app = uid?.let { identityFor(plan, it) }
             val flow = FlowInfo(
                 flowId = 0,
@@ -140,7 +172,7 @@ class VpnEngine(
             } else {
                 com.networkcontrol.android.kotlin.core.matching.NetworkZones.classify(info.destination.address)
             }
-            ForwardingPolicy.conditionalAction(ruleSet, flow, domains, zone, network.current)
+            return FlowContext(flow, domains, zone)
         }
     }
 

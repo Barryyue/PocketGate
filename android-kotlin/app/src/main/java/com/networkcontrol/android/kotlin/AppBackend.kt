@@ -213,9 +213,10 @@ class AppBackend(val container: AppContainer) {
         runCatching { container.rules.remove(listOf(id), RuleEndReason.Deleted) }
     }
 
-    suspend fun getLogs(limit: Int = 300, keyword: String? = null): List<LogEntry> =
+    /** @param action 只查詢指定判決；null 表示全部（逐連線模式下也會記錄已允許的連線）。 */
+    suspend fun getLogs(limit: Int = 300, keyword: String? = null, action: VerdictAction? = VerdictAction.Deny): List<LogEntry> =
         container.activityStore.query(
-            LogQuery(action = VerdictAction.Deny, keyword = keyword, limit = limit),
+            LogQuery(action = action, keyword = keyword, limit = limit),
         )
 
     /** 匯出用：分頁讀取所有記錄，避開單次查詢上限。 */
@@ -660,6 +661,65 @@ class AppBackend(val container: AppContainer) {
         container.preferences.forwardingEnabled = enabled
         container.vpnEngine.requestReplan()
     }
+
+    // ---- 攔截列表 ----
+
+    val blocklistState = container.blocklists.state
+    val blocklistMatcher = container.blocklists.matcher
+
+    fun setBlocklistsEnabled(enabled: Boolean) {
+        container.scope.launch { container.blocklists.setEnabled(enabled) }
+    }
+
+    fun setBlocklistSourceEnabled(id: String, enabled: Boolean) {
+        container.scope.launch { container.blocklists.setSourceEnabled(id, enabled) }
+    }
+
+    fun setBlocklistWifiOnly(value: Boolean) {
+        container.scope.launch { container.blocklists.setWifiOnly(value) }
+    }
+
+    fun setBlocklistIntervalDays(days: Int) {
+        container.scope.launch { container.blocklists.setIntervalDays(days) }
+    }
+
+    suspend fun updateBlocklistsNow() = container.blocklists.updateNow()
+
+    suspend fun addBlocklist(name: String, url: String): String? = container.blocklists.addCustom(name, url)
+
+    suspend fun removeBlocklist(id: String) = container.blocklists.remove(id)
+
+    suspend fun importBlocklist(uri: android.net.Uri, name: String): Int =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val input = container.appContext.contentResolver.openInputStream(uri)
+                ?: throw java.io.IOException("cannot open file")
+            input.use { container.blocklists.import(name, it) }
+        }
+
+    /** 從記錄一鍵放行被名單誤攔的域名：建立「所有應用、允許、該域名」的規則（屬於目前的配置文件）。 */
+    suspend fun allowDomain(hostname: String) {
+        val now = com.networkcontrol.android.kotlin.core.Time.now()
+        container.rules.add(
+            com.networkcontrol.android.kotlin.core.model.Rule(
+                id = java.util.UUID.randomUUID().toString(),
+                profileId = container.profiles.active.id,
+                app = null,
+                conditions = com.networkcontrol.android.kotlin.core.model.RuleConditions(
+                    direction = com.networkcontrol.android.kotlin.core.model.Direction.Outbound,
+                    remote = com.networkcontrol.android.kotlin.core.model.RemoteTarget.Domain(hostname.lowercase()),
+                ),
+                action = com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow,
+                lifetime = com.networkcontrol.android.kotlin.core.model.RuleLifetime.Permanent,
+                source = com.networkcontrol.android.kotlin.core.model.RuleSource.User,
+                note = "blocklist exception",
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
+    }
+
+    fun blocklistName(id: String): String? =
+        container.blocklists.state.value.sources.firstOrNull { it.id == id }?.name
 
     fun forwardingUpstream(): String = container.preferences.forwardingUpstream
 

@@ -90,7 +90,10 @@ enum class VerdictReason(val code: Int) {
     NoUserSession(5),
     DoNotDisturb(6),
     FailSafe(7),
-    Cancelled(8);
+    Cancelled(8),
+
+    /** 命中攔截列表（`Verdict.ruleId` 為 `blocklist:<名單 id>`）。 */
+    Blocklist(9);
 
     companion object {
         fun fromCode(code: Int): VerdictReason = entries.firstOrNull { it.code == code } ?: FailSafe

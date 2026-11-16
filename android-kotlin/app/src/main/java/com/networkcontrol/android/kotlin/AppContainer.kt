@@ -98,6 +98,14 @@ class AppContainer(context: Context) {
         isSyntheticAddress = { address -> vpnEngine.forwardingFilter.hostnameFor(address) != null },
     )
 
+    private val underlyingNetwork = com.networkcontrol.android.kotlin.engine.vpn.UnderlyingNetwork(appContext)
+    val blocklists = com.networkcontrol.android.kotlin.engine.blocklist.BlocklistManager(
+        directory = java.io.File(appContext.filesDir, "blocklists"),
+        scope = scope,
+        open = { url -> underlyingNetwork.openConnection(url) as java.net.HttpURLConnection },
+        isUnmetered = { underlyingNetwork.isUnmetered() },
+    )
+
     val vpnEngine: VpnEngine = VpnEngine(
         context = appContext,
         scope = scope,
@@ -117,6 +125,7 @@ class AppContainer(context: Context) {
         preferences = preferences,
         notifier = vpnNotifier,
         selfPackage = appContext.packageName,
+        blocklist = { blocklists.matcher.value },
     )
 
     val trafficCollector = TrafficCollector(appContext, appCatalog, appStore, trafficStore)
@@ -171,6 +180,9 @@ class AppContainer(context: Context) {
                 .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "profiles init failed", it) }
             runCatching { rules.initialize() }
                 .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "rules init failed", it) }
+            runCatching { blocklists.initialize() }
+                .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "blocklist init failed", it) }
+            blocklists.onChanged = { vpnEngine.requestReplan() }
             runCatching { migrateLegacySharedAppRules() }
                 .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.e("core", "rule migration failed", it) }
             runCatching { configBackup.backupIfNeeded() }
@@ -183,6 +195,7 @@ class AppContainer(context: Context) {
                     protection.setEnabled(false)
                     com.networkcontrol.android.kotlin.platform.AppLog.e("core", "VPN engine start failed; protection disabled", it)
                 }
+            runCatching { blocklists.start() }
             runCatching { promptRouter.start() }
             runCatching { quietNotifier.start() }
             runCatching { speedMonitor.start(scope, screenState.interactive) }

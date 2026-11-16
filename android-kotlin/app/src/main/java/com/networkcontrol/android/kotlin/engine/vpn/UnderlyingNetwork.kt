@@ -46,6 +46,17 @@ class UnderlyingNetwork(context: Context) {
     fun resolve(host: String): Array<InetAddress> =
         current()?.getAllByName(host) ?: InetAddress.getAllByName(host)
 
+    /** 在實體網路上開啟連線（本應用被排除在 VPN 之外，但明確綁定可以避開 VPN 的 DNS 設定）。 */
+    fun openConnection(url: java.net.URL): java.net.URLConnection =
+        current()?.openConnection(url) ?: url.openConnection()
+
+    /** 目前的實體網路是否不計量（一般是 Wi-Fi / 有線）。查不到時視為計量，避免意外耗用行動數據。 */
+    fun isUnmetered(): Boolean {
+        val network = current() ?: return false
+        val caps = runCatching { connectivity?.getNetworkCapabilities(network) }.getOrNull() ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    }
+
     fun bind(socket: Socket) {
         current()?.bindSocket(socket)
     }

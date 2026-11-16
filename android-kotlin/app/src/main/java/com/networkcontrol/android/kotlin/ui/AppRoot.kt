@@ -62,6 +62,7 @@ fun AppRoot(container: AppContainer) {
     var showAppListPermission by remember { mutableStateOf(false) }
     var selected by rememberSaveable { mutableIntStateOf(0) }
     var islandSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    var blocklistsOpen by rememberSaveable { mutableStateOf(false) }
     val appListPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
@@ -95,7 +96,17 @@ fun AppRoot(container: AppContainer) {
 
     val backend = container.backend
     Box(Modifier.fillMaxSize()) {
-        if (islandSettingsOpen) {
+        if (blocklistsOpen) {
+            Box(
+                Modifier.fillMaxSize().widthIn(max = 760.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                com.networkcontrol.android.kotlin.ui.settings.BlocklistSettingsScreen(
+                    backend = backend,
+                    onBack = { blocklistsOpen = false },
+                )
+            }
+        } else if (islandSettingsOpen) {
             Box(
                 Modifier.fillMaxSize().widthIn(max = 760.dp),
                 contentAlignment = Alignment.TopCenter,
@@ -133,6 +144,7 @@ fun AppRoot(container: AppContainer) {
                             else -> SettingsScreen(
                                 backend = backend,
                                 onOpenIslandSettings = { islandSettingsOpen = true },
+                                onOpenBlocklists = { blocklistsOpen = true },
                             )
                         }
                     }
