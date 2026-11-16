@@ -718,6 +718,20 @@ class AppBackend(val container: AppContainer) {
         )
     }
 
+    fun setTrackerDatabaseEnabled(enabled: Boolean) {
+        container.scope.launch {
+            container.blocklists.setSourceEnabled(com.networkcontrol.android.kotlin.engine.blocklist.BlocklistCatalog.TRACKER_SOURCE_ID, enabled)
+        }
+    }
+
+    fun setTrackerCategoryBlocked(category: String, blocked: Boolean) {
+        container.scope.launch { container.blocklists.setTrackerCategoryBlocked(category, blocked) }
+    }
+
+    /** 記錄頁顯示用：域名的追蹤器歸屬。 */
+    fun trackerOf(hostname: String?): com.networkcontrol.android.kotlin.engine.blocklist.TrackerInfo? =
+        container.blocklists.matcher.value.tracker(hostname)
+
     fun blocklistName(id: String): String? =
         container.blocklists.state.value.sources.firstOrNull { it.id == id }?.name
 

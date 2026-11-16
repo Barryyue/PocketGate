@@ -998,7 +998,7 @@ fun SettingsScreen(
                                 s.format(
                                     S.BlocklistsActive,
                                     java.text.NumberFormat.getIntegerInstance().format(blocklistMatcher.totalEntries),
-                                    blocklistState.sources.count { it.enabled && it.entries > 0 },
+                                    blocklistState.lists.count { it.enabled && it.entries > 0 },
                                 )
                             } else {
                                 s[S.Off]

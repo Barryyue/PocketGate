@@ -103,7 +103,7 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     }
                     if (state.enabled) {
                         Text(
-                            s.format(S.BlocklistsActive, numbers.format(matcher.totalEntries), state.sources.count { it.enabled && it.entries > 0 }),
+                            s.format(S.BlocklistsActive, numbers.format(matcher.totalEntries), state.lists.count { it.enabled && it.entries > 0 }),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -123,11 +123,24 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                 }
             }
 
+            item {
+                TrackerCard(
+                    source = state.trackerSource,
+                    blocklistsEnabled = state.enabled,
+                    blocked = state.blockedTrackerCategories,
+                    database = matcher.trackers,
+                    s = s,
+                    numbers = numbers,
+                    onToggle = { backend.setTrackerDatabaseEnabled(it) },
+                    onCategory = { category, on -> backend.setTrackerCategoryBlocked(category, on) },
+                )
+            }
+
             if (state.enabled) {
                 item {
                     Text(s[S.BlocklistsSources], style = MaterialTheme.typography.titleMedium)
                 }
-                items(state.sources, key = { it.id }) { source ->
+                items(state.lists, key = { it.id }) { source ->
                     SourceCard(
                         source = source,
                         s = s,
@@ -256,6 +269,79 @@ private fun SourceCard(
         if (!source.builtin) {
             TextButton(onClick = onRemove) { Text(s[S.BlocklistsRemove]) }
         }
+    }
+}
+
+@Composable
+private fun TrackerCard(
+    source: BlocklistSourceState?,
+    blocklistsEnabled: Boolean,
+    blocked: Set<String>,
+    database: com.networkcontrol.android.kotlin.engine.blocklist.TrackerDatabase?,
+    s: UiStrings,
+    numbers: NumberFormat,
+    onToggle: (Boolean) -> Unit,
+    onCategory: (String, Boolean) -> Unit,
+) {
+    val enabled = source?.enabled == true
+    SectionCard(s[S.Trackers]) {
+        Text(
+            BlocklistCatalog.trackers.description[s.noteLanguage],
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(s[S.TrackersEnable], style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Switch(checked = enabled, onCheckedChange = onToggle)
+        }
+        if (enabled && source != null) {
+            val status = when {
+                database != null -> s.format(
+                    S.TrackersStatus,
+                    numbers.format(database.size),
+                    database.companies,
+                    formatDateTime(source.updatedAt),
+                )
+                source.lastError != null -> s.format(S.BlocklistsFailed, source.lastError)
+                else -> s[S.BlocklistsNotDownloaded]
+            }
+            Text(
+                status,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (database == null && source.lastError != null) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+            )
+            Text(s[S.TrackersBlockCategories], style = MaterialTheme.typography.bodyMedium)
+            if (!blocklistsEnabled) {
+                Text(
+                    s[S.TrackersNeedBlocklists],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            com.networkcontrol.android.kotlin.engine.blocklist.TrackerCategory.blockable.forEach { category ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        com.networkcontrol.android.kotlin.ui.common.trackerCategoryLabel(s, category),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = category in blocked,
+                        enabled = blocklistsEnabled,
+                        onCheckedChange = { onCategory(category, it) },
+                    )
+                }
+            }
+        }
+        Text(
+            s[S.TrackersAttribution],
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

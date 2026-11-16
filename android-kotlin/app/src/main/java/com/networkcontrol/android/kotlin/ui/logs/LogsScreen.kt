@@ -171,7 +171,7 @@ fun LogsScreen(backend: AppBackend) {
             }
         }
         items(filtered, key = { it.id }) { entry ->
-            LogRow(entry, onClick = { selected = entry })
+            LogRow(entry, tracker = backend.trackerOf(entry.hostname), onClick = { selected = entry })
         }
         item {
             OutlinedButton(onClick = { showExportDialog = true }, modifier = Modifier.fillMaxWidth()) {
@@ -188,6 +188,7 @@ fun LogsScreen(backend: AppBackend) {
     selected?.let { entry ->
         LogDetailDialog(
             entry = entry,
+            tracker = backend.trackerOf(entry.hostname),
             listName = { id -> backend.blocklistName(id) },
             onAllowDomain = { host ->
                 scope.launch {
@@ -244,7 +245,11 @@ private fun exportFileName(): String {
 }
 
 @Composable
-private fun LogRow(entry: LogEntry, onClick: () -> Unit) {
+private fun LogRow(
+    entry: LogEntry,
+    tracker: com.networkcontrol.android.kotlin.engine.blocklist.TrackerInfo? = null,
+    onClick: () -> Unit,
+) {
     val s = rememberUiStrings()
     val target = entry.hostname ?: "${entry.remoteIp}:${entry.remotePort}"
     Card(
@@ -268,6 +273,13 @@ private fun LogRow(entry: LogEntry, onClick: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (tracker != null) {
+                    Text(
+                        "${s[S.TrackerLabel]}：${tracker.company} · ${com.networkcontrol.android.kotlin.ui.common.trackerCategoryLabel(s, tracker.category)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
             }
             Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
                 Text("×${entry.count}", style = MaterialTheme.typography.titleSmall)
@@ -286,6 +298,7 @@ private fun LogRow(entry: LogEntry, onClick: () -> Unit) {
 @Composable
 private fun LogDetailDialog(
     entry: LogEntry,
+    tracker: com.networkcontrol.android.kotlin.engine.blocklist.TrackerInfo?,
     listName: (String) -> String?,
     onAllowDomain: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -301,12 +314,20 @@ private fun LogDetailDialog(
                 DetailRow(s[S.Target], entry.hostname ?: "${entry.remoteIp}:${entry.remotePort}")
                 DetailRow(s[S.Protocol], protocolLabel(entry.protocol))
                 DetailRow(s[S.Reason], reasonLabel(s, entry.verdict.reason))
+                tracker?.let {
+                    DetailRow(s[S.TrackerLabel], "${it.company} · ${com.networkcontrol.android.kotlin.ui.common.trackerCategoryLabel(s, it.category)}")
+                }
                 DetailRow(s[S.Count], entry.count.toString())
                 entry.local?.let { DetailRow("Local", "${it.address.hostAddress}:${it.port}") }
                 entry.verdict.ruleId?.let { id ->
                     if (id.startsWith("blocklist:")) {
                         val listId = id.removePrefix("blocklist:")
-                        val name = if (listId == "dns-bypass") s[S.DnsBypassListName] else listName(listId) ?: listId
+                        val name = when {
+                            listId == "dns-bypass" -> s[S.DnsBypassListName]
+                            listId.startsWith("tracker:") ->
+                                "Disconnect · " + com.networkcontrol.android.kotlin.ui.common.trackerCategoryLabel(s, listId.removePrefix("tracker:"))
+                            else -> listName(listId) ?: listId
+                        }
                         DetailRow(s[S.ReasonBlocklist], name)
                     } else {
                         DetailRow(s[S.Rule], id)

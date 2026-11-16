@@ -15,6 +15,24 @@ data class BuiltinBlocklist(
 )
 
 object BlocklistCatalog {
+    /** 追蹤器資料庫的來源 id：用於識別（公司 / 類別）與整類攔截，不當作一般名單顯示。 */
+    const val TRACKER_SOURCE_ID = "disconnect"
+
+    val trackers = BuiltinBlocklist(
+        id = TRACKER_SOURCE_ID,
+        name = "Disconnect Tracking Protection",
+        description = NoteText(
+            "Tracker database used by Firefox: which company owns a domain and what it is used for.",
+            "Firefox 使用的追踪器数据库：域名属于哪家公司、用途是什么。",
+            "Firefox 使用的追蹤器資料庫：網域屬於哪家公司、用途是什麼。",
+        ),
+        urls = listOf(
+            "https://raw.githubusercontent.com/disconnectme/disconnect-tracking-protection/master/services.json",
+            "https://cdn.jsdelivr.net/gh/disconnectme/disconnect-tracking-protection@master/services.json",
+        ),
+        homepage = "https://github.com/disconnectme/disconnect-tracking-protection",
+    )
+
     val builtin: List<BuiltinBlocklist> = listOf(
         BuiltinBlocklist(
             id = "anti-ad",
@@ -113,5 +131,8 @@ object BlocklistCatalog {
         ),
     )
 
-    fun find(id: String): BuiltinBlocklist? = builtin.firstOrNull { it.id == id }
+    /** 名單與追蹤器資料庫都在這裡（追蹤器資料庫排在最後）。 */
+    val all: List<BuiltinBlocklist> get() = builtin + trackers
+
+    fun find(id: String): BuiltinBlocklist? = all.firstOrNull { it.id == id }
 }
