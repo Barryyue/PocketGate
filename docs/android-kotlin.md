@@ -1340,3 +1340,14 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - **Baseline Profile**：`:baselineprofile` 模組以 UiAutomator 走冷啟動與各分頁；`scripts/android-kotlin.ps1 baseline` 重新生成（只用模擬器）。模擬器上量不出冷啟動差異，見 K-124；真機效果未量測。
 - **CI**：`.github/workflows/android-kotlin.yml`（只在 `android-kotlin/` 變更時執行）：單元測試、Release、arm64 體積上限 5.5 MB、檢查 `baseline.prof`。尚未在 GitHub 上實際執行過。
 - 本章的 34a 為 v0.9.3 一節（原與 v0.9.1 一節同為 34）。
+
+## 42. v0.9.10-m4p11（2026-11-16）：實機效能診斷與 DNS 導回修正
+
+- **實機量測**（vivo V2509A、Android 17、純 IPv6 行動網路、逐連線模式 + FlClash 0.9.3）：
+  - 單條連線首位元組時間：經本應用 313～401 ms，直接走 FlClash 370～467 ms，沒有額外延遲。
+  - 20 條並發：經本應用 3 條失敗、其餘 0.34～9.4 秒；直接走 FlClash 全部 0.29～0.98 秒。
+  - 並發時沒有連線卡在 SYN-SENT，卡的是解析：每批 5～20% 的解析多等 3 秒（Android 解析器重送間隔），即回覆遺失。
+  - 另外觀察到 FlClash 曾停止接受連線（監聽埠 Recv-Q 129），推測被 vivo 後台管理凍結，需把 FlClash 設為允許後台運行。
+- **原因與修正**：見 K-125。
+- 量測方法：shell 的 `$(( ))` 是 32 位整數，`date +%s%N` 相減超過約 2.1 秒會溢出成負數；改用 `/proc/uptime`（10 ms 精度）。
+- 修正版已安裝到實機，複測待 adb 重新連線後進行。
