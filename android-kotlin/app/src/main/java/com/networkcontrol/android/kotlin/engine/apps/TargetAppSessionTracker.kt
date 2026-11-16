@@ -19,20 +19,27 @@ import kotlinx.coroutines.launch
 /**
  * 「允許一次」的應用會話追蹤：
  * - 規則建立後，目標應用第一次回到前台時標記 seen；
- * - 目標應用的所有 Activity 都離開前台（ACTIVITY_STOPPED）2 秒後移除規則；
- *   應用內切換頁面不算離開（見 [AppForegroundState]）；
+ * - 目標應用的所有 Activity 都離開前台（ACTIVITY_STOPPED）並在背景停留超過
+ *   [backgroundGraceMs]（使用者設定，預設 10 分鐘；0 時為 2 秒）後移除規則，
+ *   期間回到前台不會重新詢問；應用內切換頁面不算離開（見 [AppForegroundState]）；
  * - 從未回到前台、或離開時沒有收到 STOPPED 的規則 10 分鐘後回收，避免背景同步讓規則永久殘留。
  *
  * 這是 Android 上可穩定取得的近似：一般應用無法可靠讀取其他進程的死亡事件，
- * 因此以 UsageStats 的 Activity STOPPED 作為「關閉應用」信號。
+ * 從最近任務劃掉應用也只會記錄 ACTIVITY_STOPPED（系統把 DESTROYED 轉成 STOPPED），
+ * 因此以「離開前台且在背景停留一段時間」作為「關閉應用」信號。
+ *
+ * 使用者用 adb 授予 DUMP 權限後（見 [ProcessExitWatcher]），改用真正的進程結束記錄：
+ * 目標應用的主進程在規則建立後結束才移除規則，切到背景多久都不影響（與紅魔的「直到應用關閉」一致）。
  */
 class TargetAppSessionTracker(
     private val context: Context,
     private val rules: RuleService,
     private val scope: CoroutineScope,
+    private val backgroundGraceMs: () -> Long = { LEAVE_GRACE_MS },
 ) {
     private val usage = context.getSystemService(UsageStatsManager::class.java)
     private val power = context.getSystemService(PowerManager::class.java)
+    val processExits = ProcessExitWatcher(context)
     private var lastQuery = 0L
     private val state = AppForegroundState()
 
@@ -64,6 +71,21 @@ class TargetAppSessionTracker(
             return
         }
         val now = System.currentTimeMillis()
+        val exitAware = processExits.available
+        if (exitAware) {
+            // 主進程在規則建立後結束 = 應用已關閉；不需要使用情況權限。
+            val closed = targets.filter { rule ->
+                val packageName = packageOf(rule) ?: return@filter false
+                val exitedAt = processExits.lastMainProcessExit(packageName)
+                exitedAt != null && exitedAt >= rule.createdAt
+            }
+            if (closed.isNotEmpty()) {
+                rules.remove(closed.map { it.id }, RuleEndReason.Expired)
+                closed.mapNotNull(::packageOf).toSet().forEach { onRevokedAfterLeaving?.invoke(it) }
+                AppLog.i("session", "removed ${closed.size} until-app-exit rules after the app process ended")
+                return
+            }
+        }
         if (!hasUsageAccess()) {
             if (!noAccessLogged) {
                 noAccessLogged = true
@@ -99,7 +121,7 @@ class TargetAppSessionTracker(
                 return@forEach
             }
             val left = state.leftAt(packageName)
-            if (left != null && left >= rule.createdAt && now - left >= LEAVE_GRACE_MS) {
+            if (!exitAware && leftLongEnough(left, rule.createdAt, now, backgroundGraceMs())) {
                 remove += rule.id
                 leftPackages += packageName
                 return@forEach
@@ -157,7 +179,11 @@ class TargetAppSessionTracker(
         ) == AppOpsManager.MODE_ALLOWED
     }.getOrDefault(false)
 
-    private companion object {
+    companion object {
+        /** 規則建立後應用離開前台，且在背景停留超過寬限時間（至少 2 秒）。 */
+        fun leftLongEnough(leftAt: Long?, createdAt: Long, now: Long, graceMs: Long): Boolean =
+            leftAt != null && leftAt >= createdAt && now - leftAt >= maxOf(LEAVE_GRACE_MS, graceMs)
+
         const val LOOKBACK_MS = 5 * 60_000L
         const val INITIAL_LOOKBACK_MS = 6 * 60 * 60_000L
         const val LEAVE_GRACE_MS = 2_000L

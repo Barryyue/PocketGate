@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.10.5",
+            date = "2026-11-17",
+            features = listOf(),
+            improvements = listOf(
+                t(
+                    "\"Only once\" and \"Deny\" no longer end the moment you switch away: they now last until the app has stayed in the background for 10 minutes, so returning to it soon does not ask again. The time can be changed in settings (0 restores the old behaviour). After granting the DUMP permission once with adb, they end only when the app is really closed, like on Red Magic.",
+                    "「仅一次」和「禁止」不再一切到后台就失效：应用在后台超过 10 分钟才算关闭，期间回到应用不会再询问。时间可在设置中修改（设为 0 恢复旧行为）。用 adb 授予一次 DUMP 权限后，会和红魔一样在应用真正关闭时才失效。",
+                    "「僅一次」和「禁止」不再一切到背景就失效：應用程式在背景超過 10 分鐘才算關閉，期間回到應用程式不會再詢問。時間可在設定中修改（設為 0 恢復舊行為）。用 adb 授予一次 DUMP 權限後，會和紅魔一樣在應用程式真正關閉時才失效。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.10.4",
             date = "2026-11-16",
             features = listOf(

@@ -608,6 +608,15 @@ class AppBackend(val container: AppContainer) {
         container.promptRouter.refresh()
     }
 
+    /** 是否已用 adb 授予 DUMP，能偵測其他應用真正關閉。 */
+    fun processExitDetection(): Boolean = container.appSessionTracker.processExits.available
+
+    fun onceBackgroundMinutes(): Int = container.preferences.onceBackgroundMinutes
+
+    fun setOnceBackgroundMinutes(minutes: Int) {
+        container.preferences.onceBackgroundMinutes = minutes
+    }
+
     fun promptDenyPermanent(): Boolean = container.preferences.promptDenyPermanent
 
     fun setPromptDenyPermanent(permanent: Boolean) {

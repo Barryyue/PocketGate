@@ -1428,3 +1428,14 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - **樣式**：系統懸浮窗預設改為貼底（`promptOverlayPosition` 預設 `bottom`），全寬、上方圓角、白底、背景變暗（`FLAG_DIM_BEHIND`，仍是 `FLAG_NOT_TOUCH_MODAL`，懸浮窗外的觸控照常傳給下方應用）；置頂 / 自訂位置時為四角圓角卡片。應用內卡片（`PromptOverlay`）同樣的內容與按鈕。說明句中的網路類型取自 `NetworkMonitor`（Wi-Fi / 行動數據 / 其他）。
 - **驗證**：JVM 測試 `PromptDenyPolicyTest`、`PromptSheetTextTest`、`RulesTest.denyOnceRuleIsAppLevelAndNotPersistent`；模擬器：Chrome 觸發的系統懸浮窗貼底顯示（說明、目標、勾選、四個按鈕）；點懸浮窗外的 Chrome 網址列可正常彈出鍵盤；點「禁止」建立 `Deny UntilAppExit`，離開 Chrome 後被回收；應用內卡片勾選後點「禁止」建立永久禁止規則。
 - **未驗證**：實機（紅魔）上的外觀與觸控；中文介面下的排版只在 JVM 測試檢查了文字。
+
+## 48. v0.10.5-m4p12（2026-11-17）：「僅一次」「禁止」持續到應用真正關閉
+
+- **現象**（實機）：點「僅一次」後，應用切到背景再回來又被詢問。原設計以「所有 Activity 離開前台 2 秒」當作關閉，與紅魔的「直到應用關閉」不符。
+- **限制**：一般應用拿不到其他應用的關閉事件。UsageStats 中系統把 ACTIVITY_DESTROYED 轉成 ACTIVITY_STOPPED，模擬器上把 Chrome 從最近任務劃掉也只留下 STOPPED；其他進程不可見。紅魔的掌心管家是平台簽名的系統應用，可以直接監聽進程死亡。
+- **做法**：
+  - 使用者用 adb 授予一次 `android.permission.DUMP`（development 權限，manifest 已宣告）後，`ProcessExitWatcher` 每 2 秒查 `getHistoricalProcessExitReasons(目標套件)`，**主進程**（`processName == packageName`，忽略渲染等子進程）在規則建立後結束才移除規則；切到背景多久都不影響。不需要使用情況權限。
+  - 未授權時退回近似：離開前台且在背景停留超過「「僅一次」「禁止」在背景保留（分鐘）」才移除，預設 10 分鐘，0 = 舊行為（2 秒）。
+  - 設定頁顯示是否已啟用關閉偵測，未啟用時附上授權指令 `adb shell pm grant com.networkcontrol.android.kotlin android.permission.DUMP`。
+- **驗證**：JVM 測試 `OnceSessionGraceTest`；模擬器（已授予 DUMP）：Chrome 點「僅一次」→ 回桌面 20 秒再打開不再詢問 → 從最近任務移除 Chrome，主進程結束後約 2 秒規則被移除（日誌 `removed 1 until-app-exit rules after the app process ended`）。
+- **未驗證**：實機（紅魔 / Android 版本）上 `pm grant DUMP` 與進程結束記錄是否同樣可用；未授權時 10 分鐘近似的實際體驗。

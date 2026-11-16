@@ -130,4 +130,5 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
   - Kotlin 版 DNS：Java 的 `InetAddress.hostAddress` 對 IPv6 不壓縮零（`2606:4700:4700:0:0:0:0:1111`），比對 IP 要用 `InetAddress` 物件而不是字串。開發機網路對部分境外域名有 DNS 污染（例如 google.com 解析到 104.244.42.197），模擬器上連不上 Google 系服務不代表程式有問題。
   - Kotlin 版：引擎的「觸發信號」不要用無 replay 的 `MutableSharedFlow`（收集端開始前的信號會遺失，曾導致啟動後不建立隧道），用 `Channel(CONFLATED)`。判斷使用者「離開應用」一律按 Activity（`AppForegroundState`），不要用「前台套件是否改變」：回桌面時前台為空，無法和應用內換頁區分。`uiautomator dump` 看不到懸浮窗，要加 `--windows`。本機 Gradle 第一次構建偶爾失敗、重跑即過（檔案鎖），不是程式問題。
   - Kotlin 版 Gradle 的設備測試（例如 `:app:generateReleaseBaselineProfile`）會在所有已連接的裝置上執行，開發機可能連著用戶的實機，一律設 `ANDROID_SERIAL=emulator-5554`（`scripts/android-kotlin.ps1 baseline` 已預設）。Release 已按 ABI 拆分，輸出為 `app-arm64-v8a-release.apk` / `app-x86_64-release.apk`。
+  - Kotlin 版「直到應用關閉」：一般應用拿不到其他應用的關閉事件（UsageStats 把 ACTIVITY_DESTROYED 轉成 STOPPED，從最近任務劃掉也只有 STOPPED）。要真正的關閉信號得由使用者 `adb shell pm grant <套件> android.permission.DUMP`，再用 `getHistoricalProcessExitReasons` 查目標主進程（只看 `processName == packageName`，渲染等子進程會自行重啟）。
   - 通知文本在 `Resources/values*/strings.xml`（沒有界面時也要可用），界面文本由 `tools/android-strings.py` 生成 XLIFF；兩處都要維護三種語言。

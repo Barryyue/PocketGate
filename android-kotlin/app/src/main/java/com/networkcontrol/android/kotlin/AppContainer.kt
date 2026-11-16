@@ -56,7 +56,12 @@ class AppContainer(context: Context) {
     val settings = SettingsService(settingsStore)
     val runtime = RuntimeStateService(settingsStore)
     val rules = RuleService(ruleStore, runtime, scope)
-    val appSessionTracker = com.networkcontrol.android.kotlin.engine.apps.TargetAppSessionTracker(appContext, rules, scope)
+    val appSessionTracker = com.networkcontrol.android.kotlin.engine.apps.TargetAppSessionTracker(
+        appContext,
+        rules,
+        scope,
+        backgroundGraceMs = { preferences.onceBackgroundMinutes * 60_000L },
+    )
     val profiles = ProfileService(profileStore, runtime, rules)
     val prompts = PromptBroker(rules, runtime, settings, scope).also { broker ->
         appSessionTracker.onRevokedAfterLeaving = { packageName -> scope.launch { broker.quietInBackground(packageName) } }
