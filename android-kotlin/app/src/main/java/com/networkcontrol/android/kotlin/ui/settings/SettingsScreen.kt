@@ -130,7 +130,6 @@ fun SettingsScreen(
     var islandOpacity by remember { mutableFloatStateOf(backend.speedIslandOpacity()) }
     var islandMode by remember { mutableStateOf(backend.speedIslandMode()) }
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
-    var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
     var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
@@ -166,6 +165,7 @@ fun SettingsScreen(
     }
     val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
     var showTimedOption by remember { mutableStateOf(backend.promptShowTimedOption()) }
+    var denyPermanent by remember { mutableStateOf(backend.promptDenyPermanent()) }
     val forwardingAvailable = remember { backend.forwardingAvailable() }
     var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
     var showScheduleDialog by remember { mutableStateOf(false) }
@@ -349,6 +349,15 @@ fun SettingsScreen(
                     },
                 )
                 SwitchRow(
+                    title = s[S.PromptDenyPermanent],
+                    subtitle = s[S.PromptDenyPermanentHint],
+                    checked = denyPermanent,
+                    onCheckedChange = {
+                        denyPermanent = it
+                        backend.setPromptDenyPermanent(it)
+                    },
+                )
+                SwitchRow(
                     title = s[S.PromptDefaultAction],
                     subtitle = if (settings.promptDefaultAction == VerdictAction.Deny) s[S.Deny] else s[S.Allow],
                     checked = settings.promptDefaultAction == VerdictAction.Allow,
@@ -470,14 +479,6 @@ fun SettingsScreen(
                     onCheckedChange = {
                         promptDetails = it
                         backend.setPromptShowDetails(it)
-                    },
-                )
-                SwitchRow(
-                    title = s[S.ShowPromptExplanation],
-                    checked = promptExplanation,
-                    onCheckedChange = {
-                        promptExplanation = it
-                        backend.setPromptShowExplanation(it)
                     },
                 )
                 SwitchRow(

@@ -27,6 +27,41 @@ data class PromptSelection(
     val softNotification: Boolean,
 )
 
+/**
+ * 詢問面板「拒絕」按鈕的規則時效。預設只在應用本次使用期間拒絕（誤觸時重開應用即恢復）；
+ * 勾選「不再詢問」或在設定中開啟「拒絕預設為永久」時才建立永久規則。
+ */
+object PromptDenyPolicy {
+    fun lifetime(
+        dontAskAgain: Boolean,
+        denyPermanentByDefault: Boolean,
+    ): com.networkcontrol.android.kotlin.core.model.RuleLifetime =
+        if (dontAskAgain || denyPermanentByDefault) {
+            com.networkcontrol.android.kotlin.core.model.RuleLifetime.Permanent
+        } else {
+            com.networkcontrol.android.kotlin.core.model.RuleLifetime.UntilAppExit
+        }
+}
+
+/** 詢問面板的主訊息（仿紅魔：「X 已禁止 Y 使用 WLAN 網路。是否允許此應用使用網路？」）。 */
+object PromptSheetText {
+    fun message(
+        strings: com.networkcontrol.android.kotlin.ui.UiStrings,
+        ownName: String,
+        appLabel: String,
+        network: com.networkcontrol.android.kotlin.core.model.NetworkKind?,
+    ): String {
+        val networkLabel = when (network) {
+            com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi ->
+                strings[com.networkcontrol.android.kotlin.ui.S.PromptNetWlan]
+            com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular ->
+                strings[com.networkcontrol.android.kotlin.ui.S.PromptNetMobile]
+            else -> strings[com.networkcontrol.android.kotlin.ui.S.PromptNetAny]
+        }
+        return strings.format(com.networkcontrol.android.kotlin.ui.S.PromptSheetMessage, ownName, appLabel, networkLabel)
+    }
+}
+
 object PromptPresentationPolicy {
     fun select(
         pending: List<PromptCandidate>,

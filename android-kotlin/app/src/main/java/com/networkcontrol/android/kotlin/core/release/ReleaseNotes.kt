@@ -40,6 +40,22 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.10.4",
+            date = "2026-11-16",
+            features = listOf(
+                t(
+                    "Redesigned the connection prompt after Red Magic's: one clear sentence, a \"Don't ask again after denying\" option and three buttons, Deny | Allow | Only once. By default the prompt now sits at the bottom of the screen. Timed allow can still be added in settings.",
+                    "连网询问改为红魔的样式：一句说明、「禁止后不再提示」选项和「禁止 | 允许 | 仅一次」三个按钮，默认显示在屏幕底部。「限时允许」仍可在设置中加上。",
+                    "連網詢問改為紅魔的樣式：一句說明、「禁止後不再提示」選項和「禁止 | 允許 | 僅一次」三個按鈕，預設顯示在螢幕底部。「限時允許」仍可在設定中加上。",
+                ),
+                t(
+                    "Deny now only blocks the app until it is closed, and Only once allows it until it is closed; Allow is permanent. Tick \"Don't ask again after denying\" to block permanently, or turn on \"Deny is permanent by default\" to keep the old behaviour. The Later button is gone.",
+                    "「禁止」现在只在应用关闭前禁止，「仅一次」只在应用关闭前允许，「允许」为永久允许。勾选「禁止后不再提示」才会永久禁止；想恢复旧行为可开启设置「「禁止」默认为永久」。移除「稍后」按钮。",
+                    "「禁止」現在只在應用程式關閉前禁止，「僅一次」只在應用程式關閉前允許，「允許」為永久允許。勾選「禁止後不再提示」才會永久禁止；想恢復舊行為可開啟設定「「禁止」預設為永久」。移除「稍後」按鈕。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.10.3",
             date = "2026-11-16",
             features = listOf(),

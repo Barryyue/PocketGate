@@ -608,6 +608,13 @@ class AppBackend(val container: AppContainer) {
         container.promptRouter.refresh()
     }
 
+    fun promptDenyPermanent(): Boolean = container.preferences.promptDenyPermanent
+
+    fun setPromptDenyPermanent(permanent: Boolean) {
+        container.preferences.promptDenyPermanent = permanent
+        container.promptRouter.refresh()
+    }
+
     fun promptShowDetails(): Boolean = container.preferences.promptShowDetails
 
     fun setPromptShowDetails(show: Boolean) {
