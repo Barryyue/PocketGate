@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.10.2",
+            date = "2026-11-16",
+            features = listOf(),
+            improvements = listOf(
+                t(
+                    "Fixed: in per-connection mode, after protection restarted (for example after changing a forwarding setting or switching modes), web pages could keep loading for a long time, because browsers still used cached addresses that the tunnel no longer recognised. Address mappings are now restored when the tunnel restarts, and unrecognised addresses fail immediately so apps look them up again.",
+                    "修正：逐连接模式下保护重新启动后（例如修改转发设置、切换模式），网页可能一直加载，因为浏览器仍在使用隧道已不认得的缓存地址。现在隧道重启时会恢复地址映射，不认得的地址会立即失败，让应用重新解析。",
+                    "修正：逐連線模式下保護重新啟動後（例如修改轉發設定、切換模式），網頁可能一直載入，因為瀏覽器仍在使用隧道已不認得的快取位址。現在隧道重啟時會恢復位址映射，不認得的位址會立即失敗，讓應用程式重新解析。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.10.1",
             date = "2026-11-16",
             features = listOf(),
