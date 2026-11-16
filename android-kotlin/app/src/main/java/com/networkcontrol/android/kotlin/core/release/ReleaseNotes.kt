@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.10.3",
+            date = "2026-11-16",
+            features = listOf(),
+            improvements = listOf(
+                t(
+                    "Fixed the main cause of slow browsing in per-connection mode: when many connections were busy at once, packets between the app and its forwarding engine could be lost, so pages, images and apps such as Telegram waited seconds for retransmissions or never finished loading. 20 parallel page loads now all finish in about 0.2 to 0.6 seconds.",
+                    "修正逐连接模式变慢的主要原因：同时有很多连接时，应用与转发引擎之间会丢包，网页、图片和 Telegram 这类应用要等好几秒重传，甚至一直加载不完。现在 20 个网页同时加载都能在约 0.2～0.6 秒完成。",
+                    "修正逐連線模式變慢的主要原因：同時有很多連線時，應用程式與轉發引擎之間會遺失封包，網頁、圖片和 Telegram 這類應用程式要等好幾秒重傳，甚至一直載入不完。現在 20 個網頁同時載入都能在約 0.2～0.6 秒完成。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.10.2",
             date = "2026-11-16",
             features = listOf(),

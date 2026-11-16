@@ -18,13 +18,17 @@ import java.io.IOException
  *
  * hev 對非 TUN 的 fd 會退回一般 read/write（`TUNGETIFF` 失敗即不使用 vnet header），
  * 而 AF_UNIX SOCK_SEQPACKET 保留封包邊界，所以 hev 可以把 socketpair 當成虛擬網卡使用。
+ *
+ * 注意：`ParcelFileDescriptor.createReliableSocketPair()` 是 **SOCK_STREAM**（"Reliable" 指另有關閉偵測通道），
+ * 突發時多個封包會在一次讀取中黏在一起，讀取端只處理第一個、其餘遺失（DNS 回覆、SYN-ACK、資料段都會掉）。
+ * 必須用 [Os.socketpair] 建立 SOCK_SEQPACKET。
  */
 class ForwardingRelay(
     private val tun: ParcelFileDescriptor,
     private val filter: ForwardingPacketFilter,
     private val onError: (Throwable) -> Unit,
 ) : AutoCloseable {
-    private val pair: Array<ParcelFileDescriptor> = ParcelFileDescriptor.createReliableSocketPair()
+    private val pair: Array<ParcelFileDescriptor> = createPacketSocketPair()
     private val relaySide = pair[0]
 
     /** 交給 hev 的一端；hev 停止前必須保持開啟。 */
@@ -69,9 +73,10 @@ class ForwardingRelay(
         }
     }
 
-    /** 定期放行排隊中的映射 DNS 查詢（hev 偶爾丟掉回覆時，不讓佇列等到下一個封包才前進）。 */
+    /** 定期放行排隊中的映射 DNS 查詢、重送逾時未回覆的查詢（見 [DnsPacer]），不讓佇列等到下一個封包才前進。 */
     private fun startDnsPump() {
         Thread({
+            raisePriority()
             while (!stopped) {
                 // 有排隊時每 1 ms 檢查一次（間隔與逾時都是毫秒級）；沒有排隊時低頻輪詢。
                 val pending = runCatching { filter.drainDns() }.getOrDefault(false)
@@ -102,7 +107,16 @@ class ForwardingRelay(
         }
     }
 
+    /**
+     * 轉發執行緒提高優先級：hev 往回寫時對端（本應用）讀得慢，hev 只會等約 100 ms（見 hev 補丁 NC_WRITE_RETRY），
+     * 被其他執行緒搶占太久仍可能丟包。
+     */
+    private fun raisePriority() {
+        runCatching { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY) }
+    }
+
     private fun pumpUpstream() {
+        raisePriority()
         val buffer = ByteArray(BUFFER_SIZE)
         try {
             while (!stopped) {
@@ -126,6 +140,7 @@ class ForwardingRelay(
     }
 
     private fun pumpDownstream() {
+        raisePriority()
         val buffer = ByteArray(BUFFER_SIZE)
         try {
             while (!stopped) {
@@ -167,7 +182,20 @@ class ForwardingRelay(
 
     companion object {
         private const val BUFFER_SIZE = 65_536
-        private const val SOCKET_BUFFER = 1 shl 20
+        private const val SOCKET_BUFFER = 8 shl 20
+
+        /** 建立保留封包邊界的 AF_UNIX SOCK_SEQPACKET socket 對。 */
+        fun createPacketSocketPair(): Array<ParcelFileDescriptor> {
+            val first = java.io.FileDescriptor()
+            val second = java.io.FileDescriptor()
+            Os.socketpair(OsConstants.AF_UNIX, OsConstants.SOCK_SEQPACKET, 0, first, second)
+            try {
+                return arrayOf(ParcelFileDescriptor.dup(first), ParcelFileDescriptor.dup(second))
+            } finally {
+                runCatching { Os.close(first) }
+                runCatching { Os.close(second) }
+            }
+        }
         private const val DNS_PUMP_INTERVAL_MS = 5L
     }
 }

@@ -316,6 +316,13 @@
 |---|---|---|---|---|
 | K-128 | hev 重啟後恢復假位址映射（`FakeIpMappings`）：隧道每次重建 hev 都會清空映射、從 100.64.0.0 起重新分配，瀏覽器（系統解析器結果固定快取 60 秒）與既有連線仍用舊假位址，hev 不認得或已分給別的網域，連線卡住或連錯主機（實機症狀：Chrome 開百度一直載入、ClientHello 517 位元組一直沒被確認）。hev 按查詢順序從 .0 依序分配，所以 hev 啟動時按原位址順序重放已知網域（排在所有應用查詢之前）；重放中暫時丟棄發往未恢復位址的新連線，結束後 hev 不認得的假位址直接拒絕（TCP RST / ICMP），應用立即失敗並重新解析 | `FakeIpMappings`、`ForwardingPacketFilter`、`DnsPacer`、`ForwardingRelay` | `FakeIpReplayTest`（6 項，含過濾層端到端）；模擬器：修正前 hev 重啟後舊位址連到別的主機（HTTP 530 / 404），修正後連續重啟兩次舊位址仍 200 OK、新網域接續分配 | 應用進程重啟（更新安裝）後映射不保留（只在記憶體），此時舊位址改為立即拒絕而不是卡住；實機需用戶確認 |
 
+### v0.10.3-m4p12（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-129 | 轉送 socket 對改為真正的 SOCK_SEQPACKET：`createReliableSocketPair()` 其實是 SOCK_STREAM，突發時封包黏包遺失（hev 寫出 233 / 轉送層讀到 134），造成 DNS、SYN-ACK、資料段遺失與數秒重傳。改用 `Os.socketpair(AF_UNIX, SOCK_SEQPACKET)`；移除只為繞過此問題的 `SynGate`，`DnsPacer` 改為在途 64 個 + 100 ms 重送 | `ForwardingRelay`、`DnsPacer`、`ForwardingPacketFilter` | 包數比對 1316 = 1316；模擬器 20 條並發 HTTP 0.19～0.58 秒零失敗（修正前長尾 2～7 秒、每輪 1～3 條失敗）、30 條並發建連 ≤0.13 秒、30 個並發 DNS ≤0.08 秒、映射重放正常；`DnsPacerTest` 更新 | 實機未量測（adb 中斷），需用戶確認 |
+| K-130 | hev 原生庫補丁：寫入遇 EAGAIN 時 poll 等待後重試（最多約 100 ms）而不是丟包；轉送執行緒提高優先級；socket 緩衝要求 8 MB | `android-kotlin/native/hev-socks5-tunnel/`、`jniLibs/*/libhev-socks5-tunnel.so`、`ForwardingRelay` | 以 NDK 30 重新編譯 arm64-v8a / x86_64，APK 內的庫與編譯產物雜湊一致 | 升級 hev 時要重新套用補丁 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

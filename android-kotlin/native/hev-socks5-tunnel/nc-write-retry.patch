@@ -1,0 +1,36 @@
+diff --git a/src/hev-socks5-tunnel.c b/src/hev-socks5-tunnel.c
+index 74f0c10..687e773 100644
+--- a/src/hev-socks5-tunnel.c
++++ b/src/hev-socks5-tunnel.c
+@@ -8,6 +8,9 @@
+  */
+ 
+ #include <errno.h>
++#if defined(__linux__)
++#include <poll.h>
++#endif
+ #include <assert.h>
+ #include <signal.h>
+ #include <string.h>
+@@ -93,6 +96,21 @@ netif_output_handler (struct netif *netif, struct pbuf *p)
+     ssize_t s;
+ 
+     s = hev_tunnel_write (tun_fd, p);
++#if defined(__linux__)
++    /*
++     * NC_WRITE_RETRY (NetworkControl): the tunnel fd may be a socketpair whose
++     * reader drains packets in another process thread. Dropping on EAGAIN loses
++     * DNS replies, SYN-ACKs and data segments under bursts; wait briefly for
++     * the reader instead (bounded to ~100 ms so a stalled reader cannot hang
++     * the stack).
++     */
++    for (int nc_retry = 0; (s <= 0) && (errno == EAGAIN) && (nc_retry < 20);
++         nc_retry++) {
++        struct pollfd pfd = { .fd = tun_fd, .events = POLLOUT };
++        poll (&pfd, 1, 5);
++        s = hev_tunnel_write (tun_fd, p);
++    }
++#endif
+     if (s <= 0) {
+         if (errno == EAGAIN)
+             return ERR_WOULDBLOCK;

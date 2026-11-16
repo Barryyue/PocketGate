@@ -1151,7 +1151,7 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
                                                                └─ 詢問 → 拒絕 + 建立詢問（允許後下一次連線轉發）
 ```
 
-- hev 讀寫的是 `ParcelFileDescriptor.createReliableSocketPair()`（AF_UNIX SOCK_SEQPACKET）的一端；hev 對非 TUN fd 的 `TUNGETIFF` 失敗後使用一般 read/write，封包邊界由 SEQPACKET 保留。
+- hev 讀寫的是 AF_UNIX SOCK_SEQPACKET socket 對（`Os.socketpair`）的一端；hev 對非 TUN fd 的 `TUNGETIFF` 失敗後使用一般 read/write，封包邊界由 SEQPACKET 保留。（v0.10.3 之前誤用 `createReliableSocketPair()`，它其實是 SOCK_STREAM，見 §46。）
 - 判決沿用黑洞模式的 `VpnRoutingPlanner` 結果（規則、模式、專注、鎖屏、可信應用）：`Bypass` → 轉發，`Block` → 拒絕，`BlockAndAsk` → 拒絕並詢問。系統 UID 放行；查不到擁有者時除「全部阻止」外放行並計數。
 - 只在 TCP SYN 與新 UDP 五元組上查 UID（Binder），結果緩存 10 秒（TCP）/ 60 秒滑動（UDP）；路由計畫每次重算時清空。
 - DNS：VPN 的 DNS 指向 hev 映射 DNS `10.111.222.3`，A 記錄映射到 `100.64.0.0/10`，hev 以域名向 SOCKS5 發 CONNECT；過濾層監聽 hev 回覆的 DNS，把映射位址還原成域名給詢問與記錄。
@@ -1395,3 +1395,23 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - **修正**（`FakeIpMappings`）：hev 按查詢順序從網段第一個位址依序分配，所以 hev 啟動時把已知網域按原位址順序重新查詢一遍（經 `DnsPacer` 的優先佇列，排在所有應用查詢之前），得到完全相同的映射。重放中發往尚未恢復位址的新連線先丟棄（應用約 1 秒後重送 SYN）；重放結束後，hev 不認得的假位址直接拒絕，應用立即失敗並重新解析，而不是卡住。重放的回覆位址與預期不同、或查詢多次無回覆時中止重放。
 - **驗證**：`FakeIpReplayTest`；模擬器連續重啟 hev 兩次，舊位址仍 200 OK，新網域接續分配。
 - **限制**：映射只存在記憶體，應用進程重啟（更新安裝）後無法恢復，此時舊位址立即被拒絕（不會卡住）。
+
+## 46. v0.10.3-m4p12（2026-11-16）：轉送 socket 對改為真正的 SOCK_SEQPACKET
+
+- **現象**（實機 Chrome / Telegram + FlClash）：逐連線模式下網頁、Telegram 明顯比 FlClash 自己的 TUN 慢；單條連線延遲相同，並發時才慢。實機 20 條並發：純建連恰好 16 條 30～40 ms、其餘 1～3 秒（SYN 重傳）；HTTP 首位元組 0.15～3.5 秒。
+- **定位過程**：
+  - 先後懷疑過 hev 的映射 DNS、lwIP 監聽佇列、hev 寫入 EAGAIN 丟包，並據此加過 DNS 逐一放行、SYN 限流、hev 寫入重試，都只改善一部分。
+  - 逐包追蹤一條慢連線：hev 送出 seq=6527 後，轉送層讀到的下一段是 seq=10907，中間兩段 1460 位元組根本沒有讀到，lwIP 約 10 秒後才重傳。
+  - 比對包數：hev 寫出 233 包、轉送層只讀到 134；轉送層寫入 195 包、hev 只讀到 156。兩個方向都在 socket 對裡「消失」。
+  - 原因：`ParcelFileDescriptor.createReliableSocketPair()` 是 **SOCK_STREAM**（"Reliable" 指另有關閉偵測通道），不保留封包邊界；突發時多個封包在一次讀取中黏在一起，讀取端只把它當成一個封包處理，其餘遺失。
+- **修正**：用 `Os.socketpair(AF_UNIX, SOCK_SEQPACKET, 0, …)` 建立 socket 對（`ForwardingRelay.createPacketSocketPair`）。修正後包數完全一致（hev 寫出 1316 = 轉送層讀到 1316）。
+- **清理**：移除只為繞過此問題而加的 SYN 限流（`SynGate`）；`DnsPacer` 不再一次只放一個（在途上限 64、100 ms 未回覆重送），保留 hev 重啟後映射重放的優先順序。
+- **保留的改進**：
+  - hev 原生庫加上寫入 EAGAIN 時最多等約 100 ms 的補丁（`android-kotlin/native/hev-socks5-tunnel/`），SEQPACKET 的接收佇列滿時不再直接丟包；
+  - 轉送執行緒提高優先級（`THREAD_PRIORITY_URGENT_DISPLAY`）；socket 緩衝要求 8 MB（系統上限內）。
+- **模擬器結果**（內建直連出口，修正前 → 修正後）：
+  - 20 條並發 HTTP：長尾 2～7 秒、每輪 1～3 條失敗 → 全部 0.19～0.58 秒、零失敗；
+  - 30 條並發建連：部分 1～3 秒 → 全部 ≤ 0.13 秒；
+  - 30 個不同網域並發解析：全部 ≤ 0.08 秒；
+  - hev 重啟後映射重放仍正常（舊位址 200 OK）。
+- **實機**：修正版未在實機量測（adb 無線連線已中斷），需用戶安裝 0.10.3 後確認。
