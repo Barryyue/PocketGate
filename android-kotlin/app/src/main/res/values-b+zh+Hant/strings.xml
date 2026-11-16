@@ -25,4 +25,16 @@
     <string name="nav_apps">應用程式</string>
     <string name="nav_logs">記錄</string>
     <string name="nav_settings">設定</string>
+    <string name="tile_mode">過濾模式</string>
+    <string name="tile_block_all">全部阻止</string>
+    <string name="tile_dnd">勿擾 1 小時</string>
+    <string name="tile_focus">專注</string>
+    <string name="widget_status">防護狀態</string>
+    <string name="widget_status_desc">防護狀態、今日攔截和一鍵開關</string>
+    <string name="widget_overview">今日概覽</string>
+    <string name="widget_overview_desc">狀態、模式、攔截、流量和待處理詢問</string>
+    <string name="widget_controls">快捷開關</string>
+    <string name="widget_controls_desc">保護、模式、全部阻止、勿擾和專注一排搞定</string>
+    <string name="widget_traffic">流量排行</string>
+    <string name="widget_traffic_desc">今日流量和用得最多的應用程式</string>
 </resources>

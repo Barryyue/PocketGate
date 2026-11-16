@@ -326,6 +326,7 @@
 | K-132 | 「僅一次」「禁止」持續到應用真正關閉：授予 DUMP 後以 `getHistoricalProcessExitReasons` 偵測目標主進程結束；未授權時以背景停留時間近似（預設 10 分鐘，可設定，0 = 舊行為） | `ProcessExitWatcher`、`TargetAppSessionTracker`、`AppPreferences`、`SettingsScreen`、`AndroidManifest.xml` | JVM 測試；模擬器：背景 20 秒回來不再詢問、劃掉 Chrome 後約 2 秒移除規則 | 實機 DUMP 授權待驗證 |
 | K-133 | 關閉偵測一鍵授權：設定頁「授權」按鈕先用 Shizuku（`IShizukuService.newProcess` 執行 `pm grant`），再試 root，都沒有時顯示引導與可複製的 adb 命令 | `DumpPermissionGranter`、`SettingsScreen`、`AndroidManifest.xml`（ShizukuProvider）、`build.gradle.kts` | 模擬器：無工具時的引導、複製、授權後狀態即時更新 | Shizuku / Root 實際授權待實機驗證 |
 | K-134 | 詢問按鈕單行：限時按鈕改為「60分鐘」，按鈕文字放不下時自動縮小 | `PromptOverlayController`、`PromptOverlay`、`UiStrings` | 模擬器 zh-TW 畫面確認 | 實機待確認 |
+| K-135 | 桌面掛件（防護狀態、今日概覽、快捷開關、流量排行）、控制中心磁貼（模式、全部阻止、勿擾、專注，加上原有保護）、長按捷徑；共用 `QuickActions`，削弱防護的操作在應用鎖下先驗證（含修正原保護磁貼） | `platform/quick/*`、`widget/NcWidgets.kt`、`AndroidManifest.xml`、`res/xml/widget_*.xml`、`proguard-rules.pro` | JVM `QuickLogicTest`；模擬器：四款掛件上桌與操作、應用鎖驗證、捷徑、磁貼 | 實機啟動器外觀待確認 |
 
 ### 尚未完成（待辦，不屬於完成項）
 

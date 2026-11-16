@@ -40,6 +40,34 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.11.0",
+            date = "2026-11-17",
+            features = listOf(
+                t(
+                    "Four home screen widgets: Protection (status and an on/off button), Today at a glance (blocks, traffic and pending prompts), Quick controls (protection, mode, block all, quiet and focus in one row) and Traffic ranking.",
+                    "新增四款桌面小组件：防护状态（状态和一键开关）、今日概览（拦截、流量、待处理询问）、快捷开关（保护、模式、全部阻止、勿扰、专注一排搞定）和流量排行。",
+                    "新增四款桌面小工具：防護狀態（狀態和一鍵開關）、今日概覽（攔截、流量、待處理詢問）、快捷開關（保護、模式、全部阻止、勿擾、專注一排搞定）和流量排行。",
+                ),
+                t(
+                    "New Quick Settings tiles for filter mode, block all, quiet for 1 hour and focus, alongside the protection tile.",
+                    "控制中心新增过滤模式、全部阻止、勿扰 1 小时和专注磁贴，与原有的保护磁贴并列。",
+                    "控制中心新增過濾模式、全部阻止、勿擾 1 小時和專注圖塊，與原有的保護圖塊並列。",
+                ),
+                t(
+                    "Long-press the app icon for shortcuts that turn protection on or off, switch mode, block all, start quiet or start focus.",
+                    "长按应用图标可直接开关保护、切换模式、全部阻止、开启勿扰或开始专注。",
+                    "長按應用程式圖示可直接開關保護、切換模式、全部阻止、開啟勿擾或開始專注。",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "With app lock on, actions from widgets, tiles and shortcuts that weaken protection (turning it off, loosening the mode, ending block all or focus) ask you to verify first. The protection tile now follows this rule too.",
+                    "开启应用锁时，从小组件、磁贴、快捷方式执行会削弱防护的操作（关闭保护、放宽模式、解除全部阻止或结束专注）需要先验证身份；原有的保护磁贴也一并遵守。",
+                    "開啟應用程式鎖時，從小工具、圖塊、捷徑執行會削弱防護的操作（關閉保護、放寬模式、解除全部阻止或結束專注）需要先驗證身分；原有的保護圖塊也一併遵守。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.10.7",
             date = "2026-11-17",
             features = listOf(),
