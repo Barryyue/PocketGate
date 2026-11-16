@@ -152,6 +152,19 @@ fun formatTime(epochMillis: Long): String =
 fun formatDateTime(epochMillis: Long): String =
     dateTimeFormatter.format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
 
+fun trackerCategoryLabel(s: UiStrings, category: String): String = when (category) {
+    "Advertising" -> s[S.TrackerCatAdvertising]
+    "Analytics" -> s[S.TrackerCatAnalytics]
+    "Social" -> s[S.TrackerCatSocial]
+    "Fingerprinting" -> s[S.TrackerCatFingerprinting]
+    "Cryptomining" -> s[S.TrackerCatCryptomining]
+    "Email" -> s[S.TrackerCatEmail]
+    "Content" -> s[S.TrackerCatContent]
+    "Anti-fraud" -> s[S.TrackerCatAntiFraud]
+    "ConsentManagers" -> s[S.TrackerCatConsent]
+    else -> category
+}
+
 fun reasonLabel(s: UiStrings, reason: VerdictReason): String = when (reason) {
     VerdictReason.Rule -> s[S.ReasonRule]
     VerdictReason.Mode -> s[S.ReasonMode]

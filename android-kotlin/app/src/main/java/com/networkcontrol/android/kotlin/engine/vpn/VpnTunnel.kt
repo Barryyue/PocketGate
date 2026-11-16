@@ -308,7 +308,7 @@ class VpnTunnelController(
         newRelay.start()
         relay = newRelay
         forwardingActive = true
-        filter.invalidate()
+        filter.reset()
         return true
     }
 

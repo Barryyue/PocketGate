@@ -46,7 +46,14 @@ data class BlocklistState(
     val initialized: Boolean = false,
     val sources: List<BlocklistSourceState> = emptyList(),
     val updating: Boolean = false,
-)
+    /** 整類攔截的追蹤器類別（需要開啟攔截列表與追蹤器資料庫）。 */
+    val blockedTrackerCategories: Set<String> = emptySet(),
+) {
+    val trackerSource: BlocklistSourceState? get() = sources.firstOrNull { it.id == BlocklistCatalog.TRACKER_SOURCE_ID }
+
+    /** 一般名單（不含追蹤器資料庫）。 */
+    val lists: List<BlocklistSourceState> get() = sources.filter { it.id != BlocklistCatalog.TRACKER_SOURCE_ID }
+}
 
 /** 一次更新的結果，供界面顯示。 */
 data class BlocklistUpdateSummary(val updated: Int, val unchanged: Int, val failed: Int, val skippedMetered: Boolean = false)
@@ -71,6 +78,7 @@ class BlocklistManager(
     private val gate = Mutex()
     private val stateFile = File(directory, "state.json")
     private val loaded = HashMap<String, DomainBlocklist>()
+    private var trackers: TrackerDatabase? = null
 
     private val _state = MutableStateFlow(BlocklistState())
     val state: StateFlow<BlocklistState> = _state.asStateFlow()
@@ -109,7 +117,11 @@ class BlocklistManager(
                     enabled = true,
                     initialized = true,
                     sources = state.sources.map { source ->
-                        if (source.builtin) source.copy(enabled = BlocklistCatalog.find(source.id)?.defaultEnabled == true) else source
+                        if (source.builtin && source.id != BlocklistCatalog.TRACKER_SOURCE_ID) {
+                            source.copy(enabled = BlocklistCatalog.find(source.id)?.defaultEnabled == true)
+                        } else {
+                            source
+                        }
                     },
                 )
             } else {
@@ -120,6 +132,11 @@ class BlocklistManager(
     }
 
     suspend fun setWifiOnly(value: Boolean) = mutate { it.copy(wifiOnly = value) }
+
+    suspend fun setTrackerCategoryBlocked(category: String, blocked: Boolean) = mutate { state ->
+        val next = if (blocked) state.blockedTrackerCategories + category else state.blockedTrackerCategories - category
+        state.copy(blockedTrackerCategories = next)
+    }
 
     suspend fun setIntervalDays(days: Int) = mutate { it.copy(intervalDays = days.coerceIn(1, 30)) }
 
@@ -182,13 +199,13 @@ class BlocklistManager(
 
     private suspend fun updateDue() {
         val state = _state.value
-        if (!state.enabled) return
+        if (!state.enabled && state.trackerSource?.enabled != true) return
         update(force = false)
     }
 
     /** 使用者剛勾選 / 新增的名單：立即下載，不受「僅 Wi-Fi」限制（這是使用者的直接操作）。 */
     private suspend fun updateMissing() {
-        if (!_state.value.enabled) return
+        if (!_state.value.enabled && _state.value.trackerSource?.enabled != true) return
         update(force = false, onlyMissing = true, ignoreMetered = true)
     }
 
@@ -200,7 +217,9 @@ class BlocklistManager(
         val snapshot = _state.value
         val now = clock()
         val candidates = snapshot.sources.filter { source ->
-            source.enabled && !source.imported && source.urls.isNotEmpty() && when {
+            // 追蹤器資料庫可以單獨開啟（只做識別）；一般名單需要總開關。
+            val active = source.enabled && (snapshot.enabled || source.id == BlocklistCatalog.TRACKER_SOURCE_ID)
+            active && !source.imported && source.urls.isNotEmpty() && when {
                 onlyMissing -> source.updatedAt == 0L && now - source.lastAttemptAt > RETRY_MISSING_MS
                 force -> true
                 else -> isDue(source, snapshot.intervalDays, now)
@@ -221,10 +240,10 @@ class BlocklistManager(
                     is Outcome.Updated -> {
                         updated++
                         gate.withLock {
-                            loaded[source.id] = outcome.list
+                            if (outcome.trackers != null) trackers = outcome.trackers else loaded[source.id] = outcome.list
                             replaceSourceLocked(source.id) {
                                 it.copy(
-                                    entries = outcome.list.size,
+                                    entries = outcome.trackers?.size ?: outcome.list.size,
                                     updatedAt = clock(),
                                     lastAttemptAt = clock(),
                                     lastError = null,
@@ -256,13 +275,19 @@ class BlocklistManager(
     }
 
     private sealed interface Outcome {
-        class Updated(val list: DomainBlocklist, val etag: String?, val lastModified: String?) : Outcome
+        class Updated(
+            val list: DomainBlocklist,
+            val etag: String?,
+            val lastModified: String?,
+            val trackers: TrackerDatabase? = null,
+        ) : Outcome
         data object NotModified : Outcome
         class Failed(val message: String) : Outcome
     }
 
     private fun download(source: BlocklistSourceState): Outcome {
-        val binary = File(directory, "${source.id}.bin")
+        val isTrackers = source.id == BlocklistCatalog.TRACKER_SOURCE_ID
+        val binary = File(directory, if (isTrackers) TRACKER_FILE else "${source.id}.bin")
         val hasData = binary.isFile && source.updatedAt > 0
         var lastError = "no url"
         for (address in source.urls) {
@@ -289,6 +314,27 @@ class BlocklistManager(
                 if (code !in 200..299) {
                     lastError = "HTTP $code"
                     continue
+                }
+                if (isTrackers) {
+                    val text = CappedInputStream(connection.inputStream, MAX_DOWNLOAD_BYTES).use { it.readBytes() }.toString(Charsets.UTF_8)
+                    val database = try {
+                        TrackerDatabase.parse(text)
+                    } catch (ex: org.json.JSONException) {
+                        lastError = "invalid tracker database"
+                        continue
+                    }
+                    if (database.size == 0) {
+                        lastError = "no domains found"
+                        continue
+                    }
+                    writeAtomically(binary, text)
+                    val sameAddress = address == source.urls.first()
+                    return Outcome.Updated(
+                        DomainBlocklist.Empty,
+                        etag = if (sameAddress) connection.getHeaderField("ETag") else null,
+                        lastModified = if (sameAddress) connection.getHeaderField("Last-Modified") else null,
+                        trackers = database,
+                    )
                 }
                 val result = CappedInputStream(connection.inputStream, MAX_DOWNLOAD_BYTES).use { BlocklistParser.parse(it) }
                 if (result.list.size == 0) {
@@ -342,12 +388,29 @@ class BlocklistManager(
         rebuildLocked()
     }
 
+    private fun writeAtomically(file: File, text: String) {
+        val temp = File(directory, file.name + ".tmp")
+        temp.writeText(text)
+        if (!temp.renameTo(file)) {
+            file.delete()
+            if (!temp.renameTo(file)) throw IOException("cannot replace ${file.name}")
+        }
+    }
+
     private fun rebuildLocked() {
         val state = _state.value
+        val trackerOn = state.trackerSource?.enabled == true
+        if (!trackerOn) {
+            trackers = null
+        } else if (trackers == null) {
+            trackers = runCatching {
+                File(directory, TRACKER_FILE).takeIf { it.isFile }?.readText()?.let(TrackerDatabase::parse)
+            }.getOrNull()
+        }
         val lists = if (!state.enabled) {
             emptyList()
         } else {
-            state.sources.filter { it.enabled }.mapNotNull { source ->
+            state.lists.filter { it.enabled }.mapNotNull { source ->
                 val list = loaded[source.id] ?: runCatching {
                     File(directory, "${source.id}.bin").takeIf { it.isFile }?.let(DomainBlocklist::readFrom)
                 }.getOrNull()?.also { loaded[source.id] = it }
@@ -358,14 +421,15 @@ class BlocklistManager(
         val active = lists.map { it.first }.toSet()
         loaded.keys.retainAll(active)
         val previous = _matcher.value
-        val next = BlocklistMatcher(lists)
+        val categories = if (state.enabled) state.blockedTrackerCategories else emptySet()
+        val next = BlocklistMatcher(lists, trackers, categories)
         _matcher.value = next
-        if (previous.totalEntries != next.totalEntries || previous.isEmpty != next.isEmpty) onChanged?.invoke()
+        if (previous.signature != next.signature) onChanged?.invoke()
     }
 
     private fun mergeBuiltin(state: BlocklistState): BlocklistState {
         val existing = state.sources.associateBy { it.id }
-        val builtin = BlocklistCatalog.builtin.map { entry ->
+        val builtin = BlocklistCatalog.all.map { entry ->
             val saved = existing[entry.id]
             // 地址與名稱以目錄為準（新版本可能換了鏡像），使用者的勾選與更新狀態保留。
             saved?.copy(name = entry.name, urls = entry.urls, builtin = true)
@@ -413,6 +477,7 @@ class BlocklistManager(
 
     companion object {
         private const val USER_AGENT = "NetworkControl-Android"
+        private const val TRACKER_FILE = "disconnect.json"
         private const val MAX_DOWNLOAD_BYTES = 64L * 1024 * 1024
         private const val DAY_MS = 24L * 60 * 60 * 1000
         private const val RETRY_FAILED_MS = 6L * 60 * 60 * 1000
@@ -429,6 +494,7 @@ object BlocklistStateCodec {
         put("wifiOnly", state.wifiOnly)
         put("intervalDays", state.intervalDays)
         put("initialized", state.initialized)
+        put("blockedTrackerCategories", JSONArray(state.blockedTrackerCategories.sorted()))
         put(
             "sources",
             JSONArray().apply {
@@ -462,6 +528,9 @@ object BlocklistStateCodec {
             wifiOnly = root.optBoolean("wifiOnly", true),
             intervalDays = root.optInt("intervalDays", 7),
             initialized = root.optBoolean("initialized", false),
+            blockedTrackerCategories = root.optJSONArray("blockedTrackerCategories")
+                ?.let { array -> (0 until array.length()).map(array::getString).toSet() }
+                ?: emptySet(),
             sources = (0 until sources.length()).map { index ->
                 val item = sources.getJSONObject(index)
                 val urls = item.optJSONArray("urls") ?: JSONArray()

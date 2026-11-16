@@ -11,9 +11,9 @@ import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.net.ServerSocket
+import java.nio.channels.ServerSocketChannel
+import java.nio.channels.SocketChannel
 import java.net.Socket
-import java.net.SocketException
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.concurrent.ConcurrentHashMap
@@ -54,8 +54,13 @@ class DirectSocksServer(
     val password: String = randomToken()
     val counters = DirectSocksCounters()
 
-    private val server = ServerSocket(0, 256, InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1)))
-    val port: Int get() = server.localPort
+    private val server: ServerSocketChannel = ServerSocketChannel.open().apply {
+        bind(InetSocketAddress(InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1)), 0), 256)
+    }
+    val port: Int = (server.localAddress as InetSocketAddress).port
+
+    /** 握手完成後的 TCP 轉送：單一執行緒處理所有連線（見 [TcpRelay]）。 */
+    private val relay = TcpRelay(onClosed = { counters.active.decrementAndGet() })
 
     private val threadIds = AtomicInteger()
     private val pool = ThreadPoolExecutor(
@@ -65,7 +70,7 @@ class DirectSocksServer(
         TimeUnit.SECONDS,
         SynchronousQueue(),
         ThreadFactory { runnable ->
-            // 每條連線兩個執行緒，堆疊給小一點以控制記憶體。
+            // 只用於握手與 UDP 關聯；TCP 資料由 TcpRelay 的單一執行緒轉送。
             Thread(null, runnable, "NetworkControlKT.Direct-${threadIds.incrementAndGet()}", 256 * 1024)
                 .apply { isDaemon = true }
         },
@@ -85,16 +90,16 @@ class DirectSocksServer(
 
     private fun acceptLoop() {
         while (!closed) {
-            val socket = try {
+            val channel = try {
                 server.accept()
             } catch (ex: IOException) {
                 if (!closed) AppLog.w("direct", "accept failed: ${ex.message}")
                 break
             }
             counters.accepted.incrementAndGet()
-            if (!submit { handle(socket) }) {
+            if (!submit { handle(channel) }) {
                 counters.rejected.incrementAndGet()
-                runCatching { socket.close() }
+                runCatching { channel.close() }
             }
         }
     }
@@ -106,9 +111,12 @@ class DirectSocksServer(
         false
     }
 
-    private fun handle(client: Socket) {
-        track(client)
+    private fun handle(channel: SocketChannel) {
+        track(channel)
         counters.active.incrementAndGet()
+        // 握手在阻塞模式下用串流完成（DataInputStream 不預讀，不會吃掉握手後的資料）。
+        val client = channel.socket()
+        var handedOff = false
         try {
             client.tcpNoDelay = true
             client.soTimeout = HANDSHAKE_TIMEOUT_MS
@@ -120,7 +128,7 @@ class DirectSocksServer(
                 return
             }
             when (request.command) {
-                Socks5Wire.CMD_CONNECT -> connect(client, input, output, request)
+                Socks5Wire.CMD_CONNECT -> handedOff = connect(channel, output, request)
                 Socks5Wire.CMD_UDP_ASSOCIATE -> associate(client, input, output)
                 else -> output.write(Socks5Wire.reply(Socks5Wire.REP_COMMAND_NOT_SUPPORTED))
             }
@@ -131,8 +139,13 @@ class DirectSocksServer(
         } catch (ex: Error) {
             AppLog.e("direct", "session crashed", ex)
         } finally {
-            counters.active.decrementAndGet()
-            closeQuietly(client)
+            if (handedOff) {
+                // 交給轉送層：之後由它關閉並遞減計數。
+                sockets -= channel
+            } else {
+                counters.active.decrementAndGet()
+                closeQuietly(channel)
+            }
         }
     }
 
@@ -160,7 +173,8 @@ class DirectSocksServer(
         return ok
     }
 
-    private fun connect(client: Socket, input: InputStream, output: OutputStream, request: Socks5Request) {
+    /** @return true 表示連線已交給 [relay]。 */
+    private fun connect(client: SocketChannel, output: OutputStream, request: Socks5Request): Boolean {
         val startedAt = System.currentTimeMillis()
         val addresses = try {
             request.address?.let { arrayOf(it) } ?: resolve(request.host!!)
@@ -168,19 +182,19 @@ class DirectSocksServer(
             counters.connectFailed.incrementAndGet()
             AppLog.d("direct", "resolve ${request.host} failed after ${System.currentTimeMillis() - startedAt}ms: ${ex.message}")
             output.write(Socks5Wire.reply(Socks5Wire.REP_HOST_UNREACHABLE))
-            return
+            return false
         }
-        var remote: Socket? = null
+        var remote: SocketChannel? = null
         var lastError: IOException? = null
         // IPv4 優先（很多網路沒有可用的 IPv6），多個位址時前面的位址只等 3 秒，避免一個壞位址拖住整條連線。
         val ordered = addresses.sortedBy { if (it is Inet4Address) 0 else 1 }
         for ((index, address) in ordered.withIndex()) {
-            val socket = Socket()
-            runCatching { bindSocket(socket) }
+            val socket = SocketChannel.open()
+            runCatching { bindSocket(socket.socket()) }
             val timeout = if (index < ordered.lastIndex) minOf(PER_ADDRESS_TIMEOUT_MS, connectTimeoutMs) else connectTimeoutMs
             try {
-                socket.tcpNoDelay = true
-                socket.connect(InetSocketAddress(address, request.port), timeout)
+                socket.socket().tcpNoDelay = true
+                socket.socket().connect(InetSocketAddress(address, request.port), timeout)
                 remote = socket
                 break
             } catch (ex: IOException) {
@@ -197,35 +211,17 @@ class DirectSocksServer(
                 Socks5Wire.REP_HOST_UNREACHABLE
             }
             output.write(Socks5Wire.reply(code))
-            return
+            return false
         }
-        track(remote)
         try {
             output.write(Socks5Wire.reply(Socks5Wire.REP_SUCCEEDED))
-            client.soTimeout = 0
-            val downstream = remote.getInputStream()
-            val upstream = remote.getOutputStream()
-            // 下行（目標 → 用戶端）在另一個執行緒；拿不到執行緒時放棄這條連線。
-            val downDone = java.util.concurrent.CountDownLatch(1)
-            val started = submit {
-                try {
-                    pump(downstream, output)
-                    runCatching { client.shutdownOutput() }
-                } finally {
-                    downDone.countDown()
-                }
-            }
-            if (!started) {
-                counters.rejected.incrementAndGet()
-                return
-            }
-            pump(input, upstream)
-            // 用戶端送完（半關閉）後，目標可能還在回覆：轉達半關閉並等下行結束。
-            runCatching { remote.shutdownOutput() }
-            downDone.await(HALF_CLOSE_LINGER_MS.toLong(), TimeUnit.MILLISECONDS)
-        } finally {
+            client.socket().soTimeout = 0
+        } catch (ex: IOException) {
             closeQuietly(remote)
+            throw ex
         }
+        relay.register(client, remote)
+        return true
     }
 
     private fun associate(client: Socket, input: InputStream, output: OutputStream) {
@@ -314,20 +310,6 @@ class DirectSocksServer(
         }
     }
 
-    private fun pump(from: InputStream, to: OutputStream) {
-        val buffer = ByteArray(TCP_BUFFER)
-        try {
-            while (true) {
-                val read = from.read(buffer)
-                if (read < 0) break
-                if (read > 0) to.write(buffer, 0, read)
-            }
-            to.flush()
-        } catch (_: SocketException) {
-        } catch (_: IOException) {
-        }
-    }
-
     private fun track(closeable: java.io.Closeable) {
         sockets += closeable
         if (closed) closeQuietly(closeable)
@@ -342,6 +324,7 @@ class DirectSocksServer(
         if (closed) return
         closed = true
         runCatching { server.close() }
+        relay.close()
         // ConcurrentHashMap 的迭代器在並發移除時是安全的；不能先 toList()（大小與內容可能不一致而拋例外）。
         for (closeable in sockets) runCatching { closeable.close() }
         sockets.clear()
@@ -352,8 +335,6 @@ class DirectSocksServer(
     companion object {
         private const val HANDSHAKE_TIMEOUT_MS = 15_000
         private const val PER_ADDRESS_TIMEOUT_MS = 3_000
-        private const val HALF_CLOSE_LINGER_MS = 120_000
-        private const val TCP_BUFFER = 32 * 1024
         private const val UDP_BUFFER = 65_535
 
         private fun randomToken(): String {

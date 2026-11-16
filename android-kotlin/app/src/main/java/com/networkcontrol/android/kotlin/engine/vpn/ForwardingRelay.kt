@@ -57,7 +57,20 @@ class ForwardingRelay(
         }
     }
 
+    /** 送往 hev 的封包（切斷連線用）；與上行轉送共用輸出，需要同步。 */
+    private val hevWriter = object : PacketWriter {
+        override fun write(packet: ByteArray) {
+            if (stopped) return
+            try {
+                synchronized(relayOutput) { relayOutput.write(packet, 0, packet.size) }
+            } catch (ex: IOException) {
+                if (!stopped) AppLog.w("forwarding", "hev write failed: ${ex.message}")
+            }
+        }
+    }
+
     fun start() {
+        filter.toHev = hevWriter
         upstream = Thread({ pumpUpstream() }, "NetworkControlKT.FwdUp").apply {
             isDaemon = true
             start()
@@ -82,7 +95,7 @@ class ForwardingRelay(
                     if (filterErrors++ % 1000 == 0L) AppLog.e("forwarding", "filter failed; forwarding packet", ex)
                     true
                 }
-                if (forward) relayOutput.write(buffer, 0, read)
+                if (forward) synchronized(relayOutput) { relayOutput.write(buffer, 0, read) }
             }
         } catch (ex: IOException) {
             if (!stopped) onError(ex)
@@ -98,8 +111,8 @@ class ForwardingRelay(
                 val read = relayInput.read(buffer)
                 if (read < 0) break
                 if (read == 0) continue
-                runCatching { filter.onHevPacket(buffer, read) }
-                writeTun(buffer, read)
+                val keep = runCatching { filter.onHevPacket(buffer, read, tunWriter) }.getOrDefault(true)
+                if (keep) writeTun(buffer, read)
             }
         } catch (ex: IOException) {
             if (!stopped) onError(ex)

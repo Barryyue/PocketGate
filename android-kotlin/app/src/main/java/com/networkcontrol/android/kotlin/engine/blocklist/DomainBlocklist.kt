@@ -244,21 +244,41 @@ object BlocklistParser {
     }
 }
 
-/** 多份名單的聯合；不可變，更新時整個替換。 */
-class BlocklistMatcher(private val lists: List<Pair<String, DomainBlocklist>>) {
-    val isEmpty: Boolean get() = lists.isEmpty()
+/**
+ * 多份名單與追蹤器資料庫的聯合；不可變，更新時整個替換。
+ * @param blockedCategories 要整類攔截的追蹤器類別（命中時回傳 `tracker:<類別>`）。
+ */
+class BlocklistMatcher(
+    private val lists: List<Pair<String, DomainBlocklist>>,
+    val trackers: TrackerDatabase? = null,
+    private val blockedCategories: Set<String> = emptySet(),
+) {
+    /** 沒有任何攔截條件（追蹤器資料庫只用於識別時也算空）。 */
+    val isEmpty: Boolean get() = lists.isEmpty() && (trackers == null || blockedCategories.isEmpty())
     val totalEntries: Int = lists.sumOf { it.second.size }
 
-    /** 回傳命中的名單 id；沒有命中時為 null。 */
+    /** 回傳命中的名單 id（追蹤器類別為 `tracker:<類別>`）；沒有命中時為 null。 */
     fun match(host: String?): String? {
-        if (host.isNullOrEmpty() || lists.isEmpty()) return null
+        if (host.isNullOrEmpty() || isEmpty) return null
         for ((id, list) in lists) {
             if (list.matches(host)) return id
+        }
+        if (blockedCategories.isNotEmpty()) {
+            val info = trackers?.lookup(host) ?: return null
+            if (info.category in blockedCategories) return TRACKER_PREFIX + info.category
         }
         return null
     }
 
+    /** 追蹤器歸屬（只用於顯示）。 */
+    fun tracker(host: String?): TrackerInfo? = trackers?.lookup(host)
+
+    /** 用於判斷是否需要通知引擎重新判決。 */
+    internal val signature: String = lists.joinToString { "${it.first}:${it.second.size}" } +
+        "|${trackers?.size ?: 0}|${blockedCategories.sorted()}"
+
     companion object {
+        const val TRACKER_PREFIX = "tracker:"
         val Empty = BlocklistMatcher(emptyList())
     }
 }
