@@ -611,6 +611,13 @@ class AppBackend(val container: AppContainer) {
     /** 是否已用 adb 授予 DUMP，能偵測其他應用真正關閉。 */
     fun processExitDetection(): Boolean = container.appSessionTracker.processExits.available
 
+    /** 用 Shizuku 或 root 授予 DUMP；成功後關閉偵測立即生效。 */
+    suspend fun grantExitDetection(): com.networkcontrol.android.kotlin.platform.permissions.DumpGrantOutcome =
+        com.networkcontrol.android.kotlin.platform.permissions.DumpPermissionGranter.grant(context.packageName)
+
+    fun exitDetectionAdbCommand(): String =
+        com.networkcontrol.android.kotlin.platform.permissions.DumpPermissionGranter.adbCommand(context.packageName)
+
     fun onceBackgroundMinutes(): Int = container.preferences.onceBackgroundMinutes
 
     fun setOnceBackgroundMinutes(minutes: Int) {

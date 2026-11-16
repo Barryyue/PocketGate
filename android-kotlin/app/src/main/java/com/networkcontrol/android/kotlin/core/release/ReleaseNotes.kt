@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.10.6",
+            date = "2026-11-17",
+            features = listOf(
+                t(
+                    "Close detection can now be turned on without a computer: tap Grant in settings to authorize it once with Shizuku or root. If neither is available, the app shows how to do it with Shizuku or a computer.",
+                    "关闭检测不再需要电脑：在设置中点「授权」，即可用 Shizuku 或 Root 一次开启。两者都没有时，会显示用 Shizuku 或电脑开启的方法。",
+                    "關閉偵測不再需要電腦：在設定中點「授權」，即可用 Shizuku 或 Root 一次開啟。兩者都沒有時，會顯示用 Shizuku 或電腦開啟的方法。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.10.5",
             date = "2026-11-17",
             features = listOf(),

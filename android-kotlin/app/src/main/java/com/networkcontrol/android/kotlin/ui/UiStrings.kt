@@ -446,6 +446,13 @@ enum class S {
     OnceBackgroundMinutesHint,
     OnceExitDetectionOn,
     OnceExitDetectionOff,
+    OnceExitGrant,
+    OnceExitGrantOk,
+    OnceExitGrantRestart,
+    OnceExitGrantDenied,
+    OnceExitGrantFailed,
+    OnceExitGuideTitle,
+    OnceExitGuideBody,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -913,7 +920,14 @@ private val EN = mapOf(
     S.OnceBackgroundMinutes to "Keep \"Only once\" and \"Deny\" in the background (minutes)",
     S.OnceBackgroundMinutesHint to "After the app goes to the background, the decision ends only when it stays there longer than this. 0 ends it as soon as you leave the app. Android does not tell other apps when an app is really closed, so this is an approximation.",
     S.OnceExitDetectionOn to "Close detection is on: decisions end when the app is really closed, and the time above is not used.",
-    S.OnceExitDetectionOff to "Close detection is off. To end decisions only when the app is really closed (like Red Magic), grant this once from a computer: adb shell pm grant com.networkcontrol.android.kotlin android.permission.DUMP",
+    S.OnceExitDetectionOff to "Close detection is off, so the time above is used. Tap Grant to turn it on once with Shizuku or root.",
+    S.OnceExitGrant to "Grant",
+    S.OnceExitGrantOk to "Close detection is on",
+    S.OnceExitGrantRestart to "Granted. Restart the app if it does not take effect.",
+    S.OnceExitGrantDenied to "Authorization was denied",
+    S.OnceExitGrantFailed to "Grant failed: %1\$s",
+    S.OnceExitGuideTitle to "Turn on close detection",
+    S.OnceExitGuideBody to "Shizuku is not running and root is not available. Choose one way to grant it once:\n\n1. Shizuku: install Shizuku, start it with Wireless debugging, then come back and tap Grant.\n2. Computer: enable USB debugging, connect the phone and run this command:",
 )
 
 private val CN = mapOf(
@@ -1357,7 +1371,14 @@ private val CN = mapOf(
     S.OnceBackgroundMinutes to "「仅一次」「禁止」在后台保留（分钟）",
     S.OnceBackgroundMinutesHint to "应用切到后台后，超过这段时间才算关闭并失效，期间回到应用不会再询问；0 表示一离开就失效。Android 无法得知其他应用是否真正被关闭，这是近似做法。",
     S.OnceExitDetectionOn to "已启用关闭检测：应用真正关闭时才失效，上面的时间不再使用。",
-    S.OnceExitDetectionOff to "未启用关闭检测。想和红魔一样在应用真正关闭时才失效，请用电脑执行一次：adb shell pm grant com.networkcontrol.android.kotlin android.permission.DUMP",
+    S.OnceExitDetectionOff to "未启用关闭检测，目前按上面的时间判断。点「授权」可用 Shizuku 或 Root 开启（只需一次）。",
+    S.OnceExitGrant to "授权",
+    S.OnceExitGrantOk to "已启用关闭检测",
+    S.OnceExitGrantRestart to "已授权，如未生效请重新打开应用",
+    S.OnceExitGrantDenied to "授权被拒绝",
+    S.OnceExitGrantFailed to "授权失败：%1\$s",
+    S.OnceExitGuideTitle to "开启关闭检测",
+    S.OnceExitGuideBody to "没有检测到正在运行的 Shizuku，也没有 Root。任选一种方式授权一次：\n\n1. Shizuku：安装 Shizuku，在其中用「无线调试」启动，回到这里再点「授权」。\n2. 电脑：打开 USB 调试并连接电脑，执行下面的命令：",
 )
 
 private val TW = mapOf(
@@ -1801,5 +1822,12 @@ private val TW = mapOf(
     S.OnceBackgroundMinutes to "「僅一次」「禁止」在背景保留（分鐘）",
     S.OnceBackgroundMinutesHint to "應用程式切到背景後，超過這段時間才算關閉並失效，期間回到應用程式不會再詢問；0 表示一離開就失效。Android 無法得知其他應用程式是否真正被關閉，這是近似做法。",
     S.OnceExitDetectionOn to "已啟用關閉偵測：應用程式真正關閉時才失效，上面的時間不再使用。",
-    S.OnceExitDetectionOff to "未啟用關閉偵測。想和紅魔一樣在應用程式真正關閉時才失效，請用電腦執行一次：adb shell pm grant com.networkcontrol.android.kotlin android.permission.DUMP",
+    S.OnceExitDetectionOff to "未啟用關閉偵測，目前按上面的時間判斷。點「授權」可用 Shizuku 或 Root 開啟（只需一次）。",
+    S.OnceExitGrant to "授權",
+    S.OnceExitGrantOk to "已啟用關閉偵測",
+    S.OnceExitGrantRestart to "已授權，如未生效請重新開啟應用程式",
+    S.OnceExitGrantDenied to "授權被拒絕",
+    S.OnceExitGrantFailed to "授權失敗：%1\$s",
+    S.OnceExitGuideTitle to "開啟關閉偵測",
+    S.OnceExitGuideBody to "沒有偵測到正在執行的 Shizuku，也沒有 Root。任選一種方式授權一次：\n\n1. Shizuku：安裝 Shizuku，在其中用「無線偵錯」啟動，回到這裡再點「授權」。\n2. 電腦：開啟 USB 偵錯並連接電腦，執行下面的命令：",
 )

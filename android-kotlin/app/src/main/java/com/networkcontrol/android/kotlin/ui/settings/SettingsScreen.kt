@@ -181,6 +181,9 @@ fun SettingsScreen(
         mutableStateOf(settings.promptTimeoutSeconds.toString())
     }
     var onceBackgroundText by remember { mutableStateOf(backend.onceBackgroundMinutes().toString()) }
+    var exitDetection by remember { mutableStateOf(backend.processExitDetection()) }
+    var grantingExitDetection by remember { mutableStateOf(false) }
+    var showExitGrantGuide by remember { mutableStateOf(false) }
     var timedMinutesText by remember(settings.promptTimedMinutes) {
         mutableStateOf(settings.promptTimedMinutes.toString())
     }
@@ -348,14 +351,6 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        val exitDetection = remember { backend.processExitDetection() }
-                        androidx.compose.foundation.text.selection.SelectionContainer {
-                            Text(
-                                if (exitDetection) s[S.OnceExitDetectionOn] else s[S.OnceExitDetectionOff],
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (exitDetection) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
                     }
                     OutlinedTextField(
                         value = onceBackgroundText,
@@ -374,6 +369,62 @@ fun SettingsScreen(
                             toast(s[S.Done])
                         },
                     ) { Text(s[S.Save]) }
+                }
+                // 關閉偵測（DUMP）：已授權時「僅一次」「禁止」在應用真正關閉時才失效。
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        if (exitDetection) s[S.OnceExitDetectionOn] else s[S.OnceExitDetectionOff],
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (exitDetection) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (!exitDetection) {
+                        TextButton(
+                            enabled = !grantingExitDetection,
+                            onClick = {
+                                grantingExitDetection = true
+                                scope.launch {
+                                    val outcome = backend.grantExitDetection()
+                                    grantingExitDetection = false
+                                    exitDetection = backend.processExitDetection()
+                                    when (outcome) {
+                                        com.networkcontrol.android.kotlin.platform.permissions.DumpGrantOutcome.Granted ->
+                                            toast(if (exitDetection) s[S.OnceExitGrantOk] else s[S.OnceExitGrantRestart])
+                                        com.networkcontrol.android.kotlin.platform.permissions.DumpGrantOutcome.NoTool ->
+                                            showExitGrantGuide = true
+                                        com.networkcontrol.android.kotlin.platform.permissions.DumpGrantOutcome.Denied ->
+                                            toast(s[S.OnceExitGrantDenied])
+                                        is com.networkcontrol.android.kotlin.platform.permissions.DumpGrantOutcome.Failed ->
+                                            toast(s.format(S.OnceExitGrantFailed, outcome.message))
+                                    }
+                                }
+                            },
+                        ) { Text(s[S.OnceExitGrant]) }
+                    }
+                }
+                if (showExitGrantGuide) {
+                    val command = remember { backend.exitDetectionAdbCommand() }
+                    AlertDialog(
+                        onDismissRequest = { showExitGrantGuide = false },
+                        title = { Text(s[S.OnceExitGuideTitle]) },
+                        text = {
+                            androidx.compose.foundation.text.selection.SelectionContainer {
+                                Text(s[S.OnceExitGuideBody] + "\n\n" + command)
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    context.getSystemService(android.content.ClipboardManager::class.java)
+                                        ?.setPrimaryClip(android.content.ClipData.newPlainText("adb", command))
+                                    toast(s[S.Done])
+                                },
+                            ) { Text(s[S.Copy]) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showExitGrantGuide = false }) { Text(s[S.Close]) }
+                        },
+                    )
                 }
                 SwitchRow(
                     title = s[S.PromptTimedVisible],
