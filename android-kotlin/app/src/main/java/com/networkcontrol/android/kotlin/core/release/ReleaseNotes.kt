@@ -40,7 +40,7 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
-            version = "0.9.11",
+            version = "0.10.1",
             date = "2026-11-16",
             features = listOf(),
             improvements = listOf(
@@ -48,6 +48,17 @@ object ReleaseNotes {
                     "Fixed: in per-connection mode, when many domain names were resolved at once (for example opening a page that loads from many sites), some lookups were lost and took 5 to 9 seconds. Lookups are now queued and retried automatically, so a burst of 30 names finishes in about 0.2 seconds.",
                     "修正：逐连接模式下同时解析很多域名（例如打开一个要从很多网站加载内容的网页）时，部分解析会丢失，要等 5～9 秒。现在解析会自动排队并重试，30 个域名同时解析约 0.2 秒内完成。",
                     "修正：逐連線模式下同時解析很多網域（例如開啟一個要從很多網站載入內容的網頁）時，部分解析會遺失，要等 5～9 秒。現在解析會自動排隊並重試，30 個網域同時解析約 0.2 秒內完成。",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.10.0",
+            date = "2026-11-16",
+            features = listOf(
+                t(
+                    "Update checks can now use GitHub, GitLab, Gitee or a custom HTTPS JSON. Set the repository in Settings; APK assets are opened directly when present.",
+                    "检查更新现在支持 GitHub、GitLab、Gitee 或自定义 HTTPS JSON；可在设置里填写仓库，有 APK 附件时直接打开下载链接。",
+                    "檢查更新現在支援 GitHub、GitLab、Gitee 或自訂 HTTPS JSON；可在設定裡填寫儲存庫，有 APK 附件時直接開啟下載連結。",
                 ),
             ),
         ),

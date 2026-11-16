@@ -1352,7 +1352,32 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 量測方法：shell 的 `$(( ))` 是 32 位整數，`date +%s%N` 相減超過約 2.1 秒會溢出成負數；改用 `/proc/uptime`（10 ms 精度）。
 - 修正版已安裝到實機，複測待 adb 重新連線後進行。
 
-## 43. v0.9.11-m4p11（2026-11-16）：映射 DNS 排隊與重送
+## 43. v0.10.0-m4p12（2026-11-16）：更新來源可配置
+
+- 更新檢查不再寫死 GitHub：設定 → 關於可選 GitHub / GitLab / Gitee / 自訂 HTTPS JSON。
+- GitHub / Gitee 填 `owner/repo`，GitLab 填 `group/project`（API 會做 URL 編碼），自訂填回傳 `version`、`url`、可選 `apk` 的 HTTPS JSON。
+- 有 APK 附件時優先打開 APK 下載連結，否則打開 release 頁面；只允許 HTTPS，公開請求仍跟隨系統代理。
+- 未實作自動下載 / 安裝；Gitee 未登入 API 有速率限制，GitLab 目前固定 gitlab.com。
+
+### 43.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.10.0-m4p12.apk` |
+| APK 大小 | 4,303,934 bytes |
+| APK SHA-256 | `07E68E7A570D79DAC9DA9334BCD80D3A8C0B4A7E2709685A9888D8FADC6BCED5` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.10.0-m4p12-x86_64-emulator.apk` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.10.0-m4p12.aab` |
+| AAB 大小 | 5,156,339 bytes |
+| AAB SHA-256 | `C93FCB953B16B664A637D2B459C3A9B0A94069081411F883AACC4AEA76666DE3` |
+| versionName / Code | `0.10.0-m4p12` / `35` |
+
+### 43.2 驗證
+
+- JVM 測試（UpdateChecker 各來源解析、URL 編碼、HTTPS 限制）/ Debug / Release / AAB 構建通過。
+- 真機未驗證：GitLab / Gitee 實際 release JSON、公司內網 GitLab、Gitee 速率限制。
+
+## 44. v0.10.1-m4p12（2026-11-16）：映射 DNS 排隊與重送
 
 - **現象**：0.9.10 後同名並發解析正常，但很多不同網域同時解析（打開從很多網站載入內容的網頁）時仍有部分要 5～9 秒。
 - **定位**：在調試版逐包記錄「讀到的查詢 / 送給 hev 的查詢 / hev 的回覆」：
@@ -1361,4 +1386,4 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
   - 即使逐一放行、間隔數毫秒，仍有約 4% 的查詢沒有回覆。
 - **修正**（`DnsPacer`）：映射 DNS 查詢一次只放一個在途，回覆後間隔 2 ms 再放行下一個；在途查詢 25 ms 沒有回覆就自己重送，最多 3 次。hev 正常 1～5 ms 就回覆，排隊與重送的代價很小。回覆按「用戶端埠 + DNS 事務 ID」對應到在途查詢。由轉送層的 `DnsPump` 執行緒放行（有排隊時每 1 ms、空閒時每 5 ms 檢查）。
 - **模擬器結果**（30 個不同網域同時解析）：修正前每輪 7～18 個要 5～9 秒；修正後連續 6 輪全部在 0.2 秒內，中位數 80～130 ms。
-- **實機**：0.9.11 已安裝且隧道正常；但實機上 adb shell（uid 2000）目前屬於繞過 VPN 的應用，shell 的解析不經過本應用，無法用相同方法量測，需用戶實際瀏覽確認。
+- **實機**：修正版（當時編號 0.9.11）已安裝且隧道正常；但實機上 adb shell（uid 2000）目前屬於繞過 VPN 的應用，shell 的解析不經過本應用，無法用相同方法量測，需用戶實際瀏覽確認。

@@ -819,6 +819,25 @@ class AppBackend(val container: AppContainer) {
         container.vpnEngine.requestReplan()
     }
 
+    fun updateSource(): com.networkcontrol.android.kotlin.core.update.UpdateSource =
+        container.preferences.updateSource
+
+    fun setUpdateSource(source: com.networkcontrol.android.kotlin.core.update.UpdateSource) {
+        container.preferences.updateSource = source
+    }
+
+    fun updateRepo(): String = container.preferences.updateRepo
+
+    fun setUpdateRepo(repo: String) {
+        container.preferences.updateRepo = repo
+    }
+
+    fun updateCustomUrl(): String = container.preferences.updateCustomUrl
+
+    fun setUpdateCustomUrl(url: String) {
+        container.preferences.updateCustomUrl = url
+    }
+
     fun installedApps(): List<com.networkcontrol.android.kotlin.core.model.InstalledApp> =
         container.appCatalog.getApps()
             .filter { it.packageName != context.packageName }
