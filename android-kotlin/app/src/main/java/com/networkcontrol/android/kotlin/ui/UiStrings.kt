@@ -433,6 +433,15 @@ enum class S {
     UpdateSourceGitLab,
     UpdateSourceGitee,
     UpdateSourceCustom,
+    PromptDontAskAgain,
+    PromptDenyPermanent,
+    PromptDenyPermanentHint,
+    PromptSheetMessage,
+    PromptNetWlan,
+    PromptNetMobile,
+    PromptNetAny,
+    PromptTimedShort,
+    PromptDeny,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -798,7 +807,7 @@ private val EN = mapOf(
     S.IslandPreview to "Preview",
     S.IslandConfig to "Dynamic island settings",
     S.PromptTimedVisible to "Show the timed allow option",
-    S.PromptTimedVisibleHint to "When off, the floating prompt only offers allow once, permanent and deny.",
+    S.PromptTimedVisibleHint to "When off, the floating prompt only offers deny, allow and only once.",
     S.ProxyTest to "Test proxy",
     S.ProxyTestSuccess to "Proxy is reachable and can connect out.",
     S.ProxyTestFailed to "Proxy test failed: %1\$s",
@@ -888,6 +897,15 @@ private val EN = mapOf(
     S.UpdateSourceGitLab to "GitLab",
     S.UpdateSourceGitee to "Gitee",
     S.UpdateSourceCustom to "Custom",
+    S.PromptDontAskAgain to "Don't ask again after denying",
+    S.PromptDenyPermanent to "Deny is permanent by default",
+    S.PromptDenyPermanentHint to "Off: Deny only blocks the app until it is closed; tick \"Don't ask again after denying\" in the prompt to deny permanently. On: Deny always creates a permanent rule.",
+    S.PromptSheetMessage to "%1\$s has blocked %2\$s from using %3\$s. Allow this app to use the network?",
+    S.PromptNetWlan to "Wi-Fi",
+    S.PromptNetMobile to "mobile data",
+    S.PromptNetAny to "the network",
+    S.PromptTimedShort to "%1\$d min",
+    S.PromptDeny to "Deny",
 )
 
 private val CN = mapOf(
@@ -1229,7 +1247,7 @@ private val CN = mapOf(
     S.IslandPreview to "预览",
     S.IslandConfig to "灵动岛设置",
     S.PromptTimedVisible to "显示「限时允许」选项",
-    S.PromptTimedVisibleHint to "关闭后，悬浮询问只显示「允许一次」「永久」「拒绝」。",
+    S.PromptTimedVisibleHint to "关闭后，悬浮询问只显示「禁止」「允许」「仅一次」。",
     S.ProxyTest to "测试代理",
     S.ProxyTestSuccess to "代理可访问，且能正常连接外网。",
     S.ProxyTestFailed to "代理测试失败：%1\$s",
@@ -1319,6 +1337,15 @@ private val CN = mapOf(
     S.UpdateSourceGitLab to "GitLab",
     S.UpdateSourceGitee to "Gitee",
     S.UpdateSourceCustom to "自定义",
+    S.PromptDontAskAgain to "禁止后不再提示",
+    S.PromptDenyPermanent to "「禁止」默认为永久",
+    S.PromptDenyPermanentHint to "关闭时，「禁止」只在应用关闭前有效，在询问中勾选「禁止后不再提示」才会永久禁止；开启后「禁止」一律永久。",
+    S.PromptSheetMessage to "%1\$s已禁止%2\$s使用%3\$s。是否允许此应用使用网络？",
+    S.PromptNetWlan to "WLAN网络",
+    S.PromptNetMobile to "移动数据",
+    S.PromptNetAny to "网络",
+    S.PromptTimedShort to "限时%1\$d分钟",
+    S.PromptDeny to "禁止",
 )
 
 private val TW = mapOf(
@@ -1660,7 +1687,7 @@ private val TW = mapOf(
     S.IslandPreview to "預覽",
     S.IslandConfig to "靈動島設定",
     S.PromptTimedVisible to "顯示「限時允許」選項",
-    S.PromptTimedVisibleHint to "關閉後，懸浮詢問只顯示「允許一次」「永久」「拒絕」。",
+    S.PromptTimedVisibleHint to "關閉後，懸浮詢問只顯示「禁止」「允許」「僅一次」。",
     S.ProxyTest to "測試代理",
     S.ProxyTestSuccess to "代理可連線，且能正常連往外網。",
     S.ProxyTestFailed to "代理測試失敗：%1\$s",
@@ -1750,4 +1777,13 @@ private val TW = mapOf(
     S.UpdateSourceGitLab to "GitLab",
     S.UpdateSourceGitee to "Gitee",
     S.UpdateSourceCustom to "自訂",
+    S.PromptDontAskAgain to "禁止後不再提示",
+    S.PromptDenyPermanent to "「禁止」預設為永久",
+    S.PromptDenyPermanentHint to "關閉時，「禁止」只在應用程式關閉前有效，在詢問中勾選「禁止後不再提示」才會永久禁止；開啟後「禁止」一律永久。",
+    S.PromptSheetMessage to "%1\$s已禁止%2\$s使用%3\$s。是否允許此應用程式使用網路？",
+    S.PromptNetWlan to "Wi-Fi 網路",
+    S.PromptNetMobile to "行動數據",
+    S.PromptNetAny to "網路",
+    S.PromptTimedShort to "限時 %1\$d 分鐘",
+    S.PromptDeny to "禁止",
 )

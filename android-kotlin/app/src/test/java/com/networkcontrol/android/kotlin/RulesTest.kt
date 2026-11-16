@@ -197,6 +197,26 @@ class RulesTest {
     }
 
     @Test
+    fun denyOnceRuleIsAppLevelAndNotPersistent() {
+        val rule = com.networkcontrol.android.kotlin.core.rules.PromptRuleFactory.createRule(
+            decision = com.networkcontrol.android.kotlin.core.model.PromptDecision(
+                action = VerdictAction.Deny,
+                lifetime = RuleLifetime.UntilAppExit,
+            ),
+            flow = flow(),
+            app = app,
+            domains = DomainCandidates(listOf("example.com")),
+            profileId = "p",
+            now = 1_000,
+        )
+        assertNotNull(rule)
+        assertEquals(VerdictAction.Deny, rule!!.action)
+        assertEquals(RuleLifetime.UntilAppExit, rule.lifetime)
+        assertFalse(rule.isPersistent)
+        assertNull(rule.conditions.remote)
+    }
+
+    @Test
     fun networkConditionsNeedMatchingContext() {
         val rules = RuleSet(
             listOf(

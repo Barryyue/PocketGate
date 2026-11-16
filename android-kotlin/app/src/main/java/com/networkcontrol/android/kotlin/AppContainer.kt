@@ -153,6 +153,7 @@ class AppContainer(context: Context) {
         context = appContext,
         preferences = preferences,
         timedMinutesProvider = { settings.state.value.promptTimedMinutes },
+        networkKindProvider = { network.current.kind },
     )
     val promptRouter = com.networkcontrol.android.kotlin.platform.prompt.PromptRouter(
         scope = scope,

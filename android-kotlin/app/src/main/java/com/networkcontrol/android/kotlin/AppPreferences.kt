@@ -47,7 +47,7 @@ class AppPreferences(context: Context) {
 
     /** 懸浮面板位置：top / bottom。 */
     var promptOverlayPosition: String
-        get() = prefs.getString(KEY_PROMPT_OVERLAY_POSITION, "top") ?: "top"
+        get() = prefs.getString(KEY_PROMPT_OVERLAY_POSITION, "bottom") ?: "bottom"
         set(value) = prefs.edit().putString(KEY_PROMPT_OVERLAY_POSITION, value).apply()
 
     /** 自訂垂直位置：0=頂部，1=底部。 */
@@ -108,6 +108,11 @@ class AppPreferences(context: Context) {
     var promptShowTimedOption: Boolean
         get() = prefs.getBoolean(KEY_PROMPT_SHOW_TIMED, true)
         set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_TIMED, value).apply()
+
+    /** 詢問面板的「拒絕」是否一律永久；預設 false：只拒絕到應用關閉，勾選「不再詢問」才永久。 */
+    var promptDenyPermanent: Boolean
+        get() = prefs.getBoolean(KEY_PROMPT_DENY_PERMANENT, false)
+        set(value) = prefs.edit().putBoolean(KEY_PROMPT_DENY_PERMANENT, value).apply()
 
     var speedIslandMode: com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
         get() = runCatching {
@@ -303,6 +308,7 @@ class AppPreferences(context: Context) {
         const val KEY_SPEED_ISLAND_SWAP_ORDER = "speed_island_swap_order"
         const val KEY_SPEED_ISLAND_DOT_COLOR = "speed_island_dot_color"
         const val KEY_PROMPT_SHOW_TIMED = "prompt_show_timed"
+        const val KEY_PROMPT_DENY_PERMANENT = "prompt_deny_permanent"
         const val KEY_SPEED_ISLAND_MODE = "speed_island_mode"
         const val KEY_SPEED_ISLAND_CONTENT = "speed_island_content"
         const val KEY_SPEED_ISLAND_FONT_SCALE = "speed_island_font_scale"

@@ -322,6 +322,7 @@
 |---|---|---|---|---|
 | K-129 | 轉送 socket 對改為真正的 SOCK_SEQPACKET：`createReliableSocketPair()` 其實是 SOCK_STREAM，突發時封包黏包遺失（hev 寫出 233 / 轉送層讀到 134），造成 DNS、SYN-ACK、資料段遺失與數秒重傳。改用 `Os.socketpair(AF_UNIX, SOCK_SEQPACKET)`；移除只為繞過此問題的 `SynGate`，`DnsPacer` 改為在途 64 個 + 100 ms 重送 | `ForwardingRelay`、`DnsPacer`、`ForwardingPacketFilter` | 包數比對 1316 = 1316；模擬器 20 條並發 HTTP 0.19～0.58 秒零失敗（修正前長尾 2～7 秒、每輪 1～3 條失敗）、30 條並發建連 ≤0.13 秒、30 個並發 DNS ≤0.08 秒、映射重放正常；`DnsPacerTest` 更新 | 實機未量測（adb 中斷），需用戶確認 |
 | K-130 | hev 原生庫補丁：寫入遇 EAGAIN 時 poll 等待後重試（最多約 100 ms）而不是丟包；轉送執行緒提高優先級；socket 緩衝要求 8 MB | `android-kotlin/native/hev-socks5-tunnel/`、`jniLibs/*/libhev-socks5-tunnel.so`、`ForwardingRelay` | 以 NDK 30 重新編譯 arm64-v8a / x86_64，APK 內的庫與編譯產物雜湊一致 | 升級 hev 時要重新套用補丁 |
+| K-131 | 詢問改為紅魔邏輯與樣式：禁止 = 到應用關閉、勾選「禁止後不再提示」= 永久禁止、允許 = 永久、僅一次 = 到應用關閉，可選限時；移除「稍後」；新增「「禁止」預設為永久」設定；懸浮窗預設貼底、全寬、背景變暗 | `PromptOverlayController`、`PromptOverlay`、`PromptPresentationPolicy`（`PromptDenyPolicy` / `PromptSheetText`）、`AppPreferences`、`SettingsScreen`、`UiStrings` | JVM 測試；模擬器：懸浮窗外觀、觸控穿透、禁止 → UntilAppExit 並在離開後回收、勾選後 → 永久 | 實機（紅魔）外觀待用戶確認 |
 
 ### 尚未完成（待辦，不屬於完成項）
 

@@ -1,6 +1,9 @@
 package com.networkcontrol.android.kotlin.platform.prompt
 
 import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.RippleDrawable
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -13,6 +16,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RadioButton
 import android.widget.TextView
 import com.networkcontrol.android.kotlin.AppPreferences
 import com.networkcontrol.android.kotlin.R
@@ -23,6 +27,7 @@ import com.networkcontrol.android.kotlin.platform.AppIconLoader
 import com.networkcontrol.android.kotlin.platform.AppLog
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.UiStrings
+import com.networkcontrol.android.kotlin.ui.prompt.promptDisplayName
 
 /**
  * 系統級懸浮詢問面板。只用原生 View，避免 ComposeView 在 WindowManager 中的生命週期問題。
@@ -32,6 +37,7 @@ class PromptOverlayController(
     private val context: Context,
     private val preferences: AppPreferences,
     private val timedMinutesProvider: () -> Int = { 60 },
+    private val networkKindProvider: () -> com.networkcontrol.android.kotlin.core.model.NetworkKind? = { null },
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val windowManager = context.getSystemService(WindowManager::class.java)
@@ -152,8 +158,9 @@ class PromptOverlayController(
             null
         }
         val screenWidth = bounds?.width() ?: context.resources.displayMetrics.widthPixels
-        val width = minOf(screenWidth - dp(32), dp(560))
         val position = preferences.promptOverlayPosition
+        val sheet = position == "bottom"
+        val width = if (sheet) WindowManager.LayoutParams.MATCH_PARENT else minOf(screenWidth - dp(32), dp(560))
         val gravity = if (position == "bottom") {
             Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
         } else {
@@ -165,10 +172,12 @@ class PromptOverlayController(
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+                (if (sheet) WindowManager.LayoutParams.FLAG_DIM_BEHIND else 0),
             android.graphics.PixelFormat.TRANSLUCENT,
         ).apply {
             this.gravity = gravity
+            if (sheet) dimAmount = 0.32f
             y = when {
                 position == "custom" -> 0
                 position == "top" && preferences.speedIslandEnabled && Settings.canDrawOverlays(context) ->
@@ -177,6 +186,7 @@ class PromptOverlayController(
                             maxOf(0, preferences.speedIslandOffsetYDp) +
                             if (preferences.vivoIslandCompatible) 16 else 0,
                     )
+                sheet -> 0
                 else -> dp(8)
             }
             title = "NetworkControl prompt"
@@ -193,89 +203,88 @@ class PromptOverlayController(
         val night = (context.resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
-        val primary = preferences.themeColor
-        val surface = if (night) 0xFF1C1B1F.toInt() else 0xFFF7F2FA.toInt()
+        val accent = preferences.themeColor
+        val surface = if (night) 0xFF2B2930.toInt() else Color.WHITE
         val onSurface = if (night) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
         val onSurfaceVariant = if (night) 0xFFCAC4D0.toInt() else 0xFF49454F.toInt()
-        val onPrimary = if (luminance(primary) > 0.5) Color.BLACK else Color.WHITE
-        val outline = if (night) 0xFF49454F.toInt() else 0xFFCAC4D0.toInt()
+        val divider = if (night) 0xFF49454F.toInt() else 0xFFE0E0E0.toInt()
+        val error = if (night) 0xFFF2B8B5.toInt() else 0xFFB3261E.toInt()
+        val sheet = preferences.promptOverlayPosition == "bottom"
 
+        // 仿紅魔：貼底白色面板、上方圓角；置頂 / 自訂位置時四角圓角並加細框。
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(12))
+            setPadding(dp(24), dp(22), dp(24), dp(6))
             background = GradientDrawable().apply {
                 setColor(surface)
-                cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), outline)
+                val r = dp(20).toFloat()
+                cornerRadii = if (sheet) floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f) else FloatArray(8) { r }
+                if (!sheet) setStroke(dp(1), divider)
             }
             elevation = dp(12).toFloat()
         }
 
-        val header = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val packageName = prompt.app?.path?.removePrefix("android-app://")
-            ?: prompt.executablePath?.removePrefix("android-app://")
-            ?: ""
-        AppIconLoader.loadBitmap(context, packageName)?.let { bitmap ->
-            header.addView(
-                ImageView(context).apply {
-                    setImageBitmap(bitmap)
-                    layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
-                },
-            )
-        }
-        val titleColumn = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(10), 0, 0, 0)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
         val appLabel = prompt.app?.displayName
             ?: prompt.app?.name
-            ?: prompt.executablePath
+            ?: promptDisplayName(prompt.executablePath)
             ?: strings[S.UnknownApp]
-        titleColumn.addView(
+        val ownName = context.applicationInfo.loadLabel(context.packageManager).toString()
+        root.addView(
             textView(
-                strings.format(S.PromptTitle, appLabel),
-                16f,
+                PromptSheetText.message(strings, ownName, appLabel, networkKindProvider()),
+                18f,
                 onSurface,
-                bold = true,
-            ),
+            ).apply {
+                maxLines = 4
+                setLineSpacing(dp(4).toFloat(), 1f)
+            },
         )
-        val first = prompt.flows.firstOrNull()
-        val target = first?.let {
-            it.domains.firstOrNull() ?: "${it.remote.address.hostAddress}:${it.remote.port}"
-        }.orEmpty()
-        if (preferences.promptShowDetails) {
-            titleColumn.addView(
-                textView(
-                    "${strings[S.PromptTarget]}：$target · ${first?.protocol?.name.orEmpty()}",
-                    12f,
-                    onSurfaceVariant,
-                ),
-            )
-            if (prompt.flows.size > 1) {
-                titleColumn.addView(
-                    textView(
-                        strings.format(S.PromptFlows, prompt.flows.size),
-                        12f,
-                        onSurfaceVariant,
-                    ),
-                )
-            }
-        }
-        header.addView(titleColumn)
-        root.addView(header)
 
-        if (preferences.promptShowExplanation) {
+        if (preferences.promptShowDetails) {
+            val first = prompt.flows.firstOrNull()
+            val target = first?.let {
+                it.domains.firstOrNull() ?: "${it.remote.address.hostAddress}:${it.remote.port}"
+            }.orEmpty()
+            val more = if (prompt.flows.size > 1) " · " + strings.format(S.PromptFlows, prompt.flows.size) else ""
             root.addView(
                 textView(
-                    strings[S.PromptBlockedHint],
-                    12f,
+                    "${strings[S.PromptTarget]}：$target · ${first?.protocol?.name.orEmpty()}$more",
+                    13f,
                     onSurfaceVariant,
+                ).apply { setPadding(0, dp(6), 0, 0) },
+            )
+        }
+        if (prompt.isTamperAlert) {
+            root.addView(
+                textView(strings[S.PromptTamper], 13f, error).apply { setPadding(0, dp(6), 0, 0) },
+            )
+        }
+
+        val denyPermanent = preferences.promptDenyPermanent
+        var dontAskAgain = false
+        if (!denyPermanent) {
+            // 勾選後「禁止」改為永久禁止；不勾只禁止到應用關閉。圓形勾選與紅魔一致。
+            val dontAsk = RadioButton(context).apply {
+                text = strings[S.PromptDontAskAgain]
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                setTextColor(onSurface)
+                buttonTintList = ColorStateList(
+                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                    intArrayOf(accent, onSurfaceVariant),
+                )
+                setOnClickListener {
+                    dontAskAgain = !dontAskAgain
+                    isChecked = dontAskAgain
+                }
+            }
+            root.addView(
+                dontAsk,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
                 ).apply {
-                    setPadding(0, dp(8), 0, dp(6))
+                    topMargin = dp(8)
+                    marginStart = -dp(6)
                 },
             )
         }
@@ -285,79 +294,44 @@ class PromptOverlayController(
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(10), 0, 0)
         }
-        fun actionButton(
-            label: String,
-            filled: Boolean,
-            onClick: () -> Unit,
-        ): TextView = textView(label, 13f, if (filled) onPrimary else onSurface).apply {
-            gravity = Gravity.CENTER
-            setPadding(dp(8), dp(10), dp(8), dp(10))
-            background = GradientDrawable().apply {
-                setColor(if (filled) primary else Color.TRANSPARENT)
-                cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), if (filled) primary else outline)
+        fun addAction(label: String, onClick: () -> Unit) {
+            if (actions.childCount > 0) {
+                actions.addView(
+                    View(context).apply { setBackgroundColor(divider) },
+                    LinearLayout.LayoutParams(dp(1), dp(22)),
+                )
             }
-            setOnClickListener {
-                dismissedId = prompt.id
-                onClick()
-                hide()
-            }
-        }
-        actions.addView(
-            actionButton(strings[S.Deny], filled = false) {
-                onAnswer?.invoke(prompt.id, VerdictAction.Deny, RuleLifetime.Permanent)
-            },
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                .apply { marginEnd = dp(8) },
-        )
-        actions.addView(
-            actionButton(strings[S.PromptOnce], filled = false) {
-                onAnswer?.invoke(prompt.id, VerdictAction.Allow, RuleLifetime.UntilAppExit)
-            },
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                .apply { marginEnd = dp(8) },
-        )
-        actions.addView(
-            actionButton(strings[S.Allow], filled = true) {
-                onAnswer?.invoke(prompt.id, VerdictAction.Allow, RuleLifetime.Permanent)
-            },
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
-        )
-        root.addView(actions)
-
-        val secondary = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(4), 0, 0)
-        }
-        val later = textView(strings[S.PromptLater], 13f, onSurfaceVariant).apply {
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-            setOnClickListener {
-                dismissedId = prompt.id
-                onDismiss?.invoke(prompt.id)
-                hide()
-            }
-        }
-        secondary.addView(
-            later,
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
-        )
-        if (preferences.promptShowTimedOption) {
-            val timed = textView(
-                strings.format(S.PromptTimed, timedMinutesProvider()),
-                12f,
-                onSurfaceVariant,
-            ).apply {
-                setPadding(dp(8), dp(8), dp(8), dp(8))
+            val button = textView(label, 17f, accent).apply {
+                gravity = Gravity.CENTER
+                setPadding(dp(4), dp(14), dp(4), dp(14))
+                background = RippleDrawable(
+                    ColorStateList.valueOf((accent and 0x00FFFFFF) or 0x33000000),
+                    null,
+                    ColorDrawable(Color.WHITE),
+                )
                 setOnClickListener {
                     dismissedId = prompt.id
-                    onAnswer?.invoke(prompt.id, VerdictAction.Allow, RuleLifetime.Timed)
+                    onClick()
                     hide()
                 }
             }
-            secondary.addView(timed)
+            actions.addView(button, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         }
-        root.addView(secondary)
+        addAction(strings[S.PromptDeny]) {
+            onAnswer?.invoke(prompt.id, VerdictAction.Deny, PromptDenyPolicy.lifetime(dontAskAgain, denyPermanent))
+        }
+        addAction(strings[S.Allow]) {
+            onAnswer?.invoke(prompt.id, VerdictAction.Allow, RuleLifetime.Permanent)
+        }
+        addAction(strings[S.PromptOnce]) {
+            onAnswer?.invoke(prompt.id, VerdictAction.Allow, RuleLifetime.UntilAppExit)
+        }
+        if (preferences.promptShowTimedOption) {
+            addAction(strings.format(S.PromptTimedShort, timedMinutesProvider())) {
+                onAnswer?.invoke(prompt.id, VerdictAction.Allow, RuleLifetime.Timed)
+            }
+        }
+        root.addView(actions)
         return root
     }
 

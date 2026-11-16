@@ -111,7 +111,7 @@ class TargetAppSessionTracker(
         if (remove.isNotEmpty()) {
             rules.remove(remove, RuleEndReason.Expired)
             leftPackages.forEach { packageName -> onRevokedAfterLeaving?.invoke(packageName) }
-            AppLog.i("session", "removed ${remove.size} allow-once rules after app left foreground")
+            AppLog.i("session", "removed ${remove.size} until-app-exit rules after app left foreground")
         }
         val active = targets.mapNotNull(::packageOf).toSet()
         state.retainLeft(active)
