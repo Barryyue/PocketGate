@@ -196,6 +196,15 @@ class AppPreferences(context: Context) {
         get() = prefs.getInt(KEY_SOCKS5_PORT, 7890)
         set(value) = prefs.edit().putInt(KEY_SOCKS5_PORT, value).apply()
 
+    /** 外部 SOCKS5 的帳號密碼（可選）；存於應用私有的偏好設定。 */
+    var socks5Username: String?
+        get() = prefs.getString(KEY_SOCKS5_USERNAME, null)?.takeIf { it.isNotEmpty() }
+        set(value) = prefs.edit().putString(KEY_SOCKS5_USERNAME, value).apply()
+
+    var socks5Password: String?
+        get() = prefs.getString(KEY_SOCKS5_PASSWORD, null)?.takeIf { it.isNotEmpty() }
+        set(value) = prefs.edit().putString(KEY_SOCKS5_PASSWORD, value).apply()
+
     var socks5Udp: Boolean
         get() = prefs.getBoolean(KEY_SOCKS5_UDP, true)
         set(value) = prefs.edit().putBoolean(KEY_SOCKS5_UDP, value).apply()
@@ -290,6 +299,8 @@ class AppPreferences(context: Context) {
         const val KEY_SOCKS5_HOST = "socks5_host"
         const val KEY_SOCKS5_PORT = "socks5_port"
         const val KEY_SOCKS5_UDP = "socks5_udp"
+        const val KEY_SOCKS5_USERNAME = "socks5_username"
+        const val KEY_SOCKS5_PASSWORD = "socks5_password"
         const val KEY_SOCKS5_BYPASS_PACKAGE = "socks5_bypass_package"
         const val KEY_FORWARDING_DIRECT_PACKAGES = "forwarding_direct_packages"
         const val KEY_LEGACY_RULES_MIGRATED = "legacy_rules_migrated"

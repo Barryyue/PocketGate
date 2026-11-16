@@ -3,8 +3,12 @@ package com.networkcontrol.android.kotlin.engine.blocklist
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** 追蹤器歸屬：哪家公司、什麼類別（類別已正規化，見 [TrackerCategory]）。 */
-data class TrackerInfo(val company: String, val category: String)
+/**
+ * 追蹤器歸屬：哪家公司、什麼類別（類別已正規化，見 [TrackerCategory]）。
+ * 同一個域名常屬於多個類別（例如 google-analytics.com 同時是統計、郵件追蹤、指紋）；
+ * [category] 是顯示用的主要類別，整類攔截看 [categories]。
+ */
+data class TrackerInfo(val company: String, val category: String, val categories: Set<String> = setOf(category))
 
 /** 正規化後的類別；指紋與郵件兩種細分合併。 */
 object TrackerCategory {
@@ -21,8 +25,8 @@ object TrackerCategory {
     /** 可以整類攔截的類別（內容、反詐騙、同意管理通常是網站正常功能的一部分，不提供整類攔截）。 */
     val blockable = listOf(ADVERTISING, ANALYTICS, SOCIAL, FINGERPRINTING, CRYPTOMINING, EMAIL)
 
-    /** 同一域名出現在多個類別時，取較「嚴重」的。 */
-    private val priority = listOf(CRYPTOMINING, FINGERPRINTING, ADVERTISING, ANALYTICS, SOCIAL, EMAIL, CONTENT, ANTI_FRAUD, CONSENT)
+    /** 顯示用的主要類別順序：最直觀的用途優先（廣告、統計），指紋、郵件追蹤這類附帶特徵排後。 */
+    private val priority = listOf(ADVERTISING, ANALYTICS, SOCIAL, CRYPTOMINING, FINGERPRINTING, EMAIL, CONTENT, ANTI_FRAUD, CONSENT)
 
     fun normalize(raw: String): String = when (raw) {
         "FingerprintingInvasive", "FingerprintingGeneral" -> FINGERPRINTING
@@ -71,8 +75,15 @@ class TrackerDatabase(private val byDomain: Map<String, TrackerInfo>) {
                             for (j in 0 until domains.length()) {
                                 val domain = DomainHash.normalize(domains.optString(j)) ?: continue
                                 val existing = result[domain]
-                                if (existing == null || TrackerCategory.rank(category) < TrackerCategory.rank(existing.category)) {
-                                    result[domain] = TrackerInfo(company, category)
+                                result[domain] = if (existing == null) {
+                                    TrackerInfo(company, category)
+                                } else {
+                                    val primary = if (TrackerCategory.rank(category) < TrackerCategory.rank(existing.category)) {
+                                        category
+                                    } else {
+                                        existing.category
+                                    }
+                                    TrackerInfo(existing.company, primary, existing.categories + category)
                                 }
                             }
                         }

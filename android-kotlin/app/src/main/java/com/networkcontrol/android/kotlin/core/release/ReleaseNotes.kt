@@ -40,6 +40,66 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.7",
+            date = "2026-11-16",
+            features = listOf(
+                t(
+                    "Tracker identification: with the Disconnect tracker database (downloaded by this device), records show which company a domain belongs to and what it is used for.",
+                    "追踪器识别：使用 Disconnect 追踪器数据库（由本机下载），记录中会显示域名属于哪家公司、用途是什么。",
+                    "追蹤器識別：使用 Disconnect 追蹤器資料庫（由本機下載），紀錄中會顯示網域屬於哪家公司、用途是什麼。",
+                ),
+                t(
+                    "Block whole tracker categories: advertising, analytics, social networks, fingerprinting, cryptomining and email tracking.",
+                    "可以整类拦截追踪器：广告、统计分析、社交网络、设备指纹、加密货币挖矿、邮件追踪。",
+                    "可以整類攔截追蹤器：廣告、統計分析、社群網路、裝置指紋、加密貨幣挖礦、郵件追蹤。",
+                ),
+                t(
+                    "When rules change, existing connections that are no longer allowed are cut off (per-connection mode).",
+                    "规则改变后，已经建立、但不再允许的连接会被切断（逐连接模式）。",
+                    "規則改變後，已經建立、但不再允許的連線會被切斷（逐連線模式）。",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Fixed: after choosing \"Later\", closing the app and opening it again no longer leaves it offline without a prompt; leaving the app (home, another app, recents) now ends the \"Later\" period, while switching screens inside the app does not.",
+                    "修正：选择「稍后」后关闭应用再打开，不再一直断网也不提示；离开应用（回桌面、切到别的应用、从最近任务划掉）才会结束「稍后」，应用内切换页面不会。",
+                    "修正：選擇「稍後」後關閉應用程式再開啟，不再一直斷網也不提示；離開應用程式（回桌面、切到別的應用程式、從最近任務滑掉）才會結束「稍後」，應用程式內切換頁面不會。",
+                ),
+                t(
+                    "Fixed: \"Only this time\" could expire after 10 minutes while you were still using the app (when the app had been open for a while, or after a long screen-off).",
+                    "修正：「仅一次」在应用已经打开很久、或关屏较久时，可能在 10 分钟后被提前撤销。",
+                    "修正：「僅限這次」在應用程式已經開啟很久、或關閉螢幕較久時，可能在 10 分鐘後被提前撤銷。",
+                ),
+                t(
+                    "Fixed: protection could occasionally fail to start the tunnel right after the app launched.",
+                    "修正：应用启动后偶尔不会建立隧道的问题。",
+                    "修正：應用程式啟動後偶爾不會建立通道的問題。",
+                ),
+                t(
+                    "External SOCKS5 proxies with a username and password are now supported (the proxy test and health check use them too).",
+                    "支持需要用户名和密码的外部 SOCKS5 代理（测试代理和健康检查也会使用）。",
+                    "支援需要使用者名稱和密碼的外部 SOCKS5 代理（測試代理和健康檢查也會使用）。",
+                ),
+                t(
+                    "In whitelist mode, connections whose owner cannot be identified are now blocked instead of allowed.",
+                    "白名单模式下，查不到归属应用的连接改为拒绝，而不是放行。",
+                    "白名單模式下，查不到歸屬應用程式的連線改為拒絕，而不是放行。",
+                ),
+                t(
+                    "The built-in exit now relays all connections on a single thread instead of two threads per connection, using much less memory with many connections.",
+                    "内置出口改为单线程转发所有连接，不再每条连接两个线程，连接多时内存占用大幅减少。",
+                    "內建出口改為單執行緒轉發所有連線，不再每條連線兩個執行緒，連線多時記憶體佔用大幅減少。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "The Disconnect data is licensed CC BY-NC-SA 4.0 and is downloaded directly from Disconnect; it is not bundled with the app.",
+                    "Disconnect 数据以 CC BY-NC-SA 4.0 授权，直接从 Disconnect 下载，不随应用打包。",
+                    "Disconnect 資料以 CC BY-NC-SA 4.0 授權，直接從 Disconnect 下載，不隨應用程式打包。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.6",
             date = "2026-11-16",
             features = listOf(

@@ -210,6 +210,10 @@ class ForwardingTest {
         assertEquals(ForwardingDecision.Forward, ForwardingPolicy.decide(blacklist, 10999))
         val whitelist = VpnRoutingPlan(FilterMode.Whitelist, emptySet(), emptyMap(), emptyList())
         assertEquals(ForwardingDecision.Block, ForwardingPolicy.decide(whitelist, 10999))
+        // 白名單預設拒絕：查不到擁有者也拒絕
+        assertEquals(ForwardingDecision.Block, ForwardingPolicy.decide(whitelist, null))
+        val ask = VpnRoutingPlan(FilterMode.Ask, emptySet(), emptyMap(), emptyList())
+        assertEquals(ForwardingDecision.Forward, ForwardingPolicy.decide(ask, null))
     }
 
     @Test

@@ -63,6 +63,21 @@ class TrackerTest {
     }
 
     @Test
+    fun domainInSeveralCategoriesIsBlockedByAnyOfThem() {
+        val json = sample.replace(
+            "\"FingerprintingInvasive\": [",
+            "\"FingerprintingInvasive\": [\n              { \"Google\": { \"http://www.google.com/\": [\"google-analytics.com\"] } },",
+        )
+        val db = TrackerDatabase.parse(json)
+        val info = db.lookup("google-analytics.com")!!
+        // 主要類別以用途為準（統計），但同時屬於指紋
+        assertEquals(TrackerCategory.ANALYTICS, info.category)
+        assertTrue(TrackerCategory.FINGERPRINTING in info.categories)
+        assertEquals("tracker:Fingerprinting", BlocklistMatcher(emptyList(), db, setOf(TrackerCategory.FINGERPRINTING)).match("google-analytics.com"))
+        assertEquals("tracker:Analytics", BlocklistMatcher(emptyList(), db, setOf(TrackerCategory.ANALYTICS)).match("google-analytics.com"))
+    }
+
+    @Test
     fun matcherBlocksOnlySelectedCategories() {
         val db = TrackerDatabase.parse(sample)
         val identifyOnly = BlocklistMatcher(emptyList(), db, emptySet())

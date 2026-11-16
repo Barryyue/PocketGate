@@ -125,4 +125,5 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
   - Kotlin 版內建直連出口：本機 SOCKS5 必須驗證帳密，否則本機任何應用都能借它繞過防火牆；出口的 socket 與 DNS 要綁到實體網路（`Network.bindSocket` / `getAllByName`）。本開發機的模擬器系統 DNS 本身不可用（關閉 VPN 也解析不了），按域名的直連要在真機驗證；排查 hev 時在應用 `files/` 下建立 `hev-debug` 檔案即可打開 debug 日誌。
   - Kotlin 版 JVM 單元測試的 classpath 是 android.jar：沒有 `com.sun.net.httpserver`，需要 HTTP 伺服器時自己用 `ServerSocket` 寫（見 `BlocklistTest.MiniHttpServer`）。`ConcurrentHashMap.newKeySet()` 在並發修改時不要 `toList()`，直接迭代。開發機用 adb 時可能同時連著用戶的真機（無線調試），命令要加 `ANDROID_SERIAL=emulator-5554`，未經允許不要碰真機。
   - Kotlin 版 DNS：Java 的 `InetAddress.hostAddress` 對 IPv6 不壓縮零（`2606:4700:4700:0:0:0:0:1111`），比對 IP 要用 `InetAddress` 物件而不是字串。開發機網路對部分境外域名有 DNS 污染（例如 google.com 解析到 104.244.42.197），模擬器上連不上 Google 系服務不代表程式有問題。
+  - Kotlin 版：引擎的「觸發信號」不要用無 replay 的 `MutableSharedFlow`（收集端開始前的信號會遺失，曾導致啟動後不建立隧道），用 `Channel(CONFLATED)`。判斷使用者「離開應用」一律按 Activity（`AppForegroundState`），不要用「前台套件是否改變」：回桌面時前台為空，無法和應用內換頁區分。`uiautomator dump` 看不到懸浮窗，要加 `--windows`。本機 Gradle 第一次構建偶爾失敗、重跑即過（檔案鎖），不是程式問題。
   - 通知文本在 `Resources/values*/strings.xml`（沒有界面時也要可用），界面文本由 `tools/android-strings.py` 生成 XLIFF；兩處都要維護三種語言。

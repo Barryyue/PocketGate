@@ -785,6 +785,16 @@ class AppBackend(val container: AppContainer) {
         container.vpnEngine.requestReplan()
     }
 
+    fun socks5Username(): String = container.preferences.socks5Username.orEmpty()
+
+    fun socks5Password(): String = container.preferences.socks5Password.orEmpty()
+
+    fun setSocks5Credentials(username: String, password: String) {
+        container.preferences.socks5Username = username.trim()
+        container.preferences.socks5Password = password
+        container.vpnEngine.requestReplan()
+    }
+
     fun socks5Udp(): Boolean = container.preferences.socks5Udp
 
     fun setSocks5Udp(enabled: Boolean) {

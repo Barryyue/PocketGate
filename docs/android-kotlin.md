@@ -1295,3 +1295,32 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試 127 個通過（新增 `DnsProtectionTest` 7 個）；Release APK 在模擬器啟動無崩潰。
 - 模擬器 Debug（逐連線 + 直接連出 + 阿里 DNS）：shell 按域名經內建出口取得 HTTP 200；Chrome 自己的 DNS 被導回，打開 example.org、wikipedia.org，記錄中 Chrome 的連線都帶域名。Google 系域名在開發機網路下解析到被污染的位址（例如 104.244.42.197）而連不上，屬於網路環境，與本應用無關。測試後已還原設定。
 - 未驗證：DoT / DoH 阻擋在真機上的效果（例如 Firefox 自帶 DoH 時是否正確退回）；IPv6 網路下的 DNS 行為；各 DoH 服務在國內網路的穩定性。
+
+## 39. v0.9.7-m4p8（2026-11-16）：切斷連線、追蹤器識別、NIO 出口與「稍後 / 僅一次」修正
+
+### 39.1 改動
+
+- **規則改變後切斷連線**：過濾層記住已轉發 TCP 連線的判決輸入；規則或計畫改變時重新判決，已不允許的連線標記為待切斷。待切斷集合非空時，既有連線的快速路徑才解析封包；下一個經過的封包（任一方向）觸發雙向 RST，序號取自該封包，符合 RFC 5961 的精確序號要求。
+- **追蹤器識別**：Disconnect 資料由裝置下載（授權 CC BY-NC-SA 4.0，不打包）；同一域名保留所有類別，顯示時以用途為主（廣告、統計優先於指紋、郵件追蹤）。資料庫可只做識別；整類攔截需要開啟攔截列表。
+- **NIO 出口**：`TcpRelay` 以單一 Selector 執行緒轉送所有握手完成的連線，每條連線只佔兩個 32 KB 緩衝區。
+- **外部 SOCKS5 帳密**、**白名單查不到擁有者時拒絕**：見 K-118、K-119。
+- **「稍後」**：見 K-115；**「僅一次」**：見 K-116；**啟動競態**：見 K-117。
+
+### 39.2 產物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.9.7-m4p8.apk`（4,433,945 bytes） |
+| APK SHA-256 | `21770344FF4A07EB5BE7E28250D25417CBE8752C20549CB19080B17CA4BD6165` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.9.7-m4p8.aab`（5,052,453 bytes） |
+| AAB SHA-256 | `FFE9CDE69EB52A35DDB4D3D0FC71C0BF8E6958D4BE5012341A45E2424655DA46` |
+| versionName / Code | `0.9.7-m4p8` / `31` |
+
+### 39.3 驗證與限制
+
+- JVM 測試 138 個通過（新增 `ConnectionCutTest` 3、`TrackerTest` 5、`DirectRelayLoadTest` 1、`Socks5AuthTest` 2）；Release APK 在模擬器啟動無崩潰。
+- 模擬器 Debug：每次啟動都建立隧道；按域名經內建出口（阿里 DoH）取得 HTTP 200；Chrome 瀏覽正常；追蹤器整類攔截與標註；「稍後」在應用內保持、離開後清除並重新詢問。測試後已還原 Chrome 規則、設定與名單資料。
+- 未驗證：真機吞吐與耗電；「僅一次」的長時間場景（使用超過 10 分鐘、關屏超過 10 分鐘）只做了代碼審查；外部 SOCKS5 帳密只用內建出口驗證，未接真正需要帳密的代理。
+- **不做的項目與理由**：
+  - IPv6 域名映射：hev 的 mapdns 只支援 IPv4，AAAA 查詢回空，應用會改用 IPv4；純 IPv6 網路一般有 464XLAT 提供 IPv4，內建出口也會在 IPv4 失敗後改用 IPv6。目前沒有實際需要。
+  - firestack / gVisor：會取代 hev、過濾層與出口三者，是重寫等級的工作；在真機吞吐 / 耗電量測顯示現有架構不足之前不做。

@@ -142,6 +142,8 @@ fun SettingsScreen(
     var socks5Host by remember { mutableStateOf(backend.socks5Host()) }
     var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
     var socks5Udp by remember { mutableStateOf(backend.socks5Udp()) }
+    var socks5User by remember { mutableStateOf(backend.socks5Username()) }
+    var socks5Pass by remember { mutableStateOf(backend.socks5Password()) }
     var proxyTesting by remember { mutableStateOf(false) }
     var proxyPackage by remember { mutableStateOf(backend.socks5BypassPackage()) }
     var showProxyAppDialog by remember { mutableStateOf(false) }
@@ -832,9 +834,27 @@ fun SettingsScreen(
                             onClick = {
                                 backend.setSocks5Host(socks5Host)
                                 backend.setSocks5Port(socks5Port.toIntOrNull() ?: 7890)
+                                backend.setSocks5Credentials(socks5User, socks5Pass)
                                 toast(s[S.Done])
                             },
                         ) { Text(s[S.Save]) }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = socks5User,
+                            onValueChange = { socks5User = it },
+                            label = { Text(s[S.Socks5Username]) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedTextField(
+                            value = socks5Pass,
+                            onValueChange = { socks5Pass = it },
+                            label = { Text(s[S.Socks5Password]) },
+                            singleLine = true,
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                     }
                     SwitchRow(
@@ -953,6 +973,8 @@ fun SettingsScreen(
                                 val error = Socks5Probe.test(
                                     host = socks5Host,
                                     port = socks5Port.toIntOrNull() ?: 7890,
+                                    username = socks5User.trim().ifEmpty { null },
+                                    password = socks5Pass,
                                 )
                                 proxyTesting = false
                                 toast(

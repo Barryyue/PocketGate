@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -61,7 +62,11 @@ class VpnEngine(
     private var appliedFallback: VpnTunnelConfig? = null
     private var lastForwardingRetry = 0L
 
-    private val replanSignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /**
+     * 重新規劃的信號。用 CONFLATED Channel 而不是無 replay 的 SharedFlow：
+     * 收集端開始收集之前發出的信號不能遺失，否則啟動時可能一次都沒有規劃，隧道不會建立。
+     */
+    private val replanSignal = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
 
     /** 也會被服務生命週期回呼（主執行緒）清空，所以要 volatile。 */
     @Volatile
@@ -255,7 +260,7 @@ class VpnEngine(
         scope.launch { screenState.locked.collect { requestReplan() } }
         scope.launch { focus.session.collect { requestReplan() } }
         scope.launch {
-            replanSignal.debounce(300).collect {
+            replanSignal.receiveAsFlow().debounce(300).collect {
                 runCatching { replanNow() }.onFailure { error ->
                     com.networkcontrol.android.kotlin.platform.AppLog.e("vpn", "replan failed", error)
                 }
@@ -298,7 +303,12 @@ class VpnEngine(
         }
         val host = preferences.socks5Host
         val port = preferences.socks5Port
-        val error = com.networkcontrol.android.kotlin.platform.Socks5Probe.handshake(host, port)
+        val error = com.networkcontrol.android.kotlin.platform.Socks5Probe.handshake(
+            host,
+            port,
+            username = preferences.socks5Username,
+            password = preferences.socks5Password,
+        )
         if (error != null) {
             com.networkcontrol.android.kotlin.platform.AppLog.w("forwarding", "upstream $host:$port unavailable: $error")
         }
@@ -306,7 +316,7 @@ class VpnEngine(
     }
 
     fun requestReplan() {
-        replanSignal.tryEmit(Unit)
+        replanSignal.trySend(Unit)
     }
 
     private suspend fun replanNow() {
@@ -357,8 +367,8 @@ class VpnEngine(
                 upstreamHost = if (server != null) "127.0.0.1" else preferences.socks5Host,
                 upstreamPort = server?.port ?: preferences.socks5Port,
                 upstreamUdp = preferences.socks5Udp,
-                upstreamUsername = server?.username,
-                upstreamPassword = server?.password,
+                upstreamUsername = server?.username ?: preferences.socks5Username,
+                upstreamPassword = server?.password ?: preferences.socks5Password,
             )
         } else {
             VpnTunnelConfig(plan.bypassPackages)

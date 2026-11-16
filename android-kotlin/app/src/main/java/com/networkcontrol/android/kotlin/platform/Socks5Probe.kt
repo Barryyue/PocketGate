@@ -17,6 +17,8 @@ object Socks5Probe {
         port: Int,
         targetHost: String = "www.gstatic.com",
         targetPort: Int = 443,
+        username: String? = null,
+        password: String? = null,
     ): String? = withContext(Dispatchers.IO) {
         if (host.isBlank()) return@withContext "empty host"
         runCatching {
@@ -26,12 +28,7 @@ object Socks5Probe {
                 val out = socket.getOutputStream()
                 val input = socket.getInputStream()
 
-                out.write(byteArrayOf(0x05, 0x01, 0x00))
-                out.flush()
-                val method = readN(input, 2)
-                if (method[0] != 0x05.toByte() || method[1] != 0x00.toByte()) {
-                    return@use "auth rejected (${method[1]})"
-                }
+                negotiate(out, input, username, password)?.let { return@use it }
 
                 val target = targetHost.toByteArray(Charsets.UTF_8)
                 val request = ByteArray(5 + target.size + 2)
@@ -70,24 +67,48 @@ object Socks5Probe {
      * 只做 SOCKS5 方法協商（不連外網），用於轉發模式的週期健康檢查。
      * 成功回傳 null，失敗回傳錯誤訊息。
      */
-    suspend fun handshake(host: String, port: Int, timeoutMs: Int = 3000): String? = withContext(Dispatchers.IO) {
+    suspend fun handshake(
+        host: String,
+        port: Int,
+        timeoutMs: Int = 3000,
+        username: String? = null,
+        password: String? = null,
+    ): String? = withContext(Dispatchers.IO) {
         if (host.isBlank()) return@withContext "empty host"
         runCatching {
             Socket().use { socket ->
                 socket.connect(InetSocketAddress(host, port), timeoutMs)
                 socket.soTimeout = timeoutMs
-                socket.getOutputStream().apply {
-                    write(byteArrayOf(0x05, 0x01, 0x00))
-                    flush()
-                }
-                val method = readN(socket.getInputStream(), 2)
-                if (method[0] != 0x05.toByte() || method[1] != 0x00.toByte()) {
-                    "auth rejected (${method[1]})"
-                } else {
-                    null
-                }
+                negotiate(socket.getOutputStream(), socket.getInputStream(), username, password)
             }
         }.getOrElse { error -> error.message ?: error.javaClass.simpleName }
+    }
+
+    /**
+     * 方法協商：有帳號密碼時同時提供「無驗證」與「帳號密碼」（RFC 1929），由代理選擇。
+     * 成功回傳 null，失敗回傳錯誤訊息。
+     */
+    internal fun negotiate(out: java.io.OutputStream, input: InputStream, username: String?, password: String?): String? {
+        val withAuth = !username.isNullOrEmpty()
+        out.write(if (withAuth) byteArrayOf(0x05, 0x02, 0x00, 0x02) else byteArrayOf(0x05, 0x01, 0x00))
+        out.flush()
+        val method = readN(input, 2)
+        if (method[0] != 0x05.toByte()) return "not a SOCKS5 proxy"
+        return when (method[1].toInt() and 0xFF) {
+            0x00 -> null
+            0x02 -> {
+                if (!withAuth) return "proxy requires username / password"
+                val user = username!!.toByteArray(Charsets.UTF_8)
+                val pass = password.orEmpty().toByteArray(Charsets.UTF_8)
+                if (user.size > 255 || pass.size > 255) return "username / password too long"
+                out.write(byteArrayOf(0x01, user.size.toByte()) + user + byteArrayOf(pass.size.toByte()) + pass)
+                out.flush()
+                val status = readN(input, 2)
+                if (status[1].toInt() != 0) "wrong username / password" else null
+            }
+            0xFF -> if (withAuth) "auth rejected" else "proxy requires username / password"
+            else -> "unsupported auth method (${method[1]})"
+        }
     }
 
     private fun readN(input: InputStream, count: Int): ByteArray {
