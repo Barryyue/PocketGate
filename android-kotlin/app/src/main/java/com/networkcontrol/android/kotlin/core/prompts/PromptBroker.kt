@@ -53,6 +53,12 @@ class PromptBroker(
     val pending: StateFlow<List<PromptSnapshot>> = _pending.asStateFlow()
     /** 「稍後」抑制：套件 → 開始抑制的時間。 */
     private val sessionSuppressed = HashMap<String, Long>()
+
+    /**
+     * 「僅一次」到期後的背景靜默：應用離開前台、規則撤銷後，它在背景的連線直接拒絕並記錄，
+     * 不發通知也不彈懸浮窗；應用回到前台時解除（由 PromptRouter 偵測），之後的連線照常詢問。
+     */
+    private val backgroundQuiet = HashSet<String>()
     @Volatile
     private var sessionSuppressedCount = 0
     private val _busy = MutableStateFlow(false)
@@ -86,6 +92,10 @@ class PromptBroker(
         val deferred = CompletableDeferred<Verdict>()
         gate.withLock {
             val suppressKey = suppressionKey(app?.path ?: flow.executablePath)
+            if (suppressKey in backgroundQuiet) {
+                deferred.complete(Verdict(com.networkcontrol.android.kotlin.core.model.VerdictAction.Deny, VerdictReason.Mode))
+                return@withLock
+            }
             if (sessionSuppressed.containsKey(suppressKey)) {
                 deferred.complete(Verdict(settings.state.value.promptDefaultAction, VerdictReason.Mode))
                 return@withLock
@@ -387,6 +397,36 @@ class PromptBroker(
 
     fun hasSessionSuppressions(): Boolean = sessionSuppressedCount > 0
 
+    /** 「僅一次」到期：在應用回到前台之前，不為它的背景連線詢問。 */
+    suspend fun quietInBackground(packageName: String) {
+        var cancelled: List<PendingPrompt> = emptyList()
+        gate.withLock {
+            val key = suppressionKey(packageName)
+            backgroundQuiet += key
+            // 已經為它建立、但還沒回答的詢問也一併移除（它們同樣是背景連線）。
+            cancelled = prompts.values.filter { suppressionKey(it.app?.path ?: it.firstFlow.executablePath) == key }
+            cancelled.forEach { prompt ->
+                removeLocked(prompt)
+                pendingFlows = (pendingFlows - prompt.flows.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
+            }
+            refreshPendingLocked()
+        }
+        cancelled.forEach { prompt ->
+            prompt.flows.forEach { it.deferred.complete(Verdict(com.networkcontrol.android.kotlin.core.model.VerdictAction.Deny, VerdictReason.Mode)) }
+            _events.emit(PromptEvent(PromptEventKind.Removed, prompt.snapshot()))
+        }
+        com.networkcontrol.android.kotlin.platform.AppLog.i("prompt", "allow-once ended: $packageName quiet until it returns to foreground")
+    }
+
+    suspend fun backgroundQuietPackages(): Set<String> = gate.withLock { HashSet(backgroundQuiet) }
+
+    suspend fun endBackgroundQuiet(packageName: String) {
+        gate.withLock {
+            if (backgroundQuiet.remove(packageName)) refreshBusyLocked()
+        }
+        com.networkcontrol.android.kotlin.platform.AppLog.i("prompt", "$packageName back in foreground; prompts resume")
+    }
+
     /** 目前的「稍後」抑制與開始時間（快照）。 */
     suspend fun sessionSuppressions(): Map<String, Long> = gate.withLock { HashMap(sessionSuppressed) }
 
@@ -440,7 +480,7 @@ class PromptBroker(
     }
 
     private fun refreshBusyLocked() {
-        _busy.value = prompts.isNotEmpty() || sessionSuppressed.isNotEmpty()
+        _busy.value = prompts.isNotEmpty() || sessionSuppressed.isNotEmpty() || backgroundQuiet.isNotEmpty()
     }
 
     private companion object {

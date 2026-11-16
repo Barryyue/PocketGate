@@ -36,6 +36,10 @@ class TargetAppSessionTracker(
     private var lastQuery = 0L
     private val state = AppForegroundState()
 
+    /** 「僅一次」因應用離開前台而撤銷時呼叫（參數為套件名稱）。 */
+    @Volatile
+    var onRevokedAfterLeaving: ((String) -> Unit)? = null
+
     /** 規則建立後出現在前台過的應用：之後只有「真正離開」才撤銷，不再按「從未打開」回收。 */
     private val seen = HashSet<String>()
     private var noAccessLogged = false
@@ -87,6 +91,7 @@ class TargetAppSessionTracker(
         }
 
         val remove = mutableListOf<String>()
+        val leftPackages = linkedSetOf<String>()
         targets.forEach { rule ->
             val packageName = packageOf(rule) ?: return@forEach
             if (state.isForeground(packageName)) {
@@ -96,6 +101,7 @@ class TargetAppSessionTracker(
             val left = state.leftAt(packageName)
             if (left != null && left >= rule.createdAt && now - left >= LEAVE_GRACE_MS) {
                 remove += rule.id
+                leftPackages += packageName
                 return@forEach
             }
             // 背景詢問：應用從未出現在前台時，10 分鐘後回收。
@@ -104,6 +110,7 @@ class TargetAppSessionTracker(
         }
         if (remove.isNotEmpty()) {
             rules.remove(remove, RuleEndReason.Expired)
+            leftPackages.forEach { packageName -> onRevokedAfterLeaving?.invoke(packageName) }
             AppLog.i("session", "removed ${remove.size} allow-once rules after app left foreground")
         }
         val active = targets.mapNotNull(::packageOf).toSet()

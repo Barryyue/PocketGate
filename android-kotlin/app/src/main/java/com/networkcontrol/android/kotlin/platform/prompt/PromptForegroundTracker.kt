@@ -134,6 +134,10 @@ class PromptForegroundTracker(private val context: Context) {
     @Synchronized
     fun leftAt(packageName: String): Long? = sessions.leftAt(packageName)
 
+    /** 應用目前是否有頁面在前台。呼叫前先用 [foregroundPackage] 刷新事件。 */
+    @Synchronized
+    fun isForeground(packageName: String): Boolean = sessions.isForeground(packageName)
+
     /** 取得目前前台套件名稱；會順便刷新 UsageStats。 */
     @Synchronized
     fun foregroundPackage(): String? {

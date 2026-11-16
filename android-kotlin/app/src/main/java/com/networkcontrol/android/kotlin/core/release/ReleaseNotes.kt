@@ -40,6 +40,25 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.8",
+            date = "2026-11-16",
+            features = listOf(),
+            improvements = listOf(
+                t(
+                    "After \"Only this time\" ends because you left the app, its background connections are blocked and recorded quietly, without notifications; when you open the app again, prompts resume and appear as the floating panel.",
+                    "「仅一次」因离开应用而结束后，该应用在后台的连接会被安静地拦截并记录，不再发通知；重新打开该应用后恢复询问，并以悬浮窗显示。",
+                    "「僅限這次」因離開應用程式而結束後，該應用程式在背景的連線會被安靜地攔截並記錄，不再發通知；重新開啟該應用程式後恢復詢問，並以懸浮視窗顯示。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "The floating panel only asks about the app you are using; prompts for other background apps still appear as notifications.",
+                    "悬浮窗只询问你正在使用的应用；其他后台应用的询问仍以通知显示。",
+                    "懸浮視窗只詢問你正在使用的應用程式；其他背景應用程式的詢問仍以通知顯示。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.7",
             date = "2026-11-16",
             features = listOf(

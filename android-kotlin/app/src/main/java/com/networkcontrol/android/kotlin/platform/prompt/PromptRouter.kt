@@ -72,6 +72,16 @@ class PromptRouter(
                     broker.busy.first { it }
                 }
                 if (broker.pending.value.isNotEmpty()) render()
+                val quiet = broker.backgroundQuietPackages()
+                if (quiet.isNotEmpty()) {
+                    if (tracker.isAvailable()) {
+                        tracker.foregroundPackage()
+                        quiet.filter { tracker.isForeground(it) }.forEach { broker.endBackgroundQuiet(it) }
+                    } else {
+                        // 沒有使用情況權限時無法知道它何時回來，直接恢復詢問。
+                        quiet.forEach { broker.endBackgroundQuiet(it) }
+                    }
+                }
                 if (broker.hasSessionSuppressions()) {
                     if (!tracker.isAvailable()) {
                         if (suppressedSince == 0L) {
