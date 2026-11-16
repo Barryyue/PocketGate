@@ -1,24 +1,36 @@
 package com.networkcontrol.android.kotlin.ui.settings
 
+import android.content.Context
 import android.content.Intent
+import android.app.TimePickerDialog
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -27,12 +39,14 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,10 +56,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -53,10 +71,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.BuildConfig
 import com.networkcontrol.android.kotlin.core.model.FilterMode
+import com.networkcontrol.android.kotlin.core.model.InstalledApp
 import com.networkcontrol.android.kotlin.core.model.Profile
 import com.networkcontrol.android.kotlin.core.model.RuleImportMode
 import com.networkcontrol.android.kotlin.core.model.RuleImportPreview
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
+import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
+import com.networkcontrol.android.kotlin.core.model.SpeedIslandContent
+import com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
+import com.networkcontrol.android.kotlin.core.release.ReleaseNote
+import com.networkcontrol.android.kotlin.core.release.ReleaseNotes
+import com.networkcontrol.android.kotlin.core.update.UpdateChecker
+import com.networkcontrol.android.kotlin.core.update.UpdateInfo
+import com.networkcontrol.android.kotlin.platform.Socks5Probe
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
@@ -64,9 +91,15 @@ import com.networkcontrol.android.kotlin.ui.rememberUiStrings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.DayOfWeek
+import java.time.LocalTime
+import java.time.format.TextStyle
+import java.util.Locale
+import java.util.UUID
+import kotlin.math.roundToInt
 
 @Composable
-fun SettingsScreen(backend: AppBackend) {
+fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
     val s = rememberUiStrings()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -75,9 +108,49 @@ fun SettingsScreen(backend: AppBackend) {
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val plan by backend.plan.collectAsStateWithLifecycle()
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
+    val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
+    var overlayKey by remember { mutableIntStateOf(0) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        overlayKey++
+        backend.refreshSpeedIsland()
+    }
+    val canDrawOverlays = remember(overlayKey) { backend.canDrawOverlays() }
+    var promptMode by remember { mutableStateOf(backend.promptPresentationMode()) }
+    var promptPosition by remember { mutableStateOf(backend.promptOverlayPosition()) }
+    var promptRatio by remember { mutableFloatStateOf(backend.promptOverlayCustomRatio()) }
+    var showOverlayPositionDialog by remember { mutableStateOf(false) }
+    var speedIsland by remember { mutableStateOf(backend.speedIslandEnabled()) }
+    var islandOpacity by remember { mutableFloatStateOf(backend.speedIslandOpacity()) }
+    var islandMode by remember { mutableStateOf(backend.speedIslandMode()) }
+    var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
+    var promptExplanation by remember { mutableStateOf(backend.promptShowExplanation()) }
+    var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
+    var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
+    var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
+    var forwardingEnabled by remember { mutableStateOf(backend.forwardingEnabled()) }
+    var socks5Host by remember { mutableStateOf(backend.socks5Host()) }
+    var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
+    var socks5Udp by remember { mutableStateOf(backend.socks5Udp()) }
+    var proxyTesting by remember { mutableStateOf(false) }
+    var proxyPackage by remember { mutableStateOf(backend.socks5BypassPackage()) }
+    var showProxyAppDialog by remember { mutableStateOf(false) }
+    var directPackages by remember { mutableStateOf(backend.forwardingDirectPackages()) }
+    var showDirectAppsDialog by remember { mutableStateOf(false) }
+    val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
+    var showTimedOption by remember { mutableStateOf(backend.promptShowTimedOption()) }
+    val forwardingAvailable = remember { backend.forwardingAvailable() }
+    var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
+    var showScheduleDialog by remember { mutableStateOf(false) }
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    var checkingUpdate by remember { mutableStateOf(false) }
+    var showReleaseNotes by remember { mutableStateOf(false) }
+    var showReleaseHistory by remember { mutableStateOf(false) }
 
     var timeoutText by remember(settings.promptTimeoutSeconds) {
         mutableStateOf(settings.promptTimeoutSeconds.toString())
+    }
+    var timedMinutesText by remember(settings.promptTimedMinutes) {
+        mutableStateOf(settings.promptTimedMinutes.toString())
     }
     var editingProfile by remember { mutableStateOf<Profile?>(null) }
     var showProfileDialog by remember { mutableStateOf(false) }
@@ -214,6 +287,36 @@ fun SettingsScreen(backend: AppBackend) {
                         },
                     ) { Text(s[S.Save]) }
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(s[S.PromptTimedDuration], style = MaterialTheme.typography.bodyMedium)
+                    }
+                    OutlinedTextField(
+                        value = timedMinutesText,
+                        onValueChange = { value ->
+                            timedMinutesText = value.filter { it.isDigit() }.take(4)
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(110.dp),
+                    )
+                    TextButton(
+                        onClick = {
+                            val minutes = timedMinutesText.toIntOrNull() ?: settings.promptTimedMinutes
+                            backend.updateSettings { it.copy(promptTimedMinutes = minutes) }
+                            toast(s[S.Done])
+                        },
+                    ) { Text(s[S.Save]) }
+                }
+                SwitchRow(
+                    title = s[S.PromptTimedVisible],
+                    subtitle = s[S.PromptTimedVisibleHint],
+                    checked = showTimedOption,
+                    onCheckedChange = {
+                        showTimedOption = it
+                        backend.setPromptShowTimedOption(it)
+                    },
+                )
                 SwitchRow(
                     title = s[S.PromptDefaultAction],
                     subtitle = if (settings.promptDefaultAction == VerdictAction.Deny) s[S.Deny] else s[S.Allow],
@@ -235,13 +338,212 @@ fun SettingsScreen(backend: AppBackend) {
         }
 
         item {
+            SectionCard(s[S.PromptPresentation]) {
+                val autoOverlay = promptMode == "auto"
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        autoOverlay,
+                        {
+                            promptMode = "auto"
+                            backend.setPromptPresentationMode("auto")
+                        },
+                        { Text(s[S.PromptPresentationAuto]) },
+                    )
+                    FilterChip(
+                        !autoOverlay,
+                        {
+                            promptMode = "notification"
+                            backend.setPromptPresentationMode("notification")
+                        },
+                        { Text(s[S.PromptPresentationNotification]) },
+                    )
+                }
+                Text(
+                    s[S.PromptPresentationHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (autoOverlay) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            s[S.OverlayPermission],
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            if (canDrawOverlays) s[S.OverlayGranted] else s[S.OverlayDenied],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (canDrawOverlays) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                        )
+                        if (!canDrawOverlays) {
+                            Spacer(Modifier.width(8.dp))
+                            OutlinedButton(onClick = { context.startActivity(backend.overlayPermissionIntent()) }) {
+                                Text(s[S.OverlayGrant])
+                            }
+                        }
+                    }
+                    Text(s[S.OverlayPosition], style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            promptPosition != "bottom",
+                            {
+                                promptPosition = "top"
+                                backend.setPromptOverlayPosition("top")
+                            },
+                            { Text(s[S.OverlayTop]) },
+                        )
+                        FilterChip(
+                            promptPosition == "bottom",
+                            {
+                                promptPosition = "bottom"
+                                backend.setPromptOverlayPosition("bottom")
+                            },
+                            { Text(s[S.OverlayBottom]) },
+                        )
+                        FilterChip(
+                            promptPosition == "custom",
+                            {
+                                promptPosition = "custom"
+                                backend.setPromptOverlayPosition("custom")
+                            },
+                            { Text(s[S.OverlayCustom]) },
+                        )
+                    }
+                    if (promptPosition == "custom") {
+                        OutlinedButton(onClick = { showOverlayPositionDialog = true }) {
+                            Text(
+                                "${s[S.OverlayAdjustPosition]} " +
+                                    "(${(promptRatio * 100).roundToInt()}%)",
+                            )
+                        }
+                        Text(
+                            s[S.OverlayCustomHint],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Text(
+                        s[S.OverlayOemHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(s[S.PromptContentSettings], style = MaterialTheme.typography.bodyMedium)
+                SwitchRow(
+                    title = s[S.ShowPromptDetails],
+                    checked = promptDetails,
+                    onCheckedChange = {
+                        promptDetails = it
+                        backend.setPromptShowDetails(it)
+                    },
+                )
+                SwitchRow(
+                    title = s[S.ShowPromptExplanation],
+                    checked = promptExplanation,
+                    onCheckedChange = {
+                        promptExplanation = it
+                        backend.setPromptShowExplanation(it)
+                    },
+                )
+                SwitchRow(
+                    title = s[S.HidePromptDetailsOnLock],
+                    checked = hideOnLock,
+                    onCheckedChange = {
+                        hideOnLock = it
+                        backend.setPromptHideDetailsOnLockScreen(it)
+                    },
+                )
+                SwitchRow(
+                    title = s[S.SpeedIsland],
+                    subtitle = s[S.SpeedIslandHint],
+                    checked = speedIsland,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !canDrawOverlays) {
+                            toast(s[S.OverlayDenied])
+                        } else {
+                            speedIsland = enabled
+                            backend.setSpeedIslandEnabled(enabled)
+                        }
+                    },
+                )
+                if (speedIsland) {
+                    val modeLabel = when (islandMode) {
+                        SpeedIslandMode.Full -> s[S.IslandModeFull]
+                        SpeedIslandMode.Cycle -> s[S.IslandModeCycle]
+                        SpeedIslandMode.Mini -> s[S.IslandModeMini]
+                    }
+                    val contentLabel = when (backend.speedIslandContent()) {
+                        SpeedIslandContent.Speed -> s[S.IslandContentSpeed]
+                        SpeedIslandContent.Traffic -> s[S.IslandContentTraffic]
+                        SpeedIslandContent.Blocked -> s[S.IslandContentBlocked]
+                        SpeedIslandContent.Pending -> s[S.IslandContentPending]
+                        SpeedIslandContent.Network -> s[S.IslandContentNetwork]
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenIslandSettings() },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(s[S.IslandConfig], style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "$contentLabel · $modeLabel · ${(islandOpacity * 100).roundToInt()}%",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = onOpenIslandSettings) { Text(s[S.Edit]) }
+                    }
+                }
+            }
+        }
+
+        item {
+            SectionCard(s[S.TrustSettings]) {
+                SwitchRow(
+                    title = s[S.AllowSystemApps],
+                    subtitle = s[S.AllowSystemAppsHint],
+                    checked = settings.allowSystemAppsByDefault,
+                    onCheckedChange = { backend.setAllowSystemAppsByDefault(it) },
+                )
+                Text(s[S.TrustedPublishers], style = MaterialTheme.typography.bodyMedium)
+                if (settings.trustedSigners.isEmpty()) {
+                    Text(
+                        s[S.NoTrustedPublishers],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    settings.trustedSigners.forEach { signer ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "${signer.take(20)}…",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = { backend.untrustPublisher(signer) }) {
+                                Text(s[S.Delete])
+                            }
+                        }
+                    }
+                    OutlinedButton(onClick = { backend.clearTrustedPublishers() }) {
+                        Text(s[S.ClearTrustedPublishers])
+                    }
+                }
+            }
+        }
+
+        item {
             SectionCard(s[S.Notifications]) {
                 SwitchRow(
                     title = s[S.NotificationsEnabled],
                     checked = backend.container.preferences.notificationsEnabled,
-                    onCheckedChange = {
-                        backend.container.preferences.notificationsEnabled = it
-                    },
+                    onCheckedChange = { backend.setNotificationsEnabled(it) },
                 )
                 OutlinedButton(onClick = { context.startActivity(backend.openNotificationSettings()) }) {
                     Text(s[S.OpenNotificationSettings])
@@ -251,6 +553,28 @@ fun SettingsScreen(backend: AppBackend) {
 
         item {
             SectionCard(s[S.VpnSettings]) {
+                SwitchRow(
+                    title = s[S.BlockOnLock],
+                    subtitle = s[S.BlockOnLockHint],
+                    checked = blockOnLock,
+                    onCheckedChange = {
+                        blockOnLock = it
+                        backend.setBlockOnLockScreen(it)
+                    },
+                )
+                SwitchRow(
+                    title = s[S.AppLock],
+                    subtitle = s[S.AppLockHint],
+                    checked = appLock,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !backend.isDeviceSecure()) {
+                            toast(s[S.AppLockNoCredential])
+                        } else {
+                            appLock = enabled
+                            backend.setAppLockEnabled(enabled)
+                        }
+                    },
+                )
                 OutlinedButton(onClick = { context.startActivity(backend.openAlwaysOnVpnSettings()) }) {
                     Text(s[S.AlwaysOnVpn])
                 }
@@ -262,6 +586,44 @@ fun SettingsScreen(backend: AppBackend) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+
+        item {
+            SectionCard(s[S.FocusSchedule]) {
+                Text(
+                    s[S.ScheduleHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (focusSchedules.isEmpty()) {
+                    Text(
+                        s[S.NoFocusSchedules],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                focusSchedules.forEach { schedule ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "${schedule.dayLabel(context)} ${schedule.timeLabel()}",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                        Switch(
+                            checked = schedule.enabled,
+                            onCheckedChange = { backend.setFocusScheduleEnabled(schedule.id, it) },
+                        )
+                        TextButton(onClick = { backend.deleteFocusSchedule(schedule.id) }) {
+                            Text(s[S.Delete])
+                        }
+                    }
+                }
+                OutlinedButton(onClick = {
+                    editingSchedule = null
+                    showScheduleDialog = true
+                }) { Text(s[S.AddSchedule]) }
             }
         }
 
@@ -329,6 +691,9 @@ fun SettingsScreen(backend: AppBackend) {
                         showProfileDialog = true
                     },
                 ) { Text(s[S.AddProfile]) }
+                OutlinedButton(onClick = { backend.createFocusProfile(copyFromCurrent = true) }) {
+                    Text(s[S.CreateFocusProfile])
+                }
             }
         }
 
@@ -366,12 +731,221 @@ fun SettingsScreen(backend: AppBackend) {
         }
 
         item {
+            SectionCard(s[S.ForwardingMode]) {
+                Text(
+                    s[S.ForwardingHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    if (forwardingAvailable) s[S.ForwardingAvailable] else s[S.ForwardingUnavailable],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (forwardingAvailable) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
+                )
+                SwitchRow(
+                    title = s[S.ForwardingMode],
+                    checked = forwardingEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !forwardingAvailable) {
+                            toast(s[S.ForwardingUnavailable])
+                        } else {
+                            forwardingEnabled = enabled
+                            backend.setForwardingEnabled(enabled)
+                        }
+                    },
+                )
+                if (forwardingEnabled) {
+                    Text(
+                        if (forwardingActive) s[S.ForwardingStatusActive] else s[S.ForwardingStatusInactive],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (forwardingActive) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                    )
+                    Text(
+                        s[S.ForwardingGuide],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedTextField(
+                        value = socks5Host,
+                        onValueChange = { socks5Host = it },
+                        label = { Text(s[S.Socks5Host]) },
+                        singleLine = true,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = socks5Port,
+                            onValueChange = {
+                                socks5Port = it.filter { char -> char.isDigit() }.take(5)
+                            },
+                            label = { Text(s[S.Socks5Port]) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(
+                            onClick = {
+                                backend.setSocks5Host(socks5Host)
+                                backend.setSocks5Port(socks5Port.toIntOrNull() ?: 7890)
+                                toast(s[S.Done])
+                            },
+                        ) { Text(s[S.Save]) }
+                    }
+                    SwitchRow(
+                        title = s[S.Socks5Udp],
+                        subtitle = s[S.Socks5UdpHint],
+                        checked = socks5Udp,
+                        onCheckedChange = {
+                            socks5Udp = it
+                            backend.setSocks5Udp(it)
+                        },
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(s[S.ProxyApp], style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                proxyPackage ?: s[S.Unset],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = { showProxyAppDialog = true }) {
+                            Text(s[S.Select])
+                        }
+                    }
+                    Text(
+                        s[S.ProxyAppHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(s[S.DirectApps], style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                s.format(S.DirectAppsCount, directPackages.size),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = { showDirectAppsDialog = true }) {
+                            Text(s[S.Select])
+                        }
+                    }
+                    Text(
+                        s[S.DirectAppsHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            proxyTesting = true
+                            scope.launch {
+                                val error = Socks5Probe.test(
+                                    host = socks5Host,
+                                    port = socks5Port.toIntOrNull() ?: 7890,
+                                )
+                                proxyTesting = false
+                                toast(
+                                    if (error == null) {
+                                        s[S.ProxyTestSuccess]
+                                    } else {
+                                        s.format(S.ProxyTestFailed, error)
+                                    },
+                                )
+                            }
+                        },
+                        enabled = !proxyTesting,
+                    ) {
+                        Text(if (proxyTesting) s[S.Loading] else s[S.ProxyTest])
+                    }
+                    Text(
+                        s[S.ForwardingDnsHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        s[S.ForwardingAbiHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        item {
             SectionCard(s[S.About]) {
-                DetailLine(s[S.Version], "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            showReleaseHistory = false
+                            showReleaseNotes = true
+                        },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DetailLine(s[S.Version], "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        s[S.ViewDetails],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 DetailLine(s[S.Engine], "AndroidVpn")
+                if (backend.isWorkProfile()) {
+                    DetailLine(s[S.WorkProfile], "✓")
+                    Text(
+                        s[S.WorkProfileHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 DetailLine(s[S.Status], "${runtime.mode.name} / ${backend.protectionStatus().name}")
                 DetailLine(s[S.SkippedRules], plan.skippedRules.size.toString())
                 DetailLine(s[S.AppsCount], backend.container.appCatalog.getApps().size.toString())
+                OutlinedButton(
+                    onClick = {
+                        if (checkingUpdate) return@OutlinedButton
+                        checkingUpdate = true
+                        scope.launch {
+                            val info = UpdateChecker.check(BuildConfig.VERSION_NAME)
+                            updateInfo = info
+                            checkingUpdate = false
+                            when {
+                                info.error != null -> toast(s.format(S.UpdateFailed, info.error))
+                                info.hasUpdate -> toast(s.format(S.UpdateAvailable, info.latestVersion))
+                                else -> toast(s[S.UpToDate])
+                            }
+                        }
+                    },
+                    enabled = !checkingUpdate,
+                ) {
+                    Text(if (checkingUpdate) s[S.Loading] else s[S.CheckUpdates])
+                }
+                updateInfo?.takeIf { it.hasUpdate }?.let { info ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            s.format(S.UpdateAvailable, info.latestVersion.orEmpty()),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = {
+                            info.downloadUrl?.let {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(it))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        }) { Text(s[S.UpdateDownload]) }
+                    }
+                }
             }
         }
 
@@ -382,6 +956,7 @@ fun SettingsScreen(backend: AppBackend) {
         ProfileDialog(
             profile = editingProfile,
             currentNetwork = backend.container.network.current,
+            loadSims = { backend.subscriptions() },
             onDismiss = { showProfileDialog = false },
             onSave = { name, mode, auto ->
                 val current = editingProfile
@@ -397,6 +972,64 @@ fun SettingsScreen(backend: AppBackend) {
             current = themeColor,
             onDismiss = { showThemeColorDialog = false },
             onSelect = { backend.setThemeColor(it) },
+        )
+    }
+
+    if (showProxyAppDialog) {
+        ProxyAppDialog(
+            apps = remember { backend.installedApps() },
+            selected = proxyPackage,
+            onDismiss = { showProxyAppDialog = false },
+            onSelect = { packageName ->
+                proxyPackage = packageName
+                backend.setSocks5BypassPackage(packageName)
+                showProxyAppDialog = false
+            },
+        )
+    }
+
+    if (showDirectAppsDialog) {
+        DirectAppsDialog(
+            apps = remember { backend.installedApps() },
+            initial = directPackages,
+            onDismiss = { showDirectAppsDialog = false },
+            onSave = { packages ->
+                directPackages = packages
+                backend.setForwardingDirectPackages(packages)
+                showDirectAppsDialog = false
+            },
+        )
+    }
+
+    if (showScheduleDialog) {
+        ScheduleDialog(
+            schedule = editingSchedule,
+            onDismiss = { showScheduleDialog = false },
+            onSave = { schedule ->
+                backend.saveFocusSchedule(schedule)
+                showScheduleDialog = false
+            },
+        )
+    }
+
+    if (showOverlayPositionDialog) {
+        OverlayPositionDialog(
+            initialRatio = promptRatio,
+            onDismiss = { showOverlayPositionDialog = false },
+            onSave = { ratio ->
+                promptRatio = ratio
+                backend.setPromptOverlayCustomRatio(ratio)
+                showOverlayPositionDialog = false
+            },
+        )
+    }
+
+    if (showReleaseNotes) {
+        ReleaseNotesDialog(
+            currentVersion = BuildConfig.VERSION_NAME,
+            history = showReleaseHistory,
+            onToggleHistory = { showReleaseHistory = !showReleaseHistory },
+            onDismiss = { showReleaseNotes = false },
         )
     }
 
@@ -487,6 +1120,7 @@ private fun ProfileRow(
 private fun ProfileDialog(
     profile: Profile?,
     currentNetwork: com.networkcontrol.android.kotlin.core.model.NetworkContext,
+    loadSims: () -> List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     onDismiss: () -> Unit,
     onSave: (String, FilterMode, com.networkcontrol.android.kotlin.core.model.AutoActivateCondition?) -> Unit,
 ) {
@@ -494,11 +1128,16 @@ private fun ProfileDialog(
     var name by remember { mutableStateOf(profile?.name ?: "") }
     var mode by remember { mutableStateOf(profile?.mode ?: FilterMode.Ask) }
     var autoKind by remember { mutableStateOf(profile?.autoActivate?.kind) }
+    var simSubscriptionId by remember { mutableStateOf(profile?.autoActivate?.subscriptionIds?.firstOrNull()) }
+    var sims by remember { mutableStateOf(loadSims()) }
     var ssid by remember { mutableStateOf(profile?.autoActivate?.ssids?.firstOrNull().orEmpty()) }
     val context = LocalContext.current
     val locationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {}
+    val phoneStateLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { sims = loadSims() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (profile == null) s[S.AddProfile] else s[S.Edit]) },
@@ -536,6 +1175,31 @@ private fun ProfileDialog(
                         { autoKind = com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired },
                         { Text(s[S.Wired]) },
                     )
+                }
+                Text(s[S.SimCard], style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        simSubscriptionId == null,
+                        { simSubscriptionId = null },
+                        { Text(s[S.AllSims]) },
+                    )
+                    sims.take(2).forEach { sim ->
+                        FilterChip(
+                            simSubscriptionId == sim.subscriptionId,
+                            { simSubscriptionId = sim.subscriptionId },
+                            { Text(sim.label) },
+                        )
+                    }
+                }
+                if (sims.isEmpty()) {
+                    Text(
+                        s[S.PhoneStateHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    TextButton(onClick = {
+                        phoneStateLauncher.launch(android.Manifest.permission.READ_PHONE_STATE)
+                    }) { Text(s[S.GrantAccess]) }
                 }
                 OutlinedTextField(
                     value = ssid,
@@ -576,12 +1240,13 @@ private fun ProfileDialog(
             TextButton(
                 onClick = {
                     if (name.isNotBlank()) {
-                        val auto = if (autoKind == null && ssid.isBlank()) {
+                        val auto = if (autoKind == null && ssid.isBlank() && simSubscriptionId == null) {
                             null
                         } else {
                             com.networkcontrol.android.kotlin.core.model.AutoActivateCondition(
                                 kind = autoKind,
                                 ssids = ssid.trim().takeIf { it.isNotEmpty() }?.let { listOf(it) } ?: emptyList(),
+                                subscriptionIds = simSubscriptionId?.let { listOf(it) } ?: emptyList(),
                             )
                         }
                         onSave(name.trim(), mode, auto)
@@ -686,6 +1351,277 @@ private fun DropdownSetting(
 }
 
 @Composable
+private fun ScheduleDialog(
+    schedule: FocusSchedule?,
+    onDismiss: () -> Unit,
+    onSave: (FocusSchedule) -> Unit,
+) {
+    val s = rememberUiStrings()
+    val context = LocalContext.current
+    var days by remember { mutableStateOf(schedule?.days ?: setOf(1, 2, 3, 4, 5)) }
+    var startMinute by remember { mutableIntStateOf(schedule?.startMinute ?: 9 * 60) }
+    var endMinute by remember { mutableIntStateOf(schedule?.endMinute ?: 18 * 60) }
+    val valid = days.isNotEmpty() && startMinute != endMinute
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.FocusSchedule]) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(s[S.ScheduleDays], style = MaterialTheme.typography.bodyMedium)
+                listOf(1..4, 5..7).forEach { range ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        range.forEach { day ->
+                            FilterChip(
+                                day in days,
+                                {
+                                    days = if (day in days) days - day else days + day
+                                },
+                                {
+                                    Text(
+                                        DayOfWeek.of(day).getDisplayName(
+                                            TextStyle.SHORT,
+                                            context.resources.configuration.locales[0] ?: Locale.getDefault(),
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+                OutlinedButton(
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute -> startMinute = hour * 60 + minute },
+                            startMinute / 60,
+                            startMinute % 60,
+                            true,
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("${s[S.ScheduleStart]}：${minutesToText(startMinute)}")
+                }
+                OutlinedButton(
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute -> endMinute = hour * 60 + minute },
+                            endMinute / 60,
+                            endMinute % 60,
+                            true,
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("${s[S.ScheduleEnd]}：${minutesToText(endMinute)}")
+                }
+                Text(
+                    s[S.ScheduleHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onSave(
+                        FocusSchedule(
+                            id = schedule?.id ?: UUID.randomUUID().toString(),
+                            days = days,
+                            startMinute = startMinute,
+                            endMinute = endMinute,
+                            enabled = schedule?.enabled ?: true,
+                        ),
+                    )
+                },
+                enabled = valid,
+            ) { Text(s[S.Save]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
+}
+
+private fun FocusSchedule.timeLabel(): String = "${minutesToText(startMinute)}–${minutesToText(endMinute)}"
+
+private fun FocusSchedule.dayLabel(context: Context): String =
+    days.sorted().joinToString(" ") { day ->
+        DayOfWeek.of(day).getDisplayName(
+            TextStyle.SHORT,
+            context.resources.configuration.locales[0] ?: Locale.getDefault(),
+        )
+    }
+
+private fun minutesToText(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
+
+private fun parseMinutes(text: String): Int? {
+    val parts = text.split(':')
+    if (parts.size != 2) return null
+    val hour = parts[0].toIntOrNull() ?: return null
+    val minute = parts[1].toIntOrNull() ?: return null
+    if (hour !in 0..23 || minute !in 0..59) return null
+    return hour * 60 + minute
+}
+
+@Composable
+private fun OverlayPositionDialog(
+    initialRatio: Float,
+    onDismiss: () -> Unit,
+    onSave: (Float) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var ratio by remember { mutableFloatStateOf(initialRatio.coerceIn(0f, 1f)) }
+    val panelHeight = 72.dp
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.OverlayPosition]) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    s.format(S.OverlayPositionPercent, (ratio * 100).roundToInt()),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(380.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                        )
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { _, dragAmount ->
+                                val available = (380.dp - panelHeight).toPx().coerceAtLeast(1f)
+                                ratio = (ratio + dragAmount / available).coerceIn(0f, 1f)
+                            }
+                        },
+                ) {
+                    val available = maxHeight - panelHeight
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    0,
+                                    (available * ratio).roundToPx(),
+                                )
+                            }
+                            .fillMaxWidth()
+                            .height(panelHeight)
+                            .padding(horizontal = 12.dp)
+                            .background(
+                                MaterialTheme.colorScheme.primary,
+                                androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "NetworkControl",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+                Text(
+                    s[S.OverlayCustomHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(ratio) }) { Text(s[S.Save]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
+}
+
+@Composable
+private fun ReleaseNotesDialog(
+    currentVersion: String,
+    history: Boolean,
+    onToggleHistory: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val s = rememberUiStrings()
+    val current = ReleaseNotes.current(currentVersion)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                if (history) s[S.ReleaseNotesHistory] else "${s[S.ReleaseNotes]} · ${current?.version ?: currentVersion}",
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 480.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (history) {
+                    ReleaseNotes.all.forEach { note -> ReleaseNoteSection(note, s) }
+                } else if (current != null) {
+                    ReleaseNoteSection(current, s)
+                } else {
+                    Text(
+                        s[S.NoReleaseNotes],
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Close]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onToggleHistory) {
+                Text(if (history) s[S.Back] else s[S.ReleaseNotesHistory])
+            }
+        },
+    )
+}
+
+@Composable
+private fun ReleaseNoteSection(
+    note: ReleaseNote,
+    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+) {
+    val language = s.noteLanguage
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "${note.version} · ${note.date}",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (note.features.isNotEmpty()) {
+            Text(s[S.NewFeatures], style = MaterialTheme.typography.labelLarge)
+            note.features.forEach { Text("• ${it[language]}", style = MaterialTheme.typography.bodySmall) }
+        }
+        if (note.improvements.isNotEmpty()) {
+            Text(s[S.Improvements], style = MaterialTheme.typography.labelLarge)
+            note.improvements.forEach { Text("• ${it[language]}", style = MaterialTheme.typography.bodySmall) }
+        }
+        if (note.notes.isNotEmpty()) {
+            note.notes.forEach {
+                Text(
+                    "• ${it[language]}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun DetailLine(label: String, value: String) {
     Row {
         Text(
@@ -696,4 +1632,149 @@ private fun DetailLine(label: String, value: String) {
         )
         Text(value, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun DirectAppsDialog(
+    apps: List<InstalledApp>,
+    initial: Set<String>,
+    onDismiss: () -> Unit,
+    onSave: (Set<String>) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var query by remember { mutableStateOf("") }
+    var selected by remember { mutableStateOf(initial) }
+    val filtered = remember(query, apps) {
+        if (query.isBlank()) {
+            apps
+        } else {
+            apps.filter {
+                it.label.contains(query, ignoreCase = true) ||
+                    it.packageName.contains(query, ignoreCase = true)
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.DirectApps]) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text(s[S.SearchApps]) },
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    items(filtered, key = { it.packageName }) { app ->
+                        val checked = app.packageName in selected
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selected = if (checked) selected - app.packageName else selected + app.packageName
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(app.label, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    app.packageName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (checked) {
+                                Text("✓", color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(selected) }) { Text(s[S.Save]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
+}
+
+@Composable
+private fun ProxyAppDialog(
+    apps: List<InstalledApp>,
+    selected: String?,
+    onDismiss: () -> Unit,
+    onSelect: (String?) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query, apps) {
+        if (query.isBlank()) {
+            apps
+        } else {
+            apps.filter {
+                it.label.contains(query, ignoreCase = true) ||
+                    it.packageName.contains(query, ignoreCase = true)
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.ProxyApp]) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text(s[S.SearchApps]) },
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(null) }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(s[S.Unset], style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    items(filtered, key = { it.packageName }) { app ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(app.packageName) }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    app.label,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                Text(
+                                    app.packageName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (app.packageName == selected) {
+                                Text("✓", color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Close]) }
+        },
+    )
 }

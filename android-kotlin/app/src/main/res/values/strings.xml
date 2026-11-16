@@ -3,8 +3,10 @@
     <string name="tile_label">NetworkControl</string>
     <string name="tile_protection">Protection</string>
     <string name="notification_channel_prompt">Connection prompts</string>
+    <string name="notification_channel_prompt_soft">Connection prompts (quiet)</string>
     <string name="notification_channel_protection">Protection status</string>
     <string name="notification_channel_quiet">Quiet period summary</string>
+    <string name="notification_channel_new_apps">New apps</string>
     <string name="protection_active">Protection is on</string>
     <string name="protection_off">Protection is off</string>
     <string name="protection_starting">Protection is starting</string>
@@ -13,9 +15,12 @@
     <string name="prompt_blocked_hint">This connection was temporarily blocked. Allow it and retry.</string>
     <string name="prompt_allow">Allow</string>
     <string name="prompt_deny">Deny</string>
+    <string name="prompt_expired">This prompt has expired. The app will be asked again on its next connection.</string>
     <string name="unknown_app">Unknown app</string>
     <string name="quiet_notification_title">Do not disturb summary</string>
     <string name="quiet_notification_text">%1$d connection attempts were blocked during do not disturb. Top app: %2$s</string>
+    <string name="new_app_title">%1$s was installed</string>
+    <string name="new_app_text">Open NetworkControl to decide whether it may connect.</string>
     <string name="nav_overview">Overview</string>
     <string name="nav_apps">Apps</string>
     <string name="nav_logs">Records</string>

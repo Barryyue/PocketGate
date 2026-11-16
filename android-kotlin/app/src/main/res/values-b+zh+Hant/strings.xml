@@ -3,8 +3,10 @@
     <string name="tile_label">NetworkControl</string>
     <string name="tile_protection">保護</string>
     <string name="notification_channel_prompt">連線詢問</string>
+    <string name="notification_channel_prompt_soft">連線詢問（安靜）</string>
     <string name="notification_channel_protection">保護狀態</string>
     <string name="notification_channel_quiet">勿擾摘要</string>
+    <string name="notification_channel_new_apps">新應用程式</string>
     <string name="protection_active">保護已開啟</string>
     <string name="protection_off">保護已關閉</string>
     <string name="protection_starting">保護正在啟動</string>
@@ -13,9 +15,12 @@
     <string name="prompt_blocked_hint">此連線已被暫時阻止，允許後應用重新連線即可上網。</string>
     <string name="prompt_allow">允許</string>
     <string name="prompt_deny">拒絕</string>
+    <string name="prompt_expired">此詢問已過期，應用程式下次連線時會重新詢問。</string>
     <string name="unknown_app">未知應用程式</string>
     <string name="quiet_notification_title">勿擾摘要</string>
     <string name="quiet_notification_text">勿擾期間有 %1$d 次連線被阻擋，最常嘗試的是 %2$s</string>
+    <string name="new_app_title">已安裝 %1$s</string>
+    <string name="new_app_text">開啟 NetworkControl 決定它是否可以連網。</string>
     <string name="nav_overview">總覽</string>
     <string name="nav_apps">應用程式</string>
     <string name="nav_logs">記錄</string>

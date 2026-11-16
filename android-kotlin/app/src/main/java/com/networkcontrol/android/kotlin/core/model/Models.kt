@@ -75,7 +75,32 @@ data class RuleConditions(
     val remote: RemoteTarget? = null,
     val remotePort: PortRange? = null,
     val localPort: PortRange? = null,
+    /** 只在這些網路類型上生效；空集合表示不限制。 */
+    val networkKinds: Set<NetworkKind> = emptySet(),
+    /** 只在這些 SIM 訂閱上生效；空集合表示不限制。 */
+    val subscriptionIds: Set<Int> = emptySet(),
+    /** 只在這些 SIM 卡槽上生效；空集合表示不限制。 */
+    val simSlots: Set<Int> = emptySet(),
 ) {
+    val hasNetworkScope: Boolean
+        get() = networkKinds.isNotEmpty() || subscriptionIds.isNotEmpty() || simSlots.isNotEmpty()
+
+    fun matchesNetwork(network: NetworkContext): Boolean {
+        if (networkKinds.isNotEmpty() && network.kind !in networkKinds) return false
+        if (subscriptionIds.isNotEmpty()) {
+            val subscription = network.subscriptionId
+            if (subscription != null) {
+                if (subscription !in subscriptionIds) return false
+            } else {
+                if (simSlots.isEmpty()) return false
+                if (network.simSlotIndex == null || network.simSlotIndex !in simSlots) return false
+            }
+        } else if (simSlots.isNotEmpty()) {
+            if (network.simSlotIndex == null || network.simSlotIndex !in simSlots) return false
+        }
+        return true
+    }
+
     companion object {
         val Any = RuleConditions()
     }
@@ -102,7 +127,9 @@ data class Rule(
     val hitCount: Long = 0,
 ) {
     val isPersistent: Boolean
-        get() = lifetime != RuleLifetime.Once && lifetime != RuleLifetime.UntilRestart
+        get() = lifetime != RuleLifetime.Once &&
+            lifetime != RuleLifetime.UntilRestart &&
+            lifetime != RuleLifetime.UntilAppExit
 
     fun isLiveAt(now: Long): Boolean =
         lifetime != RuleLifetime.Timed || expiresAt == null || expiresAt > now
@@ -112,8 +139,12 @@ data class AutoActivateCondition(
     val kind: NetworkKind? = null,
     val ssids: List<String> = emptyList(),
     val networkIds: List<String> = emptyList(),
+    val subscriptionIds: List<Int> = emptyList(),
+    val simSlots: List<Int> = emptyList(),
 ) {
-    val isEmpty: Boolean get() = kind == null && ssids.isEmpty() && networkIds.isEmpty()
+    val isEmpty: Boolean
+        get() = kind == null && ssids.isEmpty() && networkIds.isEmpty() &&
+            subscriptionIds.isEmpty() && simSlots.isEmpty()
 
     fun matches(context: NetworkContext): Boolean {
         if (isEmpty) return false
@@ -123,6 +154,17 @@ data class AutoActivateCondition(
         }
         if (networkIds.isNotEmpty() && (context.networkId == null || !networkIds.contains(context.networkId))) {
             return false
+        }
+        if (subscriptionIds.isNotEmpty()) {
+            val subscription = context.subscriptionId
+            if (subscription != null) {
+                if (subscription !in subscriptionIds) return false
+            } else {
+                if (simSlots.isEmpty()) return false
+                if (context.simSlotIndex == null || context.simSlotIndex !in simSlots) return false
+            }
+        } else if (simSlots.isNotEmpty()) {
+            if (context.simSlotIndex == null || context.simSlotIndex !in simSlots) return false
         }
         return true
     }
@@ -146,12 +188,29 @@ data class NetworkContext(
     val ssid: String? = null,
     val networkId: String? = null,
     val displayName: String? = null,
+    val subscriptionId: Int? = null,
+    val simSlotIndex: Int? = null,
+    val carrierName: String? = null,
+    val isMetered: Boolean? = null,
 ) {
-    val fingerprint: String get() = "${kind.name}|${ssid.orEmpty()}|${networkId.orEmpty()}"
+    val fingerprint: String
+        get() = "${kind.name}|${ssid.orEmpty()}|${networkId.orEmpty()}|${subscriptionId ?: -1}|${simSlotIndex ?: -1}"
 
     companion object {
         val None = NetworkContext()
     }
+}
+
+data class SimInfo(
+    val subscriptionId: Int,
+    val slotIndex: Int,
+    val carrierName: String?,
+    val displayName: String?,
+) {
+    val label: String
+        get() = displayName?.takeIf { it.isNotBlank() }
+            ?: carrierName?.takeIf { it.isNotBlank() }?.let { "SIM ${slotIndex + 1} · $it" }
+            ?: "SIM ${slotIndex + 1}"
 }
 
 data class UserSettings(
@@ -162,6 +221,12 @@ data class UserSettings(
     val maxPendingFlows: Int = 1000,
     val allowIcmpByDefault: Boolean = true,
     val logRetentionDays: Int = 30,
+    /** 詢問選「限時」時的預設時長（分鐘）。 */
+    val promptTimedMinutes: Int = 60,
+    /** 系統應用（預裝）在沒有明確規則時默認放行。 */
+    val allowSystemAppsByDefault: Boolean = false,
+    /** 受信任的簽章者（Android 為簽章 SHA-256）；其應用在沒有明確規則時默認放行。 */
+    val trustedSigners: Set<String> = emptySet(),
 ) {
     fun validated(): UserSettings = copy(
         promptTimeoutSeconds = promptTimeoutSeconds.coerceIn(5, 300),
@@ -169,6 +234,7 @@ data class UserSettings(
         onceFallbackSeconds = onceFallbackSeconds.coerceIn(10, 600),
         maxPendingFlows = maxPendingFlows.coerceIn(10, 100_000),
         logRetentionDays = logRetentionDays.coerceIn(1, 3650),
+        promptTimedMinutes = promptTimedMinutes.coerceIn(5, 1440),
     )
 
     companion object {
@@ -183,6 +249,14 @@ data class RuntimeState(
     val doNotDisturbUntil: Long? = null,
 ) {
     fun isDoNotDisturb(now: Long): Boolean = doNotDisturbUntil != null && doNotDisturbUntil > now
+}
+
+data class FocusSession(
+    val startedAt: Long,
+    val endsAt: Long,
+    val allowedPackages: Set<String> = emptySet(),
+) {
+    fun isActive(now: Long): Boolean = endsAt > now
 }
 
 data class FlowInfo(
@@ -277,6 +351,12 @@ data class PromptAnswerResult(
     val createdRuleId: String?,
     val resolvedFlows: Int,
     val remainingFlows: Int,
+)
+
+data class PromptBatchResult(
+    val answered: Int,
+    val resolvedFlows: Int,
+    val remainingPrompts: Int,
 )
 
 data class AppRouting(
@@ -414,11 +494,17 @@ data class TrafficUsage(
     val bytesIn: Long,
     val bytesOut: Long,
     val byPackage: Map<String, Pair<Long, Long>>,
+    val byNetwork: Map<NetworkKey, Pair<Long, Long>> = emptyMap(),
 ) {
     companion object {
         val Empty = TrafficUsage(0, 0, emptyMap())
     }
 }
+
+data class NetworkKey(
+    val kind: NetworkKind,
+    val subscriptionId: Int? = null,
+)
 
 data class QuietPeriodSummary(
     val startedAt: Long,
@@ -441,6 +527,13 @@ data class RuleImportPlan(
     val toUpdate: List<Rule>,
     val toRemove: List<Rule>,
     val unchanged: Int,
+)
+
+data class RuleGroup(
+    val key: String,
+    val label: String,
+    val packageName: String?,
+    val rules: List<Rule>,
 )
 
 data class NetworkSummary(

@@ -30,6 +30,7 @@ import com.networkcontrol.android.kotlin.core.model.TrafficUsage
 import com.networkcontrol.android.kotlin.core.model.UserSettings
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.core.rules.AppMatcherFactory
+import com.networkcontrol.android.kotlin.core.rules.RuleIdentity
 import com.networkcontrol.android.kotlin.data.transfer.RuleTransferService
 import com.networkcontrol.android.kotlin.engine.apps.AppCatalog
 import com.networkcontrol.android.kotlin.engine.vpn.AndroidRuleCompatibility
@@ -56,6 +57,9 @@ class AppBackend(val container: AppContainer) {
     val tunnelError = container.vpnEngine.tunnelError
     val quietPeriod = container.quietPeriods.summary
     val speed = container.speedMonitor.speed
+    val network = container.network.state
+    val focus = container.focus.session
+    val focusSchedules = container.focusScheduler.schedules
 
     fun protectionStatus(): ProtectionStatus = container.vpnEngine.status()
 
@@ -107,26 +111,44 @@ class AppBackend(val container: AppContainer) {
             .toList()
     }
 
-    suspend fun setAppDecision(packageName: String, decision: AppDecision) {
+    suspend fun setAppDecision(
+        packageName: String,
+        decision: AppDecision,
+        networkKinds: Set<com.networkcontrol.android.kotlin.core.model.NetworkKind> = emptySet(),
+        subscriptionIds: Set<Int> = emptySet(),
+        simSlots: Set<Int> = emptySet(),
+        replaceAllScopes: Boolean = networkKinds.isEmpty() && subscriptionIds.isEmpty() && simSlots.isEmpty(),
+    ) {
         val path = AppCatalog.appPath(packageName)
+        val app = if (decision == AppDecision.Unset) null else container.appCatalog.find(packageName) ?: return
         val activeProfileId = container.profiles.active.id
         val existing = container.rules.all
             .filter { it.source == RuleSource.User || it.source == RuleSource.Prompt }
             .filter { isOwnRule(it, path) }
             .filter { it.profileId == null || it.profileId == activeProfileId }
+            .filter { rule ->
+                replaceAllScopes ||
+                    (rule.conditions.networkKinds == networkKinds &&
+                        rule.conditions.subscriptionIds == subscriptionIds &&
+                        rule.conditions.simSlots == simSlots)
+            }
             .map { it.id }
         if (existing.isNotEmpty()) {
             container.rules.remove(existing, RuleEndReason.Replaced)
         }
-        if (decision == AppDecision.Unset) return
-        val app = container.appCatalog.find(packageName) ?: return
+        if (decision == AppDecision.Unset || app == null) return
         val now = Time.now()
         container.rules.add(
             Rule(
                 id = java.util.UUID.randomUUID().toString(),
                 profileId = activeProfileId,
                 app = AppMatcherFactory.create(container.appCatalog.toIdentity(app)),
-                conditions = RuleConditions(direction = Direction.Outbound),
+                conditions = RuleConditions(
+                    direction = Direction.Outbound,
+                    networkKinds = networkKinds,
+                    subscriptionIds = subscriptionIds,
+                    simSlots = simSlots,
+                ),
                 action = if (decision == AppDecision.Allow) VerdictAction.Allow else VerdictAction.Deny,
                 lifetime = RuleLifetime.Permanent,
                 source = RuleSource.User,
@@ -136,10 +158,81 @@ class AppBackend(val container: AppContainer) {
         )
     }
 
+    /** 目前配置文件下，這個應用所有的三態規則（含不同網路條件）。 */
+    fun appRules(packageName: String): List<Rule> {
+        val path = AppCatalog.appPath(packageName)
+        val activeProfileId = container.profiles.active.id
+        return container.rules.all
+            .filter { it.source == RuleSource.User || it.source == RuleSource.Prompt }
+            .filter { isOwnRule(it, path) }
+            .filter { it.profileId == null || it.profileId == activeProfileId }
+    }
+
+    /** 應用詳情用的最近連線記錄。 */
+    suspend fun appRecentLogs(packageName: String, limit: Int = 100): List<LogEntry> {
+        val identity = container.appStore.find(AppCatalog.appPath(packageName)) ?: return emptyList()
+        return container.activityStore.query(LogQuery(appId = identity.appId, limit = limit))
+    }
+
+    /** 目前配置文件（含全域）的規則，按應用分組。 */
+    fun ruleGroups(): List<com.networkcontrol.android.kotlin.core.model.RuleGroup> {
+        val activeProfileId = container.profiles.active.id
+        val visible = container.rules.all.filter {
+            it.profileId == null || it.profileId == activeProfileId
+        }
+        return visible.groupBy { it.app?.pathPattern ?: "*" }
+            .map { (key, group) ->
+                val path = group.firstNotNullOfOrNull { it.app?.pathPattern }
+                val packageName = path
+                    ?.removePrefix("android-app://")
+                    ?.takeIf { path.startsWith("android-app://") && it.isNotBlank() }
+                val label = packageName?.let { container.appCatalog.find(it)?.label } ?: packageName
+                com.networkcontrol.android.kotlin.core.model.RuleGroup(
+                    key = key,
+                    label = label ?: "Global",
+                    packageName = packageName,
+                    rules = group
+                        .map { rule ->
+                            val stats = container.rules.getHitStats(rule.id)
+                            rule.copy(hitCount = stats.first, lastHitAt = stats.second)
+                        }
+                        .sortedWith(
+                            compareByDescending<Rule> { it.manualPriority }
+                                .thenByDescending { it.updatedAt },
+                        ),
+                )
+            }
+            .sortedBy { it.label.lowercase() }
+    }
+
+    suspend fun setRuleEnabled(id: String, enabled: Boolean) {
+        runCatching { container.rules.setEnabled(id, enabled) }
+    }
+
+    suspend fun deleteRule(id: String) {
+        runCatching { container.rules.remove(listOf(id), RuleEndReason.Deleted) }
+    }
+
     suspend fun getLogs(limit: Int = 300, keyword: String? = null): List<LogEntry> =
         container.activityStore.query(
             LogQuery(action = VerdictAction.Deny, keyword = keyword, limit = limit),
         )
+
+    /** 匯出用：分頁讀取所有記錄，避開單次查詢上限。 */
+    suspend fun getAllLogsForExport(pageSize: Int = 1000): List<LogEntry> {
+        val all = mutableListOf<LogEntry>()
+        var beforeId: Long? = null
+        while (true) {
+            val page = container.activityStore.query(
+                LogQuery(beforeId = beforeId, limit = pageSize),
+            )
+            if (page.isEmpty()) break
+            all += page
+            if (page.size < pageSize) break
+            beforeId = page.last().id
+        }
+        return all
+    }
 
     suspend fun countBlockedToday(): Long {
         val start = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -155,6 +248,7 @@ class AppBackend(val container: AppContainer) {
         if (!container.trafficCollector.isAvailable) return TrafficUsage.Empty
         runCatching { container.trafficCollector.collectNow() }
         val byApp = container.trafficStore.byApp(from, to)
+        val byNetwork = container.trafficStore.byNetwork(from, to)
         var totalIn = 0L
         var totalOut = 0L
         val byPackage = HashMap<String, Pair<Long, Long>>()
@@ -166,7 +260,7 @@ class AppBackend(val container: AppContainer) {
             val current = byPackage[packageName] ?: (0L to 0L)
             byPackage[packageName] = (current.first + usage.bytesIn) to (current.second + usage.bytesOut)
         }
-        return TrafficUsage(totalIn, totalOut, byPackage)
+        return TrafficUsage(totalIn, totalOut, byPackage, byNetwork)
     }
 
     fun activeProfile(): Profile = container.profiles.active
@@ -187,6 +281,52 @@ class AppBackend(val container: AppContainer) {
         container.scope.launch {
             runCatching { container.profiles.create(name, mode, autoActivate) }
                 .onFailure { _profileErrors.tryEmit(it.message ?: "建立配置文件失敗") }
+        }
+    }
+
+    /**
+     * 建立長期「專注」白名單配置文件。
+     * - allowedPackages 非 null：只把這些應用寫成 Allow 規則（從專注會話保存）。
+     * - copyFromCurrent：複製目前配置文件的所有規則（模板）。
+     */
+    fun createFocusProfile(
+        nameBase: String = "專注",
+        allowedPackages: Set<String>? = null,
+        copyFromCurrent: Boolean = allowedPackages == null,
+    ) {
+        container.scope.launch {
+            runCatching {
+                var name = nameBase
+                var index = 2
+                while (container.profiles.all.any { it.name.equals(name, ignoreCase = true) }) {
+                    name = "$nameBase $index"
+                    index++
+                }
+                val profile = container.profiles.create(
+                    name = name,
+                    mode = FilterMode.Whitelist,
+                    autoActivate = null,
+                    copyRulesFrom = if (copyFromCurrent) container.profiles.active.id else null,
+                )
+                allowedPackages?.forEach { packageName ->
+                    val app = container.appCatalog.find(packageName) ?: return@forEach
+                    val now = Time.now()
+                    container.rules.add(
+                        Rule(
+                            id = java.util.UUID.randomUUID().toString(),
+                            profileId = profile.id,
+                            app = AppMatcherFactory.create(container.appCatalog.toIdentity(app)),
+                            conditions = RuleConditions(direction = Direction.Outbound),
+                            action = VerdictAction.Allow,
+                            lifetime = RuleLifetime.Permanent,
+                            source = RuleSource.User,
+                            createdAt = now,
+                            updatedAt = now,
+                        ),
+                    )
+                }
+                container.profiles.activate(profile.id)
+            }.onFailure { _profileErrors.tryEmit(it.message ?: "建立專注配置文件失敗") }
         }
     }
 
@@ -233,10 +373,79 @@ class AppBackend(val container: AppContainer) {
         container.scope.launch { container.prompts.dismiss(id) }
     }
 
+    fun answerPrompts(
+        ids: Collection<String>,
+        action: VerdictAction,
+        lifetime: RuleLifetime,
+        durationSeconds: Int? = null,
+    ) {
+        if (ids.isEmpty()) return
+        container.scope.launch {
+            container.prompts.answerMany(
+                ids,
+                com.networkcontrol.android.kotlin.core.model.PromptDecision(
+                    action = action,
+                    lifetime = lifetime,
+                    durationSeconds = durationSeconds,
+                    scope = com.networkcontrol.android.kotlin.core.model.PromptScope.AnyConnection,
+                ),
+            )
+        }
+    }
+
+    fun dismissPrompts(ids: Collection<String>) {
+        if (ids.isEmpty()) return
+        container.scope.launch { container.prompts.dismissMany(ids) }
+    }
+
     fun dismissQuietPeriod() = container.quietPeriods.dismiss()
+
+    fun startFocus(minutes: Int, allowedPackages: Set<String>) {
+        container.focus.start(minutes, allowedPackages)
+        container.vpnEngine.requestReplan()
+    }
+
+    fun extendFocus(minutes: Int) {
+        container.focus.extend(minutes)
+        container.vpnEngine.requestReplan()
+    }
+
+    fun stopFocus() {
+        container.focus.stop()
+        container.vpnEngine.requestReplan()
+    }
+
+    fun saveFocusSchedule(schedule: com.networkcontrol.android.kotlin.core.focus.FocusSchedule) {
+        container.focusScheduler.replace(schedule)
+    }
+
+    fun deleteFocusSchedule(id: String) {
+        container.focusScheduler.remove(id)
+    }
+
+    fun setFocusScheduleEnabled(id: String, enabled: Boolean) {
+        container.focusScheduler.setEnabled(id, enabled)
+    }
 
     fun updateSettings(transform: (UserSettings) -> UserSettings) {
         container.scope.launch { container.settings.update(transform) }
+    }
+
+    fun setAllowSystemAppsByDefault(enabled: Boolean) {
+        updateSettings { it.copy(allowSystemAppsByDefault = enabled) }
+    }
+
+    fun trustPublisher(signerSha256: String) {
+        if (signerSha256.isBlank()) return
+        updateSettings { it.copy(trustedSigners = it.trustedSigners + signerSha256) }
+    }
+
+    fun untrustPublisher(signerSha256: String) {
+        updateSettings { it.copy(trustedSigners = it.trustedSigners - signerSha256) }
+    }
+
+    fun clearTrustedPublishers() {
+        updateSettings { it.copy(trustedSigners = emptySet()) }
     }
 
     fun hasTrafficAccess(): Boolean = container.trafficCollector.isAvailable
@@ -244,8 +453,284 @@ class AppBackend(val container: AppContainer) {
     fun notificationsAvailable(): Boolean =
         androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
 
+    fun setNotificationsEnabled(enabled: Boolean) {
+        container.preferences.notificationsEnabled = enabled
+        container.promptRouter.refresh()
+    }
+
+    fun promptPresentationMode(): String = container.preferences.promptPresentationMode
+
+    fun setPromptPresentationMode(mode: String) {
+        container.preferences.promptPresentationMode = mode
+        container.promptRouter.refresh()
+    }
+
+    fun promptOverlayPosition(): String = container.preferences.promptOverlayPosition
+
+    fun setPromptOverlayPosition(position: String) {
+        container.preferences.promptOverlayPosition = position
+        container.promptRouter.refresh()
+    }
+
+    fun promptOverlayCustomRatio(): Float = container.preferences.promptOverlayCustomRatio
+
+    fun setPromptOverlayCustomRatio(ratio: Float) {
+        container.preferences.promptOverlayCustomRatio = ratio
+        container.promptRouter.refresh()
+    }
+
+    fun speedIslandEnabled(): Boolean = container.preferences.speedIslandEnabled
+
+    fun setSpeedIslandEnabled(enabled: Boolean) {
+        container.preferences.speedIslandEnabled = enabled
+        container.speedIsland.refresh()
+    }
+
+    fun refreshSpeedIsland() {
+        container.speedIsland.refresh()
+    }
+
+    fun isVivoDevice(): Boolean = container.preferences.isVivoDevice()
+
+    fun vivoIslandCompatible(): Boolean = container.preferences.vivoIslandCompatible
+
+    fun setVivoIslandCompatible(enabled: Boolean) {
+        container.preferences.vivoIslandCompatible = enabled
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandOffsetXDp(): Int = container.preferences.speedIslandOffsetXDp
+
+    fun setSpeedIslandOffsetXDp(value: Int) {
+        container.preferences.speedIslandOffsetXDp = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandOffsetYDp(): Int = container.preferences.speedIslandOffsetYDp
+
+    fun setSpeedIslandOffsetYDp(value: Int) {
+        container.preferences.speedIslandOffsetYDp = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandOpacity(): Float = container.preferences.speedIslandOpacity
+
+    fun setSpeedIslandOpacity(value: Float) {
+        container.preferences.speedIslandOpacity = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandMode(): com.networkcontrol.android.kotlin.core.model.SpeedIslandMode =
+        container.preferences.speedIslandMode
+
+    fun setSpeedIslandMode(value: com.networkcontrol.android.kotlin.core.model.SpeedIslandMode) {
+        container.preferences.speedIslandMode = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandContent(): com.networkcontrol.android.kotlin.core.model.SpeedIslandContent =
+        container.preferences.speedIslandContent
+
+    fun setSpeedIslandContent(value: com.networkcontrol.android.kotlin.core.model.SpeedIslandContent) {
+        container.preferences.speedIslandContent = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandFontScalePercent(): Int = container.preferences.speedIslandFontScalePercent
+
+    fun setSpeedIslandFontScalePercent(value: Int) {
+        container.preferences.speedIslandFontScalePercent = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandFontWeight(): com.networkcontrol.android.kotlin.core.model.SpeedIslandFontWeight =
+        container.preferences.speedIslandFontWeight
+
+    fun setSpeedIslandFontWeight(
+        value: com.networkcontrol.android.kotlin.core.model.SpeedIslandFontWeight,
+    ) {
+        container.preferences.speedIslandFontWeight = value
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandStatusBarMode(): Boolean = container.preferences.speedIslandStatusBarMode
+
+    fun setSpeedIslandStatusBarMode(enabled: Boolean) {
+        container.preferences.speedIslandStatusBarMode = enabled
+        if (enabled && container.preferences.speedIslandTextColorMode == "theme") {
+            container.preferences.speedIslandTextColorMode = "statusbar"
+        } else if (!enabled && container.preferences.speedIslandTextColorMode == "statusbar") {
+            container.preferences.speedIslandTextColorMode = "theme"
+        }
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandTextColorMode(): String = container.preferences.speedIslandTextColorMode
+
+    fun setSpeedIslandTextColorMode(mode: String) {
+        container.preferences.speedIslandTextColorMode = mode
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandTextColor(): Int = container.preferences.speedIslandTextColor
+
+    fun setSpeedIslandTextColor(color: Int) {
+        container.preferences.speedIslandTextColor = color
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandShowDot(): Boolean = container.preferences.speedIslandShowDot
+
+    fun setSpeedIslandShowDot(show: Boolean) {
+        container.preferences.speedIslandShowDot = show
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandSwapOrder(): Boolean = container.preferences.speedIslandSwapOrder
+
+    fun setSpeedIslandSwapOrder(swap: Boolean) {
+        container.preferences.speedIslandSwapOrder = swap
+        container.speedIsland.refresh()
+    }
+
+    fun speedIslandDotColor(): Int = container.preferences.speedIslandDotColor
+
+    fun setSpeedIslandDotColor(color: Int) {
+        container.preferences.speedIslandDotColor = color
+        container.speedIsland.refresh()
+    }
+
+    fun promptShowTimedOption(): Boolean = container.preferences.promptShowTimedOption
+
+    fun setPromptShowTimedOption(show: Boolean) {
+        container.preferences.promptShowTimedOption = show
+        container.promptRouter.refresh()
+    }
+
+    fun promptShowDetails(): Boolean = container.preferences.promptShowDetails
+
+    fun setPromptShowDetails(show: Boolean) {
+        container.preferences.promptShowDetails = show
+        container.promptRouter.refresh()
+    }
+
+    fun promptShowExplanation(): Boolean = container.preferences.promptShowExplanation
+
+    fun setPromptShowExplanation(show: Boolean) {
+        container.preferences.promptShowExplanation = show
+        container.promptRouter.refresh()
+    }
+
+    fun promptHideDetailsOnLockScreen(): Boolean = container.preferences.promptHideDetailsOnLockScreen
+
+    fun setPromptHideDetailsOnLockScreen(hide: Boolean) {
+        container.preferences.promptHideDetailsOnLockScreen = hide
+        container.promptRouter.refresh()
+    }
+
+    fun blockOnLockScreen(): Boolean = container.preferences.blockOnLockScreen
+
+    fun setBlockOnLockScreen(enabled: Boolean) {
+        container.preferences.blockOnLockScreen = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun isScreenLocked(): Boolean = container.screenState.locked.value
+
+    fun privateDnsMode(): String =
+        runCatching {
+            Settings.Global.getString(context.contentResolver, "private_dns_mode").orEmpty()
+        }.getOrDefault("off")
+
+    fun isAppLockEnabled(): Boolean = container.preferences.appLockEnabled
+
+    fun isDeviceSecure(): Boolean =
+        (context.getSystemService(android.app.KeyguardManager::class.java))?.isDeviceSecure == true
+
+    fun isWorkProfile(): Boolean =
+        (context.getSystemService(android.os.UserManager::class.java))?.isManagedProfile == true
+
+    fun setAppLockEnabled(enabled: Boolean) {
+        container.preferences.appLockEnabled = enabled
+    }
+
+    fun forwardingEnabled(): Boolean = container.preferences.forwardingEnabled
+
+    fun setForwardingEnabled(enabled: Boolean) {
+        container.preferences.forwardingEnabled = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun forwardingAvailable(): Boolean = com.networkcontrol.android.kotlin.engine.vpn.VpnForwardingTransport.isAvailable()
+
+    fun socks5Host(): String = container.preferences.socks5Host
+
+    fun setSocks5Host(host: String) {
+        container.preferences.socks5Host = host.trim()
+        container.vpnEngine.requestReplan()
+    }
+
+    fun socks5Port(): Int = container.preferences.socks5Port
+
+    fun setSocks5Port(port: Int) {
+        container.preferences.socks5Port = port.coerceIn(1, 65535)
+        container.vpnEngine.requestReplan()
+    }
+
+    fun socks5Udp(): Boolean = container.preferences.socks5Udp
+
+    fun setSocks5Udp(enabled: Boolean) {
+        container.preferences.socks5Udp = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun forwardingDirectPackages(): Set<String> = container.preferences.forwardingDirectPackages
+
+    fun setForwardingDirectPackages(packages: Set<String>) {
+        container.preferences.forwardingDirectPackages = packages
+        container.vpnEngine.requestReplan()
+    }
+
+    /** 隧道目前是否真的在轉發（啟動失敗回退到黑洞模式時為 false）。 */
+    val forwardingActive = container.vpnEngine.forwardingActive
+
+    fun socks5BypassPackage(): String? = container.preferences.socks5BypassPackage
+
+    fun setSocks5BypassPackage(packageName: String?) {
+        container.preferences.socks5BypassPackage = packageName
+        container.vpnEngine.requestReplan()
+    }
+
+    fun installedApps(): List<com.networkcontrol.android.kotlin.core.model.InstalledApp> =
+        container.appCatalog.getApps()
+            .filter { it.packageName != context.packageName }
+            .sortedBy { it.label.lowercase() }
+
+    fun canDrawOverlays(): Boolean = container.promptOverlay.canDrawOverlays()
+
+    fun overlayPermissionIntent(): Intent {
+        val packageUri = Uri.parse("package:${context.packageName}")
+        val candidates = listOf(
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, packageUri),
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION),
+            openAppSettings(),
+        )
+        return candidates.firstOrNull { intent ->
+            runCatching { intent.resolveActivity(context.packageManager) != null }.getOrDefault(false)
+        } ?: openAppSettings()
+    }
+
     fun appListVisibility(): com.networkcontrol.android.kotlin.engine.apps.AppCatalog.AppListVisibility =
         container.appCatalog.visibility()
+
+    fun subscriptions(): List<com.networkcontrol.android.kotlin.core.model.SimInfo> =
+        container.network.subscriptions()
+
+    fun hasPhoneStatePermission(): Boolean =
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.READ_PHONE_STATE,
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
     fun openAppSettings(): Intent =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -310,11 +795,12 @@ class AppBackend(val container: AppContainer) {
     suspend fun applyImport(json: String, mode: RuleImportMode): RuleImportPreview {
         val imported = RuleTransferService.importForPlan(json, container.profiles.all)
         val plan = RuleTransferService.plan(container.rules.all, imported, mode)
-        if (plan.toAdd.isNotEmpty()) container.rules.addRange(plan.toAdd)
-        plan.toUpdate.forEach { container.rules.update(it) }
+        // Replace 模式先刪除未匯入的規則，再新增/更新；避免身份合併後又被刪掉。
         if (plan.toRemove.isNotEmpty()) {
             container.rules.remove(plan.toRemove.map { it.id }, RuleEndReason.Replaced)
         }
+        if (plan.toAdd.isNotEmpty()) container.rules.addRange(plan.toAdd)
+        plan.toUpdate.forEach { container.rules.update(it) }
         return RuleImportPreview(
             total = imported.size,
             added = plan.toAdd.size,
@@ -336,7 +822,7 @@ class AppBackend(val container: AppContainer) {
 
     fun refreshNotifications() {
         container.vpnEngine.refreshNotification()
-        container.promptNotifier.refreshPending()
+        container.promptRouter.refresh()
     }
 
     fun scheduleTrafficRefresh() {
@@ -344,7 +830,9 @@ class AppBackend(val container: AppContainer) {
     }
 
     private fun ownRule(rules: List<Rule>, path: String): Rule? =
-        rules.firstOrNull { isOwnRule(it, path) }
+        rules.firstOrNull {
+            isOwnRule(it, path) && !it.conditions.hasNetworkScope
+        }
 
     private fun isOwnRule(rule: Rule, path: String): Boolean =
         rule.app?.let { !it.hasWildcard && it.pathPattern == path } == true &&

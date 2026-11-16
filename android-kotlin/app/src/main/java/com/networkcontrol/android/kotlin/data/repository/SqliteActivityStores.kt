@@ -14,6 +14,8 @@ import com.networkcontrol.android.kotlin.core.model.Direction
 import com.networkcontrol.android.kotlin.core.model.L4Protocol
 import com.networkcontrol.android.kotlin.core.model.LogEntry
 import com.networkcontrol.android.kotlin.core.model.LogQuery
+import com.networkcontrol.android.kotlin.core.model.NetworkKey
+import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import com.networkcontrol.android.kotlin.core.model.TrafficBucket
 import com.networkcontrol.android.kotlin.core.model.TrafficSummary
 import com.networkcontrol.android.kotlin.core.model.Verdict
@@ -325,10 +327,18 @@ class SqliteActivityStore(private val db: ActivityDatabase) : ActivityStore {
 class SqliteTrafficStore(private val db: ActivityDatabase) : TrafficStore {
     private var lastCleanup = 0L
 
-    override suspend fun add(appId: Long, minute: Long, bytesIn: Long, bytesOut: Long) =
+    override suspend fun add(
+        appId: Long,
+        minute: Long,
+        bytesIn: Long,
+        bytesOut: Long,
+        networkKind: NetworkKind,
+        subscriptionId: Int?,
+    ) =
         withContext(Dispatchers.IO) {
             if (bytesIn == 0L && bytesOut == 0L) return@withContext
             val database = db.writableDatabase
+            val networkId = subscriptionId ?: -1
             database.inTransaction {
                 listOf(
                     "traffic_minute" to 60_000L,
@@ -351,12 +361,38 @@ class SqliteTrafficStore(private val db: ActivityDatabase) : TrafficStore {
                         "UPDATE $table SET bytes_in = bytes_in + ?, bytes_out = bytes_out + ? WHERE app_id = ? AND ts = ?;",
                         arrayOf<Any?>(bytesIn, bytesOut, appId, ts),
                     )
+                    insertWithOnConflict(
+                        "traffic_network",
+                        null,
+                        ContentValues().apply {
+                            put("app_id", appId)
+                            put("ts", ts)
+                            put("unit", unit)
+                            put("network_kind", networkKind.code)
+                            put("subscription_id", networkId)
+                            put("bytes_in", 0)
+                            put("bytes_out", 0)
+                        },
+                        SQLiteDatabase.CONFLICT_IGNORE,
+                    )
+                    execSQL(
+                        """
+                        UPDATE traffic_network SET bytes_in = bytes_in + ?, bytes_out = bytes_out + ?
+                        WHERE app_id = ? AND ts = ? AND unit = ? AND network_kind = ? AND subscription_id = ?;
+                        """.trimIndent(),
+                        arrayOf<Any?>(bytesIn, bytesOut, appId, ts, unit, networkKind.code, networkId),
+                    )
                 }
             }
             val now = System.currentTimeMillis()
             if (now - lastCleanup >= 3_600_000L) {
                 lastCleanup = now
                 database.delete("traffic_minute", "ts < ?", arrayOf((now - 3 * 86_400_000L).toString()))
+                database.delete(
+                    "traffic_network",
+                    "unit = ? AND ts < ?",
+                    arrayOf("60000", (now - 3 * 86_400_000L).toString()),
+                )
             }
         }
 
@@ -416,6 +452,27 @@ class SqliteTrafficStore(private val db: ActivityDatabase) : TrafficStore {
             }
         }
     }
+
+    override suspend fun byNetwork(from: Long, to: Long): Map<NetworkKey, Pair<Long, Long>> =
+        withContext(Dispatchers.IO) {
+            val unit = if (to - from <= 2 * 86_400_000L) 60_000L else 3_600_000L
+            db.readableDatabase.rawQuery(
+                """
+                SELECT network_kind, subscription_id, SUM(bytes_in), SUM(bytes_out)
+                FROM traffic_network WHERE ts >= ? AND ts < ? AND unit = ?
+                GROUP BY network_kind, subscription_id;
+                """.trimIndent(),
+                arrayOf(from.toString(), to.toString(), unit.toString()),
+            ).use { cursor ->
+                buildMap {
+                    while (cursor.moveToNext()) {
+                        val kind = NetworkKind.fromCode(cursor.getInt(0))
+                        val subscription = cursor.getInt(1).takeIf { it >= 0 }
+                        put(NetworkKey(kind, subscription), cursor.getLong(2) to cursor.getLong(3))
+                    }
+                }
+            }
+        }
 
     private fun tableFor(from: Long, to: Long): String =
         if (to - from <= 2 * 86_400_000L && from >= System.currentTimeMillis() - 3 * 86_400_000L) {

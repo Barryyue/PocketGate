@@ -50,15 +50,194 @@
 | K-022 | 按網絡類型 / SSID 自動切換配置文件；NetworkMonitor 改為默認網路回調、忽略自身 VPN | `ProfileAutoSwitcher`、`NetworkMonitor`、`SettingsScreen` | 模擬器 UI；自動切換待真機 | SSID 需定位權限 |
 | K-023 | P0/P1 審查修正：配置文件操作閃退、隧道重建競態、detach/revoke 競爭、BlockedEvent 待決額度、初始化/重配異常隔離、流量重複計數、日誌保留、通知權限回呼、UID -1、per-app 語言覆寫 | `VpnTunnel`、`PromptBroker`、`AppContainer`、`TrafficCollector` 等 | JVM 測試 + 構建 + 模擬器 | 詳見 [kotlin-audit-2026-11-15.md](kotlin-audit-2026-11-15.md) |
 
+### v0.3（2026-11-15，提交 `6beed8e`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-024 | 網路類型 / SIM 感知：`NetworkContext` 記錄訂閱、卡槽、電信商、計費狀態；配置文件自動切換支援 SIM；`traffic_network` 按 Wi-Fi / 行動網路 / SIM 拆分；規則條件可按網路類型 / SIM 限定，網路變化自動重新規劃路由；應用頁新增網路條件規則編輯器 | `Models.kt`、`NetworkMonitor.kt`、`TrafficCollector.kt`、`Databases.kt`、`RoutingPlanner.kt`、`AppsScreen.kt` | JVM 測試（`NetworkProfileTest`、`RoutingPlannerTest`、`RulesTest`）+ 模擬器建立 Wi-Fi 規則並顯示 | 雙 SIM / 真機流量拆分待驗證 |
+| K-029 | 連線記錄 CSV 匯出：目前篩選 / 全部、SAF 保存、RFC 4180、UTF-8 BOM、公式注入防護、分頁匯出避開查詢上限 | `LogCsv.kt`、`LogsScreen.kt`、`AppBackend.getAllLogsForExport` | JVM 測試（`LogCsvTest`）+ 模擬器匯出選單 | 真機 SAF 保存待驗證 |
+| K-030 | 應用詳情：應用資訊、UID、簽章者、目前生效規則、全部規則、最近目標 / 次數 / 時間、今日流量；可一鍵信任發布者 | `AppsScreen.kt`、`AppBackend.appRecentLogs` | 模擬器開啟詳情 | 最近活動需有記錄 |
+| K-031 | 規則語意去重與分組：`RuleIdentity` 正規化應用路徑 / 條件 / 網路範圍；新增規則時更新同語意規則；啟動合併重複規則並保留命中數；新增「規則」分頁按應用分組、啟停 / 刪除 | `RuleIdentity.kt`、`RuleService.kt`、`RuleTransferService.kt`、`RulesScreen.kt` | JVM 測試（`RuleIdentityTest`、`RuleTransferTest`）+ 模擬器規則分頁 | 匯入 Replace 的跨裝置 ID 差異已修正 |
+| K-032 | 可信發布者 / 系統應用默認允許：設定頁開關與信任清單；應用詳情可信任簽章者；明確規則優先於信任默認值；簽章不符不會被信任 | `RoutingPlanner.kt`、`UserSettings`、`JsonCodec.kt`、`SettingsScreen.kt`、`AppsScreen.kt` | JVM 測試（`RoutingPlannerTest` 信任 / 系統應用 / 篡改案例）+ 模擬器詳情頁按鈕 | 真機系統應用範圍待確認 |
+| K-033 | 批量詢問：待決列表多選，允許 / 拒絕 / 稍後一次處理；規則用 `addRange` 只發布一次規則集 | `PromptBroker.answerMany`、`OverviewScreen.kt`、`AppBackend.answerPrompts` | 構建 + 模擬器入口 | 批量流程待真機 / 多詢問場景驗證 |
+| K-034 | 通知動作在進程回收後仍有效：通知 action 帶應用路徑；詢問不存在時等待核心初始化後直接建立應用規則；無有效應用時提示已過期 | `PromptNotifier.kt`、`NotificationActionReceiver.kt` | 構建 + 代碼審查 | 需真機「殺進程後點通知」驗證 |
+
+### v0.4（2026-11-15，提交 `b66956d`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-037 | 全域鎖屏斷網：螢幕關閉 / 鎖屏時以 BlockAll 重新規劃；系統 UID 仍保留 | `ScreenStateMonitor`、`VpnEngine`、`SettingsScreen` | 構建 + 代碼審查 | 按應用鎖屏開關尚未做 |
+| K-038 | 「允許一次」：詢問卡片 / 懸浮面板可只放行目前連線，不建立持久規則 | `PromptOverlay`、`PromptOverlayController`、`PromptBroker` | 模擬器詢問卡片顯示 | v0.6.1 改為應用會話語義，見 K-038b |
+| K-038b | 「允許一次」改為應用會話：建立應用級暫存規則，目標應用離開前台（UsageStats `ACTIVITY_STOPPED`）2 秒後移除；下次打開重新詢問；未取得 UsageStats 時 10 分鐘兜底 | `RuleLifetime.UntilAppExit`、`PromptRuleFactory`、`TargetAppSessionTracker`、`PromptOverlay` | JVM 測試 + 構建 | 無法可靠偵測「滑掉 / 強制停止」；以離開前台為近似 |
+| K-039 | 懸浮詢問面板：`SYSTEM_ALERT_WINDOW`；`PromptRouter` 統一決定應用內卡片 / 懸浮面板 / 通知；UsageStats 前景 UID 追蹤；原生 View 面板、頂部 / 底部、hold 計時、安靜通知渠道、addView fallback | `platform/prompt/`、`PromptNotifier`、`NotificationChannels`、`SettingsScreen`、`AndroidManifest.xml` | `PromptPresentationPolicyTest`；模擬器在 Chrome 上顯示面板並按允許成功 | 微信 / OEM ROM / IME 遮擋待真機 |
+| K-040 | 詢問內容顯示設定：連線詳情、說明文字、鎖屏隱藏詳情；通知與懸浮面板同步 | `AppPreferences`、`PromptNotifier`、`PromptOverlayController`、`PromptOverlay`、`SettingsScreen` | 構建 + 模擬器設定頁 | 真機鎖屏待驗證 |
+| K-035 | 專注模式：時長、允許應用選擇、剩餘時間、延長 15 分鐘、結束確認；專注期間 BlockAll 並只放行所選應用 | `FocusController`、`FocusSchedule`、`VpnEngine`、`RoutingPlanner`、`OverviewScreen` | 模擬器開始 15 分鐘、允許 Chrome、剩餘時間顯示 | 結束小結 / 通知尚未做 |
+| K-036 | 專注時間表：按星期與時段自動進入專注；跨午夜時段；設定頁新增 / 啟停 / 刪除；每 30 秒檢查 | `FocusScheduler`、`SettingsScreen`、`AppPreferences` | 模擬器新增週一至週五 09:00–18:00 | 重啟後校正、AlarmManager 待做 |
+| K-041 | 新應用安裝提醒：`PACKAGE_ADDED` 通知，點擊開啟應用決定 | `PackageChangeReceiver`、`NotificationChannels` | 構建 + 代碼審查 | 真機安裝流程待驗證 |
+| K-042 | 私人 DNS / DoH 提示：偵測 `private_dns_mode=hostname`，總覽提示域名規則可能失效 | `AppBackend.privateDnsMode`、`OverviewScreen` | 構建 + 代碼審查 | DoH 應用內檢測待做 |
+| K-043 | 應用鎖（第一版）：使用系統鎖屏憑證解鎖，離開超過 1 分鐘重新鎖定；未設定鎖屏時阻止啟用 | `AppLockGate`、`AppPreferences`、`SettingsScreen`、`MainActivity` | 構建 + 代碼審查 | 修改規則 / 模式前的即時驗證尚未做 |
+| K-044 | 無障礙與平板：導航圖示加內容描述；內容最大寬度 760dp 居中，改善平板與大字體佈局 | `AppRoot` | 構建 + 模擬器 | TalkBack 全流程待真機 |
+
+### v0.5（2026-11-15，提交 `1db37d1`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-045 | 啟動初始化耗時日誌；release 維持 R8 + 資源壓縮；AAB 打包 | `AppContainer`、`build.gradle.kts`、`scripts/android-kotlin.ps1` | Release APK / AAB 構建 | Baseline Profiles、arm64-only、CI 大小基線尚未做 |
+| K-046 | 正式簽名環境變量（`NC_ANDROID_KEYSTORE` 等）、AAB、GitHub 更新檢查（跟隨系統代理） | `build.gradle.kts`、`UpdateChecker`、`SettingsScreen`、腳本 | 更新版本比較測試；AAB 4.1 MB | 正式 keystore 需用戶提供 |
+| K-047 | 工作資料夾 / 多使用者限制提示 | `AppBackend.isWorkProfile`、`SettingsScreen` | 代碼審查 | 只提示，不支援跨使用者控制 |
+| K-048 | 診斷加入網絡 / SIM / 私人 DNS / IPv6 / 懸浮權限 / 專注狀態；新增真機回歸清單 | `DiagnosticsExporter`、[android-regression-checklist.md](android-regression-checklist.md) | 構建 | 真機 IPv6 / OEM 回歸待做 |
+| K-049 | adb 冒煙腳本：安裝、授權 appops、啟動、進程存活、FATAL 檢查 | `scripts/android-kotlin-smoke.ps1` | 模擬器執行通過 | 需連接裝置 |
+| K-050 | 內置 WireGuard 決策：不內置，避免與單一 VpnService 衝突；未來作為轉發模式上游 | [kotlin-roadmap.md](kotlin-roadmap.md) | 設計決策 | 無代碼改動 |
+
+### v0.6-m4spike（2026-11-15，提交 `fec8da0`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-035c | 一鍵建立「專注」白名單配置文件（複製目前規則）；進行中的專注可保存為長期配置文件（只寫入勾選的允許應用） | `AppBackend.createFocusProfile`、`SettingsScreen`、`OverviewScreen` | 模擬器建立「專注」並切換為 Active | 真機需驗證規則複製與切換 |
+| K-035d / K-036b | 專注時長與時間表改用 Android 原生圓盤 `TimePickerDialog`；可自訂任意分鐘；移除 15/30/60/120 晶片換行問題 | `OverviewScreen`、`SettingsScreen` | 模擬器：專注時長 00:30 圓盤、拖動預覽 | 真機時鐘樣式依 ROM |
+| K-039b | 懸浮面板自訂垂直位置：0–100%，設定頁提供可上下拖動的預覽面板 | `AppPreferences`、`PromptOverlayController`、`SettingsScreen` | 模擬器：15%→82% 拖動並保存 | 真機需驗證實際面板高度/insets |
+| K-051 | **M4 Phase 0 轉發 spike**：內建 `hev-socks5-tunnel`（MIT，arm64-v8a / x86_64），VpnService TUN fd 交給原生隧道；設定頁可啟用實驗轉發、指定本機 SOCKS5 host/port/UDP | `VpnForwardingTransport`、`VpnTunnel`、`VpnEngine`、`SettingsScreen`、`jniLibs/` | 模擬器：原生庫載入、隧道啟動、SOCKS5 握手；實際上網因 Reqable + adb reverse 逾時未通過 | **規則 / 詢問 / 按域名放行尚未接入轉發層**；需真機 + 本機 FlClash/SOCKS5 驗證 |
+
+### v0.6.2-m4spike（2026-11-15，提交 `6189f3e`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-035e | 詢問壽命精簡：移除「直到重啟」選項，保留允許一次 / 永久 / 限時；限時時長可在設定中心配置（預設 60 分鐘，可改 30 等） | `PromptOverlay`、`PromptOverlayController`、`OverviewScreen`、`UserSettings.promptTimedMinutes`、`SettingsScreen` | 構建 + 模擬器 | `UntilRestart` 枚舉保留以載入舊規則，但不再提供新選擇 |
+| K-052 | 靈動島（速度）：保護開啟後在螢幕頂部顯示上傳/下載速度；預設開啟，可在設定關閉；鎖屏隱藏、點擊開啟主界面；vivo / iQOO 相容模式（系統島下方 + 0–48dp 偏移）；詢問面板自動下移避免重疊 | `SpeedIslandController`、`AppContainer`、`SettingsScreen`、`PromptOverlayController` | 模擬器 `dumpsys window`：預設 frame y=84，vivo 相容後 y=126 | 真機位置 / 遮擋 / 耗電待驗證 |
+
+### v0.6.5-m4spike（2026-11-15，提交 `c29b25c`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-053 | 版本說明：設定 → 關於點擊版本號，查看目前版本新增功能 / 優化，並可切換歷史版本 | `ReleaseNotes.kt`、`SettingsScreen` | 模擬器點擊版本顯示 0.6.4 / 0.6.5 內容與歷史按鈕 | 內容為內建版本記錄，未接遠端更新說明 |
+
+### v0.6.6-m4spike（2026-11-15，提交 `c2b1a4e`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-054 | 專注與保護聯動：保護關閉時開始專注會自動開啟保護；保護中途關閉時顯示警告與「開啟保護」；專注卡片按鈕改為兩欄，修正「結束專注」文字變形 | `OverviewScreen`、`ProfileAutoSwitcher` 無關 | 模擬器：開始專注後保護自動 On，延長 / 結束專注並排、保存配置文件另起一行 | 真機 VPN 授權流程待驗證 |
+
+### v0.6.7-m4spike（2026-11-15，提交 `712ebe7`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-055 | 靈動島位置與透明度：水平 / 垂直偏移 -60..+60dp、背景透明度 20–100%、重設；文字固定白色加陰影不透明；專注與勿擾相鄰排列；勿擾保護聯動 | `AppPreferences`、`SpeedIslandController`、`SettingsScreen`、`OverviewScreen` | 構建 + 模擬器版面 | 真機偏移與透明度效果待驗證 |
+
+### v0.6.8-m4spike（2026-11-15，提交 `d94823c`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-056 | 靈動島樣式：完整（上下行同時）/ 循環（每 2 秒輪流顯示上傳或下載）/ 迷你（狀態欄風格小字、縮小內距與綠點）；設定頁可切換 | `SpeedIslandMode`、`SpeedIslandController`、`SettingsScreen` | 構建 + 模擬器設定頁 | 真機文字寬度 / 循環節奏待驗證 |
+
+### v0.6.9-m4spike（2026-11-15，提交 `09bf843`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-057 | 靈動島水平 / 垂直偏移與背景透明度改為拖動即時生效 | `SpeedIslandController.applyPosition`、`SettingsScreen` | 模擬器拖動水平滑桿 frame x 由 335 變 499，即時顯示 | 真機拖動手勢待驗證 |
+
+### v0.6.10-m4spike（2026-11-15，提交 `2ef6dbc`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-058 | 靈動島「嘗試放進狀態欄」：`FLAG_LAYOUT_IN_SCREEN` / `NO_LIMITS`、`fitInsetsTypes=0`、cutout ALWAYS，垂直偏移可負值 | `SpeedIslandController`、`AppPreferences`、`SettingsScreen` | 構建 + 代碼審查 | 第三方懸浮窗仍在系統狀態欄之下，部分 ROM 會遮住；需真機確認 |
+
+### v0.7.0-m4spike（2026-11-15）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-059 | 靈動島透明度可到 0：背景、邊框、elevation 全消失；全透明時加 `FLAG_NOT_TOUCHABLE`，文字用亮度對比陰影 | `AppPreferences`、`SpeedIslandController`、`SettingsScreen` | 模擬器截圖：0% 時只剩文字且不擋觸控 | 淺色桌布可讀性待真機 |
+| K-060 | 文字顏色三模式：跟隨主題（`ThemeController.color` 即時刷新）、跟隨狀態欄（日夜黑白近似）、自訂（預設色盤 + HSV） | `AppPreferences`、`AppBackend`、`SpeedIslandController`、`SettingsScreen`、`ThemeColorDialog` | 模擬器：主題改藍色文字同步變藍、狀態欄模式黑字、自訂紫色即時生效 | ROM 狀態欄圖示色無法直接讀取，日夜近似 |
+| K-061 | 狀態欄模式與文字色聯動：開啟時 `theme` 自動切 `statusbar`，關閉時 `statusbar` 切回 `theme` | `AppBackend.setSpeedIslandStatusBarMode` | 代碼審查 + 設定頁狀態同步 | 手動選過的模式不被覆蓋 |
+| K-062 | 綠色狀態點可顯示 / 隱藏，並可自訂顏色 | `AppPreferences`、`SpeedIslandController`、`SettingsScreen` | 模擬器：隱藏 / 顯示、紅色自訂均正常 | — |
+| K-063 | 上傳 / 下載順序互換，套用完整、循環、迷你；循環起始方向一併反轉 | `AppPreferences`、`SpeedIslandController`、`SettingsScreen` | 模擬器：順序即時切換 | — |
+| K-064 | 設定頁顏色籌片改用 `FlowRow`，窄屏自動換行 | `SettingsScreen` | 模擬器 1080×2400 設定頁 | — |
+
+### v0.8.0-m4spike（2026-11-15）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-065 | 靈動島設定獨立成頁：頂部即時預覽 + 顯示 / 外觀 / 位置分組，設定頁只保留入口與摘要 | `SpeedIslandSettingsScreen`、`AppRoot`、`SettingsScreen` | 模擬器打開頁面、預覽與設定即時生效 | 後續新選項都放此頁 |
+| K-066 | 顯示內容可切換：速度 / 今日流量 / 今日攔截 / 待處理詢問 / 目前網路 | `SpeedIslandContent`、`SpeedIslandFormatter`、`SpeedIslandController` | JVM 測試 + 模擬器頁面 | 流量與攔截每 60 秒刷新 |
+| K-067 | 字體大小 80–160%、字體粗細常規 / 中等 / 粗體 | `AppPreferences`、`SpeedIslandController`、`SpeedIslandSettingsScreen` | 模擬器預覽與實際懸浮窗 | 迷你樣式同步縮放 |
+| K-068 | 懸浮詢問可隱藏「限時允許」選項 | `AppPreferences`、`PromptOverlayController`、`PromptOverlay`、`SettingsScreen` | 代碼審查 + 頁面開關 | 關閉後只留允許一次 / 永久 / 拒絕 |
+| K-069 | 修復轉發模式：hev 隧道 ipv4/ipv6 改用 VPN 介面實際地址（10.111.222.1 / fd00:6e63::1）、關閉 TSO/USO/jumbo、加大任務堆疊 | `VpnForwardingTransport` | 模擬器 + Reqable SOCKS5：HTTP 請求和回應完整通過 tun0 | 先前位址不一致導致回包被丟棄 |
+| K-070 | 轉發設定新增「測試代理」與 DNS 提示 | `Socks5Probe`、`SettingsScreen` | 代碼審查 | DNS 仍需代理支援 UDP |
+
+### v0.8.1-m4spike（2026-11-15）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-071 | 轉發模式可選擇「代理應用」，把它加入 VPN 的 `addDisallowedApplication`，避免代理自身流量回環；設定頁顯示代理應用與 VPN 共存提示 | `AppPreferences`、`AppBackend`、`VpnEngine`、`SettingsScreen`、`UiStrings` | 構建 + 設定頁代碼審查 | 代理需關閉 TUN、保持 SOCKS 埠 |
+
+### v0.8.2-m4spike（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-072 | 速度 / 流量單位改為完整寫法：B/s、KB/s、MB/s、GB/s、TB/s，迷你樣式不再縮寫 | `SpeedIslandFormatter`、`SpeedIslandFormatterTest` | JVM 測試 | — |
+| K-073 | 狀態欄文字色改為參考系統深色模式 + 桌布 `WallpaperColors` 色調，並在桌布 / 配置變化時刷新 | `SpeedIslandController` | 代碼審查 | Android 無公開 API 讀取狀態欄圖示色，仍屬近似 |
+| K-074 | 詢問面板「允許一次」改為「僅一次」 | `UiStrings` | 構建 | 只改文案，行為不變 |
+
+### v0.8.3-m4spike（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-075 | 詢問面板改為一鍵決策：禁止 / 僅一次 / 允許；限時允許移到第二行入口，使用設定的時長；關閉「顯示限時允許」後即為三個按鈕 | `PromptOverlayController`、`PromptOverlay` | 構建 + 代碼審查 | 禁止與允許為永久；僅一次為 UntilAppExit |
+
+### v0.8.4-m4spike（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-076 | 「稍後」的靜默期由 10 分鐘縮短為 1 分鐘，之後同一應用再次聯網會重新詢問 | `PromptBroker.suppressAfterLaterMs` | 構建 | 避免頻繁騷擾，同時修正「稍後再也不提醒」 |
+
+### v0.8.5-m4spike（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-077 | 「稍後」改為按前台會話判斷：同一應用本次前台不再詢問，切出再回到前台後重新詢問；無使用情況權限時 1 分鐘兜底 | `PromptBroker`、`PromptRouter`、`PromptForegroundTracker` | 模擬器：點稍後 → 回桌面 → 再開 Chrome，詢問重新出現 | 需要「使用情況訪問」權限 |
+
+### v0.9.0-m4p1（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-078 | 轉發模式接入防火牆：hev 改讀 socketpair，`ForwardingPacketFilter` 在新連線（TCP SYN / UDP 新五元組）上查 UID，按路由計畫轉發 / 拒絕（RST、ICMP）/ 拒絕並詢問；判決按五元組緩存，既有 TCP 連線走快速路徑 | `ForwardingPacketFilter`、`ForwardingRelay`、`ForwardingPolicy`、`VpnTunnel`、`VpnEngine` | JVM 測試；模擬器：Chrome 在詢問模式被攔並彈出懸浮詢問，點允許後經 Reqable SOCKS5 載入 example.org | 規則或計畫改變時清空緩存；已建立的連線不會被新規則切斷 |
+| K-079 | 啟用 hev mapdns：系統 DNS 指向 `10.111.222.3`，A 記錄映射到 `100.64.0.0/10`，連線以域名送給 SOCKS5；過濾層監聽 DNS 回覆，詢問 / 記錄可顯示域名 | `VpnForwardingTransport`、`ForwardingPacketFilter`、`BlockedFlowReporter` | JVM 測試；模擬器：`ping example.org` 解析為 `100.64.0.5`，`nc example.org 80` 經 Reqable 回 200，詢問記錄帶 `beacons5.gvt3.com` 等域名 | 只支援 IPv4（AAAA 回空）；應用自帶 DNS（如 Chrome 直連 `10.0.2.3:53`）仍按普通 UDP 處理 |
+| K-080 | UDP 開關改語義：一律使用標準 UDP ASSOCIATE；關閉時由過濾層拒絕 UDP（ICMP 不可達），不再寫入代理不支援的 `udp: 'tcp'` | `VpnForwardingTransport`、`ForwardingPacketFilter` | JVM 測試 | 映射 DNS 不受開關影響 |
+| K-081 | 轉發啟動失敗時按路由計畫回退黑洞模式（排除名單 + 假 DNS），保留錯誤提示並每 2 分鐘重試；先前的回退實際是整機斷網且清掉錯誤 | `VpnTunnelController.apply`、`VpnEngine.checkForwarding` | 代碼審查 | 未在模擬器觸發真實的 hev 啟動失敗 |
+| K-082 | 上游 SOCKS5 健康檢查（每 30 秒只做方法協商），失敗時總覽顯示提示；設定頁顯示「正在轉發 / 未在轉發」、FlClash 設定指引 | `Socks5Probe.handshake`、`VpnEngine`、`OverviewScreen`、`SettingsScreen` | 模擬器：移除 `adb reverse` 後 30 秒內記錄 `upstream 127.0.0.1:9000 unavailable` | 上游斷開時連線失敗（不會直連） |
+| K-083 | 「直連應用」：選中的應用排除在 VPN 之外，不經代理也不受防火牆管控 | `AppPreferences.forwardingDirectPackages`、`VpnEngine`、`SettingsScreen` | 構建 | — |
+| K-084 | 判決管線跟隨實際生效模式：專注 / 鎖屏斷網時按「全部阻止」判決，不再彈詢問、記錄不再寫成允許 | `VerdictPipeline.effectiveMode`、`AppContainer` | 構建 + 代碼審查 | 黑洞與轉發模式都受益 |
+| K-085 | hev 日誌改為 `warn`，超過 1 MB 時下次啟動清空 | `writeForwardingConfig` | JVM 測試 | 先前 debug 級別在模擬器累積到 3.7 MB |
+
+### v0.9.1-m4p2（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-086 | 轉發模式逐連線執行帶域名 / 位址 / 端口 / 協定條件的規則（應用級規則仍由路由計畫處理）；映射位址按公網分區比對 | `ForwardingPolicy.decide(flowRule)`、`ForwardingPolicy.conditionalAction`、`RuleSet.hasFlowConditions`、`VpnEngine.decideForwarding` | JVM 測試；模擬器：Chrome 已有應用級允許，加入「Chrome 拒絕 example.org」後 example.org 被拒（記錄 Deny / Rule / 規則 id），baidu.com 照常經 Reqable 轉發 | 位址條件無法比對映射位址（真實 IP 由代理解析）；專注、全部阻止、停用模式不套用條件規則 |
+| K-087 | 「僅一次」改按 Activity 追蹤前台：應用內切換頁面不再被當成離開；沒有目標時重置狀態，不沿用過期前台 | `AppForegroundState`、`TargetAppSessionTracker` | JVM 測試 | 真機上的 UsageStats 事件順序未逐一驗證 |
+| K-088 | 審查修復：通知動作的 Toast 改在主執行緒（原本必崩）；快速設定磁貼鎖屏時先 `unlockAndRun`；舊版共享規則遷移只做一次；`RuleIdentity.merge` 對臨時規則採用新建立時間 | `NotificationActionReceiver`、`ProtectionTileService`、`AppContainer`、`AppPreferences.legacyRulesMigrated`、`RuleIdentity` | JVM 測試（merge）；模擬器：升級後 `legacy_rules_migrated=true` | 磁貼與通知動作未在模擬器手動觸發 |
+| K-089 | 黑洞模式下被丟棄的連線即使規則判定允許也記錄為拒絕（只放行部分域名的應用無法按應用排除） | `VerdictPipeline` | 構建 + 代碼審查 | — |
+| K-090 | 被拦連線只做一次 `getConnectionOwnerUid`（快速失敗查到的 UID 直接交給背景處理）；應用身分緩存鍵含簽名與更新時間，防止替換應用後沿用舊身分 | `BlockedFlowReporter` | 構建 + 模擬器黑洞模式記錄正常 | — |
+| K-091 | 不持有連線的詢問：相同目標去重，最多 50 條流，避免快照無限增長 | `PromptBroker.isRedundant` | 構建 | — |
+| K-092 | 省電：過期規則按下一個到期時間喚醒（規則變更時重算），不再每秒輪詢；關屏時暫停網速取樣；沒有詢問 / 抑制時 PromptRouter 掛起等待 | `RuleLifetimeManager`、`SpeedMonitor`、`ScreenStateMonitor.interactive`、`PromptBroker.busy`、`PromptRouter` | 構建 + 模擬器啟動 | 未量測真機耗電 |
+| K-093 | 轉發性能：同一條已放行 UDP 流的後續封包走快速路徑（比對原始位址 / 端口位元組，2 秒有效，規則變更即失效）；過濾層例外不再結束轉發執行緒 | `ForwardingPacketFilter`、`ForwardingRelay` | JVM 測試 | 未在真機量測吞吐 |
+| K-094 | VPN 服務被系統結束（非撤銷）而防護仍開啟時自動重建隧道（10 秒內最多一次） | `VpnTunnelController.onDetached`、`VpnEngine` | 代碼審查 | 未在模擬器觸發服務被殺 |
+
+### v0.9.2-m4p3（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-095 | 版本說明三語化：每則內容都有英文 / 簡體 / 繁體（台灣用語），跟隨應用界面語言（與 `UiStrings` 相同的語言判斷）；補齊 0.1.0～0.9.1 全部歷史條目 | `NoteText`、`NoteLanguage`、`ReleaseNotes`、`UiStrings.noteLanguage`、`SettingsScreen.ReleaseNoteSection` | JVM 測試（三語不缺、簡繁常用字不混用、語言標籤對應）；模擬器 Release：`cmd locale set-app-locales` 切到 en / zh-TW / zh-CN，本版說明與歷史版本都顯示對應語言 | 新增版本說明時三種語言都必須填寫，否則測試失敗 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
 |---|---|---|
-| K-024 | Wi-Fi / 行動網路 / SIM1 / SIM2 的流量拆分與管控 | 計劃見 [android-network-sim-plan.md](android-network-sim-plan.md) |
-| K-025 | 通知動作在進程被回收後失效（P2-6） | 待做 |
-| K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 待做 |
-| K-027 | 懸浮詢問面板、專注模式 / 時間表、鎖屏斷網、允許一次 | 路線圖 |
-| K-028 | 轉發模式 + 上游代理 | 預研完成，見 [android-forwarding-research.md](android-forwarding-research.md) |
+| K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 部分完成（應用列表的 SIM 查詢已提升），其餘待做 |
+| K-043b | 應用鎖在修改規則 / 模式前的即時驗證 | 待做（第一版只鎖啟動與背景超過 1 分鐘） |
+| K-045b | Baseline Profiles、arm64-only、CI 大小 / 啟動基線 | 待做 |
+| K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 待用戶提供 keystore |
+| K-048b | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | 待真機 |
+| K-051 | 轉發模式 + 上游代理：v0.9.0 已接入按應用判決、mapdns 域名、健康檢查（K-078～K-085），v0.9.1 按域名 / 端口規則逐連線生效（K-086）；待做：真機 FlClash 吞吐 / 耗電、IPv6 映射、應用自帶 DNS 重導、firestack / gVisor 評估 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
 
 ## 3. 維護規則
 

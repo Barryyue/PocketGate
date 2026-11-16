@@ -7,6 +7,8 @@ import com.networkcontrol.android.kotlin.core.model.CodeSignature
 import com.networkcontrol.android.kotlin.core.model.Direction
 import com.networkcontrol.android.kotlin.core.model.FilterMode
 import com.networkcontrol.android.kotlin.core.model.InstalledApp
+import com.networkcontrol.android.kotlin.core.model.NetworkContext
+import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import com.networkcontrol.android.kotlin.core.model.PortRange
 import com.networkcontrol.android.kotlin.core.model.Rule
 import com.networkcontrol.android.kotlin.core.model.RuleConditions
@@ -107,5 +109,138 @@ class RoutingPlannerTest {
         val plan = VpnRoutingPlanner.plan(rules, FilterMode.Ask, listOf(app), self)
         assertEquals(AppRoutingDecision.BlockAndAsk, plan.find(app.uid)?.decision)
         assertTrue(plan.find(app.uid)?.tamperedRuleId != null)
+    }
+
+    @Test
+    fun networkScopedRulesApplyOnlyOnMatchingNetwork() {
+        val rules = RuleSet(
+            listOf(
+                rule(
+                    "com.android.chrome",
+                    VerdictAction.Allow,
+                    conditions = RuleConditions(networkKinds = setOf(NetworkKind.Wifi)),
+                ),
+            ),
+        )
+        val wifiPlan = VpnRoutingPlanner.plan(
+            rules,
+            FilterMode.Ask,
+            listOf(chrome),
+            self,
+            NetworkContext(kind = NetworkKind.Wifi, ssid = "Office"),
+        )
+        assertEquals(AppRoutingDecision.Bypass, wifiPlan.find(chrome.uid)?.decision)
+        val cellularPlan = VpnRoutingPlanner.plan(
+            rules,
+            FilterMode.Ask,
+            listOf(chrome),
+            self,
+            NetworkContext(kind = NetworkKind.Cellular, subscriptionId = 1),
+        )
+        assertEquals(AppRoutingDecision.BlockAndAsk, cellularPlan.find(chrome.uid)?.decision)
+        assertTrue(cellularPlan.skippedRules.isEmpty())
+    }
+
+    @Test
+    fun simScopedRuleWinsOverGenericAppRule() {        val rules = RuleSet(
+            listOf(
+                rule("com.android.chrome", VerdictAction.Deny),
+                rule(
+                    "com.android.chrome",
+                    VerdictAction.Allow,
+                    conditions = RuleConditions(
+                        networkKinds = setOf(NetworkKind.Cellular),
+                        subscriptionIds = setOf(2),
+                    ),
+                ).copy(id = "com.android.chrome-sim2"),
+            ),
+        )
+        val sim2 = VpnRoutingPlanner.plan(
+            rules,
+            FilterMode.Ask,
+            listOf(chrome),
+            self,
+            NetworkContext(kind = NetworkKind.Cellular, subscriptionId = 2),
+        )
+        assertEquals(AppRoutingDecision.Bypass, sim2.find(chrome.uid)?.decision)
+        val sim1 = VpnRoutingPlanner.plan(
+            rules,
+            FilterMode.Ask,
+            listOf(chrome),
+            self,
+            NetworkContext(kind = NetworkKind.Cellular, subscriptionId = 1),
+        )
+        assertEquals(AppRoutingDecision.Block, sim1.find(chrome.uid)?.decision)
+    }
+
+    @Test
+    fun trustedSignerAllowsAppsWithoutExplicitRule() {
+        val plan = VpnRoutingPlanner.plan(
+            RuleSet.Empty,
+            FilterMode.Ask,
+            listOf(chrome),
+            self,
+            trustedSigners = setOf("signer-a"),
+        )
+        assertEquals(AppRoutingDecision.Bypass, plan.find(chrome.uid)?.decision)
+        assertEquals(AppRoutingReason.Trusted, plan.find(chrome.uid)?.reason)
+    }
+
+    @Test
+    fun explicitDenyBeatsTrustedSigner() {
+        val rules = RuleSet(listOf(rule("com.android.chrome", VerdictAction.Deny)))
+        val plan = VpnRoutingPlanner.plan(
+            rules,
+            FilterMode.Ask,
+            listOf(chrome),
+            self,
+            trustedSigners = setOf("signer-a"),
+        )
+        assertEquals(AppRoutingDecision.Block, plan.find(chrome.uid)?.decision)
+        assertEquals(AppRoutingReason.Rule, plan.find(chrome.uid)?.reason)
+    }
+
+    @Test
+    fun systemAppsDefaultAllowCanBeEnabled() {
+        val systemApp = InstalledApp("com.android.calendar", 10200, "Calendar", true, 1, 1, "signer-a")
+        val blocked = VpnRoutingPlanner.plan(RuleSet.Empty, FilterMode.Ask, listOf(systemApp), self)
+        assertEquals(AppRoutingDecision.BlockAndAsk, blocked.find(systemApp.uid)?.decision)
+        val allowed = VpnRoutingPlanner.plan(
+            RuleSet.Empty,
+            FilterMode.Ask,
+            listOf(systemApp),
+            self,
+            allowSystemAppsByDefault = true,
+        )
+        assertEquals(AppRoutingDecision.Bypass, allowed.find(systemApp.uid)?.decision)
+        assertEquals(AppRoutingReason.Trusted, allowed.find(systemApp.uid)?.reason)
+    }
+
+    @Test
+    fun focusModeAllowsOnlySelectedPackages() {
+        val plan = VpnRoutingPlanner.plan(
+            RuleSet.Empty,
+            FilterMode.BlockAll,
+            listOf(chrome, firefox),
+            self,
+            focusAllowedPackages = setOf("com.android.chrome"),
+        )
+        assertEquals(AppRoutingDecision.Bypass, plan.find(chrome.uid)?.decision)
+        assertEquals(AppRoutingReason.Focus, plan.find(chrome.uid)?.reason)
+        assertEquals(AppRoutingDecision.Block, plan.find(firefox.uid)?.decision)
+    }
+
+    @Test
+    fun tamperedSignerDoesNotBecomeTrusted() {
+        val tampered = chrome.copy(signerSha256 = "different")
+        val plan = VpnRoutingPlanner.plan(
+            RuleSet(listOf(rule("com.android.chrome", VerdictAction.Allow))),
+            FilterMode.Ask,
+            listOf(tampered),
+            self,
+            trustedSigners = setOf("signer-a"),
+        )
+        assertEquals(AppRoutingDecision.BlockAndAsk, plan.find(tampered.uid)?.decision)
+        assertTrue(plan.find(tampered.uid)?.tamperedRuleId != null)
     }
 }

@@ -1,14 +1,15 @@
-# Android Kotlin comparison build helper.
+﻿# Android Kotlin comparison build helper.
 # Usage:
 #   .\scripts\android-kotlin.ps1 build
 #   .\scripts\android-kotlin.ps1 test
 #   .\scripts\android-kotlin.ps1 install
 #   .\scripts\android-kotlin.ps1 logcat
 #   .\scripts\android-kotlin.ps1 publish
+#   .\scripts\android-kotlin.ps1 aab
 #   .\scripts\android-kotlin.ps1 emulator
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('build', 'test', 'install', 'logcat', 'publish', 'emulator')]
+    [ValidateSet('build', 'test', 'install', 'logcat', 'publish', 'aab', 'emulator')]
     [string]$Command = 'build'
 )
 
@@ -21,7 +22,7 @@ $avdHome = if ($env:NC_ANDROID_AVD_HOME) { $env:NC_ANDROID_AVD_HOME } else { 'D:
 $adb = Join-Path $sdk 'platform-tools\adb.exe'
 $emulator = 'D:\tools\android-dev\emu34\emulator\emulator.exe'
 $package = 'com.networkcontrol.android.kotlin.debug'
-$version = '0.2.0'
+$version = '0.9.2-m4p3'
 
 $env:JAVA_HOME = $jdk
 $env:ANDROID_HOME = $sdk
@@ -66,7 +67,25 @@ switch ($Command) {
         New-Item -ItemType Directory -Force $outDir | Out-Null
         $target = Join-Path $outDir ("NetworkControl-KT-{0}.apk" -f $version)
         Copy-Item $source $target -Force
-        Write-Host ("Release APK: {0} ({1:N1} MB)" -f $target, ((Get-Item $target).Length / 1MB))
+        $size = (Get-Item $target).Length
+        $hash = (Get-FileHash $target -Algorithm SHA256).Hash
+        Write-Host ("Release APK: {0} ({1:N1} MB)" -f $target, ($size / 1MB))
+        Write-Host ("Size: {0} bytes" -f $size)
+        Write-Host ("SHA-256: {0}" -f $hash)
+    }
+    'aab' {
+        Invoke-Gradle @('bundleRelease')
+        $source = Join-Path $project 'app\build\outputs\bundle\release\app-release.aab'
+        if (-not (Test-Path $source)) { throw "Release AAB not found: $source" }
+        $outDir = Join-Path $root 'artifacts\kotlin-android'
+        New-Item -ItemType Directory -Force $outDir | Out-Null
+        $target = Join-Path $outDir ("NetworkControl-KT-{0}.aab" -f $version)
+        Copy-Item $source $target -Force
+        $size = (Get-Item $target).Length
+        $hash = (Get-FileHash $target -Algorithm SHA256).Hash
+        Write-Host ("Release AAB: {0} ({1:N1} MB)" -f $target, ($size / 1MB))
+        Write-Host ("Size: {0} bytes" -f $size)
+        Write-Host ("SHA-256: {0}" -f $hash)
     }
     'emulator' {
         $env:ANDROID_AVD_HOME = $avdHome

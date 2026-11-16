@@ -119,4 +119,7 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
   - Android 的隱式 using 包含 `Android.App`：`Application` 與 Avalonia 的同名，Avalonia 的要寫 `Avalonia.Application`；項目命名空間是 `NetworkControl.Android`，引用 Android SDK 類型一律用頂層 `using global::Android...`。
   - AtomUI 在 Android 上：`Segmented` 不響應觸控（由 `TouchAdapters` 補上）；默認字體沒有中文字形且不回退，必須 `atom.WithDefaultFontFamily("sans-serif")`；ListBox 等基礎控件需要 `FluentTheme`。
   - Avalonia 12.1 在 Android 上已經把內容限制在系統欄內，`InsetsManager.SafeAreaPadding` 還是以物理像素報告：不要再手動按它留邊。
+  - 轉發模式（hev-socks5-tunnel）：`socks5.udp: 'tcp'` 是 hev 自訂的 UDP-in-TCP，只有 hev-socks5-server 支援，FlClash / mihomo / Reqable 都不認；一律用 `'udp'`，要關閉 UDP 由本應用的過濾層丟棄。不啟用 `mapdns` 時 hev 只把 IP 送給代理，代理的域名分流規則全部失效。hev 可以讀寫 `createReliableSocketPair()`（SOCK_SEQPACKET）而不是 TUN fd，這是在 hev 前面插入逐連線判決的方式；`createDatagramSocketPair()` 是隱藏 API，不能用。
+  - `adb reverse` 只轉發 TCP：模擬器上用電腦的代理測轉發時 UDP ASSOCIATE 必然失敗，UDP / QUIC 只能在真機驗證。toybox `nc` 在 stdin 結束時會立即關閉連線，測 HTTP 要用 `(printf ...; sleep 5) | nc host 80`。Git Bash 會把 `adb push x /data/local/tmp/...` 的設備路徑改寫成 `C:/Program Files/Git/data/...`，要設 `MSYS_NO_PATHCONV=1`（此時本機路徑改用 `D:/...` 寫法）。
+  - Kotlin 版：`BroadcastReceiver` 中用 `goAsync()` + `Dispatchers.Default` 做事時，`Toast` 必須切回 `Dispatchers.Main`，否則在沒有 Looper 的執行緒上直接崩潰。UsageStats 判斷「離開應用」要按 Activity 計算，應用內切換頁面會先收到舊頁的 STOPPED。版本說明（`ReleaseNotes.kt`）每則都要寫英文 / 簡體 / 繁體三種，`ReleaseNotesTest` 會檢查缺漏和簡繁混用。
   - 通知文本在 `Resources/values*/strings.xml`（沒有界面時也要可用），界面文本由 `tools/android-strings.py` 生成 XLIFF；兩處都要維護三種語言。

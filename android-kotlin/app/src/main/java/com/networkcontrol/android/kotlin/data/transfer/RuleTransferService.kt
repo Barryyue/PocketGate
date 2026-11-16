@@ -8,6 +8,7 @@ import com.networkcontrol.android.kotlin.core.model.RuleImportPlan
 import com.networkcontrol.android.kotlin.core.model.RuleLifetime
 import com.networkcontrol.android.kotlin.core.model.RuleSource
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
+import com.networkcontrol.android.kotlin.core.rules.RuleIdentity
 import com.networkcontrol.android.kotlin.data.JsonCodec
 import org.json.JSONArray
 import org.json.JSONObject
@@ -63,24 +64,28 @@ object RuleTransferService {
     }
 
     fun plan(current: List<Rule>, imported: List<Rule>, mode: RuleImportMode): RuleImportPlan {
-        val local = current.associateBy { it.id }
+        val localById = current.associateBy { it.id }
+        val localByIdentity = current.associateBy { RuleIdentity.key(it) }
         val incoming = LinkedHashMap<String, Rule>()
         imported.forEach { incoming[it.id] = it }
         val toAdd = mutableListOf<Rule>()
         val toUpdate = mutableListOf<Rule>()
         var unchanged = 0
+        val matchedCurrentIds = mutableSetOf<String>()
 
         incoming.values.forEach { rule ->
-            val existing = local[rule.id]
+            val existing = localById[rule.id] ?: localByIdentity[RuleIdentity.key(rule)]
             if (existing == null) {
                 toAdd += rule.copy(source = RuleSource.Import, boundProcess = null)
                 return@forEach
             }
+            matchedCurrentIds += existing.id
             if (existing.source == RuleSource.Builtin) {
                 unchanged++
                 return@forEach
             }
             val candidate = rule.copy(
+                id = existing.id,
                 source = existing.source,
                 createdAt = existing.createdAt,
                 updatedAt = if (differs(existing, rule)) Time.now() else existing.updatedAt,
@@ -97,7 +102,7 @@ object RuleTransferService {
             current.filter {
                 it.source != RuleSource.Builtin &&
                     (it.lifetime == RuleLifetime.Permanent || it.lifetime == RuleLifetime.Timed) &&
-                    it.id !in incoming
+                    it.id !in matchedCurrentIds
             }
         } else {
             emptyList()
@@ -116,8 +121,6 @@ object RuleTransferService {
             a.expiresAt != b.expiresAt ||
             a.lifetime != b.lifetime ||
             a.action != b.action
-
-    private fun key(rule: Rule): String = rule.id
 
     private fun toExportJson(rule: Rule): JSONObject = JSONObject().apply {
         put("id", rule.id)

@@ -13,12 +13,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +39,12 @@ import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.core.model.AppDecision
 import com.networkcontrol.android.kotlin.core.model.AppEntry
 import com.networkcontrol.android.kotlin.core.model.AppRoutingDecision
+import com.networkcontrol.android.kotlin.core.model.AppRoutingReason
+import com.networkcontrol.android.kotlin.core.model.NetworkKind
+import com.networkcontrol.android.kotlin.core.model.Rule
+import com.networkcontrol.android.kotlin.core.model.RuleConditions
+import com.networkcontrol.android.kotlin.core.model.VerdictAction
+import com.networkcontrol.android.kotlin.core.model.LogEntry
 import com.networkcontrol.android.kotlin.core.model.TrafficUsage
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.AppIcon
@@ -63,6 +72,7 @@ fun AppsScreen(backend: AppBackend) {
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
     var lastSeen by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var refreshKey by remember { mutableIntStateOf(0) }
+    val sims = remember { runCatching { backend.subscriptions() }.getOrDefault(emptyList()) }
 
     LaunchedEffect(plan, rules.version, refreshKey) {
         entries = withContext(Dispatchers.IO) { runCatching { backend.appEntries() }.getOrDefault(emptyList()) }
@@ -142,6 +152,8 @@ fun AppsScreen(backend: AppBackend) {
             AppRow(
                 backend = backend,
                 entry = entry,
+                rulesVersion = rules.version,
+                sims = sims,
                 traffic = traffic.byPackage[entry.app.packageName],
                 lastSeen = lastSeen[entry.app.packageName],
                 onChanged = { refreshKey++ },
@@ -156,12 +168,20 @@ fun AppsScreen(backend: AppBackend) {
 private fun AppRow(
     backend: AppBackend,
     entry: AppEntry,
+    rulesVersion: Long,
+    sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     traffic: Pair<Long, Long>?,
     lastSeen: Long?,
     onChanged: () -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
     val s = rememberUiStrings()
+    var showNetworkDialog by remember { mutableStateOf(false) }
+    var showDetail by remember { mutableStateOf(false) }
+    val appRules = remember(entry.app.packageName, rulesVersion) {
+        backend.appRules(entry.app.packageName)
+    }
+    val scopedRules = remember(appRules) { appRules.filter { it.conditions.hasNetworkScope } }
     val effectiveLabel = when (entry.effective) {
         AppRoutingDecision.Bypass -> s[S.Allow]
         AppRoutingDecision.Block -> s[S.Deny]
@@ -198,7 +218,11 @@ private fun AppRow(
                     selected = entry.decision == AppDecision.Allow,
                     onClick = {
                         scope.launch {
-                            backend.setAppDecision(entry.app.packageName, AppDecision.Allow)
+                            backend.setAppDecision(
+                                entry.app.packageName,
+                                AppDecision.Allow,
+                                replaceAllScopes = false,
+                            )
                             onChanged()
                         }
                     },
@@ -208,7 +232,11 @@ private fun AppRow(
                     selected = entry.decision == AppDecision.Deny,
                     onClick = {
                         scope.launch {
-                            backend.setAppDecision(entry.app.packageName, AppDecision.Deny)
+                            backend.setAppDecision(
+                                entry.app.packageName,
+                                AppDecision.Deny,
+                                replaceAllScopes = false,
+                            )
                             onChanged()
                         }
                     },
@@ -218,10 +246,37 @@ private fun AppRow(
                     selected = entry.decision == AppDecision.Unset,
                     onClick = {
                         scope.launch {
-                            backend.setAppDecision(entry.app.packageName, AppDecision.Unset)
+                            backend.setAppDecision(
+                                entry.app.packageName,
+                                AppDecision.Unset,
+                                replaceAllScopes = false,
+                            )
                             onChanged()
                         }
                     },
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { showNetworkDialog = true }) {
+                    Text(s[S.NetworkConditions])
+                }
+                TextButton(onClick = { showDetail = true }) {
+                    Text(s[S.Details])
+                }
+                if (scopedRules.isNotEmpty()) {
+                    Text(
+                        "${s[S.NetworkRules]}：${scopedRules.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            scopedRules.forEach { rule ->
+                Text(
+                    "${networkScopeLabel(rule.conditions, sims, s)} → ${actionLabel(rule.action, s)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -260,6 +315,295 @@ private fun AppRow(
             }
         }
     }
+
+    if (showNetworkDialog) {
+        NetworkRuleDialog(
+            title = entry.app.label,
+            rules = appRules,
+            initialDecision = entry.decision,
+            initialKind = backend.container.network.current.kind
+                .takeIf { it == NetworkKind.Wifi || it == NetworkKind.Cellular || it == NetworkKind.Wired },
+            sims = sims,
+            onDismiss = { showNetworkDialog = false },
+            onSave = { decision, kinds, subscriptions ->
+                scope.launch {
+                    backend.setAppDecision(
+                        entry.app.packageName,
+                        decision,
+                        networkKinds = kinds,
+                        subscriptionIds = subscriptions,
+                        replaceAllScopes = false,
+                    )
+                    showNetworkDialog = false
+                    onChanged()
+                }
+            },
+        )
+    }
+
+    if (showDetail) {
+        AppDetailDialog(
+            backend = backend,
+            entry = entry,
+            rules = appRules,
+            traffic = traffic,
+            sims = sims,
+            onDismiss = { showDetail = false },
+        )
+    }
+}
+
+@Composable
+private fun AppDetailDialog(
+    backend: AppBackend,
+    entry: AppEntry,
+    rules: List<Rule>,
+    traffic: Pair<Long, Long>?,
+    sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
+    onDismiss: () -> Unit,
+) {
+    val s = rememberUiStrings()
+    var recent by remember { mutableStateOf<List<LogEntry>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
+    val settings by backend.settings.collectAsStateWithLifecycle()
+
+    LaunchedEffect(entry.app.packageName) {
+        recent = withContext(Dispatchers.IO) {
+            runCatching { backend.appRecentLogs(entry.app.packageName) }.getOrDefault(emptyList())
+        }
+        loaded = true
+    }
+
+    val effectiveLabel = when (entry.effective) {
+        AppRoutingDecision.Bypass -> s[S.Allow]
+        AppRoutingDecision.Block -> s[S.Deny]
+        AppRoutingDecision.BlockAndAsk -> s[S.ModeAsk]
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AppIcon(entry.app.packageName, Modifier.width(40.dp).height(40.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(entry.app.label)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(entry.app.packageName, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "${s[S.Uid]}：${entry.app.uid}" +
+                        if (entry.app.isSystem) " · ${s[S.FilterSystem]}" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                entry.app.signerSha256?.let {
+                    Text(
+                        "${s[S.Signer]}：${it.take(16)}…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (it !in settings.trustedSigners) {
+                        TextButton(onClick = { backend.trustPublisher(it) }) {
+                            Text(s[S.TrustPublisher])
+                        }
+                    } else {
+                        Text(
+                            s[S.Trusted],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+                Text(
+                    "${s[S.Effective]}：$effectiveLabel · ${s[S.Reason]}：${routingReasonLabel(entry.reason, s)}",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                traffic?.let {
+                    Text(
+                        "${s[S.TrafficToday]}：${formatBytes(it.first + it.second)}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text("${s[S.Rules]}：${rules.size}", style = MaterialTheme.typography.titleSmall)
+                if (rules.isEmpty()) {
+                    Text(
+                        s[S.ModeAsk],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                rules.forEach { rule ->
+                    Text(
+                        "${networkScopeLabel(rule.conditions, sims, s)} → ${actionLabel(rule.action, s)}",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text(s[S.RecentActivity], style = MaterialTheme.typography.titleSmall)
+                if (loaded && recent.isEmpty()) {
+                    Text(
+                        s[S.NoRecentActivity],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                recent.groupBy { it.hostname ?: "${it.remoteIp}:${it.remotePort}" }
+                    .map { (target, list) ->
+                        Triple(target, list.sumOf { it.count }, list.maxOf { it.lastTs })
+                    }
+                    .sortedByDescending { it.second }
+                    .take(10)
+                    .forEach { (target, count, lastTs) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                target,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                "$count× · ${formatDateTime(lastTs)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Close]) }
+        },
+    )
+}
+
+@Composable
+private fun NetworkRuleDialog(
+    title: String,
+    rules: List<Rule>,
+    initialDecision: AppDecision,
+    initialKind: NetworkKind?,
+    sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
+    onDismiss: () -> Unit,
+    onSave: (AppDecision, Set<NetworkKind>, Set<Int>) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var kind by remember { mutableStateOf(initialKind) }
+    var subscriptionId by remember { mutableStateOf<Int?>(null) }
+    var decision by remember {
+        mutableStateOf(
+            when (initialDecision) {
+                AppDecision.Allow -> AppDecision.Allow
+                AppDecision.Deny -> AppDecision.Deny
+                AppDecision.Unset -> AppDecision.Allow
+            },
+        )
+    }
+
+    fun matchingRule(): Rule? {
+        val kinds = kind?.let { setOf(it) } ?: emptySet()
+        val subscriptions = if (kind == NetworkKind.Cellular) {
+            subscriptionId?.let { setOf(it) } ?: emptySet()
+        } else {
+            emptySet()
+        }
+        return rules.firstOrNull {
+            it.conditions.networkKinds == kinds && it.conditions.subscriptionIds == subscriptions
+        }
+    }
+
+    LaunchedEffect(kind, subscriptionId) {
+        val existing = matchingRule()
+        decision = when (existing?.action) {
+            VerdictAction.Allow -> AppDecision.Allow
+            VerdictAction.Deny -> AppDecision.Deny
+            null -> AppDecision.Unset
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(s[S.NetworkConditions], style = MaterialTheme.typography.titleSmall)
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(kind == null, { kind = null; subscriptionId = null }, { Text(s[S.AnyNetwork]) })
+                    FilterChip(kind == NetworkKind.Wifi, { kind = NetworkKind.Wifi; subscriptionId = null }, { Text(s[S.Wifi]) })
+                    FilterChip(
+                        kind == NetworkKind.Cellular,
+                        { kind = NetworkKind.Cellular },
+                        { Text(s[S.Cellular]) },
+                    )
+                    FilterChip(kind == NetworkKind.Wired, { kind = NetworkKind.Wired; subscriptionId = null }, { Text(s[S.Wired]) })
+                }
+                if (kind == NetworkKind.Cellular) {
+                    Text(s[S.SimCard], style = MaterialTheme.typography.bodyMedium)
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FilterChip(
+                            subscriptionId == null,
+                            { subscriptionId = null },
+                            { Text(s[S.AllSims]) },
+                        )
+                        sims.forEach { sim ->
+                            FilterChip(
+                                subscriptionId == sim.subscriptionId,
+                                { subscriptionId = sim.subscriptionId },
+                                { Text(sim.label) },
+                            )
+                        }
+                    }
+                    if (sims.isEmpty()) {
+                        Text(
+                            s[S.PhoneStateHint],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Text(s[S.RuleAction], style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(decision == AppDecision.Allow, { decision = AppDecision.Allow }, { Text(s[S.Allow]) })
+                    FilterChip(decision == AppDecision.Deny, { decision = AppDecision.Deny }, { Text(s[S.Deny]) })
+                    FilterChip(decision == AppDecision.Unset, { decision = AppDecision.Unset }, { Text(s[S.Unset]) })
+                }
+                Text(
+                    s[S.NetworkRuleHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onSave(
+                        decision,
+                        kind?.let { setOf(it) } ?: emptySet(),
+                        if (kind == NetworkKind.Cellular) {
+                            subscriptionId?.let { setOf(it) } ?: emptySet()
+                        } else {
+                            emptySet()
+                        },
+                    )
+                },
+            ) { Text(s[S.Save]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
 }
 
 @Composable
@@ -270,3 +614,50 @@ private fun DecisionChip(label: String, selected: Boolean, onClick: () -> Unit) 
         label = { Text(label) },
     )
 }
+
+private fun networkScopeLabel(
+    conditions: RuleConditions,
+    sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
+    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+): String {
+    val parts = mutableListOf<String>()
+    if (conditions.networkKinds.isNotEmpty()) {
+        parts += conditions.networkKinds.sortedBy { it.code }.joinToString("/") { kind ->
+            when (kind) {
+                NetworkKind.Wifi -> s[S.Wifi]
+                NetworkKind.Cellular -> s[S.Cellular]
+                NetworkKind.Wired -> s[S.Wired]
+                NetworkKind.Vpn -> "VPN"
+                NetworkKind.Other -> s[S.Other]
+                NetworkKind.None -> s[S.AnyNetwork]
+            }
+        }
+    }
+    if (conditions.subscriptionIds.isNotEmpty()) {
+        parts += conditions.subscriptionIds.sorted().joinToString("/") { id ->
+            sims.firstOrNull { it.subscriptionId == id }?.label ?: "${s[S.SimCard]} $id"
+        }
+    }
+    if (conditions.simSlots.isNotEmpty()) {
+        parts += conditions.simSlots.sorted().joinToString("/") { "${s[S.SimCard]} ${it + 1}" }
+    }
+    return parts.ifEmpty { listOf(s[S.AnyNetwork]) }.joinToString(" · ")
+}
+
+private fun actionLabel(
+    action: VerdictAction,
+    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+): String = if (action == VerdictAction.Allow) s[S.Allow] else s[S.Deny]
+
+private fun routingReasonLabel(
+    reason: AppRoutingReason,
+    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+): String = when (reason) {
+    AppRoutingReason.Rule -> s[S.ReasonRule]
+    AppRoutingReason.Mode -> s[S.ReasonMode]
+    AppRoutingReason.Self -> "Self"
+    AppRoutingReason.SystemUid -> "System UID"
+    AppRoutingReason.Trusted -> s[S.Trusted]
+    AppRoutingReason.Focus -> s[S.FocusMode]
+}
+

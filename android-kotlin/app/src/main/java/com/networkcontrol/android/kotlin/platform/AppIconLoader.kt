@@ -10,13 +10,16 @@ import androidx.core.graphics.drawable.toBitmap
 object AppIconLoader {
     private val cache = LruCache<String, Bitmap>(256)
 
-    fun load(context: Context, packageName: String): ImageBitmap? {
-        cache.get(packageName)?.let { return it.asImageBitmap() }
+    fun loadBitmap(context: Context, packageName: String): Bitmap? {
+        cache.get(packageName)?.let { return it }
         val bitmap = runCatching {
             val drawable = context.packageManager.getApplicationIcon(packageName)
             drawable.toBitmap(96, 96)
         }.getOrNull() ?: return null
         cache.put(packageName, bitmap)
-        return bitmap.asImageBitmap()
+        return bitmap
     }
+
+    fun load(context: Context, packageName: String): ImageBitmap? =
+        loadBitmap(context, packageName)?.asImageBitmap()
 }

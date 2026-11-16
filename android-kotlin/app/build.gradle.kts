@@ -8,12 +8,24 @@ android {
     namespace = "com.networkcontrol.android.kotlin"
     compileSdk = 36
 
+    signingConfigs {
+        val releaseKeystore = System.getenv("NC_ANDROID_KEYSTORE")
+        if (!releaseKeystore.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("NC_ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("NC_ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("NC_ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     defaultConfig {
         applicationId = "com.networkcontrol.android.kotlin"
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 26
+        versionName = "0.9.2-m4p3"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -25,7 +37,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

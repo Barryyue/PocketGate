@@ -97,6 +97,10 @@ object PromptRuleFactory {
                 }
             }
             RuleLifetime.UntilRestart, RuleLifetime.Permanent -> Unit
+            RuleLifetime.UntilAppExit -> {
+                // 應用級放行；由 TargetAppSessionTracker 在應用離開前台後移除。
+                conditions = RuleConditions(direction = flow.direction)
+            }
         }
 
         return Rule(

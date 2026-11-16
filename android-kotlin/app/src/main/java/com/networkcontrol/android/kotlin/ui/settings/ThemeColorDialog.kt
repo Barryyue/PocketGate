@@ -64,6 +64,7 @@ fun ThemeColorDialog(
     current: Color,
     onDismiss: () -> Unit,
     onSelect: (Color) -> Unit,
+    title: String? = null,
 ) {
     val s = rememberUiStrings()
     val initialHsv = remember {
@@ -78,7 +79,7 @@ fun ThemeColorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(s[S.ThemeColor]) },
+        title = { Text(title ?: s[S.ThemeColor]) },
         text = {
             Column(
                 modifier = Modifier

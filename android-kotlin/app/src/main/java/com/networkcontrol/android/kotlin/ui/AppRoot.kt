@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -38,13 +40,16 @@ import com.networkcontrol.android.kotlin.ui.apps.AppsScreen
 import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
 import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
+import com.networkcontrol.android.kotlin.ui.rules.RulesScreen
 import com.networkcontrol.android.kotlin.ui.settings.SettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.SpeedIslandSettingsScreen
 
 private data class Tab(val label: S, val icon: ImageVector)
 
 private val tabs = listOf(
     Tab(S.Overview, Icons.Filled.Home),
     Tab(S.Apps, Icons.AutoMirrored.Filled.List),
+    Tab(S.Rules, Icons.Filled.Lock),
     Tab(S.Logs, Icons.Filled.Notifications),
     Tab(S.Settings, Icons.Filled.Settings),
 )
@@ -56,6 +61,7 @@ fun AppRoot(container: AppContainer) {
     var ready by remember { mutableStateOf(false) }
     var showAppListPermission by remember { mutableStateOf(false) }
     var selected by rememberSaveable { mutableIntStateOf(0) }
+    var islandSettingsOpen by rememberSaveable { mutableStateOf(false) }
     val appListPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
@@ -89,26 +95,47 @@ fun AppRoot(container: AppContainer) {
 
     val backend = container.backend
     Box(Modifier.fillMaxSize()) {
-        Scaffold(
-            bottomBar = {
-                NavigationBar {
-                    tabs.forEachIndexed { index, tab ->
-                        NavigationBarItem(
-                            selected = selected == index,
-                            onClick = { selected = index },
-                            icon = { Icon(tab.icon, contentDescription = null) },
-                            label = { Text(s[tab.label]) },
-                        )
+        if (islandSettingsOpen) {
+            Box(
+                Modifier.fillMaxSize().widthIn(max = 760.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                SpeedIslandSettingsScreen(
+                    backend = backend,
+                    onBack = { islandSettingsOpen = false },
+                )
+            }
+        } else {
+            Scaffold(
+                bottomBar = {
+                    NavigationBar {
+                        tabs.forEachIndexed { index, tab ->
+                            NavigationBarItem(
+                                selected = selected == index,
+                                onClick = { selected = index },
+                                icon = { Icon(tab.icon, contentDescription = s[tab.label]) },
+                                label = { Text(s[tab.label]) },
+                            )
+                        }
                     }
-                }
-            },
-        ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
-                when (selected) {
-                    0 -> OverviewScreen(backend)
-                    1 -> AppsScreen(backend)
-                    2 -> LogsScreen(backend)
-                    else -> SettingsScreen(backend)
+                },
+            ) { padding ->
+                Box(
+                    Modifier.fillMaxSize().padding(padding),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    Box(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
+                        when (selected) {
+                            0 -> OverviewScreen(backend)
+                            1 -> AppsScreen(backend)
+                            2 -> RulesScreen(backend)
+                            3 -> LogsScreen(backend)
+                            else -> SettingsScreen(
+                                backend = backend,
+                                onOpenIslandSettings = { islandSettingsOpen = true },
+                            )
+                        }
+                    }
                 }
             }
         }

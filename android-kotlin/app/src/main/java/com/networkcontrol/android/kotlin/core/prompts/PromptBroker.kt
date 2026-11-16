@@ -7,6 +7,7 @@ import com.networkcontrol.android.kotlin.core.model.DomainCandidates
 import com.networkcontrol.android.kotlin.core.model.FlowInfo
 import com.networkcontrol.android.kotlin.core.model.FlowOrigin
 import com.networkcontrol.android.kotlin.core.model.PromptAnswerResult
+import com.networkcontrol.android.kotlin.core.model.PromptBatchResult
 import com.networkcontrol.android.kotlin.core.model.PromptDecision
 import com.networkcontrol.android.kotlin.core.model.PromptEvent
 import com.networkcontrol.android.kotlin.core.model.PromptEventKind
@@ -50,7 +51,13 @@ class PromptBroker(
 
     private val _pending = MutableStateFlow<List<PromptSnapshot>>(emptyList())
     val pending: StateFlow<List<PromptSnapshot>> = _pending.asStateFlow()
-    private val suppressedUntil = HashMap<String, Long>()
+    private val sessionSuppressed = HashSet<String>()
+    @Volatile
+    private var sessionSuppressedCount = 0
+    private val _busy = MutableStateFlow(false)
+
+    /** 有待決詢問或「稍後」抑制時為 true；PromptRouter 只在這時輪詢前台應用。 */
+    val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
     private val _events = MutableSharedFlow<PromptEvent>(extraBufferCapacity = 64)
     val events = _events.asSharedFlow()
@@ -77,9 +84,8 @@ class PromptBroker(
         var event: PromptEvent? = null
         val deferred = CompletableDeferred<Verdict>()
         gate.withLock {
-            val suppressionKey = app?.path ?: flow.executablePath ?: "unknown"
-            val until = suppressedUntil[suppressionKey]
-            if (until != null && until > Time.now()) {
+            val suppressKey = suppressionKey(app?.path ?: flow.executablePath)
+            if (suppressKey in sessionSuppressed) {
                 deferred.complete(Verdict(settings.state.value.promptDefaultAction, VerdictReason.Mode))
                 return@withLock
             }
@@ -90,6 +96,11 @@ class PromptBroker(
 
             val pendingFlow = PendingFlow(flow, domains, deferred)
             val existing = byApp[key]
+            if (existing != null && !holdConnection && existing.isRedundant(flow, domains)) {
+                // 黑洞 / 轉發模式的連線已經被丟棄，同一目標重複加入只會讓詢問與快照無限增長。
+                deferred.complete(Verdict(currentSettings.promptDefaultAction, VerdictReason.Mode))
+                return@withLock
+            }
             if (existing != null) {
                 existing.flows += pendingFlow
                 event = PromptEvent(PromptEventKind.Updated, existing.snapshot())
@@ -202,6 +213,101 @@ class PromptBroker(
         return PromptAnswerResult(true, created?.id, resolved.size, remaining)
     }
 
+    /**
+     * 批量回答：一次建立所有規則（只發布一次規則集），再逐個解決詢問。
+     * 逾時或已被移除的詢問會被跳過。
+     */
+    suspend fun answerMany(
+        promptIds: Collection<String>,
+        decision: PromptDecision,
+    ): PromptBatchResult {
+        val selections = mutableListOf<BatchSelection>()
+        gate.withLock {
+            promptIds.distinct().forEach { id ->
+                val prompt = prompts[id] ?: return@forEach
+                val first = prompt.flows.firstOrNull() ?: return@forEach
+                selections += BatchSelection(prompt.id, first, prompt.app, first.domains)
+            }
+        }
+        if (selections.isEmpty()) return PromptBatchResult(0, 0, prompts.size)
+
+        val now = Time.now()
+        val toAdd = mutableListOf<Rule>()
+        val ruleIndexes = mutableListOf<Int>()
+        selections.forEachIndexed { index, selection ->
+            PromptRuleFactory.createRule(
+                decision = decision,
+                flow = selection.first.flow,
+                app = selection.app ?: selection.first.flow.executablePath
+                    ?.takeIf { it.startsWith("android-app://") && !it.startsWith("android-app://uid:") }
+                    ?.let { AppIdentity(path = it, displayName = it.removePrefix("android-app://")) },
+                domains = selection.domains,
+                profileId = runtime.activeProfileId,
+                now = now,
+                onceFallbackSeconds = settings.state.value.onceFallbackSeconds,
+            )?.let {
+                toAdd += it
+                ruleIndexes += index
+            }
+        }
+        val saved = if (toAdd.isEmpty()) emptyList() else rules.addRange(toAdd)
+        val ruleIds = mutableMapOf<Int, String>()
+        ruleIndexes.forEachIndexed { order, selectionIndex ->
+            saved.getOrNull(order)?.let { ruleIds[selectionIndex] = it.id }
+        }
+
+        var resolvedFlows = 0
+        val verdicts = mutableListOf<Pair<List<PendingFlow>, Verdict>>()
+        val events = mutableListOf<PromptEvent>()
+        gate.withLock {
+            selections.forEachIndexed { index, selection ->
+                val prompt = prompts[selection.promptId] ?: return@forEachIndexed
+                val first = prompt.flows.firstOrNull { it === selection.first }
+                    ?: prompt.flows.firstOrNull()
+                    ?: return@forEachIndexed
+                val coverageRule = Rule(
+                    id = "",
+                    conditions = PromptRuleFactory.createConditions(decision, first.flow, first.domains),
+                    action = decision.action,
+                    lifetime = RuleLifetime.Once,
+                    source = RuleSource.Prompt,
+                    createdAt = 0,
+                    updatedAt = 0,
+                )
+                val coverage = CompiledRule(coverageRule)
+                val resolved = if (decision.applyToAllFlows) {
+                    prompt.flows.filter {
+                        it === first || coverage.matchConditions(
+                            it.flow,
+                            it.domains,
+                            NetworkZones.classify(it.flow.remote.address),
+                        )
+                    }
+                } else {
+                    listOf(first)
+                }
+                prompt.flows.removeAll(resolved.toSet())
+                pendingFlows = (pendingFlows - resolved.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
+                resolvedFlows += resolved.size
+                if (prompt.flows.isEmpty()) {
+                    removeLocked(prompt)
+                    events += PromptEvent(PromptEventKind.Removed, prompt.snapshot())
+                } else {
+                    events += PromptEvent(PromptEventKind.Updated, prompt.snapshot())
+                }
+                verdicts += resolved to Verdict(decision.action, VerdictReason.Prompt, ruleIds[index])
+            }
+            refreshPendingLocked()
+        }
+        verdicts.forEach { (flows, verdict) -> flows.forEach { it.deferred.complete(verdict) } }
+        events.forEach { _events.emit(it) }
+        com.networkcontrol.android.kotlin.platform.AppLog.i(
+            "prompt",
+            "batch ${decision.action} ${decision.lifetime} prompts=${selections.size} resolved=$resolvedFlows",
+        )
+        return PromptBatchResult(selections.size, resolvedFlows, prompts.size)
+    }
+
     suspend fun pauseTimer(promptId: String): Boolean {
         var changed = false
         var event: PromptEvent? = null
@@ -237,15 +343,15 @@ class PromptBroker(
         }
     }
 
-    /** 使用者選擇「稍後」：拒絕目前這批連線，10 分鐘內不再詢問同一應用。 */
+    /** 使用者選擇「稍後」後，同一應用在本次前台會話內不再詢問；切換出去再回來會重新詢問。 */
     suspend fun dismiss(promptId: String): Boolean {
         var prompt: PendingPrompt? = null
         gate.withLock {
             prompt = prompts[promptId] ?: return@withLock
             removeLocked(prompt!!)
             pendingFlows = (pendingFlows - prompt!!.flows.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
-            val key = prompt!!.app?.path ?: prompt!!.firstFlow.executablePath ?: "unknown"
-            suppressedUntil[key] = Time.now() + 10 * 60 * 1000L
+            val key = suppressionKey(prompt!!.app?.path ?: prompt!!.firstFlow.executablePath)
+            if (sessionSuppressed.add(key)) sessionSuppressedCount = sessionSuppressed.size
             refreshPendingLocked()
         }
         val dismissed = prompt ?: return false
@@ -255,6 +361,40 @@ class PromptBroker(
         _events.emit(PromptEvent(PromptEventKind.Removed, dismissed.snapshot()))
         return true
     }
+
+    suspend fun dismissMany(promptIds: Collection<String>): Int {
+        var count = 0
+        promptIds.distinct().forEach { id ->
+            if (dismiss(id)) count++
+        }
+        return count
+    }
+
+    /** 應用回到前台時呼叫，允許它再次觸發詢問。 */
+    suspend fun clearSessionSuppression(packageName: String) {
+        gate.withLock {
+            if (sessionSuppressed.remove(packageName)) {
+                sessionSuppressedCount = sessionSuppressed.size
+                refreshBusyLocked()
+            }
+        }
+    }
+
+    fun hasSessionSuppressions(): Boolean = sessionSuppressedCount > 0
+
+    /** 沒有使用情況權限時的兜底：清空本次會話抑制。 */
+    suspend fun clearAllSessionSuppressions() {
+        gate.withLock {
+            if (sessionSuppressed.isNotEmpty()) {
+                sessionSuppressed.clear()
+                sessionSuppressedCount = 0
+                refreshBusyLocked()
+            }
+        }
+    }
+
+    private fun suppressionKey(path: String?): String =
+        path?.removePrefix("android-app://")?.takeIf { it.isNotBlank() } ?: "unknown"
 
     fun getPending(): List<PromptSnapshot> = _pending.value
 
@@ -288,6 +428,16 @@ class PromptBroker(
 
     private fun refreshPendingLocked() {
         _pending.value = prompts.values.map { it.snapshot() }
+        refreshBusyLocked()
+    }
+
+    private fun refreshBusyLocked() {
+        _busy.value = prompts.isNotEmpty() || sessionSuppressed.isNotEmpty()
+    }
+
+    private companion object {
+        /** 不持有連線的詢問最多保留的連線數；超過的只計入記錄，不再加入詢問。 */
+        const val MAX_DETACHED_FLOWS = 50
     }
 
     private data class MergeKey(
@@ -303,6 +453,13 @@ class PromptBroker(
         val deferred: CompletableDeferred<Verdict>,
     )
 
+    private class BatchSelection(
+        val promptId: String,
+        val first: PendingFlow,
+        val app: AppIdentity?,
+        val domains: DomainCandidates,
+    )
+
     private class PendingPrompt(
         val id: String,
         val key: MergeKey,
@@ -315,6 +472,16 @@ class PromptBroker(
         val flows: MutableList<PendingFlow> = mutableListOf(),
         var timer: Job? = null,
     ) {
+        /** 已有相同協定、目標與域名的連線，或不持有連線的流已達上限。 */
+        fun isRedundant(flow: FlowInfo, domains: DomainCandidates): Boolean {
+            if (flows.size >= MAX_DETACHED_FLOWS) return true
+            return flows.any {
+                it.flow.protocol == flow.protocol &&
+                    it.flow.remote == flow.remote &&
+                    it.domains.names == domains.names
+            }
+        }
+
         fun snapshot(): PromptSnapshot = PromptSnapshot(
             id = id,
             app = app,

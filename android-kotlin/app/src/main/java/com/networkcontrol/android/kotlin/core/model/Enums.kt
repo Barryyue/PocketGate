@@ -49,7 +49,9 @@ enum class RuleLifetime(val code: Int) {
     UntilProcessExit(1),
     Timed(2),
     UntilRestart(3),
-    Permanent(4);
+    Permanent(4),
+    /** 允許直到目標應用離開前台（Android 用 UsageStats 判斷）；不持久化。 */
+    UntilAppExit(5);
 
     companion object {
         fun fromCode(code: Int): RuleLifetime = entries.firstOrNull { it.code == code } ?: Permanent
@@ -141,7 +143,9 @@ enum class AppRoutingReason(val code: Int) {
     Self(0),
     SystemUid(1),
     Rule(2),
-    Mode(3);
+    Mode(3),
+    Trusted(4),
+    Focus(5);
 
     companion object {
         fun fromCode(code: Int): AppRoutingReason = entries.firstOrNull { it.code == code } ?: Mode
@@ -219,4 +223,34 @@ enum class AndroidRuleIneffectiveReason(val code: Int) {
     companion object {
         fun fromCode(code: Int): AndroidRuleIneffectiveReason = entries.firstOrNull { it.code == code } ?: UnsupportedConditions
     }
+}
+
+enum class SpeedIslandMode {
+    /** 同時顯示上傳與下載。 */
+    Full,
+    /** 精簡：上傳 / 下載輪流顯示。 */
+    Cycle,
+    /** 迷你：狀態欄風格的小字。 */
+    Mini,
+}
+
+/** 靈動島顯示內容。 */
+enum class SpeedIslandContent {
+    /** 即時上下行速度。 */
+    Speed,
+    /** 今日流量總計。 */
+    Traffic,
+    /** 今日攔截次數。 */
+    Blocked,
+    /** 待處理詢問數量。 */
+    Pending,
+    /** 目前網路名稱。 */
+    Network,
+}
+
+/** 靈動島字體粗細。 */
+enum class SpeedIslandFontWeight {
+    Normal,
+    Medium,
+    Bold,
 }

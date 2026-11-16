@@ -1,5 +1,6 @@
 package com.networkcontrol.android.kotlin.ui.overview
 
+import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -10,19 +11,27 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,13 +50,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.core.model.FilterMode
 import com.networkcontrol.android.kotlin.core.model.ProtectionStatus
+import com.networkcontrol.android.kotlin.core.model.PromptSnapshot
+import com.networkcontrol.android.kotlin.core.model.RuleLifetime
 import com.networkcontrol.android.kotlin.core.model.TrafficUsage
+import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.MetricCard
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
 import com.networkcontrol.android.kotlin.ui.common.formatBytes
 import com.networkcontrol.android.kotlin.ui.common.formatDateTime
+import com.networkcontrol.android.kotlin.ui.common.protocolLabel
+import com.networkcontrol.android.kotlin.ui.prompt.promptDisplayName
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -64,12 +78,30 @@ fun OverviewScreen(backend: AppBackend) {
     val settings by backend.settings.collectAsStateWithLifecycle()
     val quiet by backend.quietPeriod.collectAsStateWithLifecycle()
     val speed by backend.speed.collectAsStateWithLifecycle()
+    val focus by backend.focus.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     var blockedToday by remember { mutableLongStateOf(0L) }
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var showBatchPrompts by remember { mutableStateOf(false) }
+    var showFocusDialog by remember { mutableStateOf(false) }
+    var confirmEndFocus by remember { mutableStateOf(false) }
+    var privateDnsMode by remember { mutableStateOf("off") }
+
+    LaunchedEffect(Unit) {
+        privateDnsMode = withContext(Dispatchers.IO) {
+            runCatching { backend.privateDnsMode() }.getOrDefault("off")
+        }
+    }
+
+    LaunchedEffect(focus != null) {
+        while (focus != null) {
+            now = System.currentTimeMillis()
+            kotlinx.coroutines.delay(1_000)
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -141,8 +173,20 @@ fun OverviewScreen(backend: AppBackend) {
                     )
                 }
                 val error = backend.tunnelError.collectAsStateWithLifecycle().value
-                if (!error.isNullOrBlank() && status == ProtectionStatus.Failed) {
+                // 保護開啟時也可能有提示（例如轉發回退到黑洞模式、上游代理無法連線）。
+                if (!error.isNullOrBlank() && (status == ProtectionStatus.Failed || status == ProtectionStatus.On)) {
                     Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+        if (privateDnsMode == "hostname") {
+            item {
+                SectionCard(s[S.PrivateDnsTitle]) {
+                    Text(
+                        s[S.PrivateDnsHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -211,6 +255,72 @@ fun OverviewScreen(backend: AppBackend) {
             }
         }
         item {
+            SectionCard(s[S.FocusMode]) {
+                val active = focus
+                if (active == null) {
+                    Text(
+                        s[S.FocusAllowedHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = { showFocusDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(s[S.FocusStart]) }
+                } else {
+                    val remaining = (active.endsAt - now).coerceAtLeast(0)
+                    Text(
+                        s.format(S.FocusRemaining, formatRemaining(remaining)),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        if (active.allowedPackages.isEmpty()) {
+                            s[S.FocusNoAllowed]
+                        } else {
+                            "${s[S.FocusAllowedApps]}：${active.allowedPackages.size}"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (!protection) {
+                        Text(
+                            s[S.FocusNeedsProtection],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        OutlinedButton(
+                            onClick = { enableProtection() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(s[S.EnableProtection]) }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { backend.extendFocus(15) },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(s[S.FocusExtend], maxLines = 1)
+                        }
+                        TextButton(
+                            onClick = { confirmEndFocus = true },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(s[S.FocusStop], maxLines = 1)
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            backend.createFocusProfile(
+                                allowedPackages = active.allowedPackages,
+                                copyFromCurrent = false,
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(s[S.SaveAsProfile]) }
+                }
+            }
+        }
+        item {
             SectionCard(s[S.DoNotDisturb]) {
                 val until = runtime.doNotDisturbUntil
                 val active = until != null && until > now
@@ -223,12 +333,26 @@ fun OverviewScreen(backend: AppBackend) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    if (!protection) {
+                        Text(
+                            s[S.DndNeedsProtection],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        OutlinedButton(
+                            onClick = { enableProtection() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(s[S.EnableProtection]) }
+                    }
                     OutlinedButton(onClick = { backend.setDoNotDisturb(null) }) {
                         Text(s[S.Off])
                     }
                 } else {
                     OutlinedButton(
-                        onClick = { backend.setDoNotDisturb(System.currentTimeMillis() + 60 * 60 * 1000L) },
+                        onClick = {
+                            backend.setDoNotDisturb(System.currentTimeMillis() + 60 * 60 * 1000L)
+                            if (!protection) enableProtection()
+                        },
                     ) {
                         Text("${s[S.DoNotDisturb]} ${s[S.OneHour]}")
                     }
@@ -301,6 +425,28 @@ fun OverviewScreen(backend: AppBackend) {
                             Text(formatBytes(traffic.bytesOut), style = MaterialTheme.typography.titleMedium)
                         }
                     }
+                    val simLabels = backend.subscriptions().associateBy { it.subscriptionId }
+                    traffic.byNetwork.entries
+                        .filter { it.value.first + it.value.second > 0 }
+                        .sortedByDescending { it.value.first + it.value.second }
+                        .take(4)
+                        .forEach { (key, bytes) ->
+                            val label = when (key.kind) {
+                                com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi -> s[S.Wifi]
+                                com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular ->
+                                    key.subscriptionId?.let { simLabels[it]?.label } ?: s[S.Cellular]
+                                com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired -> s[S.Wired]
+                                else -> s[S.Other]
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(label, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    formatBytes(bytes.first + bytes.second),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     val top = traffic.byPackage.entries
                         .sortedByDescending { it.value.first + it.value.second }
                         .take(3)
@@ -325,6 +471,12 @@ fun OverviewScreen(backend: AppBackend) {
                         s.format(S.PromptFlows, prompts.size),
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    OutlinedButton(
+                        onClick = { showBatchPrompts = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(s[S.BatchPrompts])
+                    }
                 }
             }
         }
@@ -358,4 +510,256 @@ fun OverviewScreen(backend: AppBackend) {
             }
         }
     }
+
+    if (showBatchPrompts) {
+        BatchPromptDialog(
+            prompts = prompts,
+            timedMinutes = settings.promptTimedMinutes,
+            onDismiss = { showBatchPrompts = false },
+            onAnswer = { ids, action, lifetime ->
+                backend.answerPrompts(
+                    ids,
+                    action,
+                    lifetime,
+                    if (lifetime == RuleLifetime.Timed) settings.promptTimedMinutes * 60 else null,
+                )
+                showBatchPrompts = false
+            },
+            onLater = { ids ->
+                backend.dismissPrompts(ids)
+                showBatchPrompts = false
+            },
+        )
+    }
+
+    if (showFocusDialog) {
+        FocusStartDialog(
+            backend = backend,
+            onDismiss = { showFocusDialog = false },
+            onStart = { minutes, allowed ->
+                backend.startFocus(minutes, allowed)
+                if (!protection) enableProtection()
+                showFocusDialog = false
+            },
+        )
+    }
+
+    if (confirmEndFocus) {
+        AlertDialog(
+            onDismissRequest = { confirmEndFocus = false },
+            title = { Text(s[S.FocusStop]) },
+            text = { Text(s[S.FocusEndConfirm]) },
+            confirmButton = {
+                TextButton(onClick = {
+                    backend.stopFocus()
+                    confirmEndFocus = false
+                }) { Text(s[S.FocusStop]) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmEndFocus = false }) { Text(s[S.Cancel]) }
+            },
+        )
+    }
+}
+
+@Composable
+private fun FocusStartDialog(
+    backend: AppBackend,
+    onDismiss: () -> Unit,
+    onStart: (Int, Set<String>) -> Unit,
+) {
+    val s = rememberUiStrings()
+    val context = LocalContext.current
+    var minutes by remember { mutableIntStateOf(30) }
+    var query by remember { mutableStateOf("") }
+    var apps by remember { mutableStateOf<List<com.networkcontrol.android.kotlin.core.model.AppEntry>>(emptyList()) }
+    var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(Unit) {
+        apps = withContext(Dispatchers.IO) {
+            runCatching { backend.appEntries() }.getOrDefault(emptyList())
+        }
+    }
+
+    val filtered = apps.filter {
+        query.isBlank() ||
+            it.app.label.contains(query, ignoreCase = true) ||
+            it.app.packageName.contains(query, ignoreCase = true)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.FocusStart]) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute ->
+                                minutes = (hour * 60 + minute).coerceIn(5, 24 * 60)
+                            },
+                            minutes / 60,
+                            minutes % 60,
+                            true,
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("${s[S.FocusDuration]}：${formatDurationMinutes(minutes)}")
+                }
+                Text(s[S.FocusAllowedApps], style = MaterialTheme.typography.titleSmall)
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text(s[S.SearchApps]) },
+                    singleLine = true,
+                )
+                LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+                    items(filtered, key = { it.app.packageName }) { entry ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = entry.app.packageName in selected,
+                                onCheckedChange = { checked ->
+                                    selected = if (checked) {
+                                        selected + entry.app.packageName
+                                    } else {
+                                        selected - entry.app.packageName
+                                    }
+                                },
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(entry.app.label, style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    entry.app.packageName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+                Text(
+                    s[S.FocusAllowedHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onStart(minutes, selected) }) {
+                Text(s[S.FocusStart])
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
+}
+
+private fun formatRemaining(millis: Long): String {
+    val totalSeconds = (millis / 1000).coerceAtLeast(0)
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
+}
+
+private fun formatDurationMinutes(minutes: Int): String =
+    if (minutes >= 60) "${minutes / 60}h ${minutes % 60}m" else "${minutes}m"
+
+@Composable
+private fun BatchPromptDialog(
+    prompts: List<PromptSnapshot>,
+    timedMinutes: Int,
+    onDismiss: () -> Unit,
+    onAnswer: (Set<String>, VerdictAction, RuleLifetime) -> Unit,
+    onLater: (Set<String>) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var selected by remember(prompts.map { it.id }) {
+        mutableStateOf(prompts.map { it.id }.toSet())
+    }
+    var lifetime by remember { mutableStateOf(RuleLifetime.Permanent) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.BatchPrompts]) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { selected = prompts.map { it.id }.toSet() }) {
+                        Text(s[S.SelectAll])
+                    }
+                    TextButton(onClick = { selected = emptySet() }) {
+                        Text(s[S.ClearSelection])
+                    }
+                }
+                prompts.forEach { prompt ->
+                    val name = prompt.app?.displayName
+                        ?: prompt.app?.name
+                        ?: promptDisplayName(prompt.executablePath)
+                        ?: s[S.UnknownApp]
+                    val first = prompt.flows.firstOrNull()
+                    val target = first?.let {
+                        it.domains.firstOrNull() ?: "${it.remote.address.hostAddress}:${it.remote.port}"
+                    }.orEmpty()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = prompt.id in selected,
+                            onCheckedChange = { checked ->
+                                selected = if (checked) selected + prompt.id else selected - prompt.id
+                            },
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(name, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "$target · ${first?.let { protocolLabel(it.protocol) }.orEmpty()}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                Text(s[S.BatchPromptsHint], style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        lifetime == RuleLifetime.UntilAppExit,
+                        { lifetime = RuleLifetime.UntilAppExit },
+                        { Text(s[S.PromptOnce]) },
+                    )
+                    FilterChip(
+                        lifetime == RuleLifetime.Permanent,
+                        { lifetime = RuleLifetime.Permanent },
+                        { Text(s[S.PromptPermanent]) },
+                    )
+                    FilterChip(
+                        lifetime == RuleLifetime.Timed,
+                        { lifetime = RuleLifetime.Timed },
+                        { Text(s.format(S.PromptTimed, timedMinutes)) },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TextButton(onClick = { onLater(selected) }, enabled = selected.isNotEmpty()) {
+                    Text(s[S.PromptLater])
+                }
+                OutlinedButton(
+                    onClick = { onAnswer(selected, VerdictAction.Deny, lifetime) },
+                    enabled = selected.isNotEmpty(),
+                ) { Text(s[S.Deny]) }
+                Button(
+                    onClick = { onAnswer(selected, VerdictAction.Allow, lifetime) },
+                    enabled = selected.isNotEmpty(),
+                ) { Text(s[S.Allow]) }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
 }

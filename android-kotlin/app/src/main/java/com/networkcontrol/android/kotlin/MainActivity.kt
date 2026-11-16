@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.ui.AppRoot
+import com.networkcontrol.android.kotlin.ui.security.AppLockGate
 import com.networkcontrol.android.kotlin.ui.theme.NetworkControlTheme
 
 class MainActivity : AppCompatActivity() {
@@ -22,7 +23,9 @@ class MainActivity : AppCompatActivity() {
             val container = App.container(this)
             val themeColor by container.theme.color.collectAsStateWithLifecycle()
             NetworkControlTheme(seedColor = themeColor) {
-                AppRoot(container)
+                AppLockGate(container) {
+                    AppRoot(container)
+                }
             }
         }
     }

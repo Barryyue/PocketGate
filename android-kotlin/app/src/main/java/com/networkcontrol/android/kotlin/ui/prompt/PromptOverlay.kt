@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -18,9 +17,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,8 +41,10 @@ internal fun promptDisplayName(path: String?): String? = when {
 fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
     val s = rememberUiStrings()
     val prompts by backend.prompts.collectAsStateWithLifecycle()
+    val settings by backend.settings.collectAsStateWithLifecycle()
     val prompt = prompts.firstOrNull() ?: return
-    var lifetime by remember(prompt.id) { mutableStateOf(RuleLifetime.Permanent) }
+    val prefs = backend.container.preferences
+    val timedMinutes = settings.promptTimedMinutes
 
     LaunchedEffect(prompt.id) {
         while (true) {
@@ -81,26 +79,30 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                     val target = first?.let {
                         it.domains.firstOrNull() ?: "${it.remote.address.hostAddress}:${it.remote.port}"
                     } ?: ""
-                    Text(
-                        "${s[S.PromptTarget]}：$target · ${first?.let { protocolLabel(it.protocol) }.orEmpty()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (prompt.flows.size > 1) {
+                    if (prefs.promptShowDetails) {
                         Text(
-                            s.format(S.PromptFlows, prompt.flows.size),
+                            "${s[S.PromptTarget]}：$target · ${first?.let { protocolLabel(it.protocol) }.orEmpty()}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        if (prompt.flows.size > 1) {
+                            Text(
+                                s.format(S.PromptFlows, prompt.flows.size),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
 
-            Text(
-                s[S.PromptBlockedHint],
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (prefs.promptShowExplanation) {
+                Text(
+                    s[S.PromptBlockedHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (prompt.isTamperAlert) {
                 Text(
                     s[S.PromptTamper],
@@ -109,22 +111,43 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                FilterChip(
-                    lifetime == RuleLifetime.Permanent,
-                    { lifetime = RuleLifetime.Permanent },
-                    { Text(s[S.PromptPermanent]) },
-                )
-                FilterChip(
-                    lifetime == RuleLifetime.Timed,
-                    { lifetime = RuleLifetime.Timed },
-                    { Text(s[S.PromptOneHour]) },
-                )
-                FilterChip(
-                    lifetime == RuleLifetime.UntilRestart,
-                    { lifetime = RuleLifetime.UntilRestart },
-                    { Text(s[S.PromptUntilRestart]) },
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        backend.answerPrompt(
+                            prompt.id,
+                            VerdictAction.Deny,
+                            RuleLifetime.Permanent,
+                            null,
+                        )
+                    },
+                ) { Text(s[S.Deny]) }
+                OutlinedButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        backend.answerPrompt(
+                            prompt.id,
+                            VerdictAction.Allow,
+                            RuleLifetime.UntilAppExit,
+                            null,
+                        )
+                    },
+                ) { Text(s[S.PromptOnce]) }
+                Button(
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        backend.answerPrompt(
+                            prompt.id,
+                            VerdictAction.Allow,
+                            RuleLifetime.Permanent,
+                            null,
+                        )
+                    },
+                ) { Text(s[S.Allow]) }
             }
 
             Row(
@@ -135,26 +158,20 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                     Text(s[S.PromptLater])
                 }
                 Spacer(Modifier.weight(1f))
-                OutlinedButton(
-                    onClick = {
-                        backend.answerPrompt(
-                            prompt.id,
-                            VerdictAction.Deny,
-                            lifetime,
-                            if (lifetime == RuleLifetime.Timed) 3600 else null,
-                        )
-                    },
-                ) { Text(s[S.Deny]) }
-                Button(
-                    onClick = {
-                        backend.answerPrompt(
-                            prompt.id,
-                            VerdictAction.Allow,
-                            lifetime,
-                            if (lifetime == RuleLifetime.Timed) 3600 else null,
-                        )
-                    },
-                ) { Text(s[S.Allow]) }
+                if (prefs.promptShowTimedOption) {
+                    TextButton(
+                        onClick = {
+                            backend.answerPrompt(
+                                prompt.id,
+                                VerdictAction.Allow,
+                                RuleLifetime.Timed,
+                                timedMinutes * 60,
+                            )
+                        },
+                    ) {
+                        Text(s.format(S.PromptTimed, timedMinutes))
+                    }
+                }
             }
         }
     }

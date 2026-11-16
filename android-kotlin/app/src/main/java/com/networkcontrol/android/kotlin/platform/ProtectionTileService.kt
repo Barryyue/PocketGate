@@ -16,6 +16,15 @@ class ProtectionTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
+        // 鎖屏時不允許直接切換防護（否則撿到手機的人可以從下拉選單關掉防火牆）。
+        if (isLocked) {
+            unlockAndRun { toggle() }
+        } else {
+            toggle()
+        }
+    }
+
+    private fun toggle() {
         val container = (applicationContext as App).container
         val enable = !container.protection.isEnabled
         container.vpnEngine.setProtection(enable)

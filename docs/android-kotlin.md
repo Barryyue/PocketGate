@@ -382,3 +382,803 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 通知動作在進程被回收後失效（P2-6）；主執行緒 PackageManager、`establish()` 失敗顯示等 P2 項目見審查報告。
 - 轉發模式 / 上游代理仍未實現；預研見 [android-forwarding-research.md](android-forwarding-research.md)，建議先做 Phase 0 spike。
 - 真機未驗證：OEM ROM、always-on、開機恢復、Tile、私人 DNS、純 IPv6、規則導入導出設備往返。
+
+---
+
+## 12. v0.3（2026-11-15）
+
+### 12.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 網路類型 / SIM | `NetworkContext` 增加 `subscriptionId`、`simSlotIndex`、`carrierName`、`isMetered`；`SimInfo` 與配置文件編輯器支援 SIM 選擇；`NetworkMonitor` 從 `TelephonyNetworkSpecifier` / `SubscriptionManager` 取得 SIM，忽略自家 VPN。 |
+| 流量拆分 | Activity DB v4 新增 `traffic_network`；`TrafficCollector` 按 Wi-Fi / 行動網路 / SIM 查詢；無 `READ_PHONE_STATE` 時降級為行動網路合計；總覽顯示 Wi-Fi / SIM 拆分；修正跨日收集把過去流量記到今天。 |
+| 網路感知規則 | `RuleConditions` 加入 `networkKinds` / `subscriptionIds` / `simSlots`；SIM 訂閱優先、卡槽作後備；`VpnRoutingPlanner` 與判決管線按目前網路套用；網路變化自動 replan；應用頁新增網路條件規則編輯器。 |
+| 規則品質 | `RuleIdentity` 以應用路徑、簽章、連線條件、網路範圍建立語意鍵；新增同語意規則改為更新；啟動合併重複規則並保留命中數；新增「規則」分頁按應用分組、啟停 / 刪除；修正跨裝置匯入 Replace 會誤刪規則。 |
+| 可信發布者 | 設定頁可默認允許系統應用、管理可信簽章者；應用詳情可一鍵信任發布者；明確規則優先，簽章不符不會被信任。 |
+| 記錄與詳情 | 連線記錄 CSV 匯出（目前篩選 / 全部、RFC 4180、UTF-8 BOM、公式注入防護、分頁）；應用詳情顯示規則、最近目標、次數、時間與今日流量。 |
+| 詢問 | 待決詢問可批量允許 / 拒絕 / 稍後，規則只發布一次；通知動作帶應用路徑，進程被回收後仍可直接建立規則。 |
+
+### 12.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.3.0.apk` |
+| 大小 | 3,274,474 bytes（約 3.1 MB，雙 ABI） |
+| SHA-256 | `AC520CC1D1D432C71501652C7C5F26A44245D9F215D502D2F72D0ED8BD07C07D` |
+| versionName / Code | `0.3.0` / `3` |
+| 簽名 | Android Debug（僅供對照試用） |
+
+### 12.3 驗證
+
+- 50 個 JVM 測試通過；Debug / Release 構建通過；R8 + 資源壓縮正常。
+- 模擬器：建立 Wi-Fi 條件的允許規則後，應用頁顯示「網路規則：Wi-Fi → 允許」，規則分頁按應用分組顯示；應用詳情可開啟；CSV 匯出選單可開啟 SAF；五個分頁（總覽 / 應用 / 規則 / 記錄 / 設定）正常切換，無閃退。
+- 模擬器網路為有線 / 非 Wi-Fi，因此 Wi-Fi 條件規則在應用頁的「目前生效」仍顯示詢問，符合預期。
+- 真機未驗證：雙 SIM 拆分、SIM 切換後 replan、CSV 保存、批量詢問、殺進程後通知動作、可信發布者對系統應用的實際範圍。
+
+### 12.4 仍待處理
+
+- 懸浮詢問面板（K-039）設計已完成，見 [android-overlay-prompt-design.md](android-overlay-prompt-design.md)；尚未實作。
+- 專注模式 / 時間表、鎖屏斷網、允許一次、詢問內容設定、新應用提醒、DoH 提示、應用鎖、無障礙回歸。
+- 性能（Baseline Profiles、啟動埋點）、正式簽名 / AAB、工作資料夾、純 IPv6 / OEM ROM 回歸、冒煙腳本。
+- 轉發模式 / 上游代理仍未實現；預研見 [android-forwarding-research.md](android-forwarding-research.md)。
+
+---
+
+## 13. v0.4（2026-11-15）
+
+### 13.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 懸浮詢問面板 | `SYSTEM_ALERT_WINDOW` + `TYPE_APPLICATION_OVERLAY`；`PromptRouter` 成為 `PromptBroker.pending` 的唯一訂閱者，統一決定應用內卡片 / 懸浮面板 / 通知；UsageStats 增量追蹤前台 UID（Activity 級別），只在被詢問應用同 UID 前台時顯示；原生 View 面板（頂部 / 底部、時效 chips、允許一次、稍後 / 拒絕 / 允許）、hold 計時、addView 失敗退回通知。 |
+| 詢問內容 | 連線詳情、說明文字、鎖屏隱藏詳情三個開關，通知與懸浮面板同步；通知改為 `PROMPT_SOFT` 安靜渠道，避免 heads-up 蓋住頂部面板。 |
+| 鎖屏斷網 | `ScreenStateMonitor` 監聽螢幕 / 鎖屏；開啟後鎖屏時以 BlockAll 重新規劃，系統 UID 仍保留。 |
+| 專注模式 | 時長、允許應用選擇、剩餘時間、延長 15 分鐘、結束確認；專注期間 BlockAll，只放行所選應用；狀態持久化，重啟後按結束時間校正。 |
+| 專注時間表 | 按星期與時段自動進入專注（支援跨午夜）；設定頁新增 / 啟停 / 刪除；每 30 秒檢查，手動專注不被覆蓋。 |
+| 新應用提醒 | `PACKAGE_ADDED` 發送通知，點擊開啟應用做決定。 |
+| 私人 DNS | 偵測 `private_dns_mode=hostname`，在總覽提示域名規則可能失效。 |
+| 應用鎖 | 使用系統鎖屏憑證解鎖；離開超過 1 分鐘重新鎖定；未設定鎖屏時阻止啟用。 |
+| 無障礙 / 平板 | 導航圖示加內容描述；內容最大寬度 760dp 居中。 |
+
+### 13.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.4.0.apk` |
+| 大小 | 3,345,990 bytes（約 3.2 MB，雙 ABI） |
+| SHA-256 | `463597974C4CB536979750817F4F1143BA4A839446A294285A53686E72863C1F` |
+| versionName / Code | `0.4.0` / `4` |
+| 簽名 | Android Debug（僅供對照試用） |
+
+### 13.3 驗證
+
+- JVM 測試通過（含 `PromptPresentationPolicyTest`、`FocusScheduleTest`、既有規則 / 網路 / CSV 測試）；Debug / Release 構建通過。
+- 模擬器：Chrome 前景時懸浮面板顯示於頂部，按「允許」成功建立規則並收起；面板高度約 458px（修正文字大小誤用 dp 的問題）；設定頁顯示懸浮權限、位置、詢問內容與專注時間表；新增週一至週五 09:00–18:00 時間表成功；專注模式可開始並顯示剩餘時間與允許應用數。
+- 真機未驗證：微信 / OEM ROM 的懸浮窗、IME 遮擋、鎖屏斷網、應用鎖憑證、新應用通知、私人 DNS 提示、批量詢問與通知動作進程回收。
+
+### 13.4 仍待處理
+
+- 應用鎖目前只鎖啟動與背景超過 1 分鐘，尚未在修改規則 / 模式 / 退出時即時驗證。
+- 專注模式結束小結、AlarmManager 精確排程、重啟後時間表校正待補強。
+- 批量詢問與通知動作進程回收仍需真機場景驗證。
+- M3 性能、正式簽名 / AAB、工作資料夾、IPv6 / OEM 回歸、冒煙腳本；M4 轉發模式。
+
+---
+
+## 14. v0.5（2026-11-15）
+
+### 14.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 啟動與建置 | 初始化日誌加入耗時；release 維持 R8 + 資源壓縮；新增 AAB 打包命令。 |
+| 簽名 | `NC_ANDROID_KEYSTORE` / `NC_ANDROID_KEYSTORE_PASSWORD` / `NC_ANDROID_KEY_ALIAS` / `NC_ANDROID_KEY_PASSWORD` 存在時使用正式簽名，否則沿用 debug。 |
+| 更新檢查 | 設定 → 關於新增「檢查更新」；讀取 GitHub latest release，版本比較，跟隨系統代理；有新版本可開啟下載頁。 |
+| 工作資料夾 | 設定 → 關於顯示工作資料夾提示：VPN 只作用於目前使用者。 |
+| 診斷 | summary 加入網絡類型 / SSID / SIM / 私人 DNS / IPv6 / 鎖屏斷網 / 專注 / 懸浮權限 / UsageStats。 |
+| 回歸 | 新增 [android-regression-checklist.md](android-regression-checklist.md)：模擬器冒煙、真機網絡、OEM ROM、發版檢查。 |
+| 冒煙腳本 | `scripts/android-kotlin-smoke.ps1`：安裝、授權 appops、啟動、進程存活、FATAL 檢查。 |
+| WireGuard | 決策：不內置 WireGuard VPN；未來作為轉發模式的上游出口。 |
+
+### 14.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.5.0.apk` |
+| APK 大小 | 3,354,142 bytes（約 3.2 MB） |
+| APK SHA-256 | `9E133E782C1A39CA5675424CCAB31698BEE66CCCE11CC90A142D7ABA7315FE9E` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.5.0.aab` |
+| AAB 大小 | 4,298,273 bytes（約 4.1 MB） |
+| AAB SHA-256 | `AADF6170D1CF5D1F6178B9C169FBAF528733893A0BD3F94BAF5A718C9D027EE3` |
+| versionName / Code | `0.5.0` / `5` |
+| 簽名 | Android Debug（正式簽名需設定 `NC_ANDROID_KEYSTORE`） |
+
+### 14.3 驗證
+
+- 60 個 JVM 測試通過；Release APK 與 AAB 構建通過。
+- 模擬器冒煙腳本通過：進程存活、無 FATAL、UsageStats / 懸浮窗 appops 設定成功。
+- Release APK（R8 + 資源壓縮）在模擬器安裝並啟動成功，五個分頁與專注模式卡片正常渲染。
+- 模擬器：專注模式、專注時間表、懸浮面板、詢問內容、應用鎖入口、工作資料夾提示均無閃退。
+- 真機未驗證：正式簽名、純 IPv6、私人 DNS、OEM ROM、微信懸浮面板、鎖屏斷網、應用鎖憑證、新應用通知、更新檢查網絡。
+
+### 14.4 仍待處理
+
+- Baseline Profiles、arm64-only、CI 大小 / 啟動基線。
+- 正式 keystore 簽名與側載更新流程演練（需用戶提供密鑰）。
+- 純 IPv6 / 私人 DNS / OEM ROM 真機回歸（清單已備）。
+- 應用鎖在修改規則 / 模式 / 退出時的即時驗證。
+- 轉發模式 Phase 0 尚未開始；需要 Go / NDK 工具鏈與真機吞吐 / 耗電測試。
+
+---
+
+## 15. v0.6.0-m4spike（2026-11-15）
+
+### 15.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 專注配置文件 | 設定 → 配置文件新增「建立專注配置文件」：以白名單模式建立並複製目前規則；專注進行中可「保存為配置文件」，只把勾選的允許應用寫入新配置文件。 |
+| 時間選擇 | 專注時長與時間表改用 Android 原生圓盤 `TimePickerDialog`，可自訂任意分鐘；不再使用會換行的 15/30/60/120 晶片。 |
+| 懸浮面板位置 | 位置新增「自訂」：0–100% 垂直比例；設定頁提供可上下拖動的面板預覽，儲存後實際懸浮面板按比例定位。 |
+| M4 Phase 0 | 內建 `hev-socks5-tunnel`（MIT）原生庫（arm64-v8a / x86_64）；VpnService TUN fd 可交給原生隧道；設定頁可啟用實驗轉發模式，指定本機 SOCKS5 host/port/UDP。 |
+
+### 15.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.0-m4spike.apk` |
+| APK 大小 | 4,105,809 bytes（約 3.9 MB） |
+| APK SHA-256 | `3C5DE1BAF063258BF36AA972D178C279A0CE6E2CDE6D27170E33F68BD5C59009` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.0-m4spike.aab` |
+| AAB 大小 | 4,644,928 bytes（約 4.4 MB） |
+| AAB SHA-256 | `FC423C2D2E019A45616AD9E5D35C462CE9552810F5787E3FE9EFB722DC661812` |
+| versionName / Code | `0.6.0-m4spike` / `6` |
+| 簽名 | Android Debug（正式簽名需 `NC_ANDROID_KEYSTORE`） |
+
+### 15.3 驗證
+
+- 60 個 JVM 測試通過；Release APK / AAB 構建通過。
+- 模擬器：自訂懸浮位置拖動 15% → 82% 並保存；專注時長按鈕打開原生圓盤（00:30）；轉發設定頁顯示「原生隧道可用」；一鍵建立「專注」白名單配置文件並切換為 Active。
+- 模擬器轉發：`hev-socks5-tunnel` 載入成功、TUN fd 啟動成功、SOCKS5 握手與會話建立；但經 Reqable + `adb reverse` 的實際 TCP/UDP 數據在 3 秒後 `io timeout`，Chrome 回 `ERR_CONNECTION_CLOSED`。**未通過端到端轉發驗證。**
+- 真機未驗證：本機 FlClash/SOCKS5 轉發、UDP/QUIC、吞吐、耗電、與其他 VPN 共存、懸浮自訂位置、專注配置文件。
+
+### 15.4 重要限制
+
+- Phase 0 **不執行規則與詢問**：所有被捕獲的應用流量都會轉發到 SOCKS5；需要規則控制的用戶暫不要開啟。
+- 目前是「所有流量走 SOCKS5」，不是最終 M4；Phase 1 才接入 per-flow 判決、域名傳遞、UDP/QUIC 與按應用控制。
+- 上游建議使用裝置本機的 SOCKS5（例如 FlClash 的 127.0.0.1:7890）；遠端/LAN 上游可能被 VPN 路由環路。
+- 若原生庫載入或啟動失敗，會自動回到黑洞模式並在日誌記錄。
+
+---
+
+## 16. v0.6.1-m4spike（2026-11-15）
+
+### 16.1 「允許一次」語義
+
+- 舊版：`RuleLifetime.Once` 只放行目前詢問批次中的連線（BlockedEvent 另有 60 秒兜底），不是應用會話。
+- 新版：新增 `RuleLifetime.UntilAppExit`，按「允許一次」會建立**應用級暫存規則**；由 `TargetAppSessionTracker` 以 UsageStats `ACTIVITY_STOPPED` 判斷目標應用離開前台，2 秒後移除規則，下次打開會重新詢問。
+- 未取得 UsageStats 權限時，規則最多保留 10 分鐘，之後回收；NetworkControl 重啟時也會消失。
+- `直到重啟` 的語義保持不變：指 **NetworkControl 自身進程 / 服務重啟**，不是目標應用重啟。
+- 限制：Android 一般應用無法可靠觀察其他應用的「滑掉 / 強制停止」，目前以「離開前台」近似；若使用者在應用內快速切換 Activity，2 秒寬限與 RESUMED 事件可避免誤刪。
+
+### 16.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.1-m4spike.apk` |
+| APK 大小 | 4,105,805 bytes |
+| APK SHA-256 | `7C2D6E51225DE43AB1CEC9D8A441F39932D95652C427917CC1ED2128EF100DFA` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.1-m4spike.aab` |
+| AAB 大小 | 4,647,953 bytes |
+| AAB SHA-256 | `10CDDD91606D4C709958DA784BD993974DDDE0F25EA669ECCFBECE8A2ED96159` |
+| versionName / Code | `0.6.1-m4spike` / `7` |
+
+### 16.3 驗證
+
+- JVM 測試新增 `UntilAppExit` 規則建立與非持久化檢查；全部測試通過。
+- Debug / Release / AAB 構建通過。
+- 真機未驗證：允許一次 → 離開應用 → 再次打開是否重新詢問；UsageStats 在 OEM ROM 上的 ACTIVE_STOPPED 事件差異。
+
+---
+
+## 17. v0.6.2-m4spike（2026-11-15）
+
+### 17.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 詢問壽命 | 移除「直到重啟」選項，保留「允許一次 / 永久 / 限時」；限時時長在設定 → 詢問 → 「限時規則時長（分鐘）」配置，預設 60，可改 30 等。`UntilRestart` 僅保留給舊資料載入，不再提供新選擇。 |
+| 允許一次 | 維持應用會話：目標應用離開前台 2 秒後失效；下次打開重新詢問。 |
+| 速度島 | 保護開啟且螢幕解鎖時，在螢幕頂部顯示黑色膠囊，預設 `↓ 下載 / ↑ 上傳`；點擊開啟 NetworkControl；鎖屏 / 關閉保護時隱藏。 |
+| 詢問面板 | 速度島開啟時，頂部懸浮詢問面板下移 50dp，避免與速度島重疊。 |
+
+### 17.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.2-m4spike.apk` |
+| APK 大小 | 4,122,189 bytes |
+| APK SHA-256 | `88C2C3AAF52632BCB908068145BFF3D5AD557CEFD3E637299C9F9EE0C2ABBEF4` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.2-m4spike.aab` |
+| AAB 大小 | 4,667,698 bytes |
+| AAB SHA-256 | `52648343836BBC6C5D2B8BDEDB97CA04B584E16315D5CDCAD8CB0860DE789C4F` |
+| versionName / Code | `0.6.2-m4spike` / `8` |
+
+### 17.3 驗證
+
+- JVM 測試通過；Debug / Release / AAB 構建通過。
+- 模擬器：設定頁可開啟速度島；`dumpsys window` 可見 `NetworkControl speed` 視窗，overlay 權限與保護狀態正確。
+- 真機未驗證：速度島在瀏海 / 挖孔 / 狀態欄下的位置、與鍵盤和其他懸浮窗的遮擋、常駐耗電、OEM ROM 限制。
+
+### 17.4 已知限制
+
+- 速度島與詢問面板都使用 `TYPE_APPLICATION_OVERLAY`；部分系統敏感頁面或 `setHideOverlayWindows(true)` 會隱藏它們。
+- 速度島是系統懸浮窗，關閉保護或鎖屏時隱藏；若使用者撤銷懸浮窗權限，會自動消失。
+- 「直到重啟」已從 UI 移除，但舊版建立過的 `UntilRestart` 規則仍會在當前 NetworkControl 進程內生效，直到進程重啟。
+
+---
+
+## 18. v0.6.3-m4spike（2026-11-15）
+
+### 18.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 靈動島 | 原名「速度島」更名為「靈動島（速度）」；**預設開啟**，保護開啟且螢幕解鎖時顯示上傳/下載速度；設定 → 詢問顯示方式 →「靈動島（速度）」可隨時關閉。 |
+| 權限刷新 | 授予「顯示在其他應用程式上層」後返回設定頁會立即刷新靈動島，不需要重啟。 |
+| 位置 | 靈動島固定在螢幕頂部中央；開啟時詢問面板自動下移 50dp。 |
+
+### 18.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.3-m4spike.apk` |
+| APK 大小 | 4,122,189 bytes |
+| APK SHA-256 | `B506D4A7B6F22FC68367FA2106622DCC67B1D8129BD17C54FDD9B3AB94C4C3C8` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.3-m4spike.aab` |
+| AAB 大小 | 4,667,910 bytes |
+| AAB SHA-256 | `E341F39E6921D09B8E63201A9DBD0E6C1A41D424A9B652711FBD8339DA95AD50` |
+| versionName / Code | `0.6.3-m4spike` / `9` |
+
+### 18.3 驗證
+
+- JVM 測試通過；Debug / Release / AAB 構建通過。
+- 模擬器：設定頁可切換靈動島；保護開啟且 overlay 權限授予時，`dumpsys window` 可見 `NetworkControl speed` 視窗；關閉設定後視窗移除（代碼路徑）。
+- 真機未驗證：瀏海 / 挖孔位置、狀態欄高度、與鍵盤 / 其他懸浮窗遮擋、待機耗電、OEM ROM 限制。
+
+---
+
+## 19. v0.6.4-m4spike（2026-11-15）
+
+### 19.1 vivo / iQOO 相容模式
+
+- 偵測 `Build.MANUFACTURER` / `Build.BRAND` 含 `vivo` 或 `iqoo`，預設開啟相容模式。
+- 相容模式把靈動島額外下移 16dp，放在 vivo 原子島 / 狀態欄下方，減少重疊。
+- 設定 → 詢問顯示方式 → 靈動島開啟後，可看到「vivo / iQOO 相容模式」開關與「額外頂部偏移 0–48dp」滑桿。
+- 詢問面板在靈動島開啟時同步下移，偏移量與速度島一致。
+- **限制**：第三方應用無法接入 vivo 原子島 API；相容模式只是位置與視覺避讓，不會把內容放進系統島。
+
+### 19.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.4-m4spike.apk` |
+| APK 大小 | 4,154,961 bytes |
+| APK SHA-256 | `6833810590ED314259DDCC24C07C45684FB54B58F35443B605F0EABB894CA092` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.4-m4spike.aab` |
+| AAB 大小 | 4,704,855 bytes |
+| AAB SHA-256 | `DBC2F354935B435D56B363AB52B0A2C28359151522AA80C2C303ECA7C4933DD3` |
+| versionName / Code | `0.6.4-m4spike` / `10` |
+
+### 19.3 驗證
+
+- JVM 測試通過；Debug / Release / AAB 構建通過。
+- 模擬器：速度島預設 frame y=84；開啟 vivo 相容後 y=126（+16dp × density），偏移滑桿可調。
+- 真機未驗證：vivo / iQOO 實際原子島高度、挖孔位置、系統島展開時的遮擋；建議在真機上把「額外頂部偏移」調到不重疊的位置。
+
+---
+
+## 20. v0.6.5-m4spike（2026-11-15）
+
+### 20.1 版本說明
+
+- 設定 → 關於的版本號列可點擊，打開「版本說明」對話框。
+- 顯示目前版本的新增功能、優化與修復，以及注意事項。
+- 對話框可切換「歷史版本」，回看 0.1.0 起各版本的變更。
+- 版本內容內建在 `ReleaseNotes`，不依賴網路；後續發版時追加一條記錄即可。
+
+### 20.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.5-m4spike.apk` |
+| APK 大小 | 4,154,961 bytes |
+| APK SHA-256 | `191E38D674C4F41F3C8795D107D5F3433ED436594529DD85EDA94661DC2C0659` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.5-m4spike.aab` |
+| AAB 大小 | 4,720,327 bytes |
+| AAB SHA-256 | `38572E7B5B368CBC12E7F0E80358E95AC399BBBF7CF9D02AC5C4EB58AC90E6A2` |
+| versionName / Code | `0.6.5-m4spike` / `11` |
+
+### 20.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器：設定 → 關於點擊版本，顯示「版本說明 · 0.6.4」與新增功能 / 優化，並有「歷史版本」按鈕。
+- 真機未驗證：小屏 / 大字體下的滾動與排版、TalkBack 朗讀。
+
+---
+
+## 21. v0.6.6-m4spike（2026-11-15）
+
+### 21.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 專注與保護 | 保護關閉時按「開始專注」會先自動開啟保護（必要時彈 VPN 授權）；若使用者在專注期間關閉保護，卡片顯示「保護已關閉，專注模式不會阻止任何聯網」與「開啟保護」按鈕。 |
+| 專注卡片排版 | 「延長 15 分鐘」與「結束專注」改為同一行兩欄；「保存為配置文件」另起一行全寬，修正原本三個按鈕擠在一起造成文字變形。 |
+
+### 21.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.6-m4spike.apk` |
+| APK 大小 | 4,171,341 bytes |
+| APK SHA-256 | `1D9D260AA89EC0CEC87F0B8697C626BA45A53A7081F1A695625EF2F3A6F8455F` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.6-m4spike.aab` |
+| AAB 大小 | 4,722,862 bytes |
+| AAB SHA-256 | `7B6A69A8540FCFF910C26E8A1E8232F53E5C9808709E1EBB5E854844FF275BE4` |
+| versionName / Code | `0.6.6-m4spike` / `12` |
+
+### 21.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器：開始專注後保護自動切換為 On；專注卡片顯示「Remaining / Extend 15 minutes / End focus」並排，`Save as profile` 另起一行，文字不再變形。
+- 真機未驗證：VPN 授權彈窗流程、不同字體縮放下的按鈕寬度。
+
+---
+
+## 22. v0.6.7-m4spike（2026-11-15）
+
+### 22.1 本輪改動
+
+| 主題 | 內容 |
+|---|---|
+| 靈動島位置 | 原本只有向下 0–48dp；改為水平 / 垂直各 -60..+60dp，負值向左 / 上，正值向右 / 下；預設 0 回到原本位置；提供「重設」。 |
+| 靈動島透明度 | 只調整**背景**透明度（20–100%）；速度文字固定白色並加陰影，不跟隨透明度；邊框保持可見。 |
+| 版面 | 專注模式移到模式切換下方，與勿擾相鄰，不再被模式切換隔開。 |
+| 勿擾聯動 | 保護關閉時開啟勿擾會自動開啟保護；勿擾期間關閉保護時顯示警告與「開啟保護」。 |
+
+### 22.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.7-m4spike.apk` |
+| APK 大小 | 4,171,345 bytes |
+| APK SHA-256 | `23D746F9DCA1EE4519CE1B5501649A442661CC2B0708138893572F939C1FEB8C` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.7-m4spike.aab` |
+| AAB 大小 | 4,729,365 bytes |
+| AAB SHA-256 | `8130F8E72CE97260F2874E99A1D80D21284251D293BDB95AAC639C04F6D0F358` |
+| versionName / Code | `0.6.7-m4spike` / `13` |
+
+### 22.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器：專注與勿擾已在模式切換下方相鄰；設定頁可調整水平 / 垂直偏移與背景透明度。
+- 真機未驗證：負偏移是否會碰到瀏海 / 狀態欄、低透明度下的可讀性、OEM 系統島遮擋。
+
+---
+
+## 23. v0.6.8-m4spike（2026-11-15）
+
+### 23.1 靈動島樣式
+
+| 樣式 | 顯示 |
+|---|---|
+| 完整（Full） | `↓ 下載/s   ↑ 上傳/s`，同時顯示 |
+| 循環（Cycle） | 每次速度更新輪流顯示 `↓ 下載/s` 或 `↑ 上傳/s` |
+| 迷你（Mini） | 狀態欄風格：`↓1.2M ↑30K`，字體 10sp、內距更小、小綠點 |
+
+- 設定 → 詢問顯示方式 → 靈動島開啟後可選「完整 / 循環 / 迷你」。
+- 透明度只影響背景；速度文字固定白色加陰影，保持不透明。
+- 水平 / 垂直偏移與 vivo / iQOO 相容模式對三種樣式都生效。
+
+### 23.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.8-m4spike.apk` |
+| APK 大小 | 4,171,345 bytes |
+| APK SHA-256 | `D8B97C5306BB86CAE2E05BCDC3F7A130D09D45079EF95611801B19ED9E33D31D` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.8-m4spike.aab` |
+| AAB 大小 | 4,733,409 bytes |
+| AAB SHA-256 | `459DCA606903A83F19BBD6D71F1649FF9EFC74619630507239988C83D207FBD3` |
+| versionName / Code | `0.6.8-m4spike` / `14` |
+
+### 23.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器：設定頁可切換三種樣式；模式變更會移除並重建懸浮窗。
+- 真機未驗證：循環節奏是否足夠、迷你模式在窄屏 / 大字體下的寬度、透明背景上的文字可讀性。
+
+---
+
+## 24. v0.6.9-m4spike（2026-11-15）
+
+### 24.1 即時偏移與透明度
+
+- 水平 / 垂直偏移與背景透明度改為拖動滑桿時**即時更新懸浮窗**，不需要放開或重啟。
+- `SpeedIslandController` 在每次刷新時更新 `WindowManager.LayoutParams` 的 `x` / `y`，並呼叫 `updateViewLayout`。
+- 設定頁的 `Slider` 使用 `onValueChange` 直接寫入並刷新；不再等 `onValueChangeFinished`。
+- 文字仍固定白色加陰影，不跟隨背景透明度。
+
+### 24.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.9-m4spike.apk` |
+| APK 大小 | 4,171,345 bytes |
+| APK SHA-256 | `5DD74569409BEFAF6963FE6F919B76A5CFD5DD0D99B9076048FE886578FE8905` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.9-m4spike.aab` |
+| AAB 大小 | 4,733,459 bytes |
+| AAB SHA-256 | `6392CE2903869DF4A2CF43CF66A8D7DCF2558E78A04A7D21703F2E3210A2666C` |
+| versionName / Code | `0.6.9-m4spike` / `15` |
+
+### 24.3 驗證
+
+- 模擬器：拖動水平偏移滑桿，靈動島 frame x 由 335 即時變為 499，不需要放開。
+- 背景透明度滑桿同樣在拖動中更新。
+- 真機未驗證：實際拖動手勢、負偏移邊界與低透明度可讀性。
+
+---
+
+## 25. v0.6.10-m4spike（2026-11-15）
+
+### 25.1 狀態欄模式
+
+- 新增設定「嘗試放進狀態欄」：開啟後靈動島使用 `FLAG_LAYOUT_IN_SCREEN`、`FLAG_LAYOUT_NO_LIMITS`、`fitInsetsTypes=0`、cutout `ALWAYS`，可把 `y` 設為負值，移到狀態欄座標區。
+- 垂直偏移範圍仍為 -60..+60dp；狀態欄模式下以 0 為狀態欄頂部，負值再往上。
+- **系統限制**：`TYPE_APPLICATION_OVERLAY` 的層級在系統狀態欄之下，Android 通常會用狀態欄蓋住第三方懸浮窗；vivo 原子島同樣不開放給第三方。部分 ROM 在透明狀態欄或全螢幕應用下可能看得到，屬盡力而為。
+- 若看不到，請關閉「嘗試放進狀態欄」，使用一般懸浮位置。
+
+### 25.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.6.10-m4spike.apk` |
+| APK 大小 | 4,171,341 bytes |
+| APK SHA-256 | `A2746376061B263F6D2A20E94EFB270B0129AEC536620239C308BDA8FAD7D773` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.6.10-m4spike.aab` |
+| AAB 大小 | 4,734,088 bytes |
+| AAB SHA-256 | `40D4BA5524515C62CC5A5ED2E512DFE175CF9156EC488500F5FFA4F5E01E7AEA` |
+| versionName / Code | `0.6.10-m4spike` / `16` |
+
+### 25.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 真機未驗證：狀態欄模式在不同 ROM 的可見性；這是 Android 層級限制，不是位置計算問題。
+
+---
+
+## 26. v0.7.0-m4spike（2026-11-15）
+
+### 26.1 靈動島外觀配置
+
+- 背景透明度下限改為 0：`alpha=0` 時背景與邊框完全透明，`elevation` 也歸零，只留文字與狀態點；此時加上 `FLAG_NOT_TOUCHABLE`，不攔截狀態欄下拉與桌面手勢。
+- 全透明時文字依亮度自動配黑 / 白陰影（`contrastShadow`），避免亮色桌布上看不清；狀態欄模式下文字每秒跟隨日夜模式重算。
+- 文字顏色三種模式：
+  - `theme`（預設）：跟隨 `ThemeController.color`，主題色改變時透過 `StateFlow` 即時刷新。
+  - `statusbar`：夜間白、日間黑，近似狀態欄文字；開啟「嘗試放進狀態欄」時預設切到此模式，關閉時切回 `theme`。
+  - `custom`：`ThemeColorDialog` 提供預設色盤 + HSV 自訂，套用後即時生效並持久化。
+- 綠色狀態點可顯示 / 隱藏，並可自訂顏色。
+- 上傳 / 下載顯示順序可互換，套用完整、循環、迷你三種樣式；循環模式的起始方向也一併反轉。
+- 文字色、圓點色、顯示圓點、互換順序改動都走 `SpeedIslandController.refresh()` → 重建 / 更新視圖。
+
+### 26.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.7.0-m4spike.apk` |
+| APK 大小 | 4,204,113 bytes |
+| APK SHA-256 | `A35D669326C9802A0F35CD59269FD40FBD9F54F59CCFB39DFA5DED727896473B` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.7.0-m4spike.aab` |
+| AAB 大小 | 4,765,526 bytes |
+| AAB SHA-256 | `7CBD0C8D820AAE2140EF8CCF8CC18BA63AA8051EFE09FA008CABAC381D468C69` |
+| versionName / Code | `0.7.0-m4spike` / `17` |
+
+### 26.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器（1080×2400）實測：
+  - 透明度 0：背景、邊框、陰影全部消失，只剩文字。
+  - 跟隨主題：主題色改為藍色後靈動島文字同步變藍。
+  - 跟隨狀態欄：淺色系統下為黑字，位於狀態欄座標區可見。
+  - 自訂色：調色盤選紫色後即時生效；圓點設為紅色、隱藏與顯示均正常。
+  - 互換順序：`↑ … ↓ …` 與 `↓ … ↑ …` 即時切換。
+  - 設定頁籌片改為 `FlowRow`，窄屏不再把「Custom color」擠成兩行。
+- 真機未驗證：不同 ROM 狀態欄遮擋、全透明在淺色桌布上的實際可讀性、vivo 機型。
+
+### 26.4 限制
+
+- 狀態欄模式仍是盡力而為：第三方 `TYPE_APPLICATION_OVERLAY` 在系統狀態欄之下。
+- 全透明時會加上 `FLAG_NOT_TOUCHABLE`，避免看不見的懸浮窗擋住狀態欄下拉與桌面手勢；此時點擊靈動島不會開啟應用，調高透明度即可恢復點擊。
+
+---
+
+## 27. v0.8.0-m4spike（2026-11-15）
+
+### 27.1 靈動島獨立設定頁
+
+- 設定 → 詢問顯示方式 → 靈動島，只保留啟用開關和「靈動島設定」入口；所有細節移到獨立頁面。
+- 獨立頁面分為預覽、顯示內容、外觀、位置四組，後續新增選項直接往頁面加。
+- 預覽使用與懸浮窗相同的排版（`SpeedIslandFormatter`），即時反映內容、樣式、透明度、字體、顏色與狀態點。
+- 新增顯示內容：速度、今日流量、今日攔截、待處理詢問、目前網路；流量與攔截數每 60 秒從資料庫刷新。
+- 新增字體大小 80%–160%（1% 步進）與字體粗細：常規（sans-serif）、中等（sans-serif-medium）、粗體。
+- 網路名稱太長時用 `maxWidth=320dp` + ellipsize 收尾。
+
+### 27.2 詢問面板
+
+- 新增「顯示『限時允許』選項」開關（預設開）。關閉後，懸浮詢問與應用內詢問都不再顯示限時選項。
+
+### 27.3 代理轉發修復
+
+- **根因**：hev 設定裡的隧道位址是 198.18.0.1 / fc00::1，但 VPN 介面實際位址是 10.111.222.1 / fd00:6e63::1；回包被送到不存在的位址，造成 TCP 握手後逾時。
+- 修正為使用 `FakeDnsPool` 的介面位址，並關閉 TSO / USO / jumbo offload、把 task-stack-size 提高到 86016。
+- 模擬器以 Reqable SOCKS5（127.0.0.1:9000 + `adb reverse`）驗證：tcpdump 可看到完整 HTTP 請求與 Cloudflare 403 回應，證明上下行資料都經過 tun0。
+- 新增「測試代理」按鈕：5 秒內完成 SOCKS5 握手並 CONNECT `www.gstatic.com:443`。
+- **DNS 限制**：`adb reverse` 只轉發 TCP，SOCKS5 UDP ASSOCIATE 的 relay 位址在 PC 上時裝置無法回送；真機使用本機或區網代理時才具備 UDP DNS。若網頁打不開但 IP 能連，請開啟 UDP 轉發或配置系統私人 DNS。
+
+### 27.4 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.0-m4spike.apk` |
+| APK 大小 | 4,236,881 bytes |
+| APK SHA-256 | `77876238B49FE4F1A166F1AF222780F640DC9070F45B565CDB5EFAF95DAC9821` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.0-m4spike.aab` |
+| AAB 大小 | 4,819,110 bytes |
+| AAB SHA-256 | `F80D9398C577006F7B101F14D487B7827286B0F591BCFE13DDEC627D86ED7CD1` |
+| versionName / Code | `0.8.0-m4spike` / `18` |
+
+### 27.5 驗證
+
+- JVM 測試（含新增 `SpeedIslandFormatterTest`）/ Debug / Release / AAB 構建通過。
+- 模擬器：獨立設定頁、預覽、內容籌片、字體滑桿、詢問限時開關均可操作。
+- 轉發：模擬器 + Reqable 的 HTTP 流量已能完整往返；HTTPS/域名受 `adb reverse` 無 UDP 限制影響，真機需再驗證。
+- 真機未驗證：代理 UDP DNS、不同 ROM 的懸浮窗、字體粗細渲染差異。
+
+---
+
+## 28. v0.8.1-m4spike（2026-11-15）
+
+### 28.1 代理應用繞過 VPN
+
+- **問題**：同時開 NetworkControl VPN 和代理應用時，代理應用的上游流量也會進入本 VPN，再被轉發回代理的 SOCKS 埠，形成回環；代理應用也可能因 VPN 被頂掉而暫停。
+- 轉發設定新增「代理應用」選擇器（可搜尋套件），選中的應用會加入 `VpnTunnelConfig.bypassPackages`，最終呼叫 `Builder.addDisallowedApplication`。
+- 設定頁顯示「Android 一次只允許一個 VPN」提示，要求代理應用關閉 TUN/VPN，只保留 SOCKS5 埠。
+- 清除選擇後恢復只繞過本應用。
+
+### 28.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.1-m4spike.apk` |
+| APK 大小 | 4,236,877 bytes |
+| APK SHA-256 | `852002378EC9EF6F8ED250AEF498B571FE2BF9CE57CBC2D651D15C68BD28802E` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.1-m4spike.aab` |
+| AAB 大小 | 4,831,242 bytes |
+| AAB SHA-256 | `2096B26492B56DB81A7B18B674FB244D2ADB195C68DB48A90C3361F81E844F46` |
+| versionName / Code | `0.8.1-m4spike` / `19` |
+
+### 28.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 真機未驗證：代理應用繞過後 SOCKS 埠是否保持可用、代理應用是否需要額外保活設定。
+
+---
+
+## 29. v0.8.2-m4spike（2026-11-16）
+
+### 29.1 單位與文案
+
+- 速度單位改為完整形式：`B/s`、`KB/s`、`MB/s`、`GB/s`、`TB/s`；迷你樣式也使用完整單位，不再顯示 `K` / `M` / `G`。
+- 流量總量使用 `B`、`KB`、`MB`、`GB`、`TB`。
+- 詢問面板的「允許一次」改為「僅一次」；`UntilAppExit` 的行為不變。
+
+### 29.2 狀態欄文字色
+
+- Android 沒有查詢狀態欄圖示顏色的公開 API。現在用「系統深色模式 + 桌布色調」近似：
+  - 深色模式 → 白字。
+  - 淺色模式 + 桌布支援深色文字 → 黑字。
+  - 淺色模式 + 桌布支援深色主題 → 白字。
+  - 無桌布資訊 → 依深色模式。
+- 桌布變更與系統配置變更時重新計算；其餘時間每 60 秒最多查詢一次。
+- 部分應用會自行把狀態欄圖示切換為深色或淺色，第三方懸浮窗無法得知；不一致時可在「文字顏色」選自訂色覆蓋。
+
+### 29.3 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.2-m4spike.apk` |
+| APK 大小 | 4,236,881 bytes |
+| APK SHA-256 | `751A1D103B42D7CE10510CE2623F632F1E167C248B7717171C2C7E450A24D027` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.2-m4spike.aab` |
+| AAB 大小 | 4,832,470 bytes |
+| AAB SHA-256 | `F70EA2F04AADA16E857C3E0BB0A6FDC79B7FE7CD0B3F69006FAC46B069322EE8` |
+| versionName / Code | `0.8.2-m4spike` / `20` |
+
+### 29.4 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 狀態欄顏色近似需真機確認；桌布 API 在部分 ROM 可能回傳 null，此時退回深色模式判斷。
+
+---
+
+## 30. v0.8.3-m4spike（2026-11-16）
+
+### 30.1 一鍵式詢問面板
+
+- 移除「先選時長、再點允許 / 拒絕」的兩段式操作。
+- 主按鈕改為三個，按下立即生效：
+  - **禁止** → 永久拒絕
+  - **僅一次** → 允許到應用離開前台
+  - **允許** → 永久允許
+- 第二行保留「稍後」；若設定開啟「顯示限時允許」，右側多一個「限時允許（60 分鐘）」，直接使用 `promptTimedMinutes`。
+- 關閉「顯示限時允許」後，面板就是紅魔式三個按鈕 + 稍後。
+- 應用內詢問面板與系統懸浮面板同步改成相同邏輯；`PromptOnceHint` 不再顯示。
+
+### 30.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.3-m4spike.apk` |
+| APK 大小 | 4,236,877 bytes |
+| APK SHA-256 | `EB1CFA47C72B70D63C970A8DF4C3E8CA544558586BD4256DF303867C4EC635BA` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.3-m4spike.aab` |
+| AAB 大小 | 4,830,314 bytes |
+| AAB SHA-256 | `44997A480A00E2BD9E0394D94ECA6378A72080F8B74B8DC32D0AECA3BB5BEB04` |
+| versionName / Code | `0.8.3-m4spike` / `21` |
+
+### 30.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 真機未驗證：三個按鈕在窄屏 / 大字體下的換行、限時入口的點擊區域。
+
+---
+
+## 31. v0.8.4-m4spike（2026-11-16）
+
+### 31.1 「稍後」靜默期
+
+- 原因：`PromptBroker.dismiss()` 原本會把同一應用加入 10 分鐘的抑制表，期間新連線直接套用默認動作，不再彈窗。
+- 改為 1 分鐘（`suppressAfterLaterMs = 60_000`）；1 分鐘後同一應用再次聯網會重新詢問。
+- 保留抑制表是為了避免應用立刻重試造成彈窗連發。
+
+### 31.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.4-m4spike.apk` |
+| APK 大小 | 4,236,881 bytes |
+| APK SHA-256 | `A0B74BA30A88450B610E989F2307162D934CFEE744626CE479E2F03C514AE521` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.4-m4spike.aab` |
+| AAB 大小 | 4,830,516 bytes |
+| AAB SHA-256 | `B29E8E205298E0AEE4500C7E6E8DC9E58156A8553BED2CA3DFB0BF6B132DA7C2` |
+| versionName / Code | `0.8.4-m4spike` / `22` |
+
+### 31.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 真機未驗證：稍後 1 分鐘後是否能按預期重新彈窗（取決於應用是否重試連線）。
+
+---
+
+## 32. v0.8.5-m4spike（2026-11-16）
+
+### 32.1 「稍後」按前台會話判斷
+
+- `PromptBroker.dismiss()` 不再寫入固定時間的抑制表，而是把應用加入 `sessionSuppressed`。
+- `PromptRouter` 每秒檢查（僅在有會話抑制時查 UsageStats）目前前台套件：
+  - 使用者按稍後時，應用仍在前台 → 保持抑制。
+  - 切到桌面或其他應用 → 更新前台記錄。
+  - 再次回到該應用 → `clearSessionSuppression()`，下一次連線重新詢問。
+- 無「使用情況訪問」權限時無法判斷前台，退回 60 秒後自動清空抑制。
+- 抑制鍵統一去掉 `android-app://` 前綴，現在是套件名稱。
+
+### 32.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.8.5-m4spike.apk` |
+| APK 大小 | 4,253,265 bytes |
+| APK SHA-256 | `7D108749227FB52DD92B49F46237CE9AB5B00D6BC3F73C6BBB10B1A26EF6B301` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.8.5-m4spike.aab` |
+| AAB 大小 | 4,831,759 bytes |
+| AAB SHA-256 | `7CB627DDA8944292E7FA1843E8144EA6263E0ADBC68212742AC0CD3A09D697D4` |
+| versionName / Code | `0.8.5-m4spike` / `23` |
+
+### 32.3 驗證
+
+- JVM 測試 / Debug / Release / AAB 構建通過。
+- 模擬器實測：Chrome 觸發詢問 → 點稍後 → 回桌面 → 再打開 Chrome，詢問重新出現。
+- 真機未驗證：UsageStats 在 OEM ROM 的前台判斷延遲。
+
+---
+
+## 33. v0.9.0-m4p1（2026-11-16）：轉發模式接入防火牆
+
+### 33.1 架構
+
+按「只有一個 VPN 擁有者、逐連線判決、代理只是出口」的做法調整轉發模式：
+
+```
+應用 → VPN 虛擬網卡 → ForwardingRelay ─ ForwardingPacketFilter ─┬─ 允許 → socketpair → hev（lwIP）→ 本機 SOCKS5（FlClash 僅代理）
+                                                               ├─ 拒絕 → RST / ICMP 不可達，記錄
+                                                               └─ 詢問 → 拒絕 + 建立詢問（允許後下一次連線轉發）
+```
+
+- hev 讀寫的是 `ParcelFileDescriptor.createReliableSocketPair()`（AF_UNIX SOCK_SEQPACKET）的一端；hev 對非 TUN fd 的 `TUNGETIFF` 失敗後使用一般 read/write，封包邊界由 SEQPACKET 保留。
+- 判決沿用黑洞模式的 `VpnRoutingPlanner` 結果（規則、模式、專注、鎖屏、可信應用）：`Bypass` → 轉發，`Block` → 拒絕，`BlockAndAsk` → 拒絕並詢問。系統 UID 放行；查不到擁有者時除「全部阻止」外放行並計數。
+- 只在 TCP SYN 與新 UDP 五元組上查 UID（Binder），結果緩存 10 秒（TCP）/ 60 秒滑動（UDP）；路由計畫每次重算時清空。
+- DNS：VPN 的 DNS 指向 hev 映射 DNS `10.111.222.3`，A 記錄映射到 `100.64.0.0/10`，hev 以域名向 SOCKS5 發 CONNECT；過濾層監聽 hev 回覆的 DNS，把映射位址還原成域名給詢問與記錄。
+- 排除名單：本應用、「代理應用」（避免回環）、「直連應用」。
+- 失敗處理：hev 無法啟動 → 按路由計畫回退黑洞模式並保留提示，每 2 分鐘重試；上游 SOCKS5 每 30 秒協商一次，不可用時總覽提示（連線失敗，不會直連）。
+
+### 33.2 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.9.0-m4p1.apk` |
+| APK 大小 | 4,269,645 bytes |
+| APK SHA-256 | `0BC47BA255BCA1067EC3BA97FBB14CBFF3418BD1388BC3C2FB9B0F9B645C482C` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.9.0-m4p1.aab` |
+| AAB 大小 | 4,860,217 bytes |
+| AAB SHA-256 | `F80ACD61C0F3959E6B9B98FD28825DACA31EC88887B26FAF1EA665673F358AB3` |
+| versionName / Code | `0.9.0-m4p1` / `24` |
+
+### 33.3 驗證
+
+- JVM 測試 83 個全部通過（新增 `ForwardingTest` 15 個）；Debug / Release / AAB 構建通過；Release APK 在模擬器啟動無崩潰。
+- 模擬器（x86_64，上游為電腦上的 Reqable SOCKS5 經 `adb reverse tcp:9000`）：
+  - `ping example.org` 解析為 `100.64.0.5`（mapdns 生效）；`nc example.org 80`、`nc www.baidu.com 80` 經代理回 `HTTP/1.1 200 OK`。
+  - Chrome（詢問模式、無規則）連線被拒並彈出懸浮詢問，記錄帶域名；點「允許」後 Chrome 經代理載入 example.org。
+  - 移除 `adb reverse` 後，健康檢查在 30 秒內記錄上游不可用。
+- 未驗證：
+  - 真機 + FlClash（僅代理）的吞吐、耗電、UDP / QUIC、長時間穩定性；`adb reverse` 不轉發 UDP，模擬器上無法驗證 UDP ASSOCIATE。
+  - hev 啟動失敗時的黑洞回退（只做了代碼審查）。
+  - 鎖屏斷網 / 專注模式在轉發模式下的實際阻擋（只有 `ForwardingPolicy` 的 JVM 測試）。
+- 已知限制：mapdns 只支援 IPv4；應用自帶的 DNS（不走系統 DNS）按普通 UDP 處理；帶域名 / 端口條件的規則仍只用於記錄，轉發模式下尚未逐連線執行（v0.9.1 已補上，見 §34）；已建立的連線不會被新規則切斷。
+
+## 34. v0.9.1-m4p2（2026-11-16）：審查修復、轉發條件規則、省電
+
+### 34.1 改動
+
+- **轉發模式的條件規則**：過濾層在新連線上把 UID、封包與映射域名交給 `VpnEngine.decideForwarding`。規則集含帶連線條件的規則時，用 `RuleSet.evaluate` 比對（映射位址按公網分區），第一條符合的是條件規則才覆寫路由計畫；應用級規則、可信應用、篡改檢測仍由路由計畫決定。專注、全部阻止、停用模式與系統 UID 不套用條件規則。
+- **「僅一次」**：`AppForegroundState` 按 Activity 記錄 RESUMED，只有應用的最後一個 Activity STOPPED（且亮屏）才算離開；應用內切換頁面（舊頁 PAUSED → 新頁 RESUMED → 舊頁 STOPPED）不再撤銷規則。
+- **審查修復**：通知動作 Toast 改在主執行緒；快速設定磁貼鎖屏時要求解鎖；舊版共享規則遷移只執行一次（`legacy_rules_migrated`）；`RuleIdentity.merge` 對臨時規則用新建立時間；黑洞模式下被丟棄的連線不再記成允許；被拦連線只查一次連線歸屬；身分緩存鍵含簽名與更新時間；不持有連線的詢問去重並限 50 條流；`PromptForegroundTracker` 不緩存查不到的 UID。
+- **省電**：`RuleLifetimeManager` 睡到下一條限時規則到期（最多 60 秒寫回命中），規則變更時提前醒來；`SpeedMonitor` 關屏暫停；`PromptRouter` 沒有詢問 / 抑制時掛起在 `PromptBroker.busy`。
+- **轉發性能與穩定**：已放行 UDP 流的快速路徑（不解析、不配置物件、不取鎖；2 秒有效，`invalidate()` 透過 epoch 立即失效）；過濾層例外只記錄並轉發該封包；VPN 服務被系統結束而防護仍開啟時自動重建（10 秒內最多一次）。
+
+### 34.2 產物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.9.1-m4p2.apk` |
+| APK 大小 | 4,269,645 bytes |
+| APK SHA-256 | `C2CBD1823F137D59167DFB7D3A6ED2C67ABC1E9A726E20E79BFDD88790E756F0` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.9.1-m4p2.aab` |
+| AAB 大小 | 4,873,091 bytes |
+| AAB SHA-256 | `C0CFA864BBD32C600A842CC1882BAF1786935D166CC55AFECF231D27BDC7F482` |
+| versionName / Code | `0.9.1-m4p2` / `25` |
+
+### 34.3 驗證
+
+- JVM 測試 93 個全部通過（新增 `ReviewFixesTest` 10 個）；Debug / Release / AAB 構建通過；Release APK 在模擬器升級安裝後啟動無崩潰。
+- 模擬器：Debug 版黑洞模式啟動正常、詢問與記錄正常；升級後 `legacy_rules_migrated=true`。轉發模式（上游 Reqable）下以 sqlite 插入「Chrome 拒絕 example.org」：example.org 被拒、記錄為 Deny / Rule / 該規則 id，同時 baidu.com 經代理連線成功（Reqable 的 MITM 憑證頁）。測試規則與轉發開關已還原。
+- 未驗證：真機耗電與吞吐；通知動作、快速設定磁貼、服務被殺後重建都沒有手動觸發；UsageStats 在各 ROM 上的事件順序。
+
+## 35. v0.9.2-m4p3（2026-11-16）：版本說明多語言
+
+- `ReleaseNote` 的每一則改為 `NoteText(en, zhHans, zhHant)`，界面用 `UiStrings.noteLanguage`（由語言標籤推導，與界面文字同一規則）取對應語言；0.1.0～0.9.1 的歷史條目全部補齊三語，原本簡繁混雜的條目已分開。
+- `ReleaseNotesTest` 保證三語都有內容、英文不含中文、簡繁常用對應字不混用；以後新增版本說明時缺任何一種語言都會測試失敗。
+- 產物：`artifacts\kotlin-android\NetworkControl-KT-0.9.2-m4p3.apk`（4,302,413 bytes，SHA-256 `232546CBBB2D0C75B91AFD0DA247D8FEB12D5F85BC352443C4609E0A82C2E2D7`）、同名 `.aab`（4,884,736 bytes，SHA-256 `AF44E30539DD322F95187928F10F7EDDE3861171B09E3A279A1CEA5FF33B1727`）；versionName / Code `0.9.2-m4p3` / `26`。
+- 驗證：JVM 測試 97 個通過；模擬器 Release 版用 `cmd locale set-app-locales` 依次切到 en、zh-TW、zh-CN，透過 UI 樹確認本版說明與歷史版本的文字語言正確，驗證後已還原應用語言。

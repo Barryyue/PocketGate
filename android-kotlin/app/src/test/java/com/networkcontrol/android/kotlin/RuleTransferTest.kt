@@ -23,10 +23,11 @@ class RuleTransferTest {
         id: String = "r1",
         action: VerdictAction = VerdictAction.Deny,
         profileId: String? = Profile.DEFAULT_ID,
+        path: String = "android-app://com.example.app",
     ) = Rule(
         id = id,
         profileId = profileId,
-        app = AppMatcher("android-app://com.example.app", requiredSignerId = "signer-a"),
+        app = AppMatcher(path, requiredSignerId = "signer-a"),
         conditions = RuleConditions(
             direction = Direction.Outbound,
             remotePort = PortRange.single(443),
@@ -79,7 +80,9 @@ class RuleTransferTest {
     @Test
     fun mergePlanKeepsExistingAndAddsNew() {
         val existing = rule("r1")
-        val json = RuleTransferService.export(listOf(rule("r1"), rule("r2")))
+        val json = RuleTransferService.export(
+            listOf(rule("r1"), rule("r2", path = "android-app://com.other.app")),
+        )
         val imported = RuleTransferService.importForPlan(json, listOf(Profile.Default))
         val plan = RuleTransferService.plan(listOf(existing), imported, RuleImportMode.Merge)
         assertEquals(1, plan.toAdd.size)
@@ -91,7 +94,7 @@ class RuleTransferTest {
     @Test
     fun replacePlanRemovesRulesMissingFromImport() {
         val existing = rule("r1")
-        val json = RuleTransferService.export(listOf(rule("r2")))
+        val json = RuleTransferService.export(listOf(rule("r2", path = "android-app://com.other.app")))
         val imported = RuleTransferService.importForPlan(json, listOf(Profile.Default))
         val plan = RuleTransferService.plan(listOf(existing), imported, RuleImportMode.Replace)
         assertEquals(1, plan.toAdd.size)
@@ -108,6 +111,19 @@ class RuleTransferTest {
         assertTrue(plan.toAdd.isEmpty())
         assertEquals(1, plan.toUpdate.size)
         assertEquals("r1", plan.toUpdate.single().id)
+        assertEquals(VerdictAction.Deny, plan.toUpdate.single().action)
+    }
+
+    @Test
+    fun sameIdentityWithDifferentIdUpdatesExistingInReplaceMode() {
+        val existing = rule("local-id", action = VerdictAction.Allow)
+        val json = RuleTransferService.export(listOf(rule("remote-id", action = VerdictAction.Deny)))
+        val imported = RuleTransferService.importForPlan(json, listOf(Profile.Default))
+        val plan = RuleTransferService.plan(listOf(existing), imported, RuleImportMode.Replace)
+        assertTrue(plan.toAdd.isEmpty())
+        assertTrue(plan.toRemove.isEmpty())
+        assertEquals(1, plan.toUpdate.size)
+        assertEquals("local-id", plan.toUpdate.single().id)
         assertEquals(VerdictAction.Deny, plan.toUpdate.single().action)
     }
 
