@@ -396,6 +396,16 @@ enum class S {
     LogsShowAllowed,
     AllowDomain,
     AllowDomainDone,
+    DnsBypassProtection,
+    DnsBypassProtectionHint,
+    ExitDns,
+    ExitDnsHint,
+    ExitDnsSystem,
+    ExitDnsCustom,
+    ExitDnsCustomUrl,
+    ExitDnsFallback,
+    ExitDnsFallbackHint,
+    DnsBypassListName,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -814,6 +824,16 @@ private val EN = mapOf(
     S.LogsShowAllowed to "Allowed",
     S.AllowDomain to "Always allow this domain",
     S.AllowDomainDone to "Allowed %1\$s for all apps",
+    S.DnsBypassProtection to "Prevent DNS bypass",
+    S.DnsBypassProtectionHint to "Apps that send DNS to their own servers are redirected to this app's DNS, and DNS-over-TLS / well-known DNS-over-HTTPS connections are blocked, so blocklists and domain rules can see every domain. If the system Private DNS is set to a hostname, set it to Automatic or Off.",
+    S.ExitDns to "DNS for the built-in exit",
+    S.ExitDnsHint to "How the built-in exit looks up domains. Encrypted DNS hides your lookups from the network operator.",
+    S.ExitDnsSystem to "System",
+    S.ExitDnsCustom to "Custom",
+    S.ExitDnsCustomUrl to "DoH address (https://…/dns-query)",
+    S.ExitDnsFallback to "Fall back to system DNS",
+    S.ExitDnsFallbackHint to "If encrypted DNS cannot be reached, use the system DNS (unencrypted) instead of failing.",
+    S.DnsBypassListName to "Encrypted DNS bypass",
 )
 
 private val CN = mapOf(
@@ -1208,6 +1228,16 @@ private val CN = mapOf(
     S.LogsShowAllowed to "已允许",
     S.AllowDomain to "始终允许这个域名",
     S.AllowDomainDone to "已为所有应用允许 %1\$s",
+    S.DnsBypassProtection to "防止绕过 DNS",
+    S.DnsBypassProtectionHint to "应用自己发往其他服务器的 DNS 会被导回本应用的 DNS，DNS-over-TLS 和知名的 DNS-over-HTTPS 连接会被阻止，这样拦截列表和域名规则才能看到所有域名。如果系统私人 DNS 设为了指定主机名，请改为「自动」或「关闭」。",
+    S.ExitDns to "内置出口的 DNS",
+    S.ExitDnsHint to "内置出口查询域名的方式。加密 DNS 可以避免网络运营商看到你查询的域名。",
+    S.ExitDnsSystem to "系统",
+    S.ExitDnsCustom to "自定义",
+    S.ExitDnsCustomUrl to "DoH 地址（https://…/dns-query）",
+    S.ExitDnsFallback to "失败时退回系统 DNS",
+    S.ExitDnsFallbackHint to "加密 DNS 连不上时改用系统 DNS（不加密），而不是直接失败。",
+    S.DnsBypassListName to "加密 DNS 绕过",
 )
 
 private val TW = mapOf(
@@ -1602,4 +1632,14 @@ private val TW = mapOf(
     S.LogsShowAllowed to "已允許",
     S.AllowDomain to "一律允許這個網域",
     S.AllowDomainDone to "已為所有應用程式允許 %1\$s",
+    S.DnsBypassProtection to "防止繞過 DNS",
+    S.DnsBypassProtectionHint to "應用程式自己發往其他伺服器的 DNS 會被導回本應用程式的 DNS，DNS-over-TLS 和知名的 DNS-over-HTTPS 連線會被阻擋，這樣攔截列表和網域規則才能看到所有網域。如果系統私人 DNS 設為指定主機名稱，請改為「自動」或「關閉」。",
+    S.ExitDns to "內建出口的 DNS",
+    S.ExitDnsHint to "內建出口查詢網域的方式。加密 DNS 可以避免網路業者看到你查詢的網域。",
+    S.ExitDnsSystem to "系統",
+    S.ExitDnsCustom to "自訂",
+    S.ExitDnsCustomUrl to "DoH 位址（https://…/dns-query）",
+    S.ExitDnsFallback to "失敗時退回系統 DNS",
+    S.ExitDnsFallbackHint to "加密 DNS 連不上時改用系統 DNS（不加密），而不是直接失敗。",
+    S.DnsBypassListName to "加密 DNS 繞過",
 )

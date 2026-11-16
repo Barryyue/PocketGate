@@ -306,7 +306,8 @@ private fun LogDetailDialog(
                 entry.verdict.ruleId?.let { id ->
                     if (id.startsWith("blocklist:")) {
                         val listId = id.removePrefix("blocklist:")
-                        DetailRow(s[S.ReasonBlocklist], listName(listId) ?: listId)
+                        val name = if (listId == "dns-bypass") s[S.DnsBypassListName] else listName(listId) ?: listId
+                        DetailRow(s[S.ReasonBlocklist], name)
                     } else {
                         DetailRow(s[S.Rule], id)
                     }

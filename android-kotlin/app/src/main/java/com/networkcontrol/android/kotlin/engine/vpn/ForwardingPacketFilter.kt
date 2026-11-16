@@ -30,6 +30,8 @@ class ForwardingCounters {
     val unknownOwner = AtomicLong()
     val dnsMapped = AtomicLong()
     val udpFastPath = AtomicLong()
+    val dnsRedirected = AtomicLong()
+    val dnsBypassBlocked = AtomicLong()
 }
 
 /**
@@ -49,6 +51,8 @@ class ForwardingPacketFilter(
     private val decide: (uid: Int?, info: PacketInfo, hostname: String?) -> ForwardingDecision,
     private val onBlocked: (PacketInfo, uid: Int?, ask: Boolean) -> Unit,
     private val blockUdp: () -> Boolean,
+    /** 把應用直接發往其他 DNS 伺服器的查詢改寫到映射 DNS（防止繞過本機 DNS）。 */
+    private val redirectDns: () -> Boolean = { false },
     /** 命中攔截列表的新連線；預設與一般拒絕相同。 */
     private val onBlocklisted: (PacketInfo, uid: Int?) -> Unit = { info, uid -> onBlocked(info, uid, false) },
     /** 新連線被判定轉發時呼叫（只在新連線上，不是每個封包），用於記錄已允許的連線。 */
@@ -59,6 +63,7 @@ class ForwardingPacketFilter(
     private val maxEntries: Int = 8192,
 ) {
     val counters = ForwardingCounters()
+    private val dnsRedirect = DnsRedirect(dnsAddress.address)
 
     private val cacheLock = Any()
     private val decisions = HashMap<FlowKey, CachedDecision>()
@@ -112,14 +117,33 @@ class ForwardingPacketFilter(
             return true
         }
         when (info.protocol) {
-            L4Protocol.Tcp -> if (!info.isConnectionAttempt) {
-                counters.forwarded.incrementAndGet()
-                return true
+            L4Protocol.Tcp -> {
+                if (!info.isConnectionAttempt) {
+                    counters.forwarded.incrementAndGet()
+                    return true
+                }
+                // DNS over TCP 到其他伺服器：拒絕，讓解析器改用（會被改寫的）UDP。
+                if (info.destination.port == dnsPort && info.destination.address != dnsAddress && redirectDns()) {
+                    counters.dnsBypassBlocked.incrementAndGet()
+                    reject(packet, length, info, writer)
+                    return false
+                }
             }
             L4Protocol.Udp -> {
                 if (info.destination.port == dnsPort && info.destination.address == dnsAddress) {
                     counters.forwarded.incrementAndGet()
                     return true
+                }
+                if (info.destination.port == dnsPort && redirectDns()) {
+                    if (dnsRedirect.redirectQuery(packet, length)) {
+                        counters.dnsRedirected.incrementAndGet()
+                        counters.forwarded.incrementAndGet()
+                        return true
+                    }
+                    // IPv6 的 DNS 伺服器無法改寫到 IPv4 的映射 DNS：回 ICMP 不可達，解析器會改用其他伺服器。
+                    counters.dnsBypassBlocked.incrementAndGet()
+                    reject(packet, length, info, writer)
+                    return false
                 }
                 if (blockUdp()) {
                     counters.udpDropped.incrementAndGet()
@@ -230,11 +254,14 @@ class ForwardingPacketFilter(
         if (info.protocol != L4Protocol.Udp || info.source.address != dnsAddress) return
         val end = (info.payloadOffset + info.payloadLength).coerceAtMost(length)
         val answers = DnsAnswers.parseA(packet, info.payloadOffset, end)
-        if (answers.isEmpty()) return
-        synchronized(namesLock) {
-            answers.forEach { (name, address) -> names[address] = name }
+        if (answers.isNotEmpty()) {
+            synchronized(namesLock) {
+                answers.forEach { (name, address) -> names[address] = name }
+            }
+            counters.dnsMapped.addAndGet(answers.size.toLong())
         }
-        counters.dnsMapped.addAndGet(answers.size.toLong())
+        // 被改寫的查詢：把回覆的來源改回應用原本詢問的伺服器（就地修改，轉送層隨後寫回虛擬網卡）。
+        dnsRedirect.restoreReply(packet, length)
     }
 
     private fun remember(key: FlowKey, decision: ForwardingDecision, now: Long, protocol: L4Protocol) {

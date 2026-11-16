@@ -216,6 +216,25 @@ class AppPreferences(context: Context) {
 
     val usesDirectUpstream: Boolean get() = forwardingUpstream != UPSTREAM_SOCKS5
 
+    /** 逐連線模式：改寫應用自己發往其他伺服器的 DNS、阻擋 DoT 與知名 DoH，避免繞過本機 DNS。 */
+    var dnsBypassProtection: Boolean
+        get() = prefs.getBoolean(KEY_DNS_BYPASS_PROTECTION, true)
+        set(value) = prefs.edit().putBoolean(KEY_DNS_BYPASS_PROTECTION, value).apply()
+
+    /** 內建出口的 DNS：`system`、內建 DoH 服務 id（見 DohProviders）或 `custom`。 */
+    var exitDnsProvider: String
+        get() = prefs.getString(KEY_EXIT_DNS_PROVIDER, "system") ?: "system"
+        set(value) = prefs.edit().putString(KEY_EXIT_DNS_PROVIDER, value).apply()
+
+    var exitDnsCustomUrl: String?
+        get() = prefs.getString(KEY_EXIT_DNS_CUSTOM_URL, null)?.takeIf { it.isNotBlank() }
+        set(value) = prefs.edit().putString(KEY_EXIT_DNS_CUSTOM_URL, value).apply()
+
+    /** 加密 DNS 連不上時退回系統 DNS（明文）；關閉後解析失敗就是失敗。 */
+    var exitDnsFallback: Boolean
+        get() = prefs.getBoolean(KEY_EXIT_DNS_FALLBACK, true)
+        set(value) = prefs.edit().putBoolean(KEY_EXIT_DNS_FALLBACK, value).apply()
+
     /** 轉發模式下直接排除在 VPN 之外的應用：不經代理，也不受防火牆管控。 */
     var forwardingDirectPackages: Set<String>
         get() = prefs.getStringSet(KEY_FORWARDING_DIRECT_PACKAGES, emptySet())?.toSet().orEmpty()
@@ -230,6 +249,10 @@ class AppPreferences(context: Context) {
         const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
         const val UPSTREAM_SOCKS5 = ForwardingUpstream.SOCKS5
         const val KEY_FORWARDING_UPSTREAM = "forwarding_upstream"
+        const val KEY_DNS_BYPASS_PROTECTION = "dns_bypass_protection"
+        const val KEY_EXIT_DNS_PROVIDER = "exit_dns_provider"
+        const val KEY_EXIT_DNS_CUSTOM_URL = "exit_dns_custom_url"
+        const val KEY_EXIT_DNS_FALLBACK = "exit_dns_fallback"
         const val KEY_THEME = "theme"
         const val KEY_LANGUAGE = "language"
         const val KEY_PROTECTION = "protection"

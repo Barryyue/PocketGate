@@ -77,7 +77,7 @@ class VpnEngine(
         onFlow = { flow: FlowInfo -> pipeline.decide(flow) },
         extraHostname = { address -> forwardingFilter.hostnameFor(address) },
         onAllowed = { flow: FlowInfo -> pipeline.recordAllowed(flow) },
-        onBlocklisted = { flow: FlowInfo -> pipeline.recordBlocklisted(flow, blocklist().match(flow.engineHostname)) },
+        onBlocklisted = { flow: FlowInfo -> pipeline.recordBlocklisted(flow, blockedListId(flow)) },
     )
 
     /** 轉發模式的逐連線過濾層：路由計畫決定放行（轉發）、阻止或詢問。 */
@@ -86,6 +86,7 @@ class VpnEngine(
         decide = { uid, info, hostname -> decideForwarding(uid, info, hostname) },
         onBlocked = { info, uid, _ -> reporter.report(info, uid) },
         blockUdp = { !preferences.socks5Udp },
+        redirectDns = { preferences.dnsBypassProtection },
         onForwarded = { info, uid -> reporter.reportAllowed(info, uid) },
         onBlocklisted = { info, uid -> reporter.reportBlocklisted(info, uid) },
     )
@@ -98,9 +99,19 @@ class VpnEngine(
 
     private val underlying = UnderlyingNetwork(context)
 
+    /** 內建出口的域名解析：選了加密 DNS 時走 DoH，否則（或允許退回時失敗）用實體網路的系統 DNS。 */
+    val exitResolver = com.networkcontrol.android.kotlin.engine.dns.DohResolver(
+        url = {
+            com.networkcontrol.android.kotlin.engine.dns.DohProviders.find(preferences.exitDnsProvider)?.url
+                ?: preferences.exitDnsCustomUrl?.takeIf { preferences.exitDnsProvider == "custom" && it.startsWith("https://") }
+        },
+        open = { url -> underlying.openConnection(url) as java.net.HttpURLConnection },
+        fallback = { if (preferences.exitDnsFallback) underlying::resolve else null },
+    )
+
     private fun ensureDirectServer(): DirectSocksServer =
         directServer ?: DirectSocksServer(
-            resolve = underlying::resolve,
+            resolve = exitResolver::resolve,
             bindSocket = { underlying.bind(it) },
             bindDatagram = { underlying.bind(it) },
         ).also {
@@ -124,13 +135,16 @@ class VpnEngine(
         val ruleSet = rules.ruleSet.value
         val lists = blocklist()
         val useLists = hostname != null && !lists.isEmpty
-        if (!ruleSet.hasFlowConditions && !useLists) return ForwardingPolicy.decide(plan, uid)
+        // 防止繞過本機 DNS：一般應用的 DoT / 知名 DoH 連線視為命中名單（系統核心 UID 例外，避免影響私人 DNS）。
+        val encryptedDns = preferences.dnsBypassProtection && uid != null && !VpnRoutingPlanner.isSystemUid(uid) &&
+            com.networkcontrol.android.kotlin.engine.dns.EncryptedDnsTargets.matches(info.destination.port, info.destination.address, hostname)
+        if (!ruleSet.hasFlowConditions && !useLists && !encryptedDns) return ForwardingPolicy.decide(plan, uid)
         val context by lazy { flowContext(plan, uid, info, hostname) }
         return ForwardingPolicy.decide(
             plan,
             uid,
             blocklisted = {
-                useLists && lists.match(hostname) != null &&
+                (encryptedDns || (useLists && lists.match(hostname) != null)) &&
                     !ruleSet.allowsDomain(context.flow, context.flow.app, context.domains, context.zone, network.current)
             },
         ) {
@@ -141,6 +155,15 @@ class VpnEngine(
             }
         }
     }
+
+    /** 記錄用：命中哪份名單；加密 DNS 防繞過記為 `dns-bypass`。 */
+    private fun blockedListId(flow: FlowInfo): String? =
+        blocklist().match(flow.engineHostname)
+            ?: if (com.networkcontrol.android.kotlin.engine.dns.EncryptedDnsTargets.matches(flow.remote.port, flow.remote.address, flow.engineHostname)) {
+                DNS_BYPASS_LIST_ID
+            } else {
+                null
+            }
 
     private class FlowContext(
         val flow: FlowInfo,
@@ -387,6 +410,7 @@ class VpnEngine(
         const val UPSTREAM_CHECK_INTERVAL_MS = 30_000L
         const val FORWARDING_RETRY_INTERVAL_MS = 120_000L
         const val DETACH_REBUILD_INTERVAL_MS = 10_000L
+        const val DNS_BYPASS_LIST_ID = "dns-bypass"
         const val FAILURE_REBUILD_INTERVAL_MS = 10_000L
     }
 
