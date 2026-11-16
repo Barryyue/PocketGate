@@ -33,6 +33,7 @@ class ForwardingCounters {
     val dnsRedirected = AtomicLong()
     val dnsBypassBlocked = AtomicLong()
     val connectionsCut = AtomicLong()
+    val dnsQueued = AtomicLong()
 }
 
 /**
@@ -65,6 +66,28 @@ class ForwardingPacketFilter(
 ) {
     val counters = ForwardingCounters()
     private val dnsRedirect = DnsRedirect(dnsAddress.address)
+
+    /**
+     * 映射 DNS 查詢一次只交給 hev 一個、回覆後間隔 2 ms 再放行下一個，逾時未回覆自己重送（原因見 [DnsPacer]）。
+     */
+    private val dnsPacer = DnsPacer()
+
+    /** 由轉送層的放行執行緒呼叫：放行排隊中的查詢、重送逾時未回覆的查詢；回傳是否仍有待處理的查詢。 */
+    fun drainDns(): Boolean {
+        val writer = toHev ?: return false
+        if (!dnsPacer.busy) return false
+        dnsPacer.drain(clock()).forEach(writer::write)
+        return dnsPacer.busy
+    }
+
+    /** 把查詢交給映射 DNS：可以立即放行就回傳 true，否則已排隊（之後由 [drainDns] 放行）。 */
+    private fun forwardDnsQuery(packet: ByteArray, length: Int, now: Long): Boolean {
+        val writer = toHev ?: return true
+        dnsPacer.drain(now).forEach(writer::write)
+        val immediate = dnsPacer.offer(packet, length, now)
+        if (!immediate) counters.dnsQueued.incrementAndGet()
+        return immediate
+    }
 
     private val cacheLock = Any()
     private val decisions = HashMap<FlowKey, CachedDecision>()
@@ -216,13 +239,13 @@ class ForwardingPacketFilter(
             L4Protocol.Udp -> {
                 if (info.destination.port == dnsPort && info.destination.address == dnsAddress) {
                     counters.forwarded.incrementAndGet()
-                    return true
+                    return forwardDnsQuery(packet, length, clock())
                 }
                 if (info.destination.port == dnsPort && redirectDns()) {
                     if (dnsRedirect.redirectQuery(packet, length)) {
                         counters.dnsRedirected.incrementAndGet()
                         counters.forwarded.incrementAndGet()
-                        return true
+                        return forwardDnsQuery(packet, length, clock())
                     }
                     // IPv6 的 DNS 伺服器無法改寫到 IPv4 的映射 DNS：回 ICMP 不可達，解析器會改用其他伺服器。
                     counters.dnsBypassBlocked.incrementAndGet()
@@ -353,6 +376,8 @@ class ForwardingPacketFilter(
         if (!isUdpFromPort(packet, length, dnsPort)) return
         val info = IpPacketParser.tryParse(packet, length) ?: return
         if (info.protocol != L4Protocol.Udp || info.source.address != dnsAddress) return
+        // 一個映射 DNS 回覆：讓出在途名額（下一個查詢由放行執行緒依間隔送出）。
+        dnsPacer.onResponse(packet, length, clock())
         val end = (info.payloadOffset + info.payloadLength).coerceAtMost(length)
         val answers = DnsAnswers.parseA(packet, info.payloadOffset, end)
         if (answers.isNotEmpty()) {

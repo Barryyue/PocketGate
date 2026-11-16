@@ -254,6 +254,26 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_SOCKS5_BYPASS_PACKAGE, null)?.takeIf { it.isNotBlank() }
         set(value) = prefs.edit().putString(KEY_SOCKS5_BYPASS_PACKAGE, value).apply()
 
+    /** 更新來源：GitHub / GitLab / Gitee / Custom。 */
+    var updateSource: com.networkcontrol.android.kotlin.core.update.UpdateSource
+        get() = runCatching {
+            enumValueOf<com.networkcontrol.android.kotlin.core.update.UpdateSource>(
+                prefs.getString(KEY_UPDATE_SOURCE, "GitHub").orEmpty(),
+            )
+        }.getOrDefault(com.networkcontrol.android.kotlin.core.update.UpdateSource.GitHub)
+        set(value) = prefs.edit().putString(KEY_UPDATE_SOURCE, value.name).apply()
+
+    /** GitHub / Gitee 為 owner/repo；GitLab 為 group/project。 */
+    var updateRepo: String
+        get() = prefs.getString(KEY_UPDATE_REPO, "Barryyue/network-control")
+            ?: "Barryyue/network-control"
+        set(value) = prefs.edit().putString(KEY_UPDATE_REPO, value.trim()).apply()
+
+    /** Custom 來源使用的 JSON URL。 */
+    var updateCustomUrl: String
+        get() = prefs.getString(KEY_UPDATE_CUSTOM_URL, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_UPDATE_CUSTOM_URL, value.trim()).apply()
+
     private companion object {
         const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
         const val UPSTREAM_SOCKS5 = ForwardingUpstream.SOCKS5
@@ -303,6 +323,9 @@ class AppPreferences(context: Context) {
         const val KEY_SOCKS5_PASSWORD = "socks5_password"
         const val KEY_SOCKS5_BYPASS_PACKAGE = "socks5_bypass_package"
         const val KEY_FORWARDING_DIRECT_PACKAGES = "forwarding_direct_packages"
+        const val KEY_UPDATE_SOURCE = "update_source"
+        const val KEY_UPDATE_REPO = "update_repo"
+        const val KEY_UPDATE_CUSTOM_URL = "update_custom_url"
         const val KEY_LEGACY_RULES_MIGRATED = "legacy_rules_migrated"
         const val DEFAULT_THEME_COLOR = 0xFF2E7D32.toInt()
     }
