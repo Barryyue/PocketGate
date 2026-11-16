@@ -283,16 +283,25 @@
 |---|---|---|---|---|
 | K-120 | 「僅一次」因離開前台而撤銷後進入背景靜默：該應用的背景連線直接拒絕並記錄，不建立詢問（不發通知、不彈懸浮窗），已存在的該應用詢問一併移除；應用回到前台時解除，之後的連線照常以懸浮窗詢問。沒有使用情況權限時不靜默 | `TargetAppSessionTracker.onRevokedAfterLeaving`、`PromptBroker.quietInBackground/endBackgroundQuiet`、`PromptForegroundTracker.isForeground`、`PromptRouter`、`AppContainer` | 模擬器：Chrome 點「僅一次」→ 回桌面 → 日誌「allow-once ended … quiet」→ 約 55 秒內 Chrome 無詢問、無通知，背景連線記錄為拒絕 → 重新開啟 → 日誌「back in foreground; prompts resume」並彈出懸浮窗 | 使用者回饋：選僅一次後應用到後台，通知很多但懸浮窗很少（懸浮窗只詢問前台應用，屬設計）；改為背景靜默 |
 
+### v0.9.9-m4p10（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-121 | 敏感操作再驗證（K-043b）：開啟應用鎖時，關閉保護、切換模式、修改規則 / 應用決定、開關逐連線模式、改直連應用、關閉 DNS 防繞過、關閉攔截列表、關閉應用鎖前要求系統鎖屏憑證，驗證後 30 秒寬限；鎖屏上的通知「允許 / 拒絕」設為需要解鎖（Android 12+）；應用鎖說明改為如實描述能力與限制 | `AppLockGate.SensitiveActionGuard / LocalSensitiveAction`、各界面、`PromptNotifier.lockedAction`、`UiStrings.AppLockHint` | 模擬器（臨時設 PIN，測後清除）：解鎖 30 秒後切換模式出現「請驗證身分」，輸入 PIN 後繼續；寬限內第二次修改不再詢問 | 用戶決定：本版之後應用鎖相關功能降低優先級，暫不再做（無法阻止在系統設定關閉 VPN，目前場景用不到） |
+| K-122 | 主執行緒 PackageManager（K-026 剩餘部分）：代理應用 / 直連應用選擇框、「關於」中的應用數改為背景載入 | `SettingsScreen` | 構建 | `establish()` 失敗的顯示已在 v0.9.0 起於總覽顯示 tunnelError |
+| K-123 | 清理全部編譯警告（完整重新編譯為零警告）：桌布變化改用 `WallpaperManager.OnColorsChangedListener`；`onLowMemory`、`createConfirmDeviceCredentialIntent`、NetworkStats 的舊網路類型常數加註說明後壓下；`arrayOf<Any>` 明確型別；多餘條件 | `SpeedIslandController`、`AppLockGate`、`TrafficCollector`、`Databases`、`BlocklistSettingsScreen` | 刪除編譯快取後完整重編 | — |
+| K-124 | K-045b：Release 按 ABI 拆分（arm64 為主安裝包，另附 x86_64 模擬器包；Debug 與 AAB 不變）；Baseline Profile（`:baselineprofile` 模組 + `profileinstaller`，冷啟動後依序打開各分頁），生成檔提交於 `app/src/release/generated`；腳本新增 `baseline`、`startup` 命令；CI 新增 `android-kotlin.yml`（單元測試、Release、體積上限 5.5 MB、檢查 baseline.prof） | `app/build.gradle.kts`、`baselineprofile/`、`scripts/android-kotlin.ps1`、`.github/workflows/android-kotlin.yml` | 模擬器生成 Profile 成功；安裝包含 `assets/dexopt/baseline.prof`；arm64 包 4,287,546 bytes（原通用包 4,450,329）；冷啟動在模擬器上量不出差異（全新安裝中位數 526 / 493 ms，強制編譯後 902 / 892 ms，均在雜訊內） | 側載安裝時配置要等首次啟動後由系統背景編譯才生效；CI 工作流未在 GitHub 上實際執行過 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
 |---|---|---|
-| K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 部分完成（應用列表的 SIM 查詢已提升），其餘待做；新增：代理應用選擇器 `installedApps()` 仍在主執行緒載入 |
-| K-043b | 應用鎖在修改規則 / 模式前的即時驗證 | 待做（第一版只鎖啟動與背景超過 1 分鐘） |
-| K-045b | Baseline Profiles、arm64-only、CI 大小 / 啟動基線 | 待做 |
+| K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 已完成（K-122） |
+| K-043b | 應用鎖在修改規則 / 模式前的即時驗證 | 已完成（K-121）；之後應用鎖相關功能降低優先級，暫不再做 |
+| K-045b | Baseline Profiles、arm64-only、CI 大小 / 啟動基線 | 已完成（K-124）；啟動時間未進 CI（模擬器在 CI 上耗時且雜訊大），改為本機 `scripts/android-kotlin.ps1 startup` |
 | K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 待用戶提供 keystore |
 | K-048b | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | 待真機 |
-| K-051 | 轉發模式 + 上游代理：v0.9.0 接入按應用判決、mapdns、健康檢查；v0.9.1 條件規則逐連線生效；v0.9.2 三語版本說明；v0.9.3 失敗自動重建 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
+| K-051 | 轉發 / 逐連線模式總覽：v0.9.0 按應用判決與 mapdns；v0.9.1 條件規則；v0.9.4 內建直連出口；v0.9.5 攔截列表；v0.9.6 DNS 防繞過與 DoH；v0.9.7 切斷連線、追蹤器、NIO 出口 | M4，見 [android-forwarding-research.md](android-forwarding-research.md)；剩餘見 K-051b、K-051f |
 | K-051a | mapdns 只支援 IPv4；IPv6 AAAA 回空 | 不做：應用會改用 IPv4，純 IPv6 網路一般有 464XLAT，內建出口也會在 IPv4 失敗後改用 IPv6（見 android-kotlin.md §39） |
 | K-051b | 安全加固：查不到 UID 時放行；ICMP / 非 TCP-UDP / 解析失敗封包直接轉發 | 部分完成：白名單與全部阻止模式改為拒絕（K-118）；其他模式仍放行，避免誤殺系統元件 |
 | K-051c | 應用自帶 DNS / DoH 不經 mapdns | 已完成（K-109～K-111：DNS 導回、阻擋 DoT / 知名 DoH）；映射位址仍無法比對遠端位址條件 |

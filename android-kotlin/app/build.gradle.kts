@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("androidx.baselineprofile")
 }
 
 android {
@@ -24,8 +25,8 @@ android {
         applicationId = "com.networkcontrol.android.kotlin"
         minSdk = 29
         targetSdk = 36
-        versionCode = 32
-        versionName = "0.9.8-m4p9"
+        versionCode = 33
+        versionName = "0.9.9-m4p10"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -61,6 +62,17 @@ android {
         buildConfig = true
     }
 
+    // Release 按 ABI 拆分：給一般使用者的是 arm64 安裝包（目前的實機幾乎都是 arm64），
+    // x86_64 只給模擬器。Debug 保持單一通用安裝包，開發流程不變。AAB 由商店自行按 ABI 下發。
+    splits {
+        abi {
+            isEnable = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) && !it.contains("bundle", ignoreCase = true) }
+            reset()
+            include("arm64-v8a", "x86_64")
+            isUniversalApk = false
+        }
+    }
+
     packaging {
         resources.excludes += setOf(
             "/META-INF/{AL2.0,LGPL2.1}",
@@ -75,8 +87,17 @@ android {
     }
 }
 
+baselineProfile {
+    // 只在開發機上手動生成（:app:generateReleaseBaselineProfile），生成結果提交到 src/release/generated；
+    // 一般構建不會連接裝置。
+    automaticGenerationDuringBuild = false
+}
+
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.06.01"))
+    // 安裝後依 Baseline Profile 預先編譯啟動路徑（側載安裝也有效）
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+    baselineProfile(project(":baselineprofile"))
     implementation("androidx.activity:activity-compose:1.10.1")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.core:core-ktx:1.16.0")
