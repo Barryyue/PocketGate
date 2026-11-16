@@ -1104,7 +1104,7 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 ---
 
-## 34. v0.9.3-m4p4（2026-11-16）：審查修补
+## 34a. v0.9.3-m4p4（2026-11-16）：審查修补
 
 ### 34.1 修復
 
@@ -1332,3 +1332,11 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - **新增背景靜默**：「僅一次」因離開而撤銷後，該應用的背景連線直接拒絕並記錄、不產生詢問；回到前台即解除，下一次連線以懸浮窗詢問。這避免了「選了僅一次，應用到後台後通知不斷」。
 - 產物：`artifacts\kotlin-android\NetworkControl-KT-0.9.8-m4p9.apk`（4,450,329 bytes，SHA-256 `DD5D86FA353AB748CDB9EA687428D5C47B60306E1F107B4C23D02A7460F858CB`）、同名 `.aab`（5,056,733 bytes，SHA-256 `1222F901FDF188EA28CB91096295D2C4BEA89128C050C0C42F0B0FB7AACD6981`）；versionName / Code `0.9.8-m4p9` / `32`。
 - 驗證：JVM 測試 138 個通過；模擬器流程見 K-120；Release APK 啟動無崩潰。未在真機驗證（例如 Telegram 的背景推送經由 Google Play 服務，不受該應用的「僅一次」影響）。
+
+## 41. v0.9.9-m4p10（2026-11-16）：敏感操作再驗證、背景載入、零警告、arm64 與 Baseline Profile
+
+- **應用鎖**：敏感操作再驗證見 K-121。它只能防止別人在本應用內隨手修改、查看記錄，**無法阻止在系統設定中關閉 VPN**，所以不適合用來做兒童管控（真正強制需要裝置管理員 / MDM 的 `DISALLOW_CONFIG_VPN`）。用戶決定之後應用鎖相關功能降低優先級，暫不再做。
+- **安裝包**：Release 按 ABI 拆分，`NetworkControl-KT-<版本>.apk` 為 arm64（給一般使用者），`-x86_64-emulator.apk` 只給模擬器；AAB 不拆分（商店自行下發）。
+- **Baseline Profile**：`:baselineprofile` 模組以 UiAutomator 走冷啟動與各分頁；`scripts/android-kotlin.ps1 baseline` 重新生成（只用模擬器）。模擬器上量不出冷啟動差異，見 K-124；真機效果未量測。
+- **CI**：`.github/workflows/android-kotlin.yml`（只在 `android-kotlin/` 變更時執行）：單元測試、Release、arm64 體積上限 5.5 MB、檢查 `baseline.prof`。尚未在 GitHub 上實際執行過。
+- 本章的 34a 為 v0.9.3 一節（原與 v0.9.1 一節同為 34）。

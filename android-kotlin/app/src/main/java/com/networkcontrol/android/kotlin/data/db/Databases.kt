@@ -44,7 +44,7 @@ class ConfigDatabase(context: Context) : SQLiteOpenHelper(context, NAME, null, V
         )
         db.execSQL(
             "INSERT INTO profiles (id, name, mode, auto_activate, sort_order) VALUES (?, ?, ?, NULL, 0);",
-            arrayOf("00000000-0000-0000-0000-000000000001", "默認", 0),
+            arrayOf<Any>("00000000-0000-0000-0000-000000000001", "默認", 0),
         )
         db.execSQL(
             """

@@ -7,9 +7,11 @@
 #   .\scripts\android-kotlin.ps1 publish
 #   .\scripts\android-kotlin.ps1 aab
 #   .\scripts\android-kotlin.ps1 emulator
+#   .\scripts\android-kotlin.ps1 baseline   # 重新生成 Baseline Profile（只用模擬器）
+#   .\scripts\android-kotlin.ps1 startup    # 量測冷啟動
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('build', 'test', 'install', 'logcat', 'publish', 'aab', 'emulator')]
+    [ValidateSet('build', 'test', 'install', 'logcat', 'publish', 'aab', 'emulator', 'baseline', 'startup')]
     [string]$Command = 'build'
 )
 
@@ -22,7 +24,7 @@ $avdHome = if ($env:NC_ANDROID_AVD_HOME) { $env:NC_ANDROID_AVD_HOME } else { 'D:
 $adb = Join-Path $sdk 'platform-tools\adb.exe'
 $emulator = 'D:\tools\android-dev\emu34\emulator\emulator.exe'
 $package = 'com.networkcontrol.android.kotlin.debug'
-$version = '0.9.8-m4p9'
+$version = '0.9.9-m4p10'
 
 $env:JAVA_HOME = $jdk
 $env:ANDROID_HOME = $sdk
@@ -61,17 +63,47 @@ switch ($Command) {
     }
     'publish' {
         Invoke-Gradle @('assembleRelease')
-        $source = Join-Path $project 'app\build\outputs\apk\release\app-release.apk'
-        if (-not (Test-Path $source)) { throw "Release APK not found: $source" }
+        # Release 按 ABI 拆分：arm64 是給一般使用者的主安裝包，x86_64 只給模擬器。
         $outDir = Join-Path $root 'artifacts\kotlin-android'
         New-Item -ItemType Directory -Force $outDir | Out-Null
-        $target = Join-Path $outDir ("NetworkControl-KT-{0}.apk" -f $version)
-        Copy-Item $source $target -Force
-        $size = (Get-Item $target).Length
-        $hash = (Get-FileHash $target -Algorithm SHA256).Hash
-        Write-Host ("Release APK: {0} ({1:N1} MB)" -f $target, ($size / 1MB))
-        Write-Host ("Size: {0} bytes" -f $size)
-        Write-Host ("SHA-256: {0}" -f $hash)
+        $variants = @(
+            @{ Abi = 'arm64-v8a'; Name = ("NetworkControl-KT-{0}.apk" -f $version) },
+            @{ Abi = 'x86_64'; Name = ("NetworkControl-KT-{0}-x86_64-emulator.apk" -f $version) }
+        )
+        foreach ($variant in $variants) {
+            $source = Join-Path $project ("app\build\outputs\apk\release\app-{0}-release.apk" -f $variant.Abi)
+            if (-not (Test-Path $source)) { throw "Release APK not found: $source" }
+            $target = Join-Path $outDir $variant.Name
+            Copy-Item $source $target -Force
+            $size = (Get-Item $target).Length
+            $hash = (Get-FileHash $target -Algorithm SHA256).Hash
+            Write-Host ("Release APK ({0}): {1} ({2:N1} MB)" -f $variant.Abi, $target, ($size / 1MB))
+            Write-Host ("Size: {0} bytes" -f $size)
+            Write-Host ("SHA-256: {0}" -f $hash)
+        }
+    }
+    'baseline' {
+        # 重新生成 Baseline Profile（需要模擬器；開發機可能同時連著實機，只用模擬器）。
+        if (-not $env:ANDROID_SERIAL) { $env:ANDROID_SERIAL = 'emulator-5554' }
+        Invoke-Gradle @(':app:generateReleaseBaselineProfile')
+        Write-Host ("Baseline profile: {0}" -f (Join-Path $project 'app\src\release\generated\baselineProfiles\baseline-prof.txt'))
+    }
+    'startup' {
+        # 量測冷啟動（am start -W 的 TotalTime，取 5 次）。用法：.\scripts\android-kotlin.ps1 startup
+        if (-not $env:ANDROID_SERIAL) { $env:ANDROID_SERIAL = 'emulator-5554' }
+        $releasePackage = 'com.networkcontrol.android.kotlin'
+        $times = @()
+        foreach ($i in 1..5) {
+            & $adb shell am force-stop $releasePackage | Out-Null
+            Start-Sleep -Seconds 2
+            $output = & $adb shell am start -W -n "$releasePackage/com.networkcontrol.android.kotlin.MainActivity"
+            $line = $output | Where-Object { $_ -match 'TotalTime' }
+            if ($line -match '(\d+)') { $times += [int]$Matches[1] }
+            Start-Sleep -Seconds 3
+        }
+        $sorted = $times | Sort-Object
+        Write-Host ("Cold start TotalTime (ms): {0}" -f ($times -join ', '))
+        Write-Host ("Median: {0} ms" -f $sorted[[int]($sorted.Count / 2)])
     }
     'aab' {
         Invoke-Gradle @('bundleRelease')

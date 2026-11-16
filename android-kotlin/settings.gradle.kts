@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "NetworkControlKT"
 include(":app")
+include(":baselineprofile")

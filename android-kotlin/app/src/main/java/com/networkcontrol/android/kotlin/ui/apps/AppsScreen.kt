@@ -175,6 +175,7 @@ private fun AppRow(
     onChanged: () -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
+    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     var showNetworkDialog by remember { mutableStateOf(false) }
     var showDetail by remember { mutableStateOf(false) }
@@ -217,42 +218,42 @@ private fun AppRow(
                     label = s[S.Allow],
                     selected = entry.decision == AppDecision.Allow,
                     onClick = {
-                        scope.launch {
+                        guard.run { scope.launch {
                             backend.setAppDecision(
                                 entry.app.packageName,
                                 AppDecision.Allow,
                                 replaceAllScopes = false,
                             )
                             onChanged()
-                        }
+                        } }
                     },
                 )
                 DecisionChip(
                     label = s[S.Deny],
                     selected = entry.decision == AppDecision.Deny,
                     onClick = {
-                        scope.launch {
+                        guard.run { scope.launch {
                             backend.setAppDecision(
                                 entry.app.packageName,
                                 AppDecision.Deny,
                                 replaceAllScopes = false,
                             )
                             onChanged()
-                        }
+                        } }
                     },
                 )
                 DecisionChip(
                     label = s[S.Unset],
                     selected = entry.decision == AppDecision.Unset,
                     onClick = {
-                        scope.launch {
+                        guard.run { scope.launch {
                             backend.setAppDecision(
                                 entry.app.packageName,
                                 AppDecision.Unset,
                                 replaceAllScopes = false,
                             )
                             onChanged()
-                        }
+                        } }
                     },
                 )
             }
@@ -326,7 +327,7 @@ private fun AppRow(
             sims = sims,
             onDismiss = { showNetworkDialog = false },
             onSave = { decision, kinds, subscriptions ->
-                scope.launch {
+                guard.run { scope.launch {
                     backend.setAppDecision(
                         entry.app.packageName,
                         decision,
@@ -336,7 +337,7 @@ private fun AppRow(
                     )
                     showNetworkDialog = false
                     onChanged()
-                }
+                } }
             },
         )
     }

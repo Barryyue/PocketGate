@@ -120,17 +120,18 @@ class SpeedIslandController(
                 refresh()
             }
 
+            // ComponentCallbacks.onLowMemory 已由 onTrimMemory 取代；介面仍要求實作，這裡不需要處理。
+            @Suppress("OVERRIDE_DEPRECATION")
             override fun onLowMemory() = Unit
         })
+        // 桌布改變（顏色不同）時重新取色：用 API 27+ 的 OnColorsChangedListener，取代已棄用的 ACTION_WALLPAPER_CHANGED 廣播。
         runCatching {
-            context.registerReceiver(
-                object : BroadcastReceiver() {
-                    override fun onReceive(receiverContext: Context?, intent: Intent?) {
-                        refreshStatusBarColor(force = true)
-                        refresh()
-                    }
+            context.getSystemService(android.app.WallpaperManager::class.java)?.addOnColorsChangedListener(
+                { _, _ ->
+                    refreshStatusBarColor(force = true)
+                    refresh()
                 },
-                IntentFilter(Intent.ACTION_WALLPAPER_CHANGED),
+                android.os.Handler(android.os.Looper.getMainLooper()),
             )
         }
         scope.launch {

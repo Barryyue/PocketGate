@@ -68,6 +68,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun OverviewScreen(backend: AppBackend) {
+    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     val context = LocalContext.current
     val runtime by backend.runtime.collectAsStateWithLifecycle()
@@ -161,7 +162,7 @@ fun OverviewScreen(backend: AppBackend) {
                     Switch(
                         checked = protection,
                         onCheckedChange = { enabled ->
-                            if (enabled) enableProtection() else backend.setProtection(false)
+                            if (enabled) enableProtection() else guard.run { backend.setProtection(false) }
                         },
                     )
                 }
@@ -199,7 +200,7 @@ fun OverviewScreen(backend: AppBackend) {
                     options.forEachIndexed { index, mode ->
                         SegmentedButton(
                             selected = selected == index,
-                            onClick = { backend.setMode(mode) },
+                            onClick = { guard.run { backend.setMode(mode) } },
                             shape = SegmentedButtonDefaults.itemShape(index, options.size),
                         ) {
                             Text(labels[index])

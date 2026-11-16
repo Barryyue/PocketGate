@@ -85,8 +85,8 @@ class PromptNotifier(
             .setOnlyAlertOnce(true)
             .setPriority(if (soft) NotificationCompat.PRIORITY_DEFAULT else NotificationCompat.PRIORITY_HIGH)
             .setTimeoutAfter((prompt.deadline - System.currentTimeMillis()).coerceAtLeast(1_000))
-            .addAction(0, context.getString(R.string.prompt_deny), actionIntent(prompt, false))
-            .addAction(0, context.getString(R.string.prompt_allow), actionIntent(prompt, true))
+            .addAction(lockedAction(context.getString(R.string.prompt_deny), actionIntent(prompt, false)))
+            .addAction(lockedAction(context.getString(R.string.prompt_allow), actionIntent(prompt, true)))
             .build()
         runCatching { NotificationManagerCompat.from(context).notify(notificationId, notification) }
     }
@@ -104,6 +104,12 @@ class PromptNotifier(
         shown.clear()
         signatures.clear()
     }
+
+    /** 開啟應用鎖時，鎖屏上的通知動作要先解鎖才能執行（Android 12+ 由系統處理）。 */
+    private fun lockedAction(title: String, intent: PendingIntent): NotificationCompat.Action =
+        NotificationCompat.Action.Builder(0, title, intent)
+            .setAuthenticationRequired(preferences.appLockEnabled)
+            .build()
 
     private fun actionIntent(prompt: PromptSnapshot, allow: Boolean): PendingIntent {
         val appPath = prompt.app?.path

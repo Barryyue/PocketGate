@@ -40,6 +40,41 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.9",
+            date = "2026-11-16",
+            features = listOf(
+                t(
+                    "With app lock on, turning protection off, changing the mode, editing rules or app decisions and turning app lock off now ask for the screen lock first (no repeat prompt within 30 seconds); Allow / Deny in notifications on the lock screen require unlocking.",
+                    "开启应用锁时，关闭保护、切换模式、修改规则或应用设置、关闭应用锁之前会先验证锁屏（30 秒内不重复验证）；锁屏上点通知里的「允许 / 拒绝」需要先解锁。",
+                    "開啟應用程式鎖時，關閉保護、切換模式、修改規則或應用程式設定、關閉應用程式鎖之前會先驗證鎖定畫面（30 秒內不重複驗證）；鎖定畫面上點通知裡的「允許 / 拒絕」需要先解鎖。",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "The installable APK now contains only the arm64 build used by almost all phones, and ships a Baseline Profile so Android can precompile the startup path.",
+                    "安装包只包含几乎所有手机使用的 arm64 版本，并附带 Baseline Profile，系统可以预先编译启动路径。",
+                    "安裝包只包含幾乎所有手機使用的 arm64 版本，並附帶 Baseline Profile，系統可以預先編譯啟動路徑。",
+                ),
+                t(
+                    "The proxy-app and direct-app pickers load the installed app list in the background instead of freezing the screen.",
+                    "「代理应用」和「直连应用」选择框改为在后台加载应用列表，不再卡住界面。",
+                    "「代理應用程式」和「直連應用程式」選擇框改為在背景載入應用程式清單，不再卡住畫面。",
+                ),
+                t(
+                    "The app lock description now states plainly what it can and cannot do.",
+                    "应用锁的说明改为如实写明它能做什么、不能做什么。",
+                    "應用程式鎖的說明改為如實寫明它能做什麼、不能做什麼。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "App lock cannot stop anyone from turning off the VPN in system settings.",
+                    "应用锁无法阻止别人在系统设置里关闭 VPN。",
+                    "應用程式鎖無法阻止別人在系統設定裡關閉 VPN。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.8",
             date = "2026-11-16",
             features = listOf(),
