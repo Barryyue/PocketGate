@@ -422,6 +422,8 @@ enum class S {
     TrackerCatAntiFraud,
     TrackerCatConsent,
     TrackerLabel,
+    Socks5Username,
+    Socks5Password,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -866,6 +868,8 @@ private val EN = mapOf(
     S.TrackerCatAntiFraud to "Anti-fraud",
     S.TrackerCatConsent to "Consent management",
     S.TrackerLabel to "Tracker",
+    S.Socks5Username to "Username (optional)",
+    S.Socks5Password to "Password",
 )
 
 private val CN = mapOf(
@@ -1286,6 +1290,8 @@ private val CN = mapOf(
     S.TrackerCatAntiFraud to "反欺诈",
     S.TrackerCatConsent to "同意管理",
     S.TrackerLabel to "追踪器",
+    S.Socks5Username to "用户名（可选）",
+    S.Socks5Password to "密码",
 )
 
 private val TW = mapOf(
@@ -1706,4 +1712,6 @@ private val TW = mapOf(
     S.TrackerCatAntiFraud to "反詐騙",
     S.TrackerCatConsent to "同意管理",
     S.TrackerLabel to "追蹤器",
+    S.Socks5Username to "使用者名稱（選填）",
+    S.Socks5Password to "密碼",
 )

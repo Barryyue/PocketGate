@@ -265,7 +265,9 @@ class BlocklistMatcher(
         }
         if (blockedCategories.isNotEmpty()) {
             val info = trackers?.lookup(host) ?: return null
-            if (info.category in blockedCategories) return TRACKER_PREFIX + info.category
+            // 屬於任何一個被攔截的類別就攔截；記錄時優先用主要類別。
+            val hit = if (info.category in blockedCategories) info.category else info.categories.firstOrNull { it in blockedCategories }
+            if (hit != null) return TRACKER_PREFIX + hit
         }
         return null
     }

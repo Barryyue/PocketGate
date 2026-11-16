@@ -51,7 +51,8 @@ class PromptBroker(
 
     private val _pending = MutableStateFlow<List<PromptSnapshot>>(emptyList())
     val pending: StateFlow<List<PromptSnapshot>> = _pending.asStateFlow()
-    private val sessionSuppressed = HashSet<String>()
+    /** 「稍後」抑制：套件 → 開始抑制的時間。 */
+    private val sessionSuppressed = HashMap<String, Long>()
     @Volatile
     private var sessionSuppressedCount = 0
     private val _busy = MutableStateFlow(false)
@@ -85,7 +86,7 @@ class PromptBroker(
         val deferred = CompletableDeferred<Verdict>()
         gate.withLock {
             val suppressKey = suppressionKey(app?.path ?: flow.executablePath)
-            if (suppressKey in sessionSuppressed) {
+            if (sessionSuppressed.containsKey(suppressKey)) {
                 deferred.complete(Verdict(settings.state.value.promptDefaultAction, VerdictReason.Mode))
                 return@withLock
             }
@@ -125,11 +126,14 @@ class PromptBroker(
             pendingFlows += if (holdConnection) 1 else 0
             refreshPendingLocked()
         }
-        event?.let { _events.emit(it) }
-        com.networkcontrol.android.kotlin.platform.AppLog.i(
-            "prompt",
-            "request app=${app?.path} flows=${pendingFlows} tamper=$isTamperAlert",
-        )
+        // 被「稍後」抑制、超過上限或重複的連線不會產生事件，也不記錄。
+        event?.let {
+            _events.emit(it)
+            com.networkcontrol.android.kotlin.platform.AppLog.i(
+                "prompt",
+                "request app=${app?.path} flows=${pendingFlows} tamper=$isTamperAlert",
+            )
+        }
         return deferred
     }
 
@@ -351,7 +355,8 @@ class PromptBroker(
             removeLocked(prompt!!)
             pendingFlows = (pendingFlows - prompt!!.flows.count { it.flow.origin == FlowOrigin.Pending }).coerceAtLeast(0)
             val key = suppressionKey(prompt!!.app?.path ?: prompt!!.firstFlow.executablePath)
-            if (sessionSuppressed.add(key)) sessionSuppressedCount = sessionSuppressed.size
+            if (sessionSuppressed.put(key, Time.now()) == null) sessionSuppressedCount = sessionSuppressed.size
+            com.networkcontrol.android.kotlin.platform.AppLog.i("prompt", "later: suppress $key for this session")
             refreshPendingLocked()
         }
         val dismissed = prompt ?: return false
@@ -373,7 +378,7 @@ class PromptBroker(
     /** 應用回到前台時呼叫，允許它再次觸發詢問。 */
     suspend fun clearSessionSuppression(packageName: String) {
         gate.withLock {
-            if (sessionSuppressed.remove(packageName)) {
+            if (sessionSuppressed.remove(packageName) != null) {
                 sessionSuppressedCount = sessionSuppressed.size
                 refreshBusyLocked()
             }
@@ -381,6 +386,9 @@ class PromptBroker(
     }
 
     fun hasSessionSuppressions(): Boolean = sessionSuppressedCount > 0
+
+    /** 目前的「稍後」抑制與開始時間（快照）。 */
+    suspend fun sessionSuppressions(): Map<String, Long> = gate.withLock { HashMap(sessionSuppressed) }
 
     /** 沒有使用情況權限時的兜底：清空本次會話抑制。 */
     suspend fun clearAllSessionSuppressions() {

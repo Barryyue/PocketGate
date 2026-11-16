@@ -264,6 +264,19 @@
 | K-110 | 阻擋加密 DNS 繞過：一般應用的 DoT / DoQ（853）與連到知名 DoH 網域 / IP 的 443 連線視為命中名單（記錄名單為 `dns-bypass`，界面顯示「加密 DNS 繞過」）；系統核心 UID 例外；使用者的域名允許規則仍然優先 | `EncryptedDnsTargets`、`VpnEngine.decideForwarding` | JVM 測試 | 私人 DNS 設為指定主機名時由系統解析，本應用看不到，界面提示改為自動 / 關閉 |
 | K-111 | 內建出口的加密 DNS：RFC 8484 DoH 用戶端（POST、IP 地址免引導），內建 Cloudflare / Google / Quad9 / 阿里 / DNSPod 與自訂地址；TTL 快取（30 秒～1 小時）、IPv4 優先、NXDOMAIN 負快取、連續 3 次失敗後 2 分鐘內改用系統 DNS（可關閉退回） | `DnsMessage`、`DohResolver`、`DohProviders`、`VpnEngine.exitResolver`、`AppPreferences.exitDns*`、`SettingsScreen` | JVM 測試（快取、NXDOMAIN、AAAA 退回、斷路器、不允許退回時失敗）；模擬器：選阿里 DNS 後 shell `nc example.org 80` 經內建出口回 `HTTP/1.1 200 OK`（先前模擬器系統 DNS 不可用而無法按域名直連） | 預設仍為系統 DNS |
 
+### v0.9.7-m4p8（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-112 | 規則改變後切斷已建立的連線：過濾層記住已轉發的 TCP 連線（判決輸入），`invalidate()` 時重新判決；已不允許的連線在下一個封包經過（任一方向）時雙向送出精確序號的 RST（給應用：序號 = 它送出的 ACK；給 hev：序號 = 應用的序號），並丟棄原封包；新隧道 `reset()` 清空 | `ForwardingPacketFilter.invalidate/reset/cutFromClient/cutFromHev`、`IpPacketBuilder.tcpReset(sequence)`、`ForwardingRelay.hevWriter` | JVM 測試（兩個方向、序號、只切一次、仍允許的不動、reset 後遺忘） | 只追蹤 6 小時內的連線；UDP 由緩存清空自然重新判決 |
+| K-113 | 追蹤器識別：Disconnect `services.json`（CC BY-NC-SA 4.0，裝置直接下載、不隨安裝包散佈）解析成「域名 → 公司 + 類別集合」，子域名逐層查詢；記錄頁每列與詳情顯示「追蹤器：公司 · 類別」；可整類攔截廣告 / 統計 / 社群 / 指紋 / 挖礦 / 郵件追蹤（命中任一被攔類別即攔截，記為 `tracker:<類別>`）；資料庫可單獨開啟只做識別 | `TrackerDatabase`、`TrackerCategory`、`BlocklistCatalog.trackers`、`BlocklistMatcher`、`BlocklistManager`、`BlocklistSettingsScreen.TrackerCard`、`LogsScreen` | JVM 測試（真實格式節錄、子域名、多類別、整類攔截、下載與重載）；模擬器（資料檔以 run-as 放入，模擬器系統 DNS 不可用無法自行下載）：開啟「統計分析」後 Chrome 訪問 hotjar、google-analytics 被攔並記為 `tracker:Analytics`，記錄頁顯示「追蹤器：ContentSquare · 統計分析」 | 同一域名常屬多類（google-analytics 同時是統計、郵件、指紋），最初只取一類導致漏攔，已改為類別集合 |
+| K-114 | 內建出口改用 NIO：握手後的連線交給單一 Selector 執行緒轉送（背壓、半關閉、半關閉閒置 2 分鐘回收），不再每條連線兩個執行緒 | `TcpRelay`、`DirectSocksServer` | JVM 負載測試：64 條並發連線各 512 KB 完整回傳（0.33 秒）、計數歸零、執行緒不隨連線數倍增；模擬器瀏覽正常 | UDP 關聯仍為執行緒模式 |
+| K-115 | 修正「稍後」：原本以「前台換成別的應用再換回來」判斷，回桌面時前台為空，0.9.3 為容忍應用內換頁而保留上一個應用，導致離開後永遠不清除（關掉應用再開仍斷網且不詢問）。改為與「僅一次」相同的 Activity 判斷：抑制開始後，該應用所有頁面在亮屏時都 STOPPED 才清除 | `PromptForegroundTracker.leftAt`、`PromptBroker.sessionSuppressions`、`PromptRouter` | 模擬器：Chrome 詢問點「稍後」→ 應用內繼續瀏覽不再詢問 → 回桌面 → 日誌「later cleared … left foreground」→ 重新開啟再次詢問 | 只為真正建立的詢問記錄 request 日誌 |
+| K-116 | 修正「僅一次」：首次建立前台狀態只回看 5 分鐘，若使用者已在應用中停留更久，10 分鐘後規則被當成「從未開啟」回收；關屏超過 10 分鐘同樣誤收。改為首次回看 6 小時，出現在前台過的應用只在真正離開時撤銷 | `TargetAppSessionTracker` | 代碼審查 + 既有 JVM 測試 | 未在模擬器重現長時間場景 |
+| K-117 | 修正啟動競態：重新規劃信號原為無 replay 的 SharedFlow，收集端開始前發出的信號會遺失，啟動後可能不建立隧道；改為 CONFLATED Channel | `VpnEngine.replanSignal` | 模擬器：重現時保護開啟但無 `tunnel active`；修正後每次啟動都建立隧道 | — |
+| K-118 | 白名單模式下查不到連線擁有者時改為拒絕（原本除「全部阻止」外都放行）；其他模式仍放行，避免誤殺系統元件 | `ForwardingPolicy.decide` | JVM 測試 | 對應待辦 K-051b |
+| K-119 | 外部 SOCKS5 帳號密碼（RFC 1929）：設定頁新增欄位，隧道設定、測試代理與健康檢查都會使用 | `AppPreferences.socks5Username/Password`、`Socks5Probe.negotiate`、`VpnEngine`、`SettingsScreen` | JVM 測試（以內建出口驗證：正確、缺少、錯誤的帳密） | 對應待辦 K-051d；密碼存於應用私有的偏好設定 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
@@ -274,11 +287,11 @@
 | K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 待用戶提供 keystore |
 | K-048b | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | 待真機 |
 | K-051 | 轉發模式 + 上游代理：v0.9.0 接入按應用判決、mapdns、健康檢查；v0.9.1 條件規則逐連線生效；v0.9.2 三語版本說明；v0.9.3 失敗自動重建 | M4，見 [android-forwarding-research.md](android-forwarding-research.md) |
-| K-051a | mapdns 只支援 IPv4；IPv6 AAAA 回空，IPv6 擴展頭也未解析 | 待做 |
-| K-051b | 安全加固：查不到 UID 時除「全部阻止」外放行；ICMP / 非 TCP-UDP / 解析失敗封包直接轉發 | 待做 |
-| K-051c | 應用自帶 DNS / DoH 不經 mapdns，域名規則與記錄拿不到域名；映射位址也無法比對遠端位址條件 | 待做 |
-| K-051d | 上游 SOCKS5 不支援帳號密碼認證（只有無認證握手） | 待做 |
-| K-051e | 規則變更不會切斷既有 TCP 連線（設計取捨） | 待確認是否需要主動 RST |
+| K-051a | mapdns 只支援 IPv4；IPv6 AAAA 回空 | 不做：應用會改用 IPv4，純 IPv6 網路一般有 464XLAT，內建出口也會在 IPv4 失敗後改用 IPv6（見 android-kotlin.md §39） |
+| K-051b | 安全加固：查不到 UID 時放行；ICMP / 非 TCP-UDP / 解析失敗封包直接轉發 | 部分完成：白名單與全部阻止模式改為拒絕（K-118）；其他模式仍放行，避免誤殺系統元件 |
+| K-051c | 應用自帶 DNS / DoH 不經 mapdns | 已完成（K-109～K-111：DNS 導回、阻擋 DoT / 知名 DoH）；映射位址仍無法比對遠端位址條件 |
+| K-051d | 上游 SOCKS5 帳號密碼認證 | 已完成（K-119） |
+| K-051e | 規則變更不會切斷既有 TCP 連線 | 已完成（K-112） |
 | K-051f | 真機 FlClash 吞吐 / 耗電 / UDP / QUIC / 長時間穩定性；firestack / gVisor 評估 | 待真機 |
 
 ## 3. 維護規則

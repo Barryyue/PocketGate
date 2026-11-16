@@ -621,12 +621,14 @@ object ForwardingPolicy {
 
     fun decide(plan: com.networkcontrol.android.kotlin.core.model.VpnRoutingPlan, uid: Int?): ForwardingDecision {
         val mode = plan.mode
-        // 查不到擁有者（getConnectionOwnerUid 失敗）時無法詢問：除「全部阻止」外一律放行，並計數。
+        // 查不到擁有者（getConnectionOwnerUid 失敗）時無法詢問：
+        // 「全部阻止」與「白名單」（預設拒絕）一律拒絕；其他模式放行，避免誤殺系統元件的連線。
         if (uid == null) {
-            return if (mode == com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll) {
-                ForwardingDecision.Block
-            } else {
-                ForwardingDecision.Forward
+            return when (mode) {
+                com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll,
+                com.networkcontrol.android.kotlin.core.model.FilterMode.Whitelist,
+                -> ForwardingDecision.Block
+                else -> ForwardingDecision.Forward
             }
         }
         // 系統核心 UID 無法按應用排除，與黑洞模式一致地放行。

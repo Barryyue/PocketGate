@@ -26,6 +26,10 @@ class PromptForegroundTracker(private val context: Context) {
     private val excluded = HashSet<String>()
     private var excludedLoaded = false
 
+    /** 按 Activity 追蹤每個應用是否在前台、何時離開（與「僅一次」相同的判斷）。 */
+    private val sessions = com.networkcontrol.android.kotlin.engine.apps.AppForegroundState()
+    private var sessionsInitialized = false
+
     private val selfPackage = appContext.packageName
 
     fun isAvailable(): Boolean = runCatching {
@@ -47,6 +51,10 @@ class PromptForegroundTracker(private val context: Context) {
     @Synchronized
     fun foregroundUid(): Int? {
         if (!isAvailable()) return null
+        if (!sessionsInitialized) {
+            sessionsInitialized = true
+            sessions.onScreenInteractive(isScreenInteractive())
+        }
         if (!isScreenInteractive() || isKeyguardLocked()) {
             currentPackage = null
             return null
@@ -66,6 +74,7 @@ class PromptForegroundTracker(private val context: Context) {
                 events.getNextEvent(event)
                 when (event.eventType) {
                     UsageEvents.Event.ACTIVITY_RESUMED -> {
+                        event.packageName?.let { sessions.onResumed(it, event.className) }
                         val packageName = event.packageName
                         if (packageName != null && packageName !in excluded) {
                             val key = activityKey(packageName, event.className)
@@ -77,16 +86,27 @@ class PromptForegroundTracker(private val context: Context) {
                     UsageEvents.Event.ACTIVITY_PAUSED,
                     UsageEvents.Event.ACTIVITY_STOPPED,
                     -> {
+                        event.packageName?.let {
+                            sessions.onPausedOrStopped(
+                                it,
+                                event.className,
+                                event.timeStamp,
+                                stopped = event.eventType == UsageEvents.Event.ACTIVITY_STOPPED,
+                            )
+                        }
                         val packageName = event.packageName
                         if (packageName != null) {
                             resumedActivities.remove(activityKey(packageName, event.className))
                             currentPackage = resumedActivities.values.lastOrNull()
                         }
                     }
+                    UsageEvents.Event.SCREEN_INTERACTIVE -> sessions.onScreenInteractive(true)
                     UsageEvents.Event.SCREEN_NON_INTERACTIVE,
                     UsageEvents.Event.KEYGUARD_SHOWN,
                     UsageEvents.Event.DEVICE_SHUTDOWN,
                     -> {
+                        if (event.eventType == UsageEvents.Event.SCREEN_NON_INTERACTIVE) sessions.onScreenInteractive(false)
+                        sessions.onForegroundReset()
                         resumedActivities.clear()
                         currentPackage = null
                     }
@@ -106,6 +126,13 @@ class PromptForegroundTracker(private val context: Context) {
         uidCache[packageName] = uid
         return uid
     }
+
+    /**
+     * 應用最後一次「所有頁面都離開前台」的時間（亮屏時才算）；之後又回到前台則為 null。
+     * 應用內換頁、彈出權限對話框、關屏都不算離開。呼叫前先用 [foregroundPackage] 刷新事件。
+     */
+    @Synchronized
+    fun leftAt(packageName: String): Long? = sessions.leftAt(packageName)
 
     /** 取得目前前台套件名稱；會順便刷新 UsageStats。 */
     @Synchronized

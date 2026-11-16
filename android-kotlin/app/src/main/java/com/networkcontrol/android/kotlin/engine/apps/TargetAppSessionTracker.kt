@@ -35,6 +35,9 @@ class TargetAppSessionTracker(
     private val power = context.getSystemService(PowerManager::class.java)
     private var lastQuery = 0L
     private val state = AppForegroundState()
+
+    /** 規則建立後出現在前台過的應用：之後只有「真正離開」才撤銷，不再按「從未打開」回收。 */
+    private val seen = HashSet<String>()
     private var noAccessLogged = false
 
     init {
@@ -52,6 +55,7 @@ class TargetAppSessionTracker(
         if (targets.isEmpty()) {
             // 沒有目標時不查詢事件；下次有目標時從頭重建前台狀態，避免沿用過期的狀態。
             state.clear()
+            seen.clear()
             lastQuery = 0L
             return
         }
@@ -66,7 +70,9 @@ class TargetAppSessionTracker(
         val manager = usage ?: return
         val start = if (lastQuery == 0L) {
             state.onScreenInteractive(power?.isInteractive != false)
-            now - LOOKBACK_MS
+            // 首次建立狀態要回看夠久：使用者可能已經在應用裡停留很久才回答詢問，
+            // 只看最近幾分鐘會不知道它在前台，10 分鐘後把正在使用的應用的規則當成孤兒回收。
+            now - INITIAL_LOOKBACK_MS
         } else {
             maxOf(lastQuery - 1_000L, now - LOOKBACK_MS)
         }
@@ -83,20 +89,26 @@ class TargetAppSessionTracker(
         val remove = mutableListOf<String>()
         targets.forEach { rule ->
             val packageName = packageOf(rule) ?: return@forEach
-            if (state.isForeground(packageName)) return@forEach
+            if (state.isForeground(packageName)) {
+                seen += packageName
+                return@forEach
+            }
             val left = state.leftAt(packageName)
             if (left != null && left >= rule.createdAt && now - left >= LEAVE_GRACE_MS) {
                 remove += rule.id
                 return@forEach
             }
-            // 背景詢問：等使用者真的打開這個應用，或 10 分鐘後回收。
-            if (now - rule.createdAt > ORPHAN_MS) remove += rule.id
+            // 背景詢問：應用從未出現在前台時，10 分鐘後回收。
+            // 出現過（例如之後關屏很久）則保留，直到真正離開應用。
+            if (packageName !in seen && now - rule.createdAt > ORPHAN_MS) remove += rule.id
         }
         if (remove.isNotEmpty()) {
             rules.remove(remove, RuleEndReason.Expired)
             AppLog.i("session", "removed ${remove.size} allow-once rules after app left foreground")
         }
-        state.retainLeft(targets.mapNotNull(::packageOf).toSet())
+        val active = targets.mapNotNull(::packageOf).toSet()
+        state.retainLeft(active)
+        seen.retainAll(active)
     }
 
     private fun apply(event: UsageEvents.Event) {
@@ -140,6 +152,7 @@ class TargetAppSessionTracker(
 
     private companion object {
         const val LOOKBACK_MS = 5 * 60_000L
+        const val INITIAL_LOOKBACK_MS = 6 * 60 * 60_000L
         const val LEAVE_GRACE_MS = 2_000L
         const val ORPHAN_MS = 10 * 60_000L
     }

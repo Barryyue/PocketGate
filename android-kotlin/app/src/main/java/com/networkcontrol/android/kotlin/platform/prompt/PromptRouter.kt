@@ -54,6 +54,7 @@ class PromptRouter(
             render()
         }
         overlay.onDismiss = { id ->
+            com.networkcontrol.android.kotlin.platform.AppLog.d("prompt", "later tapped $id")
             scope.launch { broker.dismiss(id) }
             render()
         }
@@ -63,14 +64,10 @@ class PromptRouter(
         scope.launch { broker.pending.collect { render() } }
         scope.launch { protection.enabled.collect { render() } }
         scope.launch(Dispatchers.Default) {
-            var lastPackage: String? = null
-            var seenForeground = false
             var suppressedSince = 0L
             while (isActive) {
                 if (!broker.busy.value) {
                     // 沒有詢問也沒有「稍後」抑制：不輪詢前台應用，等到有工作再繼續。
-                    lastPackage = null
-                    seenForeground = false
                     suppressedSince = 0L
                     broker.busy.first { it }
                 }
@@ -83,24 +80,20 @@ class PromptRouter(
                             broker.clearAllSessionSuppressions()
                             suppressedSince = 0L
                         }
-                        lastPackage = null
-                        seenForeground = false
                     } else {
                         suppressedSince = 0L
-                        val packageName = tracker.foregroundPackage()
-                        if (packageName != null) {
-                            if (seenForeground && packageName != lastPackage) {
+                        // 刷新 UsageStats 事件，再看被抑制的應用是否在抑制之後離開過前台
+                        // （回桌面、切到其他應用、從最近任務劃掉都算；應用內換頁、權限對話框、關屏不算）。
+                        tracker.foregroundPackage()
+                        broker.sessionSuppressions().forEach { (packageName, since) ->
+                            val left = tracker.leftAt(packageName)
+                            if (left != null && left >= since) {
+                                com.networkcontrol.android.kotlin.platform.AppLog.i("prompt", "later cleared for $packageName: left foreground ${left - since}ms after suppression")
                                 broker.clearSessionSuppression(packageName)
                             }
-                            lastPackage = packageName
-                            seenForeground = true
                         }
-                        // 前台暫時為 null（螢幕關閉、應用內 Activity 切換）時保留 lastPackage，
-                        // 避免把「同一個應用內換頁」誤判成重新進入。 
                     }
                 } else {
-                    lastPackage = null
-                    seenForeground = false
                     suppressedSince = 0L
                 }
                 delay(1_000)
