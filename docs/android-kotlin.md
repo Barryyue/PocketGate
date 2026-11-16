@@ -1175,3 +1175,10 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試 93 個全部通過（新增 `ReviewFixesTest` 10 個）；Debug / Release / AAB 構建通過；Release APK 在模擬器升級安裝後啟動無崩潰。
 - 模擬器：Debug 版黑洞模式啟動正常、詢問與記錄正常；升級後 `legacy_rules_migrated=true`。轉發模式（上游 Reqable）下以 sqlite 插入「Chrome 拒絕 example.org」：example.org 被拒、記錄為 Deny / Rule / 該規則 id，同時 baidu.com 經代理連線成功（Reqable 的 MITM 憑證頁）。測試規則與轉發開關已還原。
 - 未驗證：真機耗電與吞吐；通知動作、快速設定磁貼、服務被殺後重建都沒有手動觸發；UsageStats 在各 ROM 上的事件順序。
+
+## 35. v0.9.2-m4p3（2026-11-16）：版本說明多語言
+
+- `ReleaseNote` 的每一則改為 `NoteText(en, zhHans, zhHant)`，界面用 `UiStrings.noteLanguage`（由語言標籤推導，與界面文字同一規則）取對應語言；0.1.0～0.9.1 的歷史條目全部補齊三語，原本簡繁混雜的條目已分開。
+- `ReleaseNotesTest` 保證三語都有內容、英文不含中文、簡繁常用對應字不混用；以後新增版本說明時缺任何一種語言都會測試失敗。
+- 產物：`artifacts\kotlin-android\NetworkControl-KT-0.9.2-m4p3.apk`（4,302,413 bytes，SHA-256 `232546CBBB2D0C75B91AFD0DA247D8FEB12D5F85BC352443C4609E0A82C2E2D7`）、同名 `.aab`（4,884,736 bytes，SHA-256 `AF44E30539DD322F95187928F10F7EDDE3861171B09E3A279A1CEA5FF33B1727`）；versionName / Code `0.9.2-m4p3` / `26`。
+- 驗證：JVM 測試 97 個通過；模擬器 Release 版用 `cmd locale set-app-locales` 依次切到 en、zh-TW、zh-CN，透過 UI 樹確認本版說明與歷史版本的文字語言正確，驗證後已還原應用語言。

@@ -1594,6 +1594,7 @@ private fun ReleaseNoteSection(
     note: ReleaseNote,
     s: com.networkcontrol.android.kotlin.ui.UiStrings,
 ) {
+    val language = s.noteLanguage
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             "${note.version} · ${note.date}",
@@ -1602,16 +1603,16 @@ private fun ReleaseNoteSection(
         )
         if (note.features.isNotEmpty()) {
             Text(s[S.NewFeatures], style = MaterialTheme.typography.labelLarge)
-            note.features.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+            note.features.forEach { Text("• ${it[language]}", style = MaterialTheme.typography.bodySmall) }
         }
         if (note.improvements.isNotEmpty()) {
             Text(s[S.Improvements], style = MaterialTheme.typography.labelLarge)
-            note.improvements.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+            note.improvements.forEach { Text("• ${it[language]}", style = MaterialTheme.typography.bodySmall) }
         }
         if (note.notes.isNotEmpty()) {
             note.notes.forEach {
                 Text(
-                    "• $it",
+                    "• ${it[language]}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

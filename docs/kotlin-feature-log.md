@@ -222,6 +222,12 @@
 | K-093 | 轉發性能：同一條已放行 UDP 流的後續封包走快速路徑（比對原始位址 / 端口位元組，2 秒有效，規則變更即失效）；過濾層例外不再結束轉發執行緒 | `ForwardingPacketFilter`、`ForwardingRelay` | JVM 測試 | 未在真機量測吞吐 |
 | K-094 | VPN 服務被系統結束（非撤銷）而防護仍開啟時自動重建隧道（10 秒內最多一次） | `VpnTunnelController.onDetached`、`VpnEngine` | 代碼審查 | 未在模擬器觸發服務被殺 |
 
+### v0.9.2-m4p3（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-095 | 版本說明三語化：每則內容都有英文 / 簡體 / 繁體（台灣用語），跟隨應用界面語言（與 `UiStrings` 相同的語言判斷）；補齊 0.1.0～0.9.1 全部歷史條目 | `NoteText`、`NoteLanguage`、`ReleaseNotes`、`UiStrings.noteLanguage`、`SettingsScreen.ReleaseNoteSection` | JVM 測試（三語不缺、簡繁常用字不混用、語言標籤對應）；模擬器 Release：`cmd locale set-app-locales` 切到 en / zh-TW / zh-CN，本版說明與歷史版本都顯示對應語言 | 新增版本說明時三種語言都必須填寫，否則測試失敗 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

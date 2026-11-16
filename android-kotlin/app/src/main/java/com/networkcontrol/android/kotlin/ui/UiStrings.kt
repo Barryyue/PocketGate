@@ -368,6 +368,10 @@ class UiStrings internal constructor(languageTag: String) {
         else -> EN
     }
 
+    /** 版本說明等多語內容使用的語言，與 [table] 的選擇規則一致。 */
+    val noteLanguage: com.networkcontrol.android.kotlin.core.release.NoteLanguage =
+        com.networkcontrol.android.kotlin.core.release.NoteLanguage.fromTag(languageTag)
+
     operator fun get(key: S): String = table[key] ?: EN[key] ?: key.name
 
     fun format(key: S, vararg args: Any?): String = get(key).format(*args)
