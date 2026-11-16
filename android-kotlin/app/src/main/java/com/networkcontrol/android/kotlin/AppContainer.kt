@@ -58,7 +58,9 @@ class AppContainer(context: Context) {
     val rules = RuleService(ruleStore, runtime, scope)
     val appSessionTracker = com.networkcontrol.android.kotlin.engine.apps.TargetAppSessionTracker(appContext, rules, scope)
     val profiles = ProfileService(profileStore, runtime, rules)
-    val prompts = PromptBroker(rules, runtime, settings, scope)
+    val prompts = PromptBroker(rules, runtime, settings, scope).also { broker ->
+        appSessionTracker.onRevokedAfterLeaving = { packageName -> scope.launch { broker.quietInBackground(packageName) } }
+    }
     val appCatalog = AppCatalog(appContext)
     val owners = ConnectionOwnerResolver(appContext)
     val network = NetworkMonitor(appContext)

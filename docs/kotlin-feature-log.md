@@ -277,6 +277,12 @@
 | K-118 | 白名單模式下查不到連線擁有者時改為拒絕（原本除「全部阻止」外都放行）；其他模式仍放行，避免誤殺系統元件 | `ForwardingPolicy.decide` | JVM 測試 | 對應待辦 K-051b |
 | K-119 | 外部 SOCKS5 帳號密碼（RFC 1929）：設定頁新增欄位，隧道設定、測試代理與健康檢查都會使用 | `AppPreferences.socks5Username/Password`、`Socks5Probe.negotiate`、`VpnEngine`、`SettingsScreen` | JVM 測試（以內建出口驗證：正確、缺少、錯誤的帳密） | 對應待辦 K-051d；密碼存於應用私有的偏好設定 |
 
+### v0.9.8-m4p9（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-120 | 「僅一次」因離開前台而撤銷後進入背景靜默：該應用的背景連線直接拒絕並記錄，不建立詢問（不發通知、不彈懸浮窗），已存在的該應用詢問一併移除；應用回到前台時解除，之後的連線照常以懸浮窗詢問。沒有使用情況權限時不靜默 | `TargetAppSessionTracker.onRevokedAfterLeaving`、`PromptBroker.quietInBackground/endBackgroundQuiet`、`PromptForegroundTracker.isForeground`、`PromptRouter`、`AppContainer` | 模擬器：Chrome 點「僅一次」→ 回桌面 → 日誌「allow-once ended … quiet」→ 約 55 秒內 Chrome 無詢問、無通知，背景連線記錄為拒絕 → 重新開啟 → 日誌「back in foreground; prompts resume」並彈出懸浮窗 | 使用者回饋：選僅一次後應用到後台，通知很多但懸浮窗很少（懸浮窗只詢問前台應用，屬設計）；改為背景靜默 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
