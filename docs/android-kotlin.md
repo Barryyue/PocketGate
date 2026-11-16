@@ -1450,3 +1450,17 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
   - 授權後 `checkSelfPermission` 立即生效，不必重啟應用。
 - **驗證**：模擬器：沒有 Shizuku / root 時點「授權」顯示引導並可複製命令；用 adb 授權後回到設定頁顯示「已啟用關閉偵測」。
 - **未驗證**：Shizuku 一鍵授權（模擬器上啟動 Shizuku 服務的操作未獲允許，待用戶在實機測試）；Root 授權。
+
+## 50. 待驗證與待辦（2026-11-17 會話結束時）
+
+> `docs/progress-android.md` 在主工作樹有用戶未提交的修改，本節暫代；之後整理進度文件時搬過去。
+
+- **待實機驗證**（手機 `10AG1635FZ005CB`，紅魔，FlClash 為 SOCKS 出口）：
+  - [ ] 0.10.3 SEQPACKET 修正後逐連線模式的速度（Chrome / 百度 / Telegram 對比 FlClash 自己的 TUN）；
+  - [ ] 0.10.4 紅魔樣式詢問框在實機上的外觀與觸控；
+  - [ ] 0.10.6 Shizuku 一鍵授予 DUMP（用戶手機已裝 Shizuku）、Root 授權；授權後「僅一次」切背景回來不再詢問、劃掉後重新詢問；
+  - [ ] 未授權時「背景停留 10 分鐘」近似的實際體驗。
+  - 實機測試期間 Shell（`com.android.shell`）被設為走 VPN，測完要改回繞過。
+- **已提出、待用戶決定**：狀態列顯示目前代理出口；「測試代理」逐步顯示結果；預設阻擋 UDP 443（QUIC）；應用內自行實作無線偵錯配對（免 Shizuku，工作量大，暫不建議）。
+- **小清理**：`promptShowExplanation` 偏好與 `AppBackend.promptShowExplanation()` 已無界面使用，可刪除。
+- **未推送**：0.10.1～0.10.6 只在本機（`agent/claude/forwarding-firewall` → `agent/opencode/android-kotlin-v0.3` → `main`），推送需用戶同意。
