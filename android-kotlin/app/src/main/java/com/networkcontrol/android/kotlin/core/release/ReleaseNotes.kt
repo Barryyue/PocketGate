@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.11",
+            date = "2026-11-16",
+            features = listOf(),
+            improvements = listOf(
+                t(
+                    "Fixed: in per-connection mode, when many domain names were resolved at once (for example opening a page that loads from many sites), some lookups were lost and took 5 to 9 seconds. Lookups are now queued and retried automatically, so a burst of 30 names finishes in about 0.2 seconds.",
+                    "修正：逐连接模式下同时解析很多域名（例如打开一个要从很多网站加载内容的网页）时，部分解析会丢失，要等 5～9 秒。现在解析会自动排队并重试，30 个域名同时解析约 0.2 秒内完成。",
+                    "修正：逐連線模式下同時解析很多網域（例如開啟一個要從很多網站載入內容的網頁）時，部分解析會遺失，要等 5～9 秒。現在解析會自動排隊並重試，30 個網域同時解析約 0.2 秒內完成。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.10",
             date = "2026-11-16",
             features = listOf(),

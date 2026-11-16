@@ -69,8 +69,27 @@ class ForwardingRelay(
         }
     }
 
+    /** 定期放行排隊中的映射 DNS 查詢（hev 偶爾丟掉回覆時，不讓佇列等到下一個封包才前進）。 */
+    private fun startDnsPump() {
+        Thread({
+            while (!stopped) {
+                // 有排隊時每 1 ms 檢查一次（間隔與逾時都是毫秒級）；沒有排隊時低頻輪詢。
+                val pending = runCatching { filter.drainDns() }.getOrDefault(false)
+                try {
+                    Thread.sleep(if (pending) 1L else DNS_PUMP_INTERVAL_MS)
+                } catch (_: InterruptedException) {
+                    break
+                }
+            }
+        }, "NetworkControlKT.DnsPump").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
     fun start() {
         filter.toHev = hevWriter
+        startDnsPump()
         upstream = Thread({ pumpUpstream() }, "NetworkControlKT.FwdUp").apply {
             isDaemon = true
             start()
@@ -147,5 +166,6 @@ class ForwardingRelay(
     companion object {
         private const val BUFFER_SIZE = 65_536
         private const val SOCKET_BUFFER = 1 shl 20
+        private const val DNS_PUMP_INTERVAL_MS = 5L
     }
 }
