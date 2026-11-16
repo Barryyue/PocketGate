@@ -256,6 +256,14 @@
 | K-107 | 修正：記錄頁原本只查詢拒絕的記錄，0.9.4 寫入的「已允許」記錄在界面上看不到（已補切換）；內建出口關閉時並發移除連線可能拋 `NoSuchElementException` | `LogsScreen`、`AppBackend.getLogs(action)`、`DirectSocksServer.close` | JVM 測試（連續兩輪） | — |
 | K-108 | 網路安全設定：維持禁止明文 HTTP，只對 `127.0.0.1` / `localhost` 開放（本機測試名單） | `res/xml/network_security_config.xml`、`AndroidManifest.xml` | 模擬器 | — |
 
+### v0.9.6-m4p7（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-109 | DNS 導回：逐連線模式下，應用發往其他伺服器的 IPv4 UDP DNS 由過濾層改寫到映射 DNS（NAT 表記住原伺服器，回覆時改回來源並重算 IP / UDP 檢查碼）；發往其他伺服器的 TCP 53 回 RST、IPv6 DNS 回 ICMP 不可達，讓解析器改走可改寫的路徑 | `DnsRedirect`、`ForwardingPacketFilter.redirectDns`、`onHevPacket` | JVM 測試（改寫與還原、檢查碼驗證、過濾層端到端）；模擬器：Chrome 自己的 DNS（直連 `10.0.2.3:53`）被導回，連線全部帶域名（含 QUIC），可以打開 example.org、wikipedia.org | 預設開啟（`dns_bypass_protection`） |
+| K-110 | 阻擋加密 DNS 繞過：一般應用的 DoT / DoQ（853）與連到知名 DoH 網域 / IP 的 443 連線視為命中名單（記錄名單為 `dns-bypass`，界面顯示「加密 DNS 繞過」）；系統核心 UID 例外；使用者的域名允許規則仍然優先 | `EncryptedDnsTargets`、`VpnEngine.decideForwarding` | JVM 測試 | 私人 DNS 設為指定主機名時由系統解析，本應用看不到，界面提示改為自動 / 關閉 |
+| K-111 | 內建出口的加密 DNS：RFC 8484 DoH 用戶端（POST、IP 地址免引導），內建 Cloudflare / Google / Quad9 / 阿里 / DNSPod 與自訂地址；TTL 快取（30 秒～1 小時）、IPv4 優先、NXDOMAIN 負快取、連續 3 次失敗後 2 分鐘內改用系統 DNS（可關閉退回） | `DnsMessage`、`DohResolver`、`DohProviders`、`VpnEngine.exitResolver`、`AppPreferences.exitDns*`、`SettingsScreen` | JVM 測試（快取、NXDOMAIN、AAAA 退回、斷路器、不允許退回時失敗）；模擬器：選阿里 DNS 後 shell `nc example.org 80` 經內建出口回 `HTTP/1.1 200 OK`（先前模擬器系統 DNS 不可用而無法按域名直連） | 預設仍為系統 DNS |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

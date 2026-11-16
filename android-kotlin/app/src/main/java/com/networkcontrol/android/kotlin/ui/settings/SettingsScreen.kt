@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -133,6 +134,10 @@ fun SettingsScreen(
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
     var forwardingEnabled by remember { mutableStateOf(backend.forwardingEnabled()) }
     var forwardingUpstream by remember { mutableStateOf(backend.forwardingUpstream()) }
+    var dnsBypass by remember { mutableStateOf(backend.dnsBypassProtection()) }
+    var exitDns by remember { mutableStateOf(backend.exitDnsProvider()) }
+    var exitDnsUrl by remember { mutableStateOf(backend.exitDnsCustomUrl()) }
+    var exitDnsFallback by remember { mutableStateOf(backend.exitDnsFallback()) }
     val viaProxy = forwardingUpstream == com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
     var socks5Host by remember { mutableStateOf(backend.socks5Host()) }
     var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
@@ -841,6 +846,67 @@ fun SettingsScreen(
                             backend.setSocks5Udp(it)
                         },
                     )
+                    SwitchRow(
+                        title = s[S.DnsBypassProtection],
+                        subtitle = s[S.DnsBypassProtectionHint],
+                        checked = dnsBypass,
+                        onCheckedChange = {
+                            dnsBypass = it
+                            backend.setDnsBypassProtection(it)
+                        },
+                    )
+                    if (!viaProxy) {
+                        Text(s[S.ExitDns], style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            s[S.ExitDnsHint],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        val dnsOptions = listOf("system" to s[S.ExitDnsSystem]) +
+                            com.networkcontrol.android.kotlin.engine.dns.DohProviders.all.map { it.id to it.name } +
+                            listOf("custom" to s[S.ExitDnsCustom])
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            dnsOptions.forEach { (id, label) ->
+                                FilterChip(
+                                    selected = exitDns == id,
+                                    onClick = {
+                                        exitDns = id
+                                        backend.setExitDnsProvider(id)
+                                    },
+                                    label = { Text(label) },
+                                )
+                            }
+                        }
+                        if (exitDns == "custom") {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(
+                                    value = exitDnsUrl,
+                                    onValueChange = { exitDnsUrl = it.trim() },
+                                    label = { Text(s[S.ExitDnsCustomUrl]) },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                TextButton(onClick = {
+                                    backend.setExitDnsCustomUrl(exitDnsUrl)
+                                    toast(s[S.Done])
+                                }) { Text(s[S.Save]) }
+                            }
+                        }
+                        if (exitDns != "system") {
+                            SwitchRow(
+                                title = s[S.ExitDnsFallback],
+                                subtitle = s[S.ExitDnsFallbackHint],
+                                checked = exitDnsFallback,
+                                onCheckedChange = {
+                                    exitDnsFallback = it
+                                    backend.setExitDnsFallback(it)
+                                },
+                            )
+                        }
+                    }
                     if (viaProxy) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {

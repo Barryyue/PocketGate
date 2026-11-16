@@ -721,6 +721,33 @@ class AppBackend(val container: AppContainer) {
     fun blocklistName(id: String): String? =
         container.blocklists.state.value.sources.firstOrNull { it.id == id }?.name
 
+    fun dnsBypassProtection(): Boolean = container.preferences.dnsBypassProtection
+
+    fun setDnsBypassProtection(enabled: Boolean) {
+        container.preferences.dnsBypassProtection = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun exitDnsProvider(): String = container.preferences.exitDnsProvider
+
+    fun setExitDnsProvider(id: String) {
+        container.preferences.exitDnsProvider = id
+        container.vpnEngine.exitResolver.clear()
+    }
+
+    fun exitDnsCustomUrl(): String = container.preferences.exitDnsCustomUrl.orEmpty()
+
+    fun setExitDnsCustomUrl(url: String) {
+        container.preferences.exitDnsCustomUrl = url.trim()
+        container.vpnEngine.exitResolver.clear()
+    }
+
+    fun exitDnsFallback(): Boolean = container.preferences.exitDnsFallback
+
+    fun setExitDnsFallback(enabled: Boolean) {
+        container.preferences.exitDnsFallback = enabled
+    }
+
     fun forwardingUpstream(): String = container.preferences.forwardingUpstream
 
     fun setForwardingUpstream(upstream: String) {

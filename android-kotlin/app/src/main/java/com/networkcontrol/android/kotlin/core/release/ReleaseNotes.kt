@@ -40,6 +40,36 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.6",
+            date = "2026-11-16",
+            features = listOf(
+                t(
+                    "Prevent DNS bypass (per-connection mode, on by default): DNS that apps send to their own servers is redirected to this app, and DNS-over-TLS and well-known DNS-over-HTTPS connections are blocked, so blocklists and domain rules also cover apps that do their own DNS.",
+                    "防止绕过 DNS（逐连接模式，默认开启）：应用自己发往其他服务器的 DNS 会被导回本应用，DNS-over-TLS 和知名的 DNS-over-HTTPS 连接会被阻止，拦截列表和域名规则对自己做 DNS 的应用同样生效。",
+                    "防止繞過 DNS（逐連線模式，預設開啟）：應用程式自己發往其他伺服器的 DNS 會被導回本應用程式，DNS-over-TLS 和知名的 DNS-over-HTTPS 連線會被阻擋，攔截列表和網域規則對自己做 DNS 的應用程式同樣生效。",
+                ),
+                t(
+                    "Encrypted DNS for the built-in exit: choose Cloudflare, Google, Quad9, AliDNS, DNSPod or your own DNS-over-HTTPS address, with optional fallback to the system DNS.",
+                    "内置出口支持加密 DNS：可选 Cloudflare、Google、Quad9、阿里 DNS、DNSPod 或自定义 DNS-over-HTTPS 地址，可设置失败时退回系统 DNS。",
+                    "內建出口支援加密 DNS：可選 Cloudflare、Google、Quad9、阿里 DNS、DNSPod 或自訂 DNS-over-HTTPS 位址，可設定失敗時退回系統 DNS。",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Encrypted DNS answers are cached by TTL, IPv4 is tried first, and after repeated failures the exit switches to the fallback for two minutes instead of waiting on every connection.",
+                    "加密 DNS 的结果按 TTL 缓存，优先 IPv4；连续失败后两分钟内直接使用备用方式，不再每条连接都等超时。",
+                    "加密 DNS 的結果按 TTL 快取，優先 IPv4；連續失敗後兩分鐘內直接使用備用方式，不再每條連線都等逾時。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "If the system Private DNS is set to a specific hostname, the system resolves names itself and this app cannot see them; set Private DNS to Automatic or Off.",
+                    "如果系统私人 DNS 设为指定主机名，系统会自己解析域名，本应用看不到；请把私人 DNS 设为「自动」或「关闭」。",
+                    "如果系統私人 DNS 設為指定主機名稱，系統會自己解析網域，本應用程式看不到；請把私人 DNS 設為「自動」或「關閉」。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.5",
             date = "2026-11-16",
             features = listOf(

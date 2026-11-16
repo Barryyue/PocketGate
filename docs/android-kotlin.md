@@ -1270,3 +1270,28 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試 120 個通過（新增 `BlocklistTest` 15 個，其中下載相關用測試內的極簡 HTTP 伺服器）；Release APK 在模擬器啟動無崩潰。
 - 模擬器 Debug（逐連線 + 直接連出，名單由電腦上的本機 HTTP 服務經 `adb reverse tcp:8765` 提供）：自動下載、「立即更新」得到 304、Chrome 訪問名單域名及子域名被拒並記錄、記錄頁一鍵放行後再次訪問變為允許。測試後已刪除測試規則、名單資料、反向埠並還原設定。
 - 未驗證：真機上下載內建名單（模擬器的系統 DNS 不可用，且本機到 GitHub 的連線時好時壞）；大名單（HaGeZi PRO 約 5 MB）在真機上的解析耗時與記憶體；HaGeZi / OISD 等名單在國內網路下的可用性。
+
+## 38. v0.9.6-m4p7（2026-11-16）：DNS 防繞過與加密 DNS
+
+### 38.1 設計
+
+- **為什麼需要**：攔截列表與域名規則靠「連線帶有域名」才能判斷，而域名來自 hev 的映射 DNS。應用若自己解析（直連 8.8.8.8:53、DoT、DoH），連線就只剩 IP。
+- **DNS 導回**：過濾層看到發往其他伺服器的 IPv4 UDP 53，就把目的位址改成映射 DNS 並記住原伺服器（以用戶端位址 + 埠為鍵，60 秒）；hev 的回覆在寫回虛擬網卡前把來源改回原伺服器。兩處都重算 IPv4 標頭與 UDP 檢查碼。TCP 53 與 IPv6 DNS 無法改寫，直接拒絕，解析器會改用其他方式。
+- **加密 DNS 繞過**：853 埠一律視為 DoT / DoQ；443 埠連到知名 DoH 網域（含子域名，例如 NextDNS 的個人網址）或 IP 視為 DoH。命中時按攔截列表處理（不詢問、可用域名允許規則例外）。系統核心 UID 不套用，避免影響使用者的私人 DNS 設定。
+- **內建出口的 DNS**：預設系統 DNS；可選 DoH。DoH 地址都用 IP（證書含 IP SAN），不需要先解析 DoH 伺服器。斷路器避免 DoH 被封鎖時每條新連線都等 5 秒逾時。
+
+### 38.2 產物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.9.6-m4p7.apk`（4,417,561 bytes） |
+| APK SHA-256 | `F59994D3F77DED9AF5325E10F09F6F94CB997242FA92BD4D1171E056693044E6` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.9.6-m4p7.aab`（5,016,365 bytes） |
+| AAB SHA-256 | `7E5079D39AE21B611EF715A1EF460B8A5B1201C051EDEF1E51A35A7EFE1F27E0` |
+| versionName / Code | `0.9.6-m4p7` / `30` |
+
+### 38.3 驗證與限制
+
+- JVM 測試 127 個通過（新增 `DnsProtectionTest` 7 個）；Release APK 在模擬器啟動無崩潰。
+- 模擬器 Debug（逐連線 + 直接連出 + 阿里 DNS）：shell 按域名經內建出口取得 HTTP 200；Chrome 自己的 DNS 被導回，打開 example.org、wikipedia.org，記錄中 Chrome 的連線都帶域名。Google 系域名在開發機網路下解析到被污染的位址（例如 104.244.42.197）而連不上，屬於網路環境，與本應用無關。測試後已還原設定。
+- 未驗證：DoT / DoH 阻擋在真機上的效果（例如 Firefox 自帶 DoH 時是否正確退回）；IPv6 網路下的 DNS 行為；各 DoH 服務在國內網路的穩定性。

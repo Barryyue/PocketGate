@@ -124,4 +124,5 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
   - Kotlin 版：`BroadcastReceiver` 中用 `goAsync()` + `Dispatchers.Default` 做事時，`Toast` 必須切回 `Dispatchers.Main`，否則在沒有 Looper 的執行緒上直接崩潰。UsageStats 判斷「離開應用」要按 Activity 計算，應用內切換頁面會先收到舊頁的 STOPPED。版本說明（`ReleaseNotes.kt`）每則都要寫英文 / 簡體 / 繁體三種，`ReleaseNotesTest` 會檢查缺漏和簡繁混用。
   - Kotlin 版內建直連出口：本機 SOCKS5 必須驗證帳密，否則本機任何應用都能借它繞過防火牆；出口的 socket 與 DNS 要綁到實體網路（`Network.bindSocket` / `getAllByName`）。本開發機的模擬器系統 DNS 本身不可用（關閉 VPN 也解析不了），按域名的直連要在真機驗證；排查 hev 時在應用 `files/` 下建立 `hev-debug` 檔案即可打開 debug 日誌。
   - Kotlin 版 JVM 單元測試的 classpath 是 android.jar：沒有 `com.sun.net.httpserver`，需要 HTTP 伺服器時自己用 `ServerSocket` 寫（見 `BlocklistTest.MiniHttpServer`）。`ConcurrentHashMap.newKeySet()` 在並發修改時不要 `toList()`，直接迭代。開發機用 adb 時可能同時連著用戶的真機（無線調試），命令要加 `ANDROID_SERIAL=emulator-5554`，未經允許不要碰真機。
+  - Kotlin 版 DNS：Java 的 `InetAddress.hostAddress` 對 IPv6 不壓縮零（`2606:4700:4700:0:0:0:0:1111`），比對 IP 要用 `InetAddress` 物件而不是字串。開發機網路對部分境外域名有 DNS 污染（例如 google.com 解析到 104.244.42.197），模擬器上連不上 Google 系服務不代表程式有問題。
   - 通知文本在 `Resources/values*/strings.xml`（沒有界面時也要可用），界面文本由 `tools/android-strings.py` 生成 XLIFF；兩處都要維護三種語言。
