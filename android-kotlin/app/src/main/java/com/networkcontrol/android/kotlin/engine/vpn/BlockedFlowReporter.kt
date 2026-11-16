@@ -44,6 +44,8 @@ class BlockedFlowReporter(
     private val extraHostname: (InetAddress) -> String? = { null },
     /** 轉發模式下已放行的連線：只寫入記錄。 */
     private val onAllowed: suspend (FlowInfo) -> Unit = {},
+    /** 命中攔截列表的連線：只寫入記錄，不詢問。 */
+    private val onBlocklisted: suspend (FlowInfo) -> Unit = {},
 ) : PacketSink {
     private val channel = Channel<Queued>(capacity = 512)
     private val recent = HashMap<DedupKey, Long>()
@@ -98,6 +100,13 @@ class BlockedFlowReporter(
         if (channel.trySend(Queued(info, uid, resolved = uid != null)).isFailure) counters.queueFull.incrementAndGet()
     }
 
+    /** 轉發模式：命中攔截列表的新連線，只記錄。 */
+    fun reportBlocklisted(info: PacketInfo, uid: Int?) {
+        if (channel.trySend(Queued(info, uid, resolved = uid != null, blocklisted = true)).isFailure) {
+            counters.queueFull.incrementAndGet()
+        }
+    }
+
     /** 轉發模式：已放行的新連線，只記錄。佇列滿時直接丟棄（記錄不能拖慢轉發）。 */
     fun reportAllowed(info: PacketInfo, uid: Int?) {
         if (uid == null || VpnRoutingPlanner.isSystemUid(uid)) return
@@ -123,7 +132,7 @@ class BlockedFlowReporter(
         }
 
         val now = Time.now()
-        val key = DedupKey(uid, packet.protocol, packet.destination.address, packet.destination.port, queued.allowed)
+        val key = DedupKey(uid, packet.protocol, packet.destination.address, packet.destination.port, queued.allowed, queued.blocklisted)
         val last = recent[key]
         if (last != null && now - last < 5_000) {
             counters.deduplicated.incrementAndGet()
@@ -173,6 +182,10 @@ class BlockedFlowReporter(
         )
         if (queued.allowed) {
             onAllowed(flow)
+            return
+        }
+        if (queued.blocklisted) {
+            onBlocklisted(flow)
             return
         }
         onFlow(flow)
@@ -247,10 +260,17 @@ class BlockedFlowReporter(
         val address: InetAddress,
         val port: Int,
         val allowed: Boolean,
+        val blocklisted: Boolean,
     )
 
     private data class FastFailKey(val uid: Int, val address: InetAddress)
 
     /** [resolved] 為 true 時 [uid] 已經查過（可能為 null，代表查不到擁有者）。 */
-    private class Queued(val info: PacketInfo, val uid: Int?, val resolved: Boolean, val allowed: Boolean = false)
+    private class Queued(
+        val info: PacketInfo,
+        val uid: Int?,
+        val resolved: Boolean,
+        val allowed: Boolean = false,
+        val blocklisted: Boolean = false,
+    )
 }

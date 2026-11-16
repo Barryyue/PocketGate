@@ -46,6 +46,7 @@ class ReleaseNotesTest {
 
     @Test
     fun currentVersionMatchesBuildSuffix() {
+        assertEquals("0.9.5", ReleaseNotes.current("0.9.5-m4p6-debug")?.version)
         assertEquals("0.9.4", ReleaseNotes.current("0.9.4-m4p5-debug")?.version)
         assertEquals("0.9.2", ReleaseNotes.current("0.9.2-m4p3-debug")?.version)
         assertEquals("0.9.1", ReleaseNotes.current("0.9.1-m4p2")?.version)

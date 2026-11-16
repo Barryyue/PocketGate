@@ -245,6 +245,17 @@
 | K-101 | 設定頁「逐連線模式」：出口可選「直接連出 / 經 SOCKS5 代理」；直連時隱藏代理相關設定。升級前已開啟轉發的使用者保留外部代理 | `AppPreferences.forwardingUpstream`、`SettingsScreen`、`UiStrings`（三語） | 構建 | 界面未截圖檢查，請用戶目視確認 |
 | K-102 | 診斷：`files/hev-debug` 存在時 hev 以 debug 級別記錄；JVM 測試啟用 `isReturnDefaultValues` | `VpnTunnelController.startForwarding`、`build.gradle.kts` | 模擬器 | — |
 
+### v0.9.5-m4p6（2026-11-16）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-103 | 攔截列表引擎：解析 hosts / 純域名 / AdBlock・AdGuard DNS 語法（`||d^`、`*.d`、`@@||d^` 例外，略過正規表示式與改寫類修飾符）；編譯成排序的 64 位元 FNV-1a 雜湊陣列（每域名 8 bytes），存 `files/blocklists/<id>.bin`，啟動時直接載入 | `DomainBlocklist`、`DomainHash`、`BlocklistParser`、`BlocklistMatcher` | JVM 測試：子域名 / 精確匹配語意、例外、略過不支援規則、TLD 與 IP 不當域名、檔案往返 | hosts 與純域名只攔精確域名（與 Pi-hole 一致），`||` 與 `*.` 攔子域名 |
+| K-104 | 訂閱管理：內建 7 份名單（anti-AD、HaGeZi NORMAL / PRO / TIF mini、OISD small、AdGuard DNS filter、StevenBlack），每份含鏡像；條件請求（ETag / Last-Modified）、64 MB 上限、失敗保留舊名單、6 小時後重試；自動更新預設每週且僅 Wi-Fi（使用者手動操作不受限）；第一次開啟才套用預設勾選（anti-AD + HaGeZi NORMAL）；自訂 https 訂閱與檔案匯入；下載走實體網路 | `BlocklistManager`、`BlocklistCatalog`、`BlocklistStateCodec`、`UnderlyingNetwork.openConnection/isUnmetered` | JVM 測試（本機 HTTP 伺服器）：下載、304 不重下、重啟後從編譯檔載入、伺服器錯誤保留舊名單、拒絕遠端 http、檔案匯入、預設勾選只套用一次；2026-11-16 從開發機確認 anti-AD、HaGeZi、AdGuard、StevenBlack 地址可下載 | OISD 在開發機的 curl 上證書吊銷檢查失敗（Windows schannel），未在真機確認 |
+| K-105 | 逐連線判決接入名單：順序為「使用者條件規則 → 名單 → 路由計畫」；名單只作用於本來會放行或詢問的連線，命中時直接拒絕不詢問；系統 UID、停用與全部阻止模式不套用；使用者對域名的允許規則（即使被應用級規則遮蔽）一律作為例外 | `ForwardingPolicy.decide(blocklisted)`、`ForwardingDecision.Blocklisted`、`RuleSet.allowsDomain`、`VpnEngine.decideForwarding` | JVM 測試；模擬器：本機 HTTP 服務經 `adb reverse` 提供測試名單，Chrome 訪問 `blocked-ads.example` 與子域名被拒、記錄 Deny / 攔截列表 / `blocklist:custom-local`，未列入的域名照常允許 | 黑洞模式不生效（被允許的應用不經過 VPN） |
+| K-106 | 界面：設定頁「攔截列表」卡片與獨立頁面（總開關、名單勾選與狀態、立即更新、新增訂閱、檔案匯入、僅 Wi-Fi、更新間隔）；記錄頁新增「已攔截 / 已允許」切換、攔截列表篩選、詳情顯示名單名稱與「一律允許這個網域」；`VerdictReason.Blocklist`；三語文字 | `BlocklistSettingsScreen`、`AppRoot`、`SettingsScreen`、`LogsScreen`、`AppBackend`、`UiStrings` | 模擬器（透過 UI 樹操作，未截圖）：開啟頁面、「立即更新」得到無變化（304）、記錄頁看到攔截列表條目，按「一律允許」後建立全域允許規則，再次訪問變為允許 | 外觀請用戶目視確認 |
+| K-107 | 修正：記錄頁原本只查詢拒絕的記錄，0.9.4 寫入的「已允許」記錄在界面上看不到（已補切換）；內建出口關閉時並發移除連線可能拋 `NoSuchElementException` | `LogsScreen`、`AppBackend.getLogs(action)`、`DirectSocksServer.close` | JVM 測試（連續兩輪） | — |
+| K-108 | 網路安全設定：維持禁止明文 HTTP，只對 `127.0.0.1` / `localhost` 開放（本機測試名單） | `res/xml/network_security_config.xml`、`AndroidManifest.xml` | 模擬器 | — |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

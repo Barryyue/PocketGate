@@ -146,6 +146,24 @@ class RuleSet(rules: List<Rule>, val version: Long = 0) {
         return RuleMatch(null, tampered)
     }
 
+    /**
+     * 是否有符合這條連線的「允許 + 域名條件」規則（不論優先順序）。
+     * 攔截列表以此作為例外：使用者為某個域名建立的允許規則，即使被同一應用優先順序更高的應用級規則遮蔽，
+     * 也應該讓這個域名不被名單攔截。
+     */
+    fun allowsDomain(
+        flow: FlowInfo,
+        app: AppIdentity?,
+        domains: DomainCandidates,
+        remoteZone: NetworkZone,
+        network: NetworkContext = NetworkContext.None,
+    ): Boolean = compiled.any { candidate ->
+        candidate.rule.action == VerdictAction.Allow &&
+            candidate.rule.conditions.remote is RemoteTarget.Domain &&
+            candidate.matchConditions(flow, domains, remoteZone, network) &&
+            candidate.matchApp(app) == AppMatchOutcome.Match
+    }
+
     fun findAppRule(
         app: AppIdentity,
         network: NetworkContext = NetworkContext.None,

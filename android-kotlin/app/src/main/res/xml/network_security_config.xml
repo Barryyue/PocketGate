@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  預設禁止明文 HTTP（與 targetSdk 28+ 的系統預設相同）。
+  只對本機地址開放：自訂攔截列表可以從 http://127.0.0.1 載入（例如開發時用 adb reverse 提供測試名單）。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

@@ -162,6 +162,7 @@ fun reasonLabel(s: UiStrings, reason: VerdictReason): String = when (reason) {
     VerdictReason.FailSafe -> s[S.ReasonFailSafe]
     VerdictReason.NoUserSession -> s[S.ReasonMode]
     VerdictReason.Cancelled -> s[S.ReasonFailSafe]
+    VerdictReason.Blocklist -> s[S.ReasonBlocklist]
 }
 
 fun protocolLabel(protocol: L4Protocol): String = when (protocol) {

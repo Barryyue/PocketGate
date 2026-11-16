@@ -342,7 +342,9 @@ class DirectSocksServer(
         if (closed) return
         closed = true
         runCatching { server.close() }
-        sockets.toList().forEach(::closeQuietly)
+        // ConcurrentHashMap 的迭代器在並發移除時是安全的；不能先 toList()（大小與內容可能不一致而拋例外）。
+        for (closeable in sockets) runCatching { closeable.close() }
+        sockets.clear()
         pool.shutdownNow()
         AppLog.i("direct", "direct exit stopped")
     }

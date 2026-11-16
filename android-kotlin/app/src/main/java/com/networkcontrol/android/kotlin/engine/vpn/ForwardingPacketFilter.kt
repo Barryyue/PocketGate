@@ -16,6 +16,9 @@ enum class ForwardingDecision {
 
     /** 拒絕並建立詢問；使用者允許後，下一次連線會被轉發。 */
     BlockAndAsk,
+
+    /** 目標域名命中攔截列表：拒絕並記錄，不詢問。 */
+    Blocklisted,
 }
 
 class ForwardingCounters {
@@ -46,6 +49,8 @@ class ForwardingPacketFilter(
     private val decide: (uid: Int?, info: PacketInfo, hostname: String?) -> ForwardingDecision,
     private val onBlocked: (PacketInfo, uid: Int?, ask: Boolean) -> Unit,
     private val blockUdp: () -> Boolean,
+    /** 命中攔截列表的新連線；預設與一般拒絕相同。 */
+    private val onBlocklisted: (PacketInfo, uid: Int?) -> Unit = { info, uid -> onBlocked(info, uid, false) },
     /** 新連線被判定轉發時呼叫（只在新連線上，不是每個封包），用於記錄已允許的連線。 */
     private val onForwarded: (PacketInfo, uid: Int?) -> Unit = { _, _ -> },
     private val dnsAddress: InetAddress = ForwardingDefaults.MapDnsAddress,
@@ -141,10 +146,10 @@ class ForwardingPacketFilter(
             if (uid == null) counters.unknownOwner.incrementAndGet()
             val fresh = decide(uid, info, hostnameFor(info.destination.address))
             remember(key, fresh, now, info.protocol)
-            if (fresh != ForwardingDecision.Forward) {
-                onBlocked(info, uid, fresh == ForwardingDecision.BlockAndAsk)
-            } else {
-                onForwarded(info, uid)
+            when (fresh) {
+                ForwardingDecision.Forward -> onForwarded(info, uid)
+                ForwardingDecision.Blocklisted -> onBlocklisted(info, uid)
+                else -> onBlocked(info, uid, fresh == ForwardingDecision.BlockAndAsk)
             }
             fresh
         }
@@ -428,27 +433,32 @@ object ForwardingPolicy {
     fun decide(
         plan: com.networkcontrol.android.kotlin.core.model.VpnRoutingPlan,
         uid: Int?,
+        blocklisted: () -> Boolean = { false },
         flowRule: () -> com.networkcontrol.android.kotlin.core.model.VerdictAction?,
     ): ForwardingDecision {
         val base = decide(plan, uid)
-        if (uid == null || VpnRoutingPlanner.isSystemUid(uid)) return base
+        // 系統核心 UID 不套用名單：誤攔會影響整機（例如 DNS、時間同步）。
+        if (uid != null && VpnRoutingPlanner.isSystemUid(uid)) return base
         when (plan.mode) {
             com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll,
             com.networkcontrol.android.kotlin.core.model.FilterMode.Disabled,
             -> return base
             else -> Unit
         }
-        val reason = plan.find(uid)?.reason
-        if (reason == com.networkcontrol.android.kotlin.core.model.AppRoutingReason.Focus ||
-            reason == com.networkcontrol.android.kotlin.core.model.AppRoutingReason.Self
-        ) {
-            return base
+        val reason = uid?.let { plan.find(it)?.reason }
+        if (reason == com.networkcontrol.android.kotlin.core.model.AppRoutingReason.Self) return base
+        // 1. 使用者的條件規則（域名 / 端口…）優先；專注模式的放行應用不受規則影響。
+        if (uid != null && reason != com.networkcontrol.android.kotlin.core.model.AppRoutingReason.Focus) {
+            when (flowRule()) {
+                com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow -> return ForwardingDecision.Forward
+                com.networkcontrol.android.kotlin.core.model.VerdictAction.Deny -> return ForwardingDecision.Block
+                null -> Unit
+            }
         }
-        return when (flowRule()) {
-            com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow -> ForwardingDecision.Forward
-            com.networkcontrol.android.kotlin.core.model.VerdictAction.Deny -> ForwardingDecision.Block
-            null -> base
-        }
+        // 2. 攔截列表：對本來會放行或詢問的連線生效（廣告域名不必詢問）。
+        if (base != ForwardingDecision.Block && blocklisted()) return ForwardingDecision.Blocklisted
+        // 3. 路由計畫。
+        return base
     }
 
     /**

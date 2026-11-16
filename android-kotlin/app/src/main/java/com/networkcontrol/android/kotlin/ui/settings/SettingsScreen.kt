@@ -99,7 +99,11 @@ import java.util.UUID
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
+fun SettingsScreen(
+    backend: AppBackend,
+    onOpenIslandSettings: () -> Unit = {},
+    onOpenBlocklists: () -> Unit = {},
+) {
     val s = rememberUiStrings()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -909,6 +913,35 @@ fun SettingsScreen(backend: AppBackend, onOpenIslandSettings: () -> Unit = {}) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+        }
+
+        item {
+            val blocklistState by backend.blocklistState.collectAsStateWithLifecycle()
+            val blocklistMatcher by backend.blocklistMatcher.collectAsStateWithLifecycle()
+            SectionCard(s[S.Blocklists]) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { onOpenBlocklists() },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(s[S.BlocklistsSubtitle], style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            if (blocklistState.enabled) {
+                                s.format(
+                                    S.BlocklistsActive,
+                                    java.text.NumberFormat.getIntegerInstance().format(blocklistMatcher.totalEntries),
+                                    blocklistState.sources.count { it.enabled && it.entries > 0 },
+                                )
+                            } else {
+                                s[S.Off]
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (blocklistState.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton(onClick = onOpenBlocklists) { Text(s[S.Edit]) }
                 }
             }
         }

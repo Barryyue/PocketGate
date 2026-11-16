@@ -93,6 +93,11 @@ class VerdictPipeline(
         publish(flow, if (rule != null) Verdict(VerdictAction.Allow, VerdictReason.Rule, rule.id) else Verdict.allow(VerdictReason.Mode))
     }
 
+    /** 命中攔截列表的連線：記錄為拒絕，規則欄記 `blocklist:<名單 id>`。 */
+    fun recordBlocklisted(flow: FlowInfo, listId: String?) {
+        publish(flow, Verdict(VerdictAction.Deny, VerdictReason.Blocklist, listId?.let { "blocklist:$it" }))
+    }
+
     private suspend fun decideInternal(
         flow: FlowInfo,
         domains: DomainCandidates,
