@@ -94,9 +94,9 @@ class PromptRouter(
                             }
                             lastPackage = packageName
                             seenForeground = true
-                        } else {
-                            lastPackage = null
                         }
+                        // 前台暫時為 null（螢幕關閉、應用內 Activity 切換）時保留 lastPackage，
+                        // 避免把「同一個應用內換頁」誤判成重新進入。 
                     }
                 } else {
                     lastPackage = null

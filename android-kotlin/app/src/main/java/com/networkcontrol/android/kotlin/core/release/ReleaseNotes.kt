@@ -40,6 +40,22 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.9.3",
+            date = "2026-11-16",
+            features = listOf(
+                t(
+                    "If the forwarding relay or the virtual network reader fails while protection is on, the tunnel is rebuilt automatically.",
+                    "转发中继或虚拟网卡读取失败时，只要保护仍开启，会自动重建隧道。",
+                    "轉發中繼或虛擬網卡讀取失敗時，只要保護仍開啟，會自動重建通道。",
+                ),
+                t(
+                    "The \"Later\" suppression now survives in-app screen switches; it is only cleared after the app really leaves the foreground.",
+                    "「稍后」抑制在应用内切换页面时不再被误清除，只有真正离开前台后才重新询问。",
+                    "「稍後」抑制在應用程式內切換頁面時不再被誤清除，只有真正離開前景後才重新詢問。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.2",
             date = "2026-11-16",
             features = listOf(

@@ -85,6 +85,7 @@ class VpnEngine(
     /** 轉發判決用的應用身分，按 UID 緩存；重新規劃時清空。 */
     private val identities = java.util.concurrent.ConcurrentHashMap<Int, com.networkcontrol.android.kotlin.core.model.AppIdentity>()
     private var lastDetachRebuild = 0L
+    private var lastFailureRebuild = 0L
 
     /** 在虛擬網卡讀取執行緒上呼叫：只有存在帶連線條件的規則時才建立 FlowInfo 比對。 */
     private fun decideForwarding(uid: Int?, info: PacketInfo, hostname: String?): ForwardingDecision {
@@ -141,6 +142,19 @@ class VpnEngine(
             _tunnelState.value = tunnel.state
             _tunnelError.value = tunnel.lastError
             _forwardingActive.value = tunnel.isForwarding
+            // 轉送執行緒或虛擬網卡讀取失敗：重新建立隧道，避免 VPN 保持 Active 但實際已斷。
+            if (tunnel.state == VpnTunnelState.Failed && protection.isEnabled) {
+                val now = android.os.SystemClock.elapsedRealtime()
+                if (now - lastFailureRebuild >= FAILURE_REBUILD_INTERVAL_MS) {
+                    lastFailureRebuild = now
+                    applied = null
+                    com.networkcontrol.android.kotlin.platform.AppLog.w(
+                        "vpn",
+                        "tunnel failed while protection on; rebuilding",
+                    )
+                    requestReplan()
+                }
+            }
         }
         tunnel.onRevoked = {
             protection.setEnabled(false)
@@ -304,6 +318,7 @@ class VpnEngine(
         const val UPSTREAM_CHECK_INTERVAL_MS = 30_000L
         const val FORWARDING_RETRY_INTERVAL_MS = 120_000L
         const val DETACH_REBUILD_INTERVAL_MS = 10_000L
+        const val FAILURE_REBUILD_INTERVAL_MS = 10_000L
     }
 
     fun status(): com.networkcontrol.android.kotlin.core.model.ProtectionStatus {

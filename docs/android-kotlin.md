@@ -1104,6 +1104,41 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 ---
 
+## 34. v0.9.3-m4p4（2026-11-16）：審查修补
+
+### 34.1 修復
+
+- **轉發失敗自動重建**：`VpnTunnel` 在轉送執行緒或虛擬網卡讀取失敗時只把狀態設為 `Failed`，而 `VpnEngine.checkForwarding()` 原本會因為「不是 Active」直接返回，導致 VPN 顯示失敗但不會重試。現在 `onStateChanged` 偵測到 `Failed` 且保護仍開啟時，會清空 `applied` 並要求重新規劃（10 秒最多一次）。
+- **稍後抑制與應用內換頁**：`PromptRouter` 在前台套件暫時為 null（Activity 切換）時不再把 `lastPackage` 清空，避免把同一應用內換頁誤判成「重新進入」而撤銷稍後抑制。
+
+### 34.2 審查結論（未修，列入待辦）
+
+- mapdns 只支援 IPv4；IPv6 AAAA 回空，IPv6 擴展頭未解析。
+- 查不到 UID 時除「全部阻止」外放行；ICMP、非 TCP/UDP、解析失敗封包直接轉發，屬安全加固空間。
+- 應用自帶 DNS / DoH 不經 mapdns，域名條件與記錄拿不到域名；映射位址無法比對遠端位址條件。
+- 上游 SOCKS5 只支援無認證握手，沒有帳號密碼。
+- 規則變更不會切斷既有 TCP 連線（設計取捨）。
+- 代理應用選擇器仍在主執行緒呼叫 `installedApps()`（K-026）。
+
+### 34.3 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK | `artifacts\kotlin-android\NetworkControl-KT-0.9.3-m4p4.apk` |
+| APK 大小 | 4,302,413 bytes |
+| APK SHA-256 | `E0349569851516576774200BE5D2FC2C5F310F469FF694AD0BAF64A5D06137F2` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.9.3-m4p4.aab` |
+| AAB 大小 | 4,885,688 bytes |
+| AAB SHA-256 | `6D6C13EAE35CCF986652032D8527A73C55A0CC4A5DC926177513762973FC1E41` |
+| versionName / Code | `0.9.3-m4p4` / `27` |
+
+### 34.4 驗證
+
+- JVM 測試（含 `ReleaseNotesTest`、`ReviewFixesTest`、`ForwardingTest`）/ Debug / Release / AAB 構建通過。
+- 失敗重建與應用內換頁只做代碼審查，未在真機模擬執行緒中斷。
+
+---
+
 ## 33. v0.9.0-m4p1（2026-11-16）：轉發模式接入防火牆
 
 ### 33.1 架構
