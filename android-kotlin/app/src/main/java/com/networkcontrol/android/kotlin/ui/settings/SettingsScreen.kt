@@ -84,6 +84,7 @@ import com.networkcontrol.android.kotlin.core.release.ReleaseNote
 import com.networkcontrol.android.kotlin.core.release.ReleaseNotes
 import com.networkcontrol.android.kotlin.core.update.UpdateChecker
 import com.networkcontrol.android.kotlin.core.update.UpdateInfo
+import com.networkcontrol.android.kotlin.core.update.UpdateSource
 import com.networkcontrol.android.kotlin.platform.Socks5Probe
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
@@ -170,6 +171,9 @@ fun SettingsScreen(
     var showScheduleDialog by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
+    var updateSource by remember { mutableStateOf(backend.updateSource()) }
+    var updateRepo by remember { mutableStateOf(backend.updateRepo()) }
+    var updateCustomUrl by remember { mutableStateOf(backend.updateCustomUrl()) }
     var showReleaseNotes by remember { mutableStateOf(false) }
     var showReleaseHistory by remember { mutableStateOf(false) }
 
@@ -1090,12 +1094,67 @@ fun SettingsScreen(
                 DetailLine(s[S.Status], "${runtime.mode.name} / ${backend.protectionStatus().name}")
                 DetailLine(s[S.SkippedRules], plan.skippedRules.size.toString())
                 DetailLine(s[S.AppsCount], if (installedCount < 0) "…" else installedCount.toString())
+                Text(s[S.UpdateSource], style = MaterialTheme.typography.bodyMedium)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    UpdateSource.entries.forEach { source ->
+                        FilterChip(
+                            updateSource == source,
+                            {
+                                updateSource = source
+                                backend.setUpdateSource(source)
+                            },
+                            { Text(updateSourceLabel(s, source)) },
+                        )
+                    }
+                }
+                OutlinedTextField(
+                    value = if (updateSource == UpdateSource.Custom) updateCustomUrl else updateRepo,
+                    onValueChange = {
+                        if (updateSource == UpdateSource.Custom) updateCustomUrl = it
+                        else updateRepo = it
+                    },
+                    label = {
+                        Text(
+                            if (updateSource == UpdateSource.Custom) {
+                                s[S.UpdateCustomUrl]
+                            } else {
+                                s[S.UpdateRepo]
+                            },
+                        )
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        s[S.UpdateRepoHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = {
+                            backend.setUpdateSource(updateSource)
+                            backend.setUpdateRepo(updateRepo)
+                            backend.setUpdateCustomUrl(updateCustomUrl)
+                            toast(s[S.Done])
+                        },
+                    ) { Text(s[S.Save]) }
+                }
                 OutlinedButton(
                     onClick = {
                         if (checkingUpdate) return@OutlinedButton
                         checkingUpdate = true
                         scope.launch {
-                            val info = UpdateChecker.check(BuildConfig.VERSION_NAME)
+                            backend.setUpdateSource(updateSource)
+                            backend.setUpdateRepo(updateRepo)
+                            backend.setUpdateCustomUrl(updateCustomUrl)
+                            val info = UpdateChecker.check(
+                                currentVersion = BuildConfig.VERSION_NAME,
+                                source = updateSource,
+                                repo = updateRepo,
+                                customUrl = updateCustomUrl,
+                            )
                             updateInfo = info
                             checkingUpdate = false
                             when {
@@ -1884,6 +1943,14 @@ private fun DirectAppsDialog(
         },
     )
 }
+
+private fun updateSourceLabel(s: com.networkcontrol.android.kotlin.ui.UiStrings, source: UpdateSource): String =
+    when (source) {
+        UpdateSource.GitHub -> s[S.UpdateSourceGitHub]
+        UpdateSource.GitLab -> s[S.UpdateSourceGitLab]
+        UpdateSource.Gitee -> s[S.UpdateSourceGitee]
+        UpdateSource.Custom -> s[S.UpdateSourceCustom]
+    }
 
 @Composable
 private fun ProxyAppDialog(

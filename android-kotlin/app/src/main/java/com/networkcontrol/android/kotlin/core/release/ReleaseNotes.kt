@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.10.0",
+            date = "2026-11-16",
+            features = listOf(
+                t(
+                    "Update checks can now use GitHub, GitLab, Gitee or a custom HTTPS JSON. Set the repository in Settings; APK assets are opened directly when present.",
+                    "检查更新现在支持 GitHub、GitLab、Gitee 或自定义 HTTPS JSON；可在设置里填写仓库，有 APK 附件时直接打开下载链接。",
+                    "檢查更新現在支援 GitHub、GitLab、Gitee 或自訂 HTTPS JSON；可在設定裡填寫儲存庫，有 APK 附件時直接開啟下載連結。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.9.10",
             date = "2026-11-16",
             features = listOf(),

@@ -1351,3 +1351,28 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - **原因與修正**：見 K-125。
 - 量測方法：shell 的 `$(( ))` 是 32 位整數，`date +%s%N` 相減超過約 2.1 秒會溢出成負數；改用 `/proc/uptime`（10 ms 精度）。
 - 修正版已安裝到實機，複測待 adb 重新連線後進行。
+
+## 43. v0.10.0-m4p12（2026-11-16）：更新來源可配置
+
+- 更新檢查不再寫死 GitHub：設定 → 關於可選 GitHub / GitLab / Gitee / 自訂 HTTPS JSON。
+- GitHub / Gitee 填 `owner/repo`，GitLab 填 `group/project`（API 會做 URL 編碼），自訂填回傳 `version`、`url`、可選 `apk` 的 HTTPS JSON。
+- 有 APK 附件時優先打開 APK 下載連結，否則打開 release 頁面；只允許 HTTPS，公開請求仍跟隨系統代理。
+- 未實作自動下載 / 安裝；Gitee 未登入 API 有速率限制，GitLab 目前固定 gitlab.com。
+
+### 43.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.10.0-m4p12.apk` |
+| APK 大小 | 4,303,934 bytes |
+| APK SHA-256 | `07E68E7A570D79DAC9DA9334BCD80D3A8C0B4A7E2709685A9888D8FADC6BCED5` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.10.0-m4p12-x86_64-emulator.apk` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.10.0-m4p12.aab` |
+| AAB 大小 | 5,156,339 bytes |
+| AAB SHA-256 | `C93FCB953B16B664A637D2B459C3A9B0A94069081411F883AACC4AEA76666DE3` |
+| versionName / Code | `0.10.0-m4p12` / `35` |
+
+### 43.2 驗證
+
+- JVM 測試（UpdateChecker 各來源解析、URL 編碼、HTTPS 限制）/ Debug / Release / AAB 構建通過。
+- 真機未驗證：GitLab / Gitee 實際 release JSON、公司內網 GitLab、Gitee 速率限制。

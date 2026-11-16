@@ -425,6 +425,14 @@ enum class S {
     Socks5Username,
     Socks5Password,
     AppLockConfirmAction,
+    UpdateSource,
+    UpdateRepo,
+    UpdateRepoHint,
+    UpdateCustomUrl,
+    UpdateSourceGitHub,
+    UpdateSourceGitLab,
+    UpdateSourceGitee,
+    UpdateSourceCustom,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -872,6 +880,14 @@ private val EN = mapOf(
     S.Socks5Username to "Username (optional)",
     S.Socks5Password to "Password",
     S.AppLockConfirmAction to "Confirm it's you to change this setting.",
+    S.UpdateSource to "Update source",
+    S.UpdateRepo to "Repository",
+    S.UpdateRepoHint to "GitHub / Gitee: owner/repo. GitLab: group/project. Custom: HTTPS JSON with version, url and optional apk.",
+    S.UpdateCustomUrl to "Custom JSON URL",
+    S.UpdateSourceGitHub to "GitHub",
+    S.UpdateSourceGitLab to "GitLab",
+    S.UpdateSourceGitee to "Gitee",
+    S.UpdateSourceCustom to "Custom",
 )
 
 private val CN = mapOf(
@@ -1295,6 +1311,14 @@ private val CN = mapOf(
     S.Socks5Username to "用户名（可选）",
     S.Socks5Password to "密码",
     S.AppLockConfirmAction to "请验证身份以更改此设置。",
+    S.UpdateSource to "更新来源",
+    S.UpdateRepo to "仓库",
+    S.UpdateRepoHint to "GitHub / Gitee 填 owner/repo；GitLab 填 group/project；自定义填返回 version、url 和可选 apk 的 HTTPS JSON。",
+    S.UpdateCustomUrl to "自定义 JSON 地址",
+    S.UpdateSourceGitHub to "GitHub",
+    S.UpdateSourceGitLab to "GitLab",
+    S.UpdateSourceGitee to "Gitee",
+    S.UpdateSourceCustom to "自定义",
 )
 
 private val TW = mapOf(
@@ -1718,4 +1742,12 @@ private val TW = mapOf(
     S.Socks5Username to "使用者名稱（選填）",
     S.Socks5Password to "密碼",
     S.AppLockConfirmAction to "請驗證身分以變更此設定。",
+    S.UpdateSource to "更新來源",
+    S.UpdateRepo to "儲存庫",
+    S.UpdateRepoHint to "GitHub / Gitee 填 owner/repo；GitLab 填 group/project；自訂填回傳 version、url 與可選 apk 的 HTTPS JSON。",
+    S.UpdateCustomUrl to "自訂 JSON 位址",
+    S.UpdateSourceGitHub to "GitHub",
+    S.UpdateSourceGitLab to "GitLab",
+    S.UpdateSourceGitee to "Gitee",
+    S.UpdateSourceCustom to "自訂",
 )
