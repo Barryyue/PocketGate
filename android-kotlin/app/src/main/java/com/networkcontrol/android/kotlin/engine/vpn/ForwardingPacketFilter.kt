@@ -43,6 +43,7 @@ class ForwardingCounters {
 
     /** hev 啟動時重放的映射數。 */
     val mappingsReplayed = AtomicLong()
+
 }
 
 /**
@@ -77,9 +78,10 @@ class ForwardingPacketFilter(
     private val dnsRedirect = DnsRedirect(dnsAddress.address)
 
     /**
-     * 映射 DNS 查詢一次只交給 hev 一個、回覆後間隔 2 ms 再放行下一個，逾時未回覆自己重送（原因見 [DnsPacer]）。
+     * 映射 DNS 查詢的排隊與重送（hev 重啟後的映射重放必須排在應用查詢之前），見 [DnsPacer]。
      */
     private val fakeIps = FakeIpMappings()
+
 
     private val dnsPacer = DnsPacer(
         onGiveUp = { packet ->

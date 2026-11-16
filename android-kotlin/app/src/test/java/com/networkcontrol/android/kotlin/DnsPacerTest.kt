@@ -21,7 +21,7 @@ class DnsPacerTest {
 
     @Test
     fun onlyOneQueryInFlightAndOrderIsKept() {
-        val pacer = DnsPacer(minGapMs = 2)
+        val pacer = DnsPacer(limit = 1, minGapMs = 2)
         val sent = (0 until 5).map { pacer.offer(query(1000 + it, it), now = 0) }
         assertEquals(listOf(true, false, false, false, false), sent)
         assertEquals(4, pacer.queued)
@@ -47,7 +47,7 @@ class DnsPacerTest {
 
     @Test
     fun replyMatchesTheRightQuery() {
-        val pacer = DnsPacer(limit = 2, minGapMs = 0)
+        val pacer = DnsPacer(limit = 2, retryMs = 25, minGapMs = 0)
         pacer.offer(query(3000, 1), now = 0)
         pacer.offer(query(3001, 2), now = 0)
         val second = reply(3001, 2)
@@ -60,7 +60,7 @@ class DnsPacerTest {
 
     @Test
     fun queryRightAfterResponseIsDelayed() {
-        val pacer = DnsPacer(minGapMs = 2)
+        val pacer = DnsPacer(limit = 1, minGapMs = 2)
         pacer.offer(query(4000, 1), now = 0)
         val r = reply(4000, 1)
         pacer.onResponse(r, r.size, now = 3)
@@ -69,8 +69,14 @@ class DnsPacerTest {
     }
 
     @Test
+    fun defaultsAllowConcurrentQueries() {
+        val pacer = DnsPacer()
+        assertTrue((0 until 20).all { pacer.offer(query(6000 + it, it), now = 0) })
+    }
+
+    @Test
     fun fullQueueFallsBackToImmediate() {
-        val pacer = DnsPacer(maxQueue = 2)
+        val pacer = DnsPacer(limit = 1, maxQueue = 2)
         pacer.offer(query(5000, 0), now = 0)
         assertFalse(pacer.offer(query(5001, 1), now = 0))
         assertFalse(pacer.offer(query(5002, 2), now = 0))
