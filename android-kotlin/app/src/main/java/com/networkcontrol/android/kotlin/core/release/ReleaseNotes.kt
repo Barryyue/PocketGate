@@ -40,6 +40,24 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.12.0",
+            date = "2026-11-18",
+            features = listOf(
+                t(
+                    "New toolbar styles: classic solid, classic frosted, floating solid, floating glass, floating frosted and floating transparent.",
+                    "新增底部工具栏样式：经典纯色、经典磨砂、悬浮纯色、悬浮玻璃、悬浮磨砂、悬浮透明。",
+                    "新增底部工具列樣式：經典純色、經典磨砂、懸浮純色、懸浮玻璃、懸浮磨砂、懸浮透明。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "Frosted and glass are translucent approximations; Android does not provide real backdrop blur for a bottom bar inside the same window.",
+                    "磨砂和玻璃是半透明近似效果；Android 不提供同窗口内底部栏的真实背景模糊。",
+                    "磨砂和玻璃是半透明近似效果；Android 不提供同視窗內底部列的真正背景模糊。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.11.2",
             date = "2026-11-17",
             features = listOf(

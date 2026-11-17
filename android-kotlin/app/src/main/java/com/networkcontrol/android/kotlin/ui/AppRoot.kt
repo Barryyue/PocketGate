@@ -2,11 +2,16 @@ package com.networkcontrol.android.kotlin.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
@@ -32,10 +37,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppContainer
+import com.networkcontrol.android.kotlin.core.model.ToolbarStyle
 import com.networkcontrol.android.kotlin.ui.apps.AppsScreen
 import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
@@ -95,6 +107,7 @@ fun AppRoot(container: AppContainer) {
     }
 
     val backend = container.backend
+    val toolbarStyle by container.theme.toolbarStyle.collectAsStateWithLifecycle()
     Box(Modifier.fillMaxSize()) {
         if (blocklistsOpen) {
             Box(
@@ -119,16 +132,11 @@ fun AppRoot(container: AppContainer) {
         } else {
             Scaffold(
                 bottomBar = {
-                    NavigationBar {
-                        tabs.forEachIndexed { index, tab ->
-                            NavigationBarItem(
-                                selected = selected == index,
-                                onClick = { selected = index },
-                                icon = { Icon(tab.icon, contentDescription = s[tab.label]) },
-                                label = { Text(s[tab.label]) },
-                            )
-                        }
-                    }
+                    AppBottomBar(
+                        style = toolbarStyle,
+                        selected = selected,
+                        onSelect = { selected = it },
+                    )
                 },
             ) { padding ->
                 Box(
@@ -194,5 +202,91 @@ fun AppRoot(container: AppContainer) {
                 TextButton(onClick = { showAppListPermission = false }) { Text(s[S.PromptLater]) }
             },
         )
+    }
+}
+
+@Composable
+private fun AppBottomBar(
+    style: ToolbarStyle,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+) {
+    val s = rememberUiStrings()
+    val floating = style.isFloating
+    val shape = if (floating) RoundedCornerShape(28.dp) else RectangleShape
+    val scheme = MaterialTheme.colorScheme
+    val brush: Brush = when (style) {
+        ToolbarStyle.ClassicSolid,
+        ToolbarStyle.FloatingSolid,
+        -> androidx.compose.ui.graphics.SolidColor(scheme.surface)
+
+        ToolbarStyle.ClassicFrosted,
+        ToolbarStyle.FloatingFrosted,
+        -> Brush.verticalGradient(
+            listOf(
+                scheme.surface.copy(alpha = 0.97f),
+                scheme.surfaceVariant.copy(alpha = 0.90f),
+            ),
+        )
+
+        ToolbarStyle.FloatingGlass -> Brush.verticalGradient(
+            listOf(
+                scheme.surface.copy(alpha = 0.72f),
+                scheme.surfaceVariant.copy(alpha = 0.55f),
+            ),
+        )
+
+        ToolbarStyle.FloatingTransparent -> Brush.verticalGradient(
+            listOf(
+                scheme.surface.copy(alpha = 0.38f),
+                scheme.surface.copy(alpha = 0.18f),
+            ),
+        )
+    }
+    val borderColor = when (style) {
+        ToolbarStyle.ClassicSolid -> null
+        ToolbarStyle.ClassicFrosted,
+        ToolbarStyle.FloatingFrosted,
+        -> scheme.outlineVariant.copy(alpha = 0.60f)
+
+        ToolbarStyle.FloatingSolid -> scheme.outlineVariant.copy(alpha = 0.35f)
+        ToolbarStyle.FloatingGlass -> scheme.onSurface.copy(alpha = 0.14f)
+        ToolbarStyle.FloatingTransparent -> scheme.onSurface.copy(alpha = 0.10f)
+    }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .then(if (floating) Modifier.padding(horizontal = 12.dp, vertical = 8.dp) else Modifier)
+            .navigationBarsPadding(),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .then(if (floating) Modifier.shadow(10.dp, shape) else Modifier)
+                .clip(shape)
+                .background(brush, shape)
+                .then(
+                    if (borderColor != null) {
+                        Modifier.border(1.dp, borderColor, shape)
+                    } else {
+                        Modifier
+                    },
+                ),
+        ) {
+            NavigationBar(
+                containerColor = Color.Transparent,
+                tonalElevation = 0.dp,
+                windowInsets = WindowInsets(0, 0, 0, 0),
+            ) {
+                tabs.forEachIndexed { index, tab ->
+                    NavigationBarItem(
+                        selected = selected == index,
+                        onClick = { onSelect(index) },
+                        icon = { Icon(tab.icon, contentDescription = s[tab.label]) },
+                        label = { Text(s[tab.label]) },
+                    )
+                }
+            }
+        }
     }
 }

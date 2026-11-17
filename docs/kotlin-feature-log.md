@@ -340,6 +340,12 @@
 |---|---|---|---|---|
 | K-137 | 鎖屏斷網白名單：勾選的應用在鎖屏時仍可聯網，解鎖後回到正常路由 | `AppPreferences.lockScreenWhitelist`、`VpnEngine.replanNow`、`RoutingPlanner.plan`、`AppRoutingReason.LockScreen`、`SettingsScreen` | JVM 測試 / Debug / Release 構建 | 白名單只在鎖屏斷網開啟時生效；專注模式仍用自己的允許清單 |
 
+### v0.12.0-m4p15（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-138 | 底部工具欄六種樣式：經典純色 / 經典磨砂 / 懸浮純色 / 懸浮玻璃 / 懸浮磨砂 / 懸浮透明；設定頁可切換並即時生效 | `ToolbarStyle`、`AppPreferences.toolbarStyle`、`ThemeController`、`AppRoot.AppBottomBar`、`SettingsScreen` | JVM 測試 / Debug / Release 構建 | 磨砂與玻璃為半透明近似，Android 同視窗沒有真正的背景模糊 API |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

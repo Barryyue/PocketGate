@@ -258,3 +258,17 @@ enum class SpeedIslandFontWeight {
     Medium,
     Bold,
 }
+
+/** 底部工具欄樣式。 */
+enum class ToolbarStyle {
+    ClassicSolid,
+    ClassicFrosted,
+    FloatingSolid,
+    FloatingGlass,
+    FloatingFrosted,
+    FloatingTransparent,
+    ;
+
+    val isFloating: Boolean
+        get() = this != ClassicSolid && this != ClassicFrosted
+}

@@ -1533,3 +1533,27 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試 / Debug / Release 構建通過。
 - 手機在打包後已離線（`6fb0426a not found`），尚未安裝到真機；需重新連接 USB 後安裝。
+
+## 55. v0.12.0-m4p15（2026-11-18）：底部工具欄樣式
+
+- 新增 `ToolbarStyle`：經典純色、經典磨砂、懸浮純色、懸浮玻璃、懸浮磨砂、懸浮透明。
+- 經典樣式為全寬；懸浮樣式加 12dp 水平邊距、8dp 垂直邊距、28dp 圓角與陰影。
+- 純色使用不透明 `surface`；磨砂用高不透明度漸變；玻璃用較低不透明度漸變加細邊框；透明用最低不透明度。
+- 設定 → 外觀 → 工具欄樣式即時切換；`ThemeController.toolbarStyle` 是 StateFlow，AppRoot 直接收集。
+- 背景模糊限制：Android 同視窗內沒有真正的 backdrop blur API，磨砂 / 玻璃是半透明近似。
+
+### 55.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.12.0-m4p15.apk` |
+| APK 大小 | 5,566,129 bytes |
+| APK SHA-256 | `1D4774EBAB64F11A3C27998DAA6BFBFAF34C48D5018950DE93836BD26F4C9890` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.12.0-m4p15-x86_64-emulator.apk` |
+| AAB | 未產出（本次只要 APK） |
+| versionName / Code | `0.12.0-m4p15` / `46` |
+
+### 55.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機目前未連接（`adb devices` 為空），尚未安裝到真機。

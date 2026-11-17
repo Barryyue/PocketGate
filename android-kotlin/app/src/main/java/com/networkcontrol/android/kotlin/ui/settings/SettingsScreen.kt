@@ -76,6 +76,7 @@ import com.networkcontrol.android.kotlin.core.model.InstalledApp
 import com.networkcontrol.android.kotlin.core.model.Profile
 import com.networkcontrol.android.kotlin.core.model.RuleImportMode
 import com.networkcontrol.android.kotlin.core.model.RuleImportPreview
+import com.networkcontrol.android.kotlin.core.model.ToolbarStyle
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
 import com.networkcontrol.android.kotlin.core.model.SpeedIslandContent
@@ -115,6 +116,7 @@ fun SettingsScreen(
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val plan by backend.plan.collectAsStateWithLifecycle()
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
+    var toolbarStyle by remember { mutableStateOf(backend.toolbarStyle()) }
     val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
     var overlayKey by remember { mutableIntStateOf(0) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -298,6 +300,19 @@ fun SettingsScreen(
                     Spacer(Modifier.width(8.dp))
                     OutlinedButton(onClick = { showThemeColorDialog = true }) {
                         Text(s[S.Edit])
+                    }
+                }
+                Text(s[S.ToolbarStyle], style = MaterialTheme.typography.bodyMedium)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ToolbarStyle.entries.forEach { style ->
+                        FilterChip(
+                            toolbarStyle == style,
+                            {
+                                toolbarStyle = style
+                                backend.setToolbarStyle(style)
+                            },
+                            { Text(toolbarStyleLabel(s, style)) },
+                        )
                     }
                 }
             }
@@ -2098,6 +2113,18 @@ private fun DirectAppsDialog(
             TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
         },
     )
+}
+
+private fun toolbarStyleLabel(
+    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+    style: ToolbarStyle,
+): String = when (style) {
+    ToolbarStyle.ClassicSolid -> s[S.ToolbarClassicSolid]
+    ToolbarStyle.ClassicFrosted -> s[S.ToolbarClassicFrosted]
+    ToolbarStyle.FloatingSolid -> s[S.ToolbarFloatingSolid]
+    ToolbarStyle.FloatingGlass -> s[S.ToolbarFloatingGlass]
+    ToolbarStyle.FloatingFrosted -> s[S.ToolbarFloatingFrosted]
+    ToolbarStyle.FloatingTransparent -> s[S.ToolbarFloatingTransparent]
 }
 
 private fun updateSourceLabel(s: com.networkcontrol.android.kotlin.ui.UiStrings, source: UpdateSource): String =
