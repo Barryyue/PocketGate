@@ -1510,3 +1510,26 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試（含 `NotificationTitleTest`）/ Debug / Release / AAB 構建通過。
 - 真機未驗證：不同 ROM 對長標題的省略與通知排版。
+
+## 54. v0.11.2-m4p14（2026-11-17）：鎖屏斷網白名單
+
+- 設定 → VPN → 鎖屏斷網開啟後，新增「鎖屏時仍允許聯網的應用」選擇器（沿用多選應用對話框）。
+- 鎖屏且 block-on-lock 生效時，白名單內的套件在 `VpnRoutingPlanner` 取得 `Bypass / LockScreen`，並加入 VPN 排除名單；解鎖後重新規劃回正常路由。
+- 若同時開啟專注模式，仍以專注模式的允許清單為準，不套用鎖屏白名單。
+- `AppRoutingReason.LockScreen` 在應用列表顯示為「鎖屏斷網」。
+
+### 54.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.11.2-m4p14.apk` |
+| APK 大小 | 5,566,133 bytes |
+| APK SHA-256 | `14B052AA6FD1C246AD2382D78121992564B9D9AA5DC2EE7074A21F378115D2E2` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.11.2-m4p14-x86_64-emulator.apk` |
+| AAB | 未產出（本次只要 APK） |
+| versionName / Code | `0.11.2-m4p14` / `45` |
+
+### 54.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機在打包後已離線（`6fb0426a not found`），尚未安裝到真機；需重新連接 USB 後安裝。

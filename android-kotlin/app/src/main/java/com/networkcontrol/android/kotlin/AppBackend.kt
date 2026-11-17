@@ -667,6 +667,13 @@ class AppBackend(val container: AppContainer) {
         container.vpnEngine.requestReplan()
     }
 
+    fun lockScreenWhitelist(): Set<String> = container.preferences.lockScreenWhitelist
+
+    fun setLockScreenWhitelist(packages: Set<String>) {
+        container.preferences.lockScreenWhitelist = packages
+        container.vpnEngine.requestReplan()
+    }
+
     fun isScreenLocked(): Boolean = container.screenState.locked.value
 
     fun privateDnsMode(): String =

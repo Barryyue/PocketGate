@@ -40,6 +40,24 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.11.2",
+            date = "2026-11-17",
+            features = listOf(
+                t(
+                    "Block-on-lock now supports a whitelist: selected apps keep network access while the screen is locked.",
+                    "锁屏断网新增白名单：选中的应用在锁屏时仍可联网。",
+                    "鎖屏斷網新增白名單：選中的應用在鎖屏時仍可聯網。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "The whitelist only applies when block-on-lock is on; focus mode still uses its own allowed apps.",
+                    "白名单只在锁屏断网开启时生效；专注模式仍使用自己的允许应用。",
+                    "白名單只在鎖屏斷網開啟時生效；專注模式仍使用自己的允許應用。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.11.1",
             date = "2026-11-17",
             features = listOf(

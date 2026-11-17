@@ -32,6 +32,7 @@ object VpnRoutingPlanner {
         allowSystemAppsByDefault: Boolean = false,
         trustedSigners: Set<String> = emptySet(),
         focusAllowedPackages: Set<String> = emptySet(),
+        lockScreenAllowedPackages: Set<String> = emptySet(),
     ): VpnRoutingPlan {
         val skipped = rules.rules.mapNotNull { rule ->
             getSkipReason(rule)?.let { SkippedRule(rule.id, it) }
@@ -54,6 +55,7 @@ object VpnRoutingPlanner {
                 allowSystemAppsByDefault,
                 trustedSigners,
                 focusAllowedPackages,
+                lockScreenAllowedPackages,
             )
             byUid[uid] = routing
             if (routing.decision == AppRoutingDecision.Bypass) bypass.addAll(packages)
@@ -99,6 +101,7 @@ object VpnRoutingPlanner {
         allowSystemAppsByDefault: Boolean,
         trustedSigners: Set<String>,
         focusAllowedPackages: Set<String>,
+        lockScreenAllowedPackages: Set<String>,
     ): AppRouting {
         if (packages.contains(selfPackage)) {
             return AppRouting(uid, primary.packageName, packages, AppRoutingDecision.Bypass, AppRoutingReason.Self)
@@ -113,6 +116,15 @@ object VpnRoutingPlanner {
                 packages,
                 AppRoutingDecision.Bypass,
                 AppRoutingReason.Focus,
+            )
+        }
+        if (lockScreenAllowedPackages.isNotEmpty() && packages.any { it in lockScreenAllowedPackages }) {
+            return AppRouting(
+                uid,
+                primary.packageName,
+                packages,
+                AppRoutingDecision.Bypass,
+                AppRoutingReason.LockScreen,
             )
         }
         when (mode) {

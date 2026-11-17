@@ -132,6 +132,8 @@ fun SettingsScreen(
     var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
     var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
     var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
+    var lockWhitelist by remember { mutableStateOf(backend.lockScreenWhitelist()) }
+    var showLockWhitelistDialog by remember { mutableStateOf(false) }
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
     var forwardingEnabled by remember { mutableStateOf(backend.forwardingEnabled()) }
     var forwardingUpstream by remember { mutableStateOf(backend.forwardingUpstream()) }
@@ -155,8 +157,9 @@ fun SettingsScreen(
         initialValue = null,
         showProxyAppDialog,
         showDirectAppsDialog,
+        showLockWhitelistDialog,
     ) {
-        if (showProxyAppDialog || showDirectAppsDialog) {
+        if (showProxyAppDialog || showDirectAppsDialog || showLockWhitelistDialog) {
             value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.installedApps() }
         }
     }
@@ -707,6 +710,29 @@ fun SettingsScreen(
                         backend.setBlockOnLockScreen(it)
                     },
                 )
+                if (blockOnLock) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                s[S.LockScreenWhitelist],
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                s.format(S.LockScreenWhitelistCount, lockWhitelist.size),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = { showLockWhitelistDialog = true }) {
+                            Text(s[S.Select])
+                        }
+                    }
+                    Text(
+                        s[S.LockScreenWhitelistHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 SwitchRow(
                     title = s[S.AppLock],
                     subtitle = s[S.AppLockHint],
@@ -1345,6 +1371,7 @@ fun SettingsScreen(
     val directApps = pickerApps
     if (showDirectAppsDialog && directApps != null) {
         DirectAppsDialog(
+            title = s[S.DirectApps],
             apps = directApps,
             initial = directPackages,
             onDismiss = { showDirectAppsDialog = false },
@@ -1352,6 +1379,20 @@ fun SettingsScreen(
                 directPackages = packages
                 guard.run { backend.setForwardingDirectPackages(packages) }
                 showDirectAppsDialog = false
+            },
+        )
+    }
+
+    if (showLockWhitelistDialog && directApps != null) {
+        DirectAppsDialog(
+            title = s[S.LockScreenWhitelist],
+            apps = directApps,
+            initial = lockWhitelist,
+            onDismiss = { showLockWhitelistDialog = false },
+            onSave = { packages ->
+                lockWhitelist = packages
+                backend.setLockScreenWhitelist(packages)
+                showLockWhitelistDialog = false
             },
         )
     }
@@ -1991,6 +2032,7 @@ private fun DetailLine(label: String, value: String) {
 
 @Composable
 private fun DirectAppsDialog(
+    title: String,
     apps: List<InstalledApp>,
     initial: Set<String>,
     onDismiss: () -> Unit,
@@ -2011,7 +2053,7 @@ private fun DirectAppsDialog(
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(s[S.DirectApps]) },
+        title = { Text(title) },
         text = {
             Column {
                 OutlinedTextField(

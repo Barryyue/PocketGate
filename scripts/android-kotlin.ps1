@@ -24,7 +24,7 @@ $avdHome = if ($env:NC_ANDROID_AVD_HOME) { $env:NC_ANDROID_AVD_HOME } else { 'D:
 $adb = Join-Path $sdk 'platform-tools\adb.exe'
 $emulator = 'D:\tools\android-dev\emu34\emulator\emulator.exe'
 $package = 'com.networkcontrol.android.kotlin.debug'
-$version = '0.11.1-m4p13'
+$version = '0.11.2-m4p14'
 
 $env:JAVA_HOME = $jdk
 $env:ANDROID_HOME = $sdk

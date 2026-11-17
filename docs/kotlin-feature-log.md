@@ -334,6 +334,12 @@
 |---|---|---|---|---|
 | K-136 | 常駐通知標題可自訂；留空時使用目前語言的預設「保護已開啟」，儲存後立即刷新通知 | `AppPreferences`、`AppBackend`、`VpnForegroundNotifier`、`SettingsScreen`、`UiStrings` | JVM `NotificationTitleTest`；Debug / Release / AAB 構建 | 自訂只套用到「保護已開啟」，啟動中仍用預設「保護正在啟動」 |
 
+### v0.11.2-m4p14（2026-11-17）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-137 | 鎖屏斷網白名單：勾選的應用在鎖屏時仍可聯網，解鎖後回到正常路由 | `AppPreferences.lockScreenWhitelist`、`VpnEngine.replanNow`、`RoutingPlanner.plan`、`AppRoutingReason.LockScreen`、`SettingsScreen` | JVM 測試 / Debug / Release 構建 | 白名單只在鎖屏斷網開啟時生效；專注模式仍用自己的允許清單 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
