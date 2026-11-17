@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.12.1",
+            date = "2026-11-18",
+            features = listOf(
+                t(
+                    "Floating toolbar styles now overlay the page content, so lists scroll behind the glass / transparent bar instead of stopping above it.",
+                    "悬浮工具栏样式现在覆盖在页面内容上，列表会从玻璃 / 透明栏后面滚过，不再停在栏上方。",
+                    "懸浮工具列樣式現在覆蓋在頁面內容上，清單會從玻璃 / 透明欄後面滾過，不再停在欄上方。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.12.0",
             date = "2026-11-18",
             features = listOf(

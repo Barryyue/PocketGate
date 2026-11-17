@@ -111,7 +111,12 @@ fun AppsScreen(backend: AppBackend) {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            start = 20.dp,
+            top = 20.dp,
+            end = 20.dp,
+            bottom = 20.dp + com.networkcontrol.android.kotlin.ui.LocalBottomContentPadding.current,
+        ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item { ScreenHeader(s[S.Apps], s[S.AppsSubtitle]) }

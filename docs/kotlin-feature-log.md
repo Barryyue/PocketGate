@@ -346,6 +346,12 @@
 |---|---|---|---|---|
 | K-138 | 底部工具欄六種樣式：經典純色 / 經典磨砂 / 懸浮純色 / 懸浮玻璃 / 懸浮磨砂 / 懸浮透明；設定頁可切換並即時生效 | `ToolbarStyle`、`AppPreferences.toolbarStyle`、`ThemeController`、`AppRoot.AppBottomBar`、`SettingsScreen` | JVM 測試 / Debug / Release 構建 | 磨砂與玻璃為半透明近似，Android 同視窗沒有真正的背景模糊 API |
 
+### v0.12.1-m4p16（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-139 | 懸浮工具欄改為覆蓋在頁面內容上，列表可從欄後滾過；各主頁 LazyColumn 底部自動增加 104dp 間距，最後一項仍可完整滾出 | `AppRoot`、`BottomBarInsets`、`Overview/Apps/Rules/Logs/SettingsScreen` | JVM 測試 / Debug / Release 構建 | 仍未做真正的背景模糊 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

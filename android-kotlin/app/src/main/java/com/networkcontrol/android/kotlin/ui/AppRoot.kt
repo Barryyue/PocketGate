@@ -28,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -130,33 +131,48 @@ fun AppRoot(container: AppContainer) {
                 )
             }
         } else {
+            val floatingToolbar = toolbarStyle.isFloating
             Scaffold(
                 bottomBar = {
-                    AppBottomBar(
-                        style = toolbarStyle,
-                        selected = selected,
-                        onSelect = { selected = it },
-                    )
+                    if (!floatingToolbar) {
+                        AppBottomBar(
+                            style = toolbarStyle,
+                            selected = selected,
+                            onSelect = { selected = it },
+                        )
+                    }
                 },
             ) { padding ->
-                Box(
-                    Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.TopCenter,
+                CompositionLocalProvider(
+                    LocalBottomContentPadding provides if (floatingToolbar) 104.dp else 0.dp,
                 ) {
-                    Box(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
-                        when (selected) {
-                            0 -> OverviewScreen(backend)
-                            1 -> AppsScreen(backend)
-                            2 -> RulesScreen(backend)
-                            3 -> LogsScreen(backend)
-                            else -> SettingsScreen(
-                                backend = backend,
-                                onOpenIslandSettings = { islandSettingsOpen = true },
-                                onOpenBlocklists = { blocklistsOpen = true },
-                            )
+                    Box(
+                        Modifier.fillMaxSize().padding(padding),
+                        contentAlignment = Alignment.TopCenter,
+                    ) {
+                        Box(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
+                            when (selected) {
+                                0 -> OverviewScreen(backend)
+                                1 -> AppsScreen(backend)
+                                2 -> RulesScreen(backend)
+                                3 -> LogsScreen(backend)
+                                else -> SettingsScreen(
+                                    backend = backend,
+                                    onOpenIslandSettings = { islandSettingsOpen = true },
+                                    onOpenBlocklists = { blocklistsOpen = true },
+                                )
+                            }
                         }
                     }
                 }
+            }
+            if (floatingToolbar) {
+                AppBottomBar(
+                    style = toolbarStyle,
+                    selected = selected,
+                    onSelect = { selected = it },
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                )
             }
         }
         PromptOverlay(
@@ -210,6 +226,7 @@ private fun AppBottomBar(
     style: ToolbarStyle,
     selected: Int,
     onSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val s = rememberUiStrings()
     val floating = style.isFloating
@@ -254,7 +271,7 @@ private fun AppBottomBar(
         ToolbarStyle.FloatingTransparent -> scheme.onSurface.copy(alpha = 0.10f)
     }
     Box(
-        Modifier
+        modifier
             .fillMaxWidth()
             .then(if (floating) Modifier.padding(horizontal = 12.dp, vertical = 8.dp) else Modifier)
             .navigationBarsPadding(),

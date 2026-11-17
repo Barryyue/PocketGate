@@ -1557,3 +1557,25 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試 / Debug / Release 構建通過。
 - 手機目前未連接（`adb devices` 為空），尚未安裝到真機。
+
+## 56. v0.12.1-m4p16（2026-11-18）：懸浮工具欄覆蓋內容
+
+- 懸浮樣式不再放進 Scaffold 的 `bottomBar`，改為外層 Box 底部 overlay；頁面內容可以延伸到欄後方。
+- 新增 `LocalBottomContentPadding`，五個主頁的 LazyColumn 底部額外留 104dp，最後一項仍能滾到欄上方。
+- 透明 / 玻璃樣式現在能看到滾動內容從欄後經過；磨砂仍是半透明近似，沒有真正的背景模糊。
+- 經典樣式保持原本的 Scaffold bottomBar 行為。
+
+### 56.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.12.1-m4p16.apk` |
+| APK 大小 | 5,566,129 bytes |
+| APK SHA-256 | `49916D00791C72DA09EBD8070AE35E0E0F3E1B9501A433911D6DC4B61BF659E7` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.12.1-m4p16-x86_64-emulator.apk` |
+| versionName / Code | `0.12.1-m4p16` / `47` |
+
+### 56.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機未連接，尚未做真機視覺確認。
