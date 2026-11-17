@@ -460,6 +460,13 @@ class AppBackend(val container: AppContainer) {
         container.promptRouter.refresh()
     }
 
+    fun protectionNotificationTitle(): String = container.preferences.protectionNotificationTitle
+
+    fun setProtectionNotificationTitle(value: String) {
+        container.preferences.protectionNotificationTitle = value
+        container.vpnEngine.refreshNotification()
+    }
+
     fun promptPresentationMode(): String = container.preferences.promptPresentationMode
 
     fun setPromptPresentationMode(mode: String) {

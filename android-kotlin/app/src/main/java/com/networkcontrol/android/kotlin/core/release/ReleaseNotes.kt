@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.11.1",
+            date = "2026-11-17",
+            features = listOf(
+                t(
+                    "The persistent notification title can be customized in Settings > Notifications; leaving it empty uses the localized default “Protection is on”.",
+                    "常驻通知标题可在设置 → 通知里自定义；留空时使用当前语言的默认「保护已开启」。",
+                    "常駐通知標題可在設定 → 通知裡自訂；留空時使用目前語言的預設「保護已開啟」。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.11.0",
             date = "2026-11-17",
             features = listOf(

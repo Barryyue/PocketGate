@@ -165,6 +165,7 @@ fun SettingsScreen(
     }
     val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
     var showTimedOption by remember { mutableStateOf(backend.promptShowTimedOption()) }
+    var notificationTitle by remember { mutableStateOf(backend.protectionNotificationTitle()) }
     var denyPermanent by remember { mutableStateOf(backend.promptDenyPermanent()) }
     val forwardingAvailable = remember { backend.forwardingAvailable() }
     var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
@@ -664,6 +665,31 @@ fun SettingsScreen(
                     checked = backend.container.preferences.notificationsEnabled,
                     onCheckedChange = { backend.setNotificationsEnabled(it) },
                 )
+                OutlinedTextField(
+                    value = notificationTitle,
+                    onValueChange = { notificationTitle = it.take(80) },
+                    label = { Text(s[S.NotificationTitle]) },
+                    placeholder = { Text(s[S.ProtectionOn]) },
+                    supportingText = { Text(s[S.NotificationTitleHint]) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(
+                        onClick = {
+                            notificationTitle = ""
+                            backend.setProtectionNotificationTitle("")
+                            toast(s[S.Reset])
+                        },
+                    ) { Text(s[S.Reset]) }
+                    Spacer(Modifier.weight(1f))
+                    TextButton(
+                        onClick = {
+                            backend.setProtectionNotificationTitle(notificationTitle)
+                            toast(s[S.Done])
+                        },
+                    ) { Text(s[S.Save]) }
+                }
                 OutlinedButton(onClick = { context.startActivity(backend.openNotificationSettings()) }) {
                     Text(s[S.OpenNotificationSettings])
                 }

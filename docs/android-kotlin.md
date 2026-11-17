@@ -1485,3 +1485,28 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - **坑**：R8 把同父類的 Glance 掛件類別水平合併，所有掛件都畫成同一款 → `proguard-rules.pro` 保留 `widget.**` 的 GlanceAppWidget 子類與 ActionCallback（見 AGENTS.md）。磁貼點擊後立即重繪會畫到舊狀態（操作非同步生效）→ 改為顯示期間跟著狀態變化重繪。
 - **驗證**：JVM `QuickLogicTest`（7 項）；模擬器（release 版）：四款掛件實際放到桌面並截取模擬器畫面確認版面；掛件上開啟保護、全部阻止、勿擾並關回；開啟應用鎖 + 模擬器 PIN 後，掛件「關閉保護」先跳出驗證，取消不執行、輸入 PIN 後才關閉；長按圖示捷徑「切換到白名單」生效（未匯出的 Activity 可由捷徑啟動）；勿擾、模式磁貼的顯示與點擊（放寬模式時要求驗證）。驗證後已恢復模擬器（模式、應用鎖、PIN、移除測試磁貼）。
 - **未驗證**：實機（vivo / 紅魔等啟動器）的掛件外觀與尺寸；專注磁貼 / 捷徑的實際啟動；APK 因 Glance（含 WorkManager）增加約 1.1 MB。
+
+## 53. v0.11.1-m4p13（2026-11-17）：常駐通知標題可自訂
+
+- 設定 → 通知新增「通知標題」輸入框，最多 80 字；留空表示使用跟隨介面語言的預設值。
+- 預設值仍是 `protection_active`（保護已開啟 / Protection is on / 保護已開啟）；「保護正在啟動」的短暫通知仍使用預設字串。
+- 儲存或重設後呼叫 `VpnEngine.refreshNotification()`，常駐通知立即更新。
+- 自訂文字存在 `SharedPreferences`（`protection_notification_title`），不寫入資料庫；升級與備份不受影響。
+
+### 53.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.11.1-m4p13.apk` |
+| APK 大小 | 5,566,133 bytes |
+| APK SHA-256 | `AED1E0B217BE64F33E6562B5E42A64A760DA00F8C8870B5B3B3B753BC738F2ED` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.11.1-m4p13-x86_64-emulator.apk` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.11.1-m4p13.aab` |
+| AAB 大小 | 6,759,285 bytes |
+| AAB SHA-256 | `771F8F79CF3BB44C1482EC2FC08F1B0A891F514D579E6A78417974F5380FDDBF` |
+| versionName / Code | `0.11.1-m4p13` / `44` |
+
+### 53.2 驗證
+
+- JVM 測試（含 `NotificationTitleTest`）/ Debug / Release / AAB 構建通過。
+- 真機未驗證：不同 ROM 對長標題的省略與通知排版。

@@ -32,6 +32,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_NOTIFICATIONS, true)
         set(value) = prefs.edit().putBoolean(KEY_NOTIFICATIONS, value).apply()
 
+    /** 常駐通知標題；空字串表示使用系統語言的預設「保護已開啟」。 */
+    var protectionNotificationTitle: String
+        get() = prefs.getString(KEY_PROTECTION_NOTIFICATION_TITLE, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_PROTECTION_NOTIFICATION_TITLE, value.trim()).apply()
+
     var notificationPermissionAsked: Boolean
         get() = prefs.getBoolean(KEY_NOTIFICATION_ASKED, false)
         set(value) = prefs.edit().putBoolean(KEY_NOTIFICATION_ASKED, value).apply()
@@ -302,6 +307,7 @@ class AppPreferences(context: Context) {
         const val KEY_PROTECTION = "protection"
         const val KEY_NOTIFICATIONS = "notifications"
         const val KEY_NOTIFICATION_ASKED = "notification_asked"
+        const val KEY_PROTECTION_NOTIFICATION_TITLE = "protection_notification_title"
         const val KEY_THEME_COLOR = "theme_color"
         const val KEY_PROMPT_PRESENTATION = "prompt_presentation"
         const val KEY_PROMPT_OVERLAY_POSITION = "prompt_overlay_position"

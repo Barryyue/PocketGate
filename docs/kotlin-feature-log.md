@@ -328,6 +328,12 @@
 | K-134 | 詢問按鈕單行：限時按鈕改為「60分鐘」，按鈕文字放不下時自動縮小 | `PromptOverlayController`、`PromptOverlay`、`UiStrings` | 模擬器 zh-TW 畫面確認 | 實機待確認 |
 | K-135 | 桌面掛件（防護狀態、今日概覽、快捷開關、流量排行）、控制中心磁貼（模式、全部阻止、勿擾、專注，加上原有保護）、長按捷徑；共用 `QuickActions`，削弱防護的操作在應用鎖下先驗證（含修正原保護磁貼） | `platform/quick/*`、`widget/NcWidgets.kt`、`AndroidManifest.xml`、`res/xml/widget_*.xml`、`proguard-rules.pro` | JVM `QuickLogicTest`；模擬器：四款掛件上桌與操作、應用鎖驗證、捷徑、磁貼 | 實機啟動器外觀待確認 |
 
+### v0.11.1-m4p13（2026-11-17）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-136 | 常駐通知標題可自訂；留空時使用目前語言的預設「保護已開啟」，儲存後立即刷新通知 | `AppPreferences`、`AppBackend`、`VpnForegroundNotifier`、`SettingsScreen`、`UiStrings` | JVM `NotificationTitleTest`；Debug / Release / AAB 構建 | 自訂只套用到「保護已開啟」，啟動中仍用預設「保護正在啟動」 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
