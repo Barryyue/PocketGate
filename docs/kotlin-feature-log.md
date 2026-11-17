@@ -358,6 +358,12 @@
 |---|---|---|---|---|
 | K-140 | 磨砂 / 玻璃工具欄接入 Haze 1.6：`hazeSource` 擷取內容、`hazeEffect` 做真實背景模糊；玻璃樣式加高光與邊框；經典磨砂也改為覆蓋式全寬模糊 | `AppRoot.AppBottomBar`、`build.gradle.kts`（Haze 1.6.0） | JVM 測試 / Debug / Release 構建 | Android 12+ 才有真實模糊；沒有 iOS Liquid Glass 的折射透鏡 |
 
+### v0.13.1-m4p18（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-141 | 三種半透明工具欄材質改為各自獨立：磨砂（高不透明度 + 26dp 模糊、霧面無高光）、玻璃（36dp 大模糊 + 低不透明度 + 垂直漸變高光 + 頂部反光條 + 受光漸變邊框 + 18dp 陰影）、透明（完全不模糊，只留 20% 底色，後方內容清晰）。修正 `clip` 必須在 `hazeEffect` 之前，避免模糊圖層畫出方角 | `AppRoot.AppBottomBar` | JVM 測試 / Debug / Release 構建 | 真機視覺未驗證；Android 12 以下走 `fallbackTint` 遮罩 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

@@ -40,6 +40,23 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.1",
+            date = "2026-11-18",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Glass and transparent toolbars now look clearly different: glass gets a much stronger blur, a tinted gradient sheen, a lit top rim and a gradient border, while transparent has no blur at all so the content behind stays sharp.",
+                    "玻璃和透明工具栏现在有明显区别：玻璃使用更强的模糊、带色调的渐变高光、顶部反光条和渐变边框；透明完全不模糊，后方内容保持清晰。",
+                    "玻璃和透明工具列現在有明顯區別：玻璃使用更強的模糊、帶色調的漸變高光、頂部反光條和漸變邊框；透明完全不模糊，後方內容保持清晰。",
+                ),
+                t(
+                    "Frosted toolbars are more opaque and less blurry, so the three translucent styles are easy to tell apart.",
+                    "磨砂工具栏提高不透明度、降低模糊程度，三种半透明样式更容易区分。",
+                    "磨砂工具列提高不透明度、降低模糊程度，三種半透明樣式更容易區分。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.0",
             date = "2026-11-18",
             features = listOf(

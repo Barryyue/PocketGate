@@ -1580,7 +1580,7 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試 / Debug / Release 構建通過。
 - 手機未連接，尚未做真機視覺確認。
 
-## 57. v0.13.0-m4p17（2026-11-18）：Haze 真實背景模糊
+## 57. v0.13.1-m4p18（2026-11-18）：Haze 真實背景模糊
 
 - 引入 Haze 1.6.0（Apache-2.0）：內容 Box 加 `hazeSource`，磨砂 / 玻璃工具欄用 `hazeEffect` 取得真實背景模糊。
 - 經典磨砂改為覆蓋式全寬工具欄；內容會從欄後滾過。
@@ -1592,13 +1592,40 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 | 項目 | 值 |
 |---|---|
-| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.0-m4p17.apk` |
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.1-m4p18.apk` |
 | APK 大小 | 5,627,047 bytes |
 | APK SHA-256 | `8463F05744B298A87BE8A7107519CC58FDDD29E042DD038545F109AED73A1F7C` |
-| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.0-m4p17-x86_64-emulator.apk` |
-| versionName / Code | `0.13.0-m4p17` / `48` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.1-m4p18-x86_64-emulator.apk` |
+| versionName / Code | `0.13.1-m4p18` / `48` |
 
 ### 57.2 驗證
 
 - JVM 測試 / Debug / Release 構建通過。
 - 手機未連接，尚未做真機視覺確認；需在 Android 12+ 的裝置上看磨砂 / 玻璃。
+
+## 58. v0.13.1-m4p18（2026-11-18）：玻璃 / 透明 / 磨砂三種材質分離
+
+- 問題：0.13.0 的玻璃與透明都使用 `HazeMaterials.ultraThin`，參數完全相同，所以看起來一模一樣。
+- 現在三種材質各自獨立設定 `HazeStyle`：
+  - **磨砂**：26dp 模糊、底色 alpha 0.68 / 0.74（淺 / 深色），霧面、無高光、無漸變邊框。
+  - **玻璃**：36dp 模糊、底色 alpha 0.24 / 0.34，加上垂直白色漸變高光（頂部 0.28）、頂部一道兩端淡出的反光條、受光漸變邊框（左上偏白）與 18dp 彩色陰影。
+  - **透明**：不使用 Haze，只畫 20% / 26% 底色 + 10% 邊框，後方內容保持清晰。
+- 修正 modifier 順序：`clip` 移到 `hazeEffect` 之前，圓角才能真正裁掉模糊圖層（之前可能出現方角）。
+- 移除 `haze-materials` 依賴，只保留核心 `haze`。
+- Android 12 以下沒有 RenderEffect，Haze 使用 `fallbackTint`（磨砂 0.96、玻璃 0.88）維持可讀性。
+- 底部導航的選中指示器跟著材質走：玻璃用白色半透明 pill、透明用低 alpha surface、磨砂用 `secondaryContainer`。
+
+### 58.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.1-m4p18.apk` |
+| APK 大小 | 5,626,849 bytes |
+| APK SHA-256 | `723057B1024C84727014712028A05CF115B8E02EEC9D4316726E07645E6FB7F2` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.1-m4p18-x86_64-emulator.apk` |
+| versionName / Code | `0.13.1-m4p18` / `49` |
+
+### 58.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機未連接，三種材質的實際觀感仍待 Android 12+ 真機確認。

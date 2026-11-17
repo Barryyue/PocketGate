@@ -25,8 +25,8 @@ android {
         applicationId = "com.networkcontrol.android.kotlin"
         minSdk = 29
         targetSdk = 36
-        versionCode = 48
-        versionName = "0.13.0-m4p17"
+        versionCode = 49
+        versionName = "0.13.1-m4p18"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -109,7 +109,6 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-core")
     implementation("dev.chrisbanes.haze:haze:1.6.0")
-    implementation("dev.chrisbanes.haze:haze-materials:1.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
     // Shizuku：讓使用者不用電腦就能授予 DUMP（關閉偵測）；Apache-2.0
