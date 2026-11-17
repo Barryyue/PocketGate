@@ -1579,3 +1579,26 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試 / Debug / Release 構建通過。
 - 手機未連接，尚未做真機視覺確認。
+
+## 57. v0.13.0-m4p17（2026-11-18）：Haze 真實背景模糊
+
+- 引入 Haze 1.6.0（Apache-2.0）：內容 Box 加 `hazeSource`，磨砂 / 玻璃工具欄用 `hazeEffect` 取得真實背景模糊。
+- 經典磨砂改為覆蓋式全寬工具欄；內容會從欄後滾過。
+- 玻璃 / 透明樣式額外加白色斜向高光、細邊框和陰影；磨砂使用 `HazeMaterials.thin`，玻璃使用 `ultraThin`。
+- Android 12+ 才有 RenderEffect 真實模糊；Android 10/11 會退回 Haze 的降級效果。
+- 限制：Haze 做的是背景模糊 + 材料色，不是 iOS Liquid Glass 的折射 / 透鏡；完全同款需要 GPU shader，成本和相容性都不划算。
+
+### 57.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.0-m4p17.apk` |
+| APK 大小 | 5,627,047 bytes |
+| APK SHA-256 | `8463F05744B298A87BE8A7107519CC58FDDD29E042DD038545F109AED73A1F7C` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.0-m4p17-x86_64-emulator.apk` |
+| versionName / Code | `0.13.0-m4p17` / `48` |
+
+### 57.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機未連接，尚未做真機視覺確認；需在 Android 12+ 的裝置上看磨砂 / 玻璃。

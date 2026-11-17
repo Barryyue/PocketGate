@@ -40,6 +40,24 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.0",
+            date = "2026-11-18",
+            features = listOf(
+                t(
+                    "Frosted and glass toolbars now use real backdrop blur (Haze) on Android 12+, with a specular highlight for the glass styles; content scrolls behind the bar.",
+                    "磨砂和玻璃工具栏在 Android 12+ 改用真实背景模糊（Haze），玻璃样式加上高光；内容会从栏后滚动。",
+                    "磨砂和玻璃工具列在 Android 12+ 改用真正背景模糊（Haze），玻璃樣式加上高光；內容會從欄後捲動。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "iOS Liquid Glass refraction/lensing is not available on Android; glass here means backdrop blur plus highlights, not optical refraction.",
+                    "Android 没有 iOS Liquid Glass 的折射/透镜效果；这里的玻璃是背景模糊加高光，不是光学折射。",
+                    "Android 沒有 iOS Liquid Glass 的折射/透鏡效果；這裡的玻璃是背景模糊加高光，不是光學折射。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.12.1",
             date = "2026-11-18",
             features = listOf(

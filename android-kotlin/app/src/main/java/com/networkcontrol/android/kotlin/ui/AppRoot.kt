@@ -49,6 +49,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppContainer
 import com.networkcontrol.android.kotlin.core.model.ToolbarStyle
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
+import dev.chrisbanes.haze.rememberHazeState
 import com.networkcontrol.android.kotlin.ui.apps.AppsScreen
 import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
@@ -109,6 +115,7 @@ fun AppRoot(container: AppContainer) {
 
     val backend = container.backend
     val toolbarStyle by container.theme.toolbarStyle.collectAsStateWithLifecycle()
+    val hazeState = rememberHazeState()
     Box(Modifier.fillMaxSize()) {
         if (blocklistsOpen) {
             Box(
@@ -132,25 +139,43 @@ fun AppRoot(container: AppContainer) {
             }
         } else {
             val floatingToolbar = toolbarStyle.isFloating
+            val overlayToolbar = toolbarStyle != ToolbarStyle.ClassicSolid
+            val contentBottom = when {
+                !overlayToolbar -> 0.dp
+                floatingToolbar -> 104.dp
+                else -> 84.dp
+            }
             Scaffold(
                 bottomBar = {
-                    if (!floatingToolbar) {
+                    if (!overlayToolbar) {
                         AppBottomBar(
                             style = toolbarStyle,
                             selected = selected,
                             onSelect = { selected = it },
+                            hazeState = hazeState,
                         )
                     }
                 },
             ) { padding ->
                 CompositionLocalProvider(
-                    LocalBottomContentPadding provides if (floatingToolbar) 104.dp else 0.dp,
+                    LocalBottomContentPadding provides contentBottom,
                 ) {
                     Box(
                         Modifier.fillMaxSize().padding(padding),
                         contentAlignment = Alignment.TopCenter,
                     ) {
-                        Box(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
+                        Box(
+                            Modifier
+                                .widthIn(max = 760.dp)
+                                .fillMaxSize()
+                                .then(
+                                    if (overlayToolbar) {
+                                        Modifier.hazeSource(state = hazeState)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                        ) {
                             when (selected) {
                                 0 -> OverviewScreen(backend)
                                 1 -> AppsScreen(backend)
@@ -166,11 +191,12 @@ fun AppRoot(container: AppContainer) {
                     }
                 }
             }
-            if (floatingToolbar) {
+            if (overlayToolbar) {
                 AppBottomBar(
                     style = toolbarStyle,
                     selected = selected,
                     onSelect = { selected = it },
+                    hazeState = hazeState,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
@@ -221,45 +247,31 @@ fun AppRoot(container: AppContainer) {
     }
 }
 
+@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 private fun AppBottomBar(
     style: ToolbarStyle,
     selected: Int,
     onSelect: (Int) -> Unit,
+    hazeState: HazeState,
     modifier: Modifier = Modifier,
 ) {
     val s = rememberUiStrings()
     val floating = style.isFloating
     val shape = if (floating) RoundedCornerShape(28.dp) else RectangleShape
     val scheme = MaterialTheme.colorScheme
-    val brush: Brush = when (style) {
-        ToolbarStyle.ClassicSolid,
-        ToolbarStyle.FloatingSolid,
-        -> androidx.compose.ui.graphics.SolidColor(scheme.surface)
-
+    val hazeStyle = when (style) {
         ToolbarStyle.ClassicFrosted,
         ToolbarStyle.FloatingFrosted,
-        -> Brush.verticalGradient(
-            listOf(
-                scheme.surface.copy(alpha = 0.97f),
-                scheme.surfaceVariant.copy(alpha = 0.90f),
-            ),
-        )
+        -> HazeMaterials.thin(scheme.surface)
 
-        ToolbarStyle.FloatingGlass -> Brush.verticalGradient(
-            listOf(
-                scheme.surface.copy(alpha = 0.72f),
-                scheme.surfaceVariant.copy(alpha = 0.55f),
-            ),
-        )
+        ToolbarStyle.FloatingGlass,
+        ToolbarStyle.FloatingTransparent,
+        -> HazeMaterials.ultraThin(scheme.surface)
 
-        ToolbarStyle.FloatingTransparent -> Brush.verticalGradient(
-            listOf(
-                scheme.surface.copy(alpha = 0.38f),
-                scheme.surface.copy(alpha = 0.18f),
-            ),
-        )
+        else -> null
     }
+    val solidColor = scheme.surface
     val borderColor = when (style) {
         ToolbarStyle.ClassicSolid -> null
         ToolbarStyle.ClassicFrosted,
@@ -280,8 +292,14 @@ private fun AppBottomBar(
             Modifier
                 .fillMaxWidth()
                 .then(if (floating) Modifier.shadow(10.dp, shape) else Modifier)
+                .then(
+                    if (hazeStyle != null) {
+                        Modifier.hazeEffect(state = hazeState, style = hazeStyle)
+                    } else {
+                        Modifier.background(solidColor, shape)
+                    },
+                )
                 .clip(shape)
-                .background(brush, shape)
                 .then(
                     if (borderColor != null) {
                         Modifier.border(1.dp, borderColor, shape)
@@ -290,6 +308,22 @@ private fun AppBottomBar(
                     },
                 ),
         ) {
+            if (style == ToolbarStyle.FloatingGlass || style == ToolbarStyle.FloatingTransparent) {
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.20f),
+                                    Color.Transparent,
+                                    Color.White.copy(alpha = 0.05f),
+                                ),
+                            ),
+                            shape,
+                        ),
+                )
+            }
             NavigationBar(
                 containerColor = Color.Transparent,
                 tonalElevation = 0.dp,

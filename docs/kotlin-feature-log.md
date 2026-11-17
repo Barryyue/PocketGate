@@ -352,6 +352,12 @@
 |---|---|---|---|---|
 | K-139 | 懸浮工具欄改為覆蓋在頁面內容上，列表可從欄後滾過；各主頁 LazyColumn 底部自動增加 104dp 間距，最後一項仍可完整滾出 | `AppRoot`、`BottomBarInsets`、`Overview/Apps/Rules/Logs/SettingsScreen` | JVM 測試 / Debug / Release 構建 | 仍未做真正的背景模糊 |
 
+### v0.13.0-m4p17（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-140 | 磨砂 / 玻璃工具欄接入 Haze 1.6：`hazeSource` 擷取內容、`hazeEffect` 做真實背景模糊；玻璃樣式加高光與邊框；經典磨砂也改為覆蓋式全寬模糊 | `AppRoot.AppBottomBar`、`build.gradle.kts`（Haze 1.6.0） | JVM 測試 / Debug / Release 構建 | Android 12+ 才有真實模糊；沒有 iOS Liquid Glass 的折射透鏡 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
