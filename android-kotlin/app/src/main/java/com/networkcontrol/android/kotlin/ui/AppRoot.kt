@@ -40,7 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -261,17 +261,22 @@ private fun AppBottomBar(
 ) {
     val s = rememberUiStrings()
     val floating = style.isFloating
-    val shape = if (floating) RoundedCornerShape(28.dp) else RectangleShape
+    val shape = if (floating) RoundedCornerShape(30.dp) else RectangleShape
+    val hazeEdgeTreatment = if (floating) {
+        BlurredEdgeTreatment(RoundedCornerShape(30.dp))
+    } else {
+        BlurredEdgeTreatment.Rectangle
+    }
     val scheme = MaterialTheme.colorScheme
     val dark = scheme.surface.luminance() < 0.5f
     val glass = style == ToolbarStyle.FloatingGlass
     val transparent = style == ToolbarStyle.FloatingTransparent
     val frosted = style == ToolbarStyle.ClassicFrosted || style == ToolbarStyle.FloatingFrosted
 
-    // 三種半透明材質的區別（之前玻璃和透明都用 ultraThin，所以看起來完全一樣）：
-    //  - 磨砂：高不透明度 + 中等模糊，霧面、沒有高光。
-    //  - 玻璃：低不透明度 + 大模糊 + 白色高光 + 漸變邊框，背景顏色會透上來。
-    //  - 透明：完全不模糊，只留一層很淡的底色，後方內容清晰可見。
+    // 三種半透明材質都交給 Haze 處理，差別在模糊量、底色和高光：
+    //  - 磨砂：26dp 模糊 + 68% 底色，霧面、沒有高光，後方內容只剩色塊。
+    //  - 玻璃：18dp 模糊 + 8~18% 底色 + 鏡面高光/漸變邊框，背景顏色會透上來。
+    //  - 透明：10dp 輕度模糊 + 44~52% 底色，內容看得見但不會和標籤打架。
     val hazeStyle = when {
         frosted -> HazeStyle(
             blurRadius = 26.dp,
@@ -282,21 +287,33 @@ private fun AppBottomBar(
             fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.96f)),
         )
 
+        // 玻璃：底色壓低到 0.08 / 0.18，讓模糊後的光影和顏色真的透上來；
+        // 高光只留在頂部一小段，底部加一層內陰影做出厚度，而不是整片泛白。
         glass -> HazeStyle(
-            blurRadius = 36.dp,
+            blurRadius = 18.dp,
             backgroundColor = scheme.surface,
-            noiseFactor = 0.12f,
+            noiseFactor = 0.06f,
             tints = listOf(
-                HazeTint(scheme.surface.copy(alpha = if (dark) 0.34f else 0.24f)),
+                HazeTint(scheme.surface.copy(alpha = if (dark) 0.18f else 0.08f)),
                 HazeTint(
                     Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = if (dark) 0.14f else 0.28f),
-                        0.42f to Color.Transparent,
-                        1f to Color.White.copy(alpha = 0.06f),
+                        0f to Color.White.copy(alpha = if (dark) 0.08f else 0.12f),
+                        0.25f to Color.Transparent,
+                        0.78f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = if (dark) 0.14f else 0.07f),
                     ),
                 ),
             ),
-            fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.88f)),
+            fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.92f)),
+        )
+
+        // 透明：只做很淺的模糊，後方內容還在但不會和標籤打架；比玻璃更「實」、比磨砂更清楚。
+        transparent -> HazeStyle(
+            blurRadius = 10.dp,
+            backgroundColor = scheme.surface,
+            noiseFactor = 0.02f,
+            tint = HazeTint(scheme.surface.copy(alpha = if (dark) 0.52f else 0.44f)),
+            fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.90f)),
         )
 
         else -> null
@@ -311,9 +328,9 @@ private fun AppBottomBar(
         // 玻璃的邊框不是單一顏色：左上受光偏白、右下沉到陰影，才會像一片有厚度的玻璃。
         ToolbarStyle.FloatingGlass -> Brush.linearGradient(
             listOf(
-                Color.White.copy(alpha = if (dark) 0.34f else 0.80f),
-                scheme.outlineVariant.copy(alpha = 0.28f),
-                Color.White.copy(alpha = if (dark) 0.12f else 0.38f),
+                Color.White.copy(alpha = if (dark) 0.30f else 0.90f),
+                scheme.onSurface.copy(alpha = 0.12f),
+                scheme.onSurface.copy(alpha = if (dark) 0.28f else 0.20f),
             ),
         )
         ToolbarStyle.FloatingTransparent -> SolidColor(scheme.onSurface.copy(alpha = 0.10f))
@@ -321,7 +338,7 @@ private fun AppBottomBar(
     Box(
         modifier
             .fillMaxWidth()
-            .then(if (floating) Modifier.padding(horizontal = 12.dp, vertical = 8.dp) else Modifier)
+            .then(if (floating) Modifier.padding(horizontal = 16.dp, vertical = 10.dp) else Modifier)
             .navigationBarsPadding(),
     ) {
         Box(
@@ -330,25 +347,24 @@ private fun AppBottomBar(
                 .then(
                     when {
                         glass -> Modifier.shadow(
-                            elevation = 18.dp,
+                            elevation = 20.dp,
                             shape = shape,
                             clip = false,
                             ambientColor = Color.Black.copy(alpha = 0.28f),
                             spotColor = Color.Black.copy(alpha = 0.38f),
                         )
+                        transparent -> Modifier.shadow(8.dp, shape)
                         floating -> Modifier.shadow(10.dp, shape)
                         else -> Modifier
                     },
                 )
-                // clip 必須在 hazeEffect 之前：模糊圖層要落在圓角裁切內部，否則會畫出一個方角矩形。
-                .clip(shape)
                 .then(
                     when {
-                        hazeStyle != null -> Modifier.hazeEffect(state = hazeState, style = hazeStyle)
-                        transparent -> Modifier.background(
-                            scheme.surface.copy(alpha = if (dark) 0.26f else 0.20f),
-                            shape,
-                        )
+                        // 讓 Haze 自己按圓角裁切模糊層；用 Modifier.clip 會把它的取樣邊界一起切掉，
+                        // 圓角處反而出現方形的模糊斷面。
+                        hazeStyle != null -> Modifier.hazeEffect(state = hazeState, style = hazeStyle) {
+                            blurredEdgeTreatment = hazeEdgeTreatment
+                        }
                         else -> Modifier.background(scheme.surface, shape)
                     },
                 )
@@ -361,6 +377,23 @@ private fun AppBottomBar(
                 ),
         ) {
             if (glass) {
+                // 內圈高光：玻璃邊緣的厚度感，比外框亮一級。
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .padding(1.dp)
+                        .border(
+                            1.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = if (dark) 0.35f else 0.65f),
+                                    Color.Transparent,
+                                    Color.Transparent,
+                                ),
+                            ),
+                            shape,
+                        ),
+                )
                 // 頂部一道鏡面反光：兩端淡出，避免直角切斷圓角。
                 Box(
                     Modifier
@@ -371,10 +404,22 @@ private fun AppBottomBar(
                             Brush.horizontalGradient(
                                 listOf(
                                     Color.Transparent,
-                                    Color.White.copy(alpha = if (dark) 0.30f else 0.85f),
+                                    Color.White.copy(alpha = if (dark) 0.55f else 1f),
                                     Color.Transparent,
                                 ),
                             ),
+                        ),
+                )
+                // 底部內陰影：玻璃有厚度，下緣不會和背景同亮度。
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                0.80f to Color.Transparent,
+                                1f to Color.Black.copy(alpha = if (dark) 0.20f else 0.08f),
+                            ),
+                            shape,
                         ),
                 )
             }

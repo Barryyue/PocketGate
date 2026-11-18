@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.2",
+            date = "2026-11-18",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Glass now has a real specular rim and a much lower tint, so the blurred content colours show through instead of looking like a white slab. Transparent uses a light blur with a readable tint, so labels no longer sit on top of sharp scrolling content.",
+                    "玻璃工具栏加入真正的镜面边框和内圈高光，底色大幅降低，模糊后的内容颜色能透上来，不再像一块白色板子。透明样式改为轻度模糊加可读的底色，标签不会再直接压在清晰的滚动内容上。",
+                    "玻璃工具列加入真正的鏡面邊框與內圈高光，底色大幅降低，模糊後的內容顏色能透上來，不再像一塊白色板子。透明樣式改為輕度模糊加可讀的底色，標籤不會再直接壓在清晰的捲動內容上。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.1",
             date = "2026-11-18",
             features = emptyList(),

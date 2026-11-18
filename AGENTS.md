@@ -134,3 +134,4 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
   - Kotlin 版「直到應用關閉」：一般應用拿不到其他應用的關閉事件（UsageStats 把 ACTIVITY_DESTROYED 轉成 STOPPED，從最近任務劃掉也只有 STOPPED）。要真正的關閉信號得由使用者 `adb shell pm grant <套件> android.permission.DUMP`，再用 `getHistoricalProcessExitReasons` 查目標主進程（只看 `processName == packageName`，渲染等子進程會自行重啟）。
   - Kotlin 版桌面掛件（Glance）：R8 會把同父類的 `GlanceAppWidget` 子類水平合併，結果所有掛件畫成同一款，只在 release 出現；`proguard-rules.pro` 已保留 `widget.**`，新增掛件放在這個套件下。快捷入口（掛件、磁貼、捷徑）一律經 `QuickActions`，不要直接呼叫 `setProtection` 等，否則會繞過應用鎖驗證。`res/values/strings.xml` 的英文字串不要寫裸撇號（`today's`），aapt 會報錯。
   - 通知文本在 `Resources/values*/strings.xml`（沒有界面時也要可用），界面文本由 `tools/android-strings.py` 生成 XLIFF；兩處都要維護三種語言。
+  - Kotlin 版工具欄玻璃（Haze）：Haze 2 的 haze-glass 需要 Compose Multiplatform 1.12（Jetpack Compose 1.12.1）+ Kotlin 2.4.20，連帶要求 AGP 9.1 / compileSdk 37 / Gradle 9；而且折射用 RuntimeShader，只有 Android 13（API 33）以上才有，低版本會退回純模糊。目前用 Haze 1.6（Compose 1.8）並自行加高光/內陰影；要升級先確認目標機的 Android 版本。

@@ -1629,3 +1629,52 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - JVM 測試 / Debug / Release 構建通過。
 - 手機未連接，三種材質的實際觀感仍待 Android 12+ 真機確認。
+
+## 59. v0.13.2-m4p19（2026-11-18）：玻璃質感重做與透明可讀性
+
+### 59.1 問題
+
+- 0.13.1 的玻璃仍是「一塊白色半透明板」：底色 0.08 以上、模糊半徑偏大、邊框是單色，看起來沒有厚度。
+- 「透明」完全不做模糊，捲動內容會直接從標籤後方穿過，文字和內容打架。
+- `Modifier.clip` 和 Haze 的取樣邊界互相裁切，圓角附近的模糊會出現方形斷面。
+
+### 59.2 這次的改法
+
+| 樣式 | 模糊 | 底色 | 額外 |
+|---|---|---|---|
+| 磨砂 | 26dp | 0.68 / 0.74 | 霧面，無高光 |
+| 玻璃 | 18dp | 0.08 / 0.18 | 內圈白光、頂部鏡面反光、底部內陰影、受光漸變外框、20dp 陰影 |
+| 透明 | 10dp | 0.44 / 0.52 | 單色細框、8dp 陰影；內容看得見但不可辨讀 |
+
+- 模糊層改用 `BlurredEdgeTreatment(RoundedCornerShape(30.dp))` 由 Haze 自己裁切，移除 `Modifier.clip`。
+- 圓角 30dp、懸浮外距 16dp × 10dp。
+- 玻璃的「厚度」由三層組成：外框（左上白、右下深）、內圈 1dp 白光、底部 20% 高度的黑色內陰影。
+
+### 59.3 為什麼不用 Haze 2 的 Glass（折射）
+
+- `haze-glass` 2.0 / 2.1 依賴 Compose Multiplatform 1.12（Jetpack Compose 1.12.1）、Kotlin 2.4.20+；Compose 1.12 的 AAR 要求 **AGP 9.1.0+、compileSdk 37**，等於要連 Gradle 9 與 Android SDK 37 一起升級。
+- Glass 的折射用 `android.graphics.RuntimeShader`，**API 33（Android 13）才存在**；低版本會退回純模糊的 delegate，視覺與現在的 Haze 1.6 差別不大。
+- 目前主要驗證機（Redmi K30 Pro）是 Android 12，升級後拿不到折射，先把 API 31 這條路打磨到最好。
+- 之後若要升級：Kotlin 2.4.21 + Compose BOM 2026.09.00 + AGP 9.1 + compileSdk 37 + `haze` / `haze-blur` / `haze-glass` 2.1.0，API 對應 `HazeInput.Backdrop(state)`、`Modifier.hazeBlur` / `Modifier.hazeGlass`、`GlassStyle { ... }`。
+
+### 59.4 驗證
+
+- 用 `D:\tools\android-dev\emu34`（33.1.24）+ `nc35` AVD（API 35，x86_64）實際啟動、安裝 Debug APK，逐一切換樣式截圖對比：
+  - 淺色：玻璃可看到後方卡片的粉色 / 綠色漸層與完整高光邊；磨砂只剩均勻霧面；透明看得到色塊但標籤清楚。
+  - 深色：玻璃呈現綠色調玻璃與明顯白邊，選中項是半透明膠囊。
+- JVM 測試、Release 構建通過。
+
+### 59.5 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.2-m4p19.apk` |
+| APK 大小 | 5,626,853 bytes |
+| APK SHA-256 | `268EF3A6E53110EC90C955B1DA95FA0574FBE9DF46FB026DAB734CAD867127D5` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.2-m4p19-x86_64-emulator.apk` |
+| versionName / Code | `0.13.2-m4p19` / `50` |
+
+### 59.6 未驗證
+
+- 真機（Android 12）的實際觀感；模擬器是 API 35，RenderEffect 行為可能與 Android 12 略有差異。
+- Android 10 / 11 的 `fallbackTint` 降級外觀。
