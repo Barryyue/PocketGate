@@ -321,9 +321,10 @@ class VpnEngine(
 
     private suspend fun replanNow() {
         val focusSession = focus.active()
+        val lockBlocking = screenState.locked.value && blockOnLockScreen()
         val plan = VpnRoutingPlanner.plan(
             rules = rules.ruleSet.value,
-            mode = if (focusSession != null || (screenState.locked.value && blockOnLockScreen())) {
+            mode = if (focusSession != null || lockBlocking) {
                 com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll
             } else {
                 runtime.mode
@@ -334,6 +335,11 @@ class VpnEngine(
             allowSystemAppsByDefault = settings.state.value.allowSystemAppsByDefault,
             trustedSigners = settings.state.value.trustedSigners,
             focusAllowedPackages = focusSession?.allowedPackages ?: emptySet(),
+            lockScreenAllowedPackages = if (lockBlocking && focusSession == null) {
+                preferences.lockScreenWhitelist
+            } else {
+                emptySet()
+            },
         )
         _plan.value = plan
         identities.clear()

@@ -18,6 +18,7 @@
 
 - **認領任務**：在 `docs/progress.md` 中把任務的 `[ ]` 改為 `[~]`，並註明 agent 名稱和日期，例如 `[~] (codex, 2026-11-13)`。已被認領的任務不要碰。
 - **分支**：在 `agent/<agent名>/<任務簡稱>` 分支上工作，例如 `agent/codex/backup-config-db`。不要直接提交到 `main`。
+- **並行開發**：只要任務能拆分、彼此不衝突，就默認開啟多任務 / 子代理並行（例如一個改代碼、一個補文檔、一個跑測試或打包），不需要逐項詢問；共享同一批文件、需要相同構建產物或會互相覆蓋時保持串行，並在進度文件中註明原因。
 - **範圍**：只修改任務說明中列出的文件或目錄。需要越界時，先在 `docs/progress.md` 的任務下記錄原因，或者交還給用戶決定。
 - **完成標準**（全部滿足才算完成）：
   1. `dotnet build NetworkControl.slnx` 零錯誤零警告（倉庫開啟了警告即錯誤）。
@@ -133,3 +134,4 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
   - Kotlin 版「直到應用關閉」：一般應用拿不到其他應用的關閉事件（UsageStats 把 ACTIVITY_DESTROYED 轉成 STOPPED，從最近任務劃掉也只有 STOPPED）。要真正的關閉信號得由使用者 `adb shell pm grant <套件> android.permission.DUMP`，再用 `getHistoricalProcessExitReasons` 查目標主進程（只看 `processName == packageName`，渲染等子進程會自行重啟）。
   - Kotlin 版桌面掛件（Glance）：R8 會把同父類的 `GlanceAppWidget` 子類水平合併，結果所有掛件畫成同一款，只在 release 出現；`proguard-rules.pro` 已保留 `widget.**`，新增掛件放在這個套件下。快捷入口（掛件、磁貼、捷徑）一律經 `QuickActions`，不要直接呼叫 `setProtection` 等，否則會繞過應用鎖驗證。`res/values/strings.xml` 的英文字串不要寫裸撇號（`today's`），aapt 會報錯。
   - 通知文本在 `Resources/values*/strings.xml`（沒有界面時也要可用），界面文本由 `tools/android-strings.py` 生成 XLIFF；兩處都要維護三種語言。
+  - Kotlin 版工具欄玻璃（Haze）：Haze 2 的 haze-glass 需要 Compose Multiplatform 1.12（Jetpack Compose 1.12.1）+ Kotlin 2.4.20，連帶要求 AGP 9.1 / compileSdk 37 / Gradle 9；而且折射用 RuntimeShader，只有 Android 13（API 33）以上才有，低版本會退回純模糊。目前用 Haze 1.6（Compose 1.8）並自行加高光/內陰影；要升級先確認目標機的 Android 版本。

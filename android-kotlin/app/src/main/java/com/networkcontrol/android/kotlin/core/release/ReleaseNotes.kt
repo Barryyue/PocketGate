@@ -40,6 +40,111 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.2",
+            date = "2026-11-18",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Glass now has a real specular rim and a much lower tint, so the blurred content colours show through instead of looking like a white slab. Transparent uses a light blur with a readable tint, so labels no longer sit on top of sharp scrolling content.",
+                    "玻璃工具栏加入真正的镜面边框和内圈高光，底色大幅降低，模糊后的内容颜色能透上来，不再像一块白色板子。透明样式改为轻度模糊加可读的底色，标签不会再直接压在清晰的滚动内容上。",
+                    "玻璃工具列加入真正的鏡面邊框與內圈高光，底色大幅降低，模糊後的內容顏色能透上來，不再像一塊白色板子。透明樣式改為輕度模糊加可讀的底色，標籤不會再直接壓在清晰的捲動內容上。",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.13.1",
+            date = "2026-11-18",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Glass and transparent toolbars now look clearly different: glass gets a much stronger blur, a tinted gradient sheen, a lit top rim and a gradient border, while transparent has no blur at all so the content behind stays sharp.",
+                    "玻璃和透明工具栏现在有明显区别：玻璃使用更强的模糊、带色调的渐变高光、顶部反光条和渐变边框；透明完全不模糊，后方内容保持清晰。",
+                    "玻璃和透明工具列現在有明顯區別：玻璃使用更強的模糊、帶色調的漸變高光、頂部反光條和漸變邊框；透明完全不模糊，後方內容保持清晰。",
+                ),
+                t(
+                    "Frosted toolbars are more opaque and less blurry, so the three translucent styles are easy to tell apart.",
+                    "磨砂工具栏提高不透明度、降低模糊程度，三种半透明样式更容易区分。",
+                    "磨砂工具列提高不透明度、降低模糊程度，三種半透明樣式更容易區分。",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.13.0",
+            date = "2026-11-18",
+            features = listOf(
+                t(
+                    "Frosted and glass toolbars now use real backdrop blur (Haze) on Android 12+, with a specular highlight for the glass styles; content scrolls behind the bar.",
+                    "磨砂和玻璃工具栏在 Android 12+ 改用真实背景模糊（Haze），玻璃样式加上高光；内容会从栏后滚动。",
+                    "磨砂和玻璃工具列在 Android 12+ 改用真正背景模糊（Haze），玻璃樣式加上高光；內容會從欄後捲動。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "iOS Liquid Glass refraction/lensing is not available on Android; glass here means backdrop blur plus highlights, not optical refraction.",
+                    "Android 没有 iOS Liquid Glass 的折射/透镜效果；这里的玻璃是背景模糊加高光，不是光学折射。",
+                    "Android 沒有 iOS Liquid Glass 的折射/透鏡效果；這裡的玻璃是背景模糊加高光，不是光學折射。",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.12.1",
+            date = "2026-11-18",
+            features = listOf(
+                t(
+                    "Floating toolbar styles now overlay the page content, so lists scroll behind the glass / transparent bar instead of stopping above it.",
+                    "悬浮工具栏样式现在覆盖在页面内容上，列表会从玻璃 / 透明栏后面滚过，不再停在栏上方。",
+                    "懸浮工具列樣式現在覆蓋在頁面內容上，清單會從玻璃 / 透明欄後面滾過，不再停在欄上方。",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.12.0",
+            date = "2026-11-18",
+            features = listOf(
+                t(
+                    "New toolbar styles: classic solid, classic frosted, floating solid, floating glass, floating frosted and floating transparent.",
+                    "新增底部工具栏样式：经典纯色、经典磨砂、悬浮纯色、悬浮玻璃、悬浮磨砂、悬浮透明。",
+                    "新增底部工具列樣式：經典純色、經典磨砂、懸浮純色、懸浮玻璃、懸浮磨砂、懸浮透明。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "Frosted and glass are translucent approximations; Android does not provide real backdrop blur for a bottom bar inside the same window.",
+                    "磨砂和玻璃是半透明近似效果；Android 不提供同窗口内底部栏的真实背景模糊。",
+                    "磨砂和玻璃是半透明近似效果；Android 不提供同視窗內底部列的真正背景模糊。",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.11.2",
+            date = "2026-11-17",
+            features = listOf(
+                t(
+                    "Block-on-lock now supports a whitelist: selected apps keep network access while the screen is locked.",
+                    "锁屏断网新增白名单：选中的应用在锁屏时仍可联网。",
+                    "鎖屏斷網新增白名單：選中的應用在鎖屏時仍可聯網。",
+                ),
+            ),
+            notes = listOf(
+                t(
+                    "The whitelist only applies when block-on-lock is on; focus mode still uses its own allowed apps.",
+                    "白名单只在锁屏断网开启时生效；专注模式仍使用自己的允许应用。",
+                    "白名單只在鎖屏斷網開啟時生效；專注模式仍使用自己的允許應用。",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.11.1",
+            date = "2026-11-17",
+            features = listOf(
+                t(
+                    "The persistent notification title can be customized in Settings > Notifications; leaving it empty uses the localized default “Protection is on”.",
+                    "常驻通知标题可在设置 → 通知里自定义；留空时使用当前语言的默认「保护已开启」。",
+                    "常駐通知標題可在設定 → 通知裡自訂；留空時使用目前語言的預設「保護已開啟」。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.11.0",
             date = "2026-11-17",
             features = listOf(

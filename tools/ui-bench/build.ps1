@@ -6,6 +6,7 @@ param(
     [ValidateSet('x64', 'arm64')]
     [string]$Abi = 'x64',
     [switch]$Aot,
+    [switch]$FullAot,
     [string]$Configuration = 'Release'
 )
 
@@ -33,7 +34,7 @@ $variants = @{
     Material = 'material'
 }
 $selected = if ($Variant -eq 'All') { @('AtomUI', 'Fluent', 'Material') } else { @($Variant) }
-$aotValue = if ($Aot) { 'true' } else { 'false' }
+$aotValue = if ($Aot -or $FullAot) { 'true' } else { 'false' }
 
 foreach ($name in $selected) {
     $project = Join-Path $root ("UiBench.{0}\UiBench.{0}.csproj" -f $name)
@@ -44,10 +45,15 @@ foreach ($name in $selected) {
 
     $output = Join-Path $root ("artifacts\{0}-{1}" -f $variants[$name], $Abi)
     Write-Host "=== 構建 $name ($Configuration, $Abi, AOT=$aotValue) ==="
+    $aotArgs = @()
+    if ($FullAot) {
+        # 完整 AOT：不用 Profiled AOT 的通用 profile，所有能編譯的方法都預編譯。
+        $aotArgs += '-p:AndroidEnableProfiledAot=false'
+    }
     & $dotnet publish $project -c $Configuration `
         -p:BenchAbi=$Abi -p:BenchAot=$aotValue `
         -p:AndroidSdkDirectory=$sdk -p:JavaSdkDirectory=$jdk `
-        -o $output -v:m --nologo
+        @aotArgs -o $output -v:m --nologo
     if ($LASTEXITCODE -ne 0) {
         throw "$name 構建失敗（退出碼 $LASTEXITCODE）"
     }

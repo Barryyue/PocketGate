@@ -460,6 +460,13 @@ class AppBackend(val container: AppContainer) {
         container.promptRouter.refresh()
     }
 
+    fun protectionNotificationTitle(): String = container.preferences.protectionNotificationTitle
+
+    fun setProtectionNotificationTitle(value: String) {
+        container.preferences.protectionNotificationTitle = value
+        container.vpnEngine.refreshNotification()
+    }
+
     fun promptPresentationMode(): String = container.preferences.promptPresentationMode
 
     fun setPromptPresentationMode(mode: String) {
@@ -657,6 +664,13 @@ class AppBackend(val container: AppContainer) {
 
     fun setBlockOnLockScreen(enabled: Boolean) {
         container.preferences.blockOnLockScreen = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun lockScreenWhitelist(): Set<String> = container.preferences.lockScreenWhitelist
+
+    fun setLockScreenWhitelist(packages: Set<String>) {
+        container.preferences.lockScreenWhitelist = packages
         container.vpnEngine.requestReplan()
     }
 
@@ -933,6 +947,12 @@ class AppBackend(val container: AppContainer) {
     }
 
     fun setThemeColor(color: androidx.compose.ui.graphics.Color) = container.theme.set(color)
+
+    fun toolbarStyle(): com.networkcontrol.android.kotlin.core.model.ToolbarStyle =
+        container.theme.toolbarStyle.value
+
+    fun setToolbarStyle(style: com.networkcontrol.android.kotlin.core.model.ToolbarStyle) =
+        container.theme.setToolbarStyle(style)
 
     fun exportRules(): String = RuleTransferService.export(container.rules.all)
 

@@ -148,7 +148,8 @@ enum class AppRoutingReason(val code: Int) {
     Rule(2),
     Mode(3),
     Trusted(4),
-    Focus(5);
+    Focus(5),
+    LockScreen(6);
 
     companion object {
         fun fromCode(code: Int): AppRoutingReason = entries.firstOrNull { it.code == code } ?: Mode
@@ -256,4 +257,18 @@ enum class SpeedIslandFontWeight {
     Normal,
     Medium,
     Bold,
+}
+
+/** 底部工具欄樣式。 */
+enum class ToolbarStyle {
+    ClassicSolid,
+    ClassicFrosted,
+    FloatingSolid,
+    FloatingGlass,
+    FloatingFrosted,
+    FloatingTransparent,
+    ;
+
+    val isFloating: Boolean
+        get() = this != ClassicSolid && this != ClassicFrosted
 }

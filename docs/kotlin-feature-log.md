@@ -328,6 +328,48 @@
 | K-134 | 詢問按鈕單行：限時按鈕改為「60分鐘」，按鈕文字放不下時自動縮小 | `PromptOverlayController`、`PromptOverlay`、`UiStrings` | 模擬器 zh-TW 畫面確認 | 實機待確認 |
 | K-135 | 桌面掛件（防護狀態、今日概覽、快捷開關、流量排行）、控制中心磁貼（模式、全部阻止、勿擾、專注，加上原有保護）、長按捷徑；共用 `QuickActions`，削弱防護的操作在應用鎖下先驗證（含修正原保護磁貼） | `platform/quick/*`、`widget/NcWidgets.kt`、`AndroidManifest.xml`、`res/xml/widget_*.xml`、`proguard-rules.pro` | JVM `QuickLogicTest`；模擬器：四款掛件上桌與操作、應用鎖驗證、捷徑、磁貼 | 實機啟動器外觀待確認 |
 
+### v0.11.1-m4p13（2026-11-17）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-136 | 常駐通知標題可自訂；留空時使用目前語言的預設「保護已開啟」，儲存後立即刷新通知 | `AppPreferences`、`AppBackend`、`VpnForegroundNotifier`、`SettingsScreen`、`UiStrings` | JVM `NotificationTitleTest`；Debug / Release / AAB 構建 | 自訂只套用到「保護已開啟」，啟動中仍用預設「保護正在啟動」 |
+
+### v0.11.2-m4p14（2026-11-17）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-137 | 鎖屏斷網白名單：勾選的應用在鎖屏時仍可聯網，解鎖後回到正常路由 | `AppPreferences.lockScreenWhitelist`、`VpnEngine.replanNow`、`RoutingPlanner.plan`、`AppRoutingReason.LockScreen`、`SettingsScreen` | JVM 測試 / Debug / Release 構建 | 白名單只在鎖屏斷網開啟時生效；專注模式仍用自己的允許清單 |
+
+### v0.12.0-m4p15（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-138 | 底部工具欄六種樣式：經典純色 / 經典磨砂 / 懸浮純色 / 懸浮玻璃 / 懸浮磨砂 / 懸浮透明；設定頁可切換並即時生效 | `ToolbarStyle`、`AppPreferences.toolbarStyle`、`ThemeController`、`AppRoot.AppBottomBar`、`SettingsScreen` | JVM 測試 / Debug / Release 構建 | 磨砂與玻璃為半透明近似，Android 同視窗沒有真正的背景模糊 API |
+
+### v0.12.1-m4p16（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-139 | 懸浮工具欄改為覆蓋在頁面內容上，列表可從欄後滾過；各主頁 LazyColumn 底部自動增加 104dp 間距，最後一項仍可完整滾出 | `AppRoot`、`BottomBarInsets`、`Overview/Apps/Rules/Logs/SettingsScreen` | JVM 測試 / Debug / Release 構建 | 仍未做真正的背景模糊 |
+
+### v0.13.0-m4p17（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-140 | 磨砂 / 玻璃工具欄接入 Haze 1.6：`hazeSource` 擷取內容、`hazeEffect` 做真實背景模糊；玻璃樣式加高光與邊框；經典磨砂也改為覆蓋式全寬模糊 | `AppRoot.AppBottomBar`、`build.gradle.kts`（Haze 1.6.0） | JVM 測試 / Debug / Release 構建 | Android 12+ 才有真實模糊；沒有 iOS Liquid Glass 的折射透鏡 |
+
+### v0.13.1-m4p18（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-141 | 三種半透明工具欄材質改為各自獨立：磨砂（高不透明度 + 26dp 模糊、霧面無高光）、玻璃（36dp 大模糊 + 低不透明度 + 垂直漸變高光 + 頂部反光條 + 受光漸變邊框 + 18dp 陰影）、透明（完全不模糊，只留 20% 底色，後方內容清晰）。修正 `clip` 必須在 `hazeEffect` 之前，避免模糊圖層畫出方角 | `AppRoot.AppBottomBar` | JVM 測試 / Debug / Release 構建 | 真機視覺未驗證；Android 12 以下走 `fallbackTint` 遮罩 |
+
+### v0.13.2-m4p19（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-142 | 玻璃質感重做：模糊層改用 `BlurredEdgeTreatment(30dp)` 自行裁圓角；玻璃底色降到 0.08 / 0.18，加內圈白光、頂部鏡面反光與底部內陰影；透明改為 10dp 輕度模糊 + 44% / 52% 底色，標籤不再壓在清晰內容上；圓角 30dp、外距 16/10dp | `AppRoot.AppBottomBar` | API 35 模擬器淺色 / 深色視覺對比、JVM 測試、Release 構建 | 真機（Android 12）未驗證；Haze 2 Glass 需要 API 33+ 且要升 AGP 9.1 / compileSdk 37，暫不採用，詳見 android-kotlin.md §59.3 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

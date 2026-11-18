@@ -32,6 +32,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_NOTIFICATIONS, true)
         set(value) = prefs.edit().putBoolean(KEY_NOTIFICATIONS, value).apply()
 
+    /** 常駐通知標題；空字串表示使用系統語言的預設「保護已開啟」。 */
+    var protectionNotificationTitle: String
+        get() = prefs.getString(KEY_PROTECTION_NOTIFICATION_TITLE, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_PROTECTION_NOTIFICATION_TITLE, value.trim()).apply()
+
     var notificationPermissionAsked: Boolean
         get() = prefs.getBoolean(KEY_NOTIFICATION_ASKED, false)
         set(value) = prefs.edit().putBoolean(KEY_NOTIFICATION_ASKED, value).apply()
@@ -39,6 +44,15 @@ class AppPreferences(context: Context) {
     var themeColor: Int
         get() = prefs.getInt(KEY_THEME_COLOR, DEFAULT_THEME_COLOR)
         set(value) = prefs.edit().putInt(KEY_THEME_COLOR, value).apply()
+
+    /** 底部工具欄樣式。 */
+    var toolbarStyle: com.networkcontrol.android.kotlin.core.model.ToolbarStyle
+        get() = runCatching {
+            enumValueOf<com.networkcontrol.android.kotlin.core.model.ToolbarStyle>(
+                prefs.getString(KEY_TOOLBAR_STYLE, "ClassicSolid").orEmpty(),
+            )
+        }.getOrDefault(com.networkcontrol.android.kotlin.core.model.ToolbarStyle.ClassicSolid)
+        set(value) = prefs.edit().putString(KEY_TOOLBAR_STYLE, value.name).apply()
 
     /** 詢問顯示方式：auto（可用時懸浮面板）/ notification（只用通知）。 */
     var promptPresentationMode: String
@@ -182,6 +196,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_BLOCK_ON_LOCK, false)
         set(value) = prefs.edit().putBoolean(KEY_BLOCK_ON_LOCK, value).apply()
 
+    /** 鎖屏斷網時仍允許聯網的應用（包名）。 */
+    var lockScreenWhitelist: Set<String>
+        get() = prefs.getStringSet(KEY_LOCK_SCREEN_WHITELIST, emptySet())?.toSet().orEmpty()
+        set(value) = prefs.edit().putStringSet(KEY_LOCK_SCREEN_WHITELIST, value.toSet()).apply()
+
     var focusSessionJson: String?
         get() = prefs.getString(KEY_FOCUS_SESSION, null)
         set(value) = prefs.edit().putString(KEY_FOCUS_SESSION, value).apply()
@@ -302,7 +321,9 @@ class AppPreferences(context: Context) {
         const val KEY_PROTECTION = "protection"
         const val KEY_NOTIFICATIONS = "notifications"
         const val KEY_NOTIFICATION_ASKED = "notification_asked"
+        const val KEY_PROTECTION_NOTIFICATION_TITLE = "protection_notification_title"
         const val KEY_THEME_COLOR = "theme_color"
+        const val KEY_TOOLBAR_STYLE = "toolbar_style"
         const val KEY_PROMPT_PRESENTATION = "prompt_presentation"
         const val KEY_PROMPT_OVERLAY_POSITION = "prompt_overlay_position"
         const val KEY_PROMPT_OVERLAY_RATIO = "prompt_overlay_ratio"
@@ -330,6 +351,7 @@ class AppPreferences(context: Context) {
         const val KEY_PROMPT_SHOW_EXPLANATION = "prompt_show_explanation"
         const val KEY_PROMPT_HIDE_DETAILS_LOCK = "prompt_hide_details_lock"
         const val KEY_BLOCK_ON_LOCK = "block_on_lock"
+        const val KEY_LOCK_SCREEN_WHITELIST = "lock_screen_whitelist"
         const val KEY_FOCUS_SESSION = "focus_session"
         const val KEY_FOCUS_SCHEDULES = "focus_schedules"
         const val KEY_APP_LOCK = "app_lock"

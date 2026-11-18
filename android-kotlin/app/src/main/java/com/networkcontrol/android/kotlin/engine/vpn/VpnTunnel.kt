@@ -9,6 +9,7 @@ import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.networkcontrol.android.kotlin.App
+import com.networkcontrol.android.kotlin.AppPreferences
 import com.networkcontrol.android.kotlin.MainActivity
 import com.networkcontrol.android.kotlin.R
 import com.networkcontrol.android.kotlin.platform.NotificationChannels
@@ -112,7 +113,14 @@ class TunReader(
     }
 }
 
-class VpnForegroundNotifier(private val context: Context) {
+/** 空白或未設定時使用本地化預設標題。 */
+internal fun notificationTitle(custom: String?, default: String): String =
+    custom?.trim()?.takeIf { it.isNotEmpty() } ?: default
+
+class VpnForegroundNotifier(
+    private val context: Context,
+    private val preferences: AppPreferences,
+) {
     val notificationId: Int = 1001
 
     @Volatile
@@ -137,9 +145,17 @@ class VpnForegroundNotifier(private val context: Context) {
             }
             else -> context.getString(R.string.protection_notification_text)
         }
+        val title = if (starting) {
+            context.getString(R.string.protection_starting)
+        } else {
+            notificationTitle(
+                preferences.protectionNotificationTitle,
+                context.getString(R.string.protection_active),
+            )
+        }
         return NotificationCompat.Builder(context, NotificationChannels.PROTECTION)
             .setSmallIcon(R.drawable.ic_shield)
-            .setContentTitle(context.getString(if (starting) R.string.protection_starting else R.string.protection_active))
+            .setContentTitle(title)
             .setContentText(body)
             .setContentIntent(intent)
             .setOngoing(true)

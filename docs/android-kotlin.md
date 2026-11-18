@@ -1485,3 +1485,196 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - **坑**：R8 把同父類的 Glance 掛件類別水平合併，所有掛件都畫成同一款 → `proguard-rules.pro` 保留 `widget.**` 的 GlanceAppWidget 子類與 ActionCallback（見 AGENTS.md）。磁貼點擊後立即重繪會畫到舊狀態（操作非同步生效）→ 改為顯示期間跟著狀態變化重繪。
 - **驗證**：JVM `QuickLogicTest`（7 項）；模擬器（release 版）：四款掛件實際放到桌面並截取模擬器畫面確認版面；掛件上開啟保護、全部阻止、勿擾並關回；開啟應用鎖 + 模擬器 PIN 後，掛件「關閉保護」先跳出驗證，取消不執行、輸入 PIN 後才關閉；長按圖示捷徑「切換到白名單」生效（未匯出的 Activity 可由捷徑啟動）；勿擾、模式磁貼的顯示與點擊（放寬模式時要求驗證）。驗證後已恢復模擬器（模式、應用鎖、PIN、移除測試磁貼）。
 - **未驗證**：實機（vivo / 紅魔等啟動器）的掛件外觀與尺寸；專注磁貼 / 捷徑的實際啟動；APK 因 Glance（含 WorkManager）增加約 1.1 MB。
+
+## 53. v0.11.1-m4p13（2026-11-17）：常駐通知標題可自訂
+
+- 設定 → 通知新增「通知標題」輸入框，最多 80 字；留空表示使用跟隨介面語言的預設值。
+- 預設值仍是 `protection_active`（保護已開啟 / Protection is on / 保護已開啟）；「保護正在啟動」的短暫通知仍使用預設字串。
+- 儲存或重設後呼叫 `VpnEngine.refreshNotification()`，常駐通知立即更新。
+- 自訂文字存在 `SharedPreferences`（`protection_notification_title`），不寫入資料庫；升級與備份不受影響。
+
+### 53.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.11.1-m4p13.apk` |
+| APK 大小 | 5,566,133 bytes |
+| APK SHA-256 | `AED1E0B217BE64F33E6562B5E42A64A760DA00F8C8870B5B3B3B753BC738F2ED` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.11.1-m4p13-x86_64-emulator.apk` |
+| AAB | `artifacts\kotlin-android\NetworkControl-KT-0.11.1-m4p13.aab` |
+| AAB 大小 | 6,759,285 bytes |
+| AAB SHA-256 | `771F8F79CF3BB44C1482EC2FC08F1B0A891F514D579E6A78417974F5380FDDBF` |
+| versionName / Code | `0.11.1-m4p13` / `44` |
+
+### 53.2 驗證
+
+- JVM 測試（含 `NotificationTitleTest`）/ Debug / Release / AAB 構建通過。
+- 真機未驗證：不同 ROM 對長標題的省略與通知排版。
+
+## 54. v0.11.2-m4p14（2026-11-17）：鎖屏斷網白名單
+
+- 設定 → VPN → 鎖屏斷網開啟後，新增「鎖屏時仍允許聯網的應用」選擇器（沿用多選應用對話框）。
+- 鎖屏且 block-on-lock 生效時，白名單內的套件在 `VpnRoutingPlanner` 取得 `Bypass / LockScreen`，並加入 VPN 排除名單；解鎖後重新規劃回正常路由。
+- 若同時開啟專注模式，仍以專注模式的允許清單為準，不套用鎖屏白名單。
+- `AppRoutingReason.LockScreen` 在應用列表顯示為「鎖屏斷網」。
+
+### 54.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.11.2-m4p14.apk` |
+| APK 大小 | 5,566,133 bytes |
+| APK SHA-256 | `14B052AA6FD1C246AD2382D78121992564B9D9AA5DC2EE7074A21F378115D2E2` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.11.2-m4p14-x86_64-emulator.apk` |
+| AAB | 未產出（本次只要 APK） |
+| versionName / Code | `0.11.2-m4p14` / `45` |
+
+### 54.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機在打包後已離線（`6fb0426a not found`），尚未安裝到真機；需重新連接 USB 後安裝。
+
+## 55. v0.12.0-m4p15（2026-11-18）：底部工具欄樣式
+
+- 新增 `ToolbarStyle`：經典純色、經典磨砂、懸浮純色、懸浮玻璃、懸浮磨砂、懸浮透明。
+- 經典樣式為全寬；懸浮樣式加 12dp 水平邊距、8dp 垂直邊距、28dp 圓角與陰影。
+- 純色使用不透明 `surface`；磨砂用高不透明度漸變；玻璃用較低不透明度漸變加細邊框；透明用最低不透明度。
+- 設定 → 外觀 → 工具欄樣式即時切換；`ThemeController.toolbarStyle` 是 StateFlow，AppRoot 直接收集。
+- 背景模糊限制：Android 同視窗內沒有真正的 backdrop blur API，磨砂 / 玻璃是半透明近似。
+
+### 55.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.12.0-m4p15.apk` |
+| APK 大小 | 5,566,129 bytes |
+| APK SHA-256 | `1D4774EBAB64F11A3C27998DAA6BFBFAF34C48D5018950DE93836BD26F4C9890` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.12.0-m4p15-x86_64-emulator.apk` |
+| AAB | 未產出（本次只要 APK） |
+| versionName / Code | `0.12.0-m4p15` / `46` |
+
+### 55.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機目前未連接（`adb devices` 為空），尚未安裝到真機。
+
+## 56. v0.12.1-m4p16（2026-11-18）：懸浮工具欄覆蓋內容
+
+- 懸浮樣式不再放進 Scaffold 的 `bottomBar`，改為外層 Box 底部 overlay；頁面內容可以延伸到欄後方。
+- 新增 `LocalBottomContentPadding`，五個主頁的 LazyColumn 底部額外留 104dp，最後一項仍能滾到欄上方。
+- 透明 / 玻璃樣式現在能看到滾動內容從欄後經過；磨砂仍是半透明近似，沒有真正的背景模糊。
+- 經典樣式保持原本的 Scaffold bottomBar 行為。
+
+### 56.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.12.1-m4p16.apk` |
+| APK 大小 | 5,566,129 bytes |
+| APK SHA-256 | `49916D00791C72DA09EBD8070AE35E0E0F3E1B9501A433911D6DC4B61BF659E7` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.12.1-m4p16-x86_64-emulator.apk` |
+| versionName / Code | `0.12.1-m4p16` / `47` |
+
+### 56.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機未連接，尚未做真機視覺確認。
+
+## 57. v0.13.1-m4p18（2026-11-18）：Haze 真實背景模糊
+
+- 引入 Haze 1.6.0（Apache-2.0）：內容 Box 加 `hazeSource`，磨砂 / 玻璃工具欄用 `hazeEffect` 取得真實背景模糊。
+- 經典磨砂改為覆蓋式全寬工具欄；內容會從欄後滾過。
+- 玻璃 / 透明樣式額外加白色斜向高光、細邊框和陰影；磨砂使用 `HazeMaterials.thin`，玻璃使用 `ultraThin`。
+- Android 12+ 才有 RenderEffect 真實模糊；Android 10/11 會退回 Haze 的降級效果。
+- 限制：Haze 做的是背景模糊 + 材料色，不是 iOS Liquid Glass 的折射 / 透鏡；完全同款需要 GPU shader，成本和相容性都不划算。
+
+### 57.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.1-m4p18.apk` |
+| APK 大小 | 5,627,047 bytes |
+| APK SHA-256 | `8463F05744B298A87BE8A7107519CC58FDDD29E042DD038545F109AED73A1F7C` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.1-m4p18-x86_64-emulator.apk` |
+| versionName / Code | `0.13.1-m4p18` / `48` |
+
+### 57.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機未連接，尚未做真機視覺確認；需在 Android 12+ 的裝置上看磨砂 / 玻璃。
+
+## 58. v0.13.1-m4p18（2026-11-18）：玻璃 / 透明 / 磨砂三種材質分離
+
+- 問題：0.13.0 的玻璃與透明都使用 `HazeMaterials.ultraThin`，參數完全相同，所以看起來一模一樣。
+- 現在三種材質各自獨立設定 `HazeStyle`：
+  - **磨砂**：26dp 模糊、底色 alpha 0.68 / 0.74（淺 / 深色），霧面、無高光、無漸變邊框。
+  - **玻璃**：36dp 模糊、底色 alpha 0.24 / 0.34，加上垂直白色漸變高光（頂部 0.28）、頂部一道兩端淡出的反光條、受光漸變邊框（左上偏白）與 18dp 彩色陰影。
+  - **透明**：不使用 Haze，只畫 20% / 26% 底色 + 10% 邊框，後方內容保持清晰。
+- 修正 modifier 順序：`clip` 移到 `hazeEffect` 之前，圓角才能真正裁掉模糊圖層（之前可能出現方角）。
+- 移除 `haze-materials` 依賴，只保留核心 `haze`。
+- Android 12 以下沒有 RenderEffect，Haze 使用 `fallbackTint`（磨砂 0.96、玻璃 0.88）維持可讀性。
+- 底部導航的選中指示器跟著材質走：玻璃用白色半透明 pill、透明用低 alpha surface、磨砂用 `secondaryContainer`。
+
+### 58.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.1-m4p18.apk` |
+| APK 大小 | 5,626,849 bytes |
+| APK SHA-256 | `723057B1024C84727014712028A05CF115B8E02EEC9D4316726E07645E6FB7F2` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.1-m4p18-x86_64-emulator.apk` |
+| versionName / Code | `0.13.1-m4p18` / `49` |
+
+### 58.2 驗證
+
+- JVM 測試 / Debug / Release 構建通過。
+- 手機未連接，三種材質的實際觀感仍待 Android 12+ 真機確認。
+
+## 59. v0.13.2-m4p19（2026-11-18）：玻璃質感重做與透明可讀性
+
+### 59.1 問題
+
+- 0.13.1 的玻璃仍是「一塊白色半透明板」：底色 0.08 以上、模糊半徑偏大、邊框是單色，看起來沒有厚度。
+- 「透明」完全不做模糊，捲動內容會直接從標籤後方穿過，文字和內容打架。
+- `Modifier.clip` 和 Haze 的取樣邊界互相裁切，圓角附近的模糊會出現方形斷面。
+
+### 59.2 這次的改法
+
+| 樣式 | 模糊 | 底色 | 額外 |
+|---|---|---|---|
+| 磨砂 | 26dp | 0.68 / 0.74 | 霧面，無高光 |
+| 玻璃 | 18dp | 0.08 / 0.18 | 內圈白光、頂部鏡面反光、底部內陰影、受光漸變外框、20dp 陰影 |
+| 透明 | 10dp | 0.44 / 0.52 | 單色細框、8dp 陰影；內容看得見但不可辨讀 |
+
+- 模糊層改用 `BlurredEdgeTreatment(RoundedCornerShape(30.dp))` 由 Haze 自己裁切，移除 `Modifier.clip`。
+- 圓角 30dp、懸浮外距 16dp × 10dp。
+- 玻璃的「厚度」由三層組成：外框（左上白、右下深）、內圈 1dp 白光、底部 20% 高度的黑色內陰影。
+
+### 59.3 為什麼不用 Haze 2 的 Glass（折射）
+
+- `haze-glass` 2.0 / 2.1 依賴 Compose Multiplatform 1.12（Jetpack Compose 1.12.1）、Kotlin 2.4.20+；Compose 1.12 的 AAR 要求 **AGP 9.1.0+、compileSdk 37**，等於要連 Gradle 9 與 Android SDK 37 一起升級。
+- Glass 的折射用 `android.graphics.RuntimeShader`，**API 33（Android 13）才存在**；低版本會退回純模糊的 delegate，視覺與現在的 Haze 1.6 差別不大。
+- 目前主要驗證機（Redmi K30 Pro）是 Android 12，升級後拿不到折射，先把 API 31 這條路打磨到最好。
+- 之後若要升級：Kotlin 2.4.21 + Compose BOM 2026.09.00 + AGP 9.1 + compileSdk 37 + `haze` / `haze-blur` / `haze-glass` 2.1.0，API 對應 `HazeInput.Backdrop(state)`、`Modifier.hazeBlur` / `Modifier.hazeGlass`、`GlassStyle { ... }`。
+
+### 59.4 驗證
+
+- 用 `D:\tools\android-dev\emu34`（33.1.24）+ `nc35` AVD（API 35，x86_64）實際啟動、安裝 Debug APK，逐一切換樣式截圖對比：
+  - 淺色：玻璃可看到後方卡片的粉色 / 綠色漸層與完整高光邊；磨砂只剩均勻霧面；透明看得到色塊但標籤清楚。
+  - 深色：玻璃呈現綠色調玻璃與明顯白邊，選中項是半透明膠囊。
+- JVM 測試、Release 構建通過。
+
+### 59.5 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.2-m4p19.apk` |
+| APK 大小 | 5,626,853 bytes |
+| APK SHA-256 | `268EF3A6E53110EC90C955B1DA95FA0574FBE9DF46FB026DAB734CAD867127D5` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.2-m4p19-x86_64-emulator.apk` |
+| versionName / Code | `0.13.2-m4p19` / `50` |
+
+### 59.6 未驗證
+
+- 真機（Android 12）的實際觀感；模擬器是 API 35，RenderEffect 行為可能與 Android 12 略有差異。
+- Android 10 / 11 的 `fallbackTint` 降級外觀。
