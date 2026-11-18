@@ -1,0 +1,23 @@
+<Project>
+  <!--
+    UI benchmark 工具目錄：與主解決方案隔離。
+    這裡關閉中央套件版本管理和倉庫的分析器/警告即錯誤，避免影響正式構建。
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NuGetAudit>false</NuGetAudit>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <!-- 對比時三個變體使用相同的 AOT 設定；-Aot 打開。 -->
+    <BenchAot Condition="'$(BenchAot)' == ''">false</BenchAot>
+    <RunAOTCompilation>$(BenchAot)</RunAOTCompilation>
+    <AndroidEnableProfiledAot>$(BenchAot)</AndroidEnableProfiledAot>
+  </PropertyGroup>
+</Project>

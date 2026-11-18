@@ -1,0 +1,6 @@
+<Project>
+  <!-- 隔離主倉庫的中央套件版本管理：benchmark 專案使用自己的明確版本。 -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

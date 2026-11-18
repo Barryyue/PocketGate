@@ -122,6 +122,16 @@
 
 MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗證記錄和待辦見 [progress-android.md](progress-android.md)，設計見 [android.md](android.md)。
 
+### 🧪 Android Kotlin 對照版（長期，2026-11-14 起）
+
+- [x] (opencode, 2026-11-15) **Kotlin 完整重寫，作為技術選型對照 — v0.2 完成**：用戶決定保留兩套 Android 代碼並行維護（Avalonia 版 + Kotlin 版）。在 `android-kotlin/` 建立獨立 Gradle 專案，applicationId `com.networkcontrol.android.kotlin`，已追平現有 Avalonia 版的主要功能並產出 v0.2 APK（`artifacts/kotlin-android/NetworkControl-KT-0.2.0.apk`，3.17 MB，Debug 簽名）。
+  - 已驗證：VPN 建立 / 分流、假 DNS、應用識別、詢問通知 + 應用內卡片、合併 / 超時 / 稍後、允許後規則生成與 VPN 重建、模式與配置文件頁、應用三態 / 圖標 / 用量、阻擋記錄、流量統計、三語切換、診斷導出、開機 / always-on / Tile 代碼路徑；JVM 測試 30 個通過；Release 冷啟動約 2.1 秒（模擬器）。
+  - **v0.2（2026-11-15）**：應用列表權限引導（GET_INSTALLED_APPS / GET_APP_LIST）、主題色（10 預設 + HSV 自訂）、規則按配置文件隔離（修正共享規則 bug + 舊資料遷移）、即時網速、勿擾入口/摘要、按網絡自動切換、P0/P1 審查修正。APK `NetworkControl-KT-0.2.0.apk`（3.17 MB）；JVM 測試 30 個通過；模擬器驗證主題色、配置文件規則隔離、勿擾與設定頁。
+  - 未驗證：真機與 OEM ROM（v0.2 新增的應用列表權限、自動切換、主題色、通知路徑）、Chrome 實際加載（模擬器宿主無外網 DNS，關閉保護後同樣失敗）、Tile / 開機恢復 / 通知權限的實機路徑、規則導入導出的設備往返。
+  - 已知差距：通知動作在進程回收後失效、部分 PackageManager 呼叫仍在主執行緒（見 `docs/kotlin-audit-2026-11-15.md`）；懸浮詢問面板、專注模式 / 時間表、鎖屏斷網、應用詳情頁、CSV 導出、轉發模式未做（Avalonia 版也尚未全部實現）。
+  - 詳細計劃、功能對齊清單、量化對照和後續迭代見 **[android-kotlin.md](android-kotlin.md)**。
+  - **完成項落盤**：[kotlin-feature-log.md](kotlin-feature-log.md)（K-001…K-028）；網絡 / SIM 規劃見 [android-network-sim-plan.md](android-network-sim-plan.md)。
+
 ---
 
 ## 🧭 第二階段（M3 v1.0，桌面 + Android，2026-11-14 起）
@@ -297,7 +307,25 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
     - 啟動合併：用含上述重複的測試數據庫驗證合併結果，再執行一次結果不變；
     - 遷移：在舊版數據庫上升級成功。
   - **驗證**：用可攜版現有的 `config.db` 的副本跑一次合併（不要直接改用戶正在使用的數據），確認規則數、命中次數和最終效果與預期一致；改動了 Core 和 Storage，按完成標準第 4 條構建 `NetworkControl.Android.slnx`。
+- [ ] **規則選錯程序的防護**（2026-11-14 飛書問題引出）：用戶給飛書的啟動器 `%LocalAppData%\Feishu\Feishu.exe` 加了禁止規則，命中 0 次；真正聯網的是 `Feishu\app\Feishu.exe`，它還有一條允許規則，所以飛書照常收發消息。目錄下另有一份版本目錄 `8.6.13\`，裡面是同樣的程序。改進：
+  - **識別啟動器**：用戶手動選的 exe 如果從沒聯網過，而同一發布者、同名的另一個 exe 正在聯網或有記錄，就提示「實際聯網的是 XX，是否改為它，或者一併加上？」；
+  - **規則衝突提示**：同一發布者、同名的程序同時有允許和禁止規則時，在規則列表中標出（與「規則與應用記錄去重」的分組顯示一起做）；
+  - **按目錄建規則**：規則目標可以選「整個目錄」（例如 `...\Feishu\**`），覆蓋多進程、多副本、升級後換路徑的應用；按發布者見下一項「按可信發布者批量允許」；
+  - **命中次數長期為 0 時提示**：規則添加一段時間（例如 1 天）後仍未匹配過任何連接，在規則列表中提示「可能選錯了程序」。
+- [ ] **新增或修改禁止規則後斷開已有連接**：過濾器只在 `ALE_AUTH_CONNECT` 建立連接時判斷，飛書這類長連接應用在規則改為禁止後仍然可以繼續通信，直到重連。規則變為禁止後，用已有的 `WindowsConnectionKiller` 斷開該程序已建立的 TCP 連接（或在界面詢問用戶是否斷開）；只支持 IPv4 TCP 的限制要在界面上說明。附帶測試。
+- [ ] **與其他 WFP 防火牆共存（火絨等）**（2026-11-14 用戶觀察到「火絨允許、我們禁止 → 實際允許」；當時測試的可能也是飛書啟動器，**先在改正規則後重新測試**，確認問題是否存在）：
+  - 原理：WFP 按子層權重從高到低評估，阻斷優先；但高優先級子層的「硬允許」（清除 `FWPS_RIGHT_ACTION_WRITE`）會讓低優先級子層的普通阻斷被忽略。我們的子層權重是 `0x8000`（`WfpSession.cs`），屬中等。
+  - 確認方法（需要管理員權限，由用戶執行）：`netsh wfp show filters` / `netsh wfp show state` 查看火絨的子層權重和過濾器標誌；開啟「Filtering Platform Connection」審計，用 5156 / 5157 事件確認最終是哪個過濾器做的決定，測完關閉審計。
+  - 如果確認存在：把我們的子層權重提高到接近 `0xFFFF`，阻斷優先生效；我們的允許保持普通允許、**不清除寫權限**，不覆蓋其他防火牆的阻斷，維持「任一方禁止即禁止」。權重相同時順序不確定，所以只能盡量爭取。
+  - 偵測與提示：枚舉其他 provider 的子層，發現權重高於我們的第三方防火牆時，在總覽頁和診斷包中提示「XX 可能會覆蓋本應用的阻斷規則」。
+  - 結論寫入 AGENTS.md 第 6 節和 design.md §22。
 - [ ] **按可信發布者批量允許**（設計見 [design.md §24](design.md#24-減輕首次使用的詢問負擔可信發布者規則與詢問批量處理規劃2026-11-14)，2026-11-14 從 Android 待辦借鑒）：例如「Microsoft Corporation 簽名的程序一律允許」，減輕首次使用的詢問負擔；首次運行引導（L4）中提供勾選項。Core 追加「發布者條件」（不能復用篡改檢測用的 `RequiredSignerId`），發布者規則的具體度低於指定路徑的規則；Android 的「系統應用默認允許」共用這套實現。
+- [ ] **Android 網路類型 / SIM / 流量拆分（N1）**（2026-11-15 用戶提出；詳細設計見 [android-network-sim-plan.md](android-network-sim-plan.md)）：目前只有配置文件按 Wi-Fi / 行動網路自動切換，**不能區分 SIM1 / SIM2，流量也只有 Wi-Fi + 行動網路合計**。
+  - N1-1：`NetworkContext` 追加 subscriptionId / simSlot / carrier / isMetered；`NetworkMonitor` 從 `TelephonyNetworkSpecifier` + `SubscriptionManager` 取值；配置文件自動切換支援 SIM；編輯器加 SIM 選擇與 `READ_PHONE_STATE` 引導。
+  - N1-2：新增 `Activity/0004_traffic_network.sql`，`TrafficCollector` 按 Wi-Fi / 行動網路 / SIM 拆分；總覽與應用頁顯示拆分；無權限降級為「行動網路（合計）」。
+  - N1-3：`RuleConditions` 追加網路類型 / subscriptionId 條件，`RuleSet` / `VpnRoutingPlanner` / `VpnEngine` 接入，網路變化時 replan；規則編輯器提供「僅 Wi-Fi / 僅行動網路 / 僅 SIM1」。
+  - 限制：VpnService 不能讓不同應用同時走不同 SIM；只按目前預設資料 SIM 套用策略，文件中如實說明。預估 7–12 個工作日，N1-1 / N1-2 可並行。
+  - 驗收：模擬器切換 Wi-Fi / 行動網路與配置文件；真機雙 SIM 切換、拒絕權限降級、流量分開累加。
 - [ ] **詢問隊列批量處理**（同上 §24）：「待決詢問」列表，多選後一次允許 / 拒絕 / 稍後；Core 的 `PromptBroker` 追加批量回應（只發布一次規則集），`prompts.proto` 追加對應接口。Android 共用 Core 部分。
 - [ ] 入站連接控制（ALE_AUTH_RECV_ACCEPT 層）
 - [ ] 流量統計（ETW Kernel-Network → traffic_* 表 → 統計頁圖表）
@@ -336,6 +364,7 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
 見 [development.md §7](development.md#7-windows-wfp-引擎)：先阻斷後詢問、只控制出站、只記錄阻斷、svchost 服務 / MSIX 規則不下發、只校驗嵌入式簽名、DoH 下域名規則無效。
 
 ## 📝 待決問題（需要用戶決定）
+- **Android 版的產品定位與技術路線**（2026-11-14）：定位為獨立產品（與 NetGuard、RethinkDNS 競爭，上架 F-Droid / Google Play），還是桌面版的配套？前者建議趁早用 Kotlin 完整重寫，後者建議保留 .NET 並按性能路線優化。分析見 [android-performance.md §9](android-performance.md#9-用-kotlin-完整重寫-android-版的評估2026-11-14)；做決定前可以先完成 progress-android.md 的 P-1 和 P-11 拿到真機數據。**正式發布、定下應用 ID 和簽名之前決定**，之後再換成本會高很多。
 
 - 開源協議（MIT / Apache-2.0 / GPL-3.0）—— 影響能否復用 GPL 項目代碼。**正式分發前必須確定**（2026-11-14 補充）：
   - 防火牆類軟件開源有助於建立信任。

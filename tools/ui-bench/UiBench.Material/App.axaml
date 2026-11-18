@@ -1,0 +1,11 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:themes="clr-namespace:Material.Styles.Themes;assembly=Material.Styles"
+             x:Class="UiBench.Material.App"
+             RequestedThemeVariant="Light">
+  <Application.Styles>
+    <!-- Material.Avalonia 3.x 的入口：MaterialTheme 會自動帶入全部控件樣式與調色盤資源，
+         所以不需要再疊一層 FluentTheme（重複的控件主題只會互相覆蓋）。 -->
+    <themes:MaterialTheme BaseTheme="Light" PrimaryColor="Blue" SecondaryColor="Amber" />
+  </Application.Styles>
+</Application>

@@ -2,6 +2,7 @@
 
 > Android 版的進度單獨記錄在這裡，避免和桌面版的 progress.md 互相衝突。協作規則同 [AGENTS.md §2](../AGENTS.md#2-協作規則多-agent-並行)。
 > 設計見 [android.md](android.md)，構建和工具鏈見 [development.md §11](development.md#11-android)。
+> **Kotlin 對照版**（2026-11-14 起，長期）：獨立專案 `android-kotlin/`，功能和進度見 **[android-kotlin.md](android-kotlin.md)**；與本文件的 Avalonia 版並行維護，互不影響。
 
 **最後更新：2026-11-14**
 
@@ -115,6 +116,75 @@
 - [ ] **診斷導出**（設計見 [android.md §8.1](android.md#81-備份與恢復診斷導出規劃)）：設定頁「資料」卡片一鍵導出 zip，經系統分享面板發送或保存為文件。內容：日誌、當前路由計劃（含此平台不生效的規則）、引擎計數器（報文、聯網嘗試、假 DNS 回答、查不到 UID、系統 UID）、VPN 狀態、**私人 DNS 狀態**、通知和電池最佳化授權狀態、設備型號 / Android 版本 / ROM、Storage 收集器提供的數據庫一致性副本；文本統一脫敏。復用桌面版的診斷包機制（`IDiagnosticsContributor`、`DiagnosticsArchive`、`DiagnosticsRedactor`），Android 補一個自己的收集器。**工程前置**：打包和脫敏代碼目前在 `NetworkControl.Ipc`，Android 不使用 gRPC，要先把它們移到不依賴 gRPC 的共享位置（只移動、不改行為）。→ **M3-11**
 
 - [~] (claude, 2026-11-14) **配置文件（M3-03）**：`IBackend` 追加 `Profiles` / `ActiveProfile` / `ActivateProfileAsync` / `CreateProfileAsync` / `UpdateProfileAsync` / `DeleteProfileAsync` / `GetRuleCount`；總覽頁模式卡片上方配置文件下拉（只有一個時隱藏）；設定頁新增配置文件卡片（列表、設為目前、新增 / 改名 / 刪除、模式選擇）；文本由 `tools/android-strings.py` 生成。Debug APK 構建通過，**未在設備上運行**；切換後 VPN 分流重建需真機確認。
+
+### 對標第一梯隊補充的待辦（2026-11-14，對照 NetGuard、RethinkDNS、TrackerControl、PCAPdroid、AFWall+）
+只列原有待辦中沒有的部分；性能與體積見下一節。每項開頭標註建議的優先級。
+
+**可靠性與安全兜底**
+- [ ] **【P0】故障時默認斷網（lockdown）與開機空窗期**：我們的進程崩潰或被系統殺掉時 VPN 隨之消失，所有被攔的應用立刻恢復聯網，用戶也不知道；開機後到服務啟動前也有一段空窗期。領先者的做法是引導用戶開啟系統的「始終開啟的 VPN」和「**阻止未使用 VPN 的連線**」。實現：用 `Settings.Secure` 中的 `always_on_vpn_app` / `always_on_vpn_lockdown`（讀取方式以真機為準，讀不到時改為引導用戶自行確認）檢測這兩項；首次使用引導和設定頁顯示狀態，沒開就持續提示並提供跳轉（`Settings.ACTION_VPN_SETTINGS`）。真機驗證：開啟 lockdown 後強制停止本應用（`adb shell am force-stop`），確認被攔的應用無法聯網，且保護能自動恢復；未開啟時在總覽頁提示風險。
+- [ ] **【P1】共享 UID 的應用**：多個包共用一個 UID 時（例如 `android.uid.system`、廠商套件），對其中一個設置規則實際作用於整組，目前界面沒有說明。應用列表把同一 UID 的包合併為一組顯示，標註「這些應用共用網絡權限，規則對整組生效」；詢問中也顯示同組的其他應用。
+- [ ] **【P1】合併 VPN 重建**：每次改規則都重建 VPN，批量操作（全部允許、切換配置文件、導入規則）時會反覆閃斷。規則變化後延遲一小段時間（例如 300 ms）再重建，期間的變化合併為一次；用 P-1 的指標記錄重建次數和耗時。
+- [ ] **【P2】私人空間（Android 15）**：私人空間和工作資料夾一樣有獨立的 VPN 名額，其中的應用不受本應用控制。檢測到私人空間時在說明中提示（與「工作資料夾（多用戶）支持」一起考慮）。
+
+**黑洞模式下就能做的控制能力**
+- [ ] **【P1】允許局域網**：VPN 路由是 `0.0.0.0/0`，被攔的應用連局域網設備（投屏、NAS、打印機）也會被攔。全局開關「允許局域網」：開啟時 VPN 路由排除私有地址段（`10/8`、`172.16/12`、`192.168/16`、`169.254/16`、IPv6 的 `fc00::/7`、`fe80::/10`），用 `VpnService.Builder.excludeRoute`（Android 13+）；更低版本改為把 `0.0.0.0/0` 拆成不含私有地址段的若干路由。以後可以按應用設置。附帶路由計算的單元測試。
+- [ ] **【P2】漫遊時禁止聯網**：按應用設置「漫遊時禁止」，並入「按網絡類型分別允許」的規則條件；雙卡手機要能區分 SIM 卡。
+
+**依賴轉發模式的能力**（轉發模式見「中期主線」；建議把轉發模式定為進入第一梯隊的必要條件，排在專注模式、時間表之前，**需要用戶確認排序**）
+- [ ] **DNS 防火牆與攔截列表訂閱**：所有 DNS 查詢經過本應用，按訂閱列表（廣告、追蹤、惡意網站）攔截，支持按應用例外和手動添加域名；顯示每個應用被攔的域名。
+- [ ] **加密 DNS 上游**：轉發模式下可選 DoH / DoT 上游，與 DNS 防火牆一起做。
+- [ ] **追蹤器識別**（擴展 P3 的「應用詳情頁」）：接入開源的追蹤器數據庫（例如 Exodus Privacy、Disconnect 的列表，注意許可證），把域名標記為公司和類別（統計、廣告）；總覽頁顯示「今天攔了 N 個追蹤器」。黑洞模式下對被攔的應用（假 DNS 能拿到域名）就能先做。
+
+**平台合規**（上架和新系統的硬性要求）
+- [ ] **【P1】16 KB 內存頁**：Android 15 起有設備使用 16 KB 頁，Google Play 要求原生庫按 16 KB 對齊。確認 .NET 運行時、SkiaSharp、HarfBuzzSharp、e_sqlite3 的版本是否支持，在 16 KB 頁的模擬器鏡像上驗證能否啟動。
+- [ ] **【P1】targetSdk 升級檢查**：targetSdk 35+ 強制全屏顯示（edge-to-edge），升級後重新驗證安全區域；Android 14 起前台服務必須聲明類型，確認 VPN 服務和通知的聲明符合要求。
+- [ ] **【P2】Google Play 的 VPN 應用聲明**：如果上架，需要填寫 VpnService 的專門聲明，說明「流量不離開設備」，並提供隱私政策頁面（與「AAB 打包與上架準備」一起做）。
+
+**信任與生態**
+- [ ] **【需要用戶決定】開源、可復現構建、F-Droid**：防火牆類應用拿到全部網絡權限，用戶最擔心應用本身作惡；第一梯隊幾乎都開源並上架 F-Droid。需要用戶決定開源策略。
+- [ ] **【P1】零遙測聲明**：設定頁和說明中寫明「不收集任何數據；除檢查更新（可以關閉）外不聯網」；崩潰信息只存本地，由用戶通過診斷導出主動提供。
+- [ ] **【P2】從其他防火牆導入規則**：支持導入 NetGuard、AFWall+ 的導出文件，降低遷移成本（擴展「備份與恢復」的導入流程，復用 `RuleImportPlanner`）。
+- [ ] **【P2】自動化接口**：帶權限保護的廣播 Intent（開關保護、允許 / 拒絕某應用、切換配置文件），供 Tasker、MacroDroid 使用；與快速設定磁貼（M3-09）一起做。
+- [ ] **【P3】更多語言**：接入社區翻譯平台（例如 Weblate），界面文本和 `strings.xml` 都要覆蓋。
+
+### P1 性能與體積（背景、測量數據和方案比較見 [android-performance.md](android-performance.md)）
+現狀（2026-11-14）：APK 45.9 MB（arm64 + x86_64 各約 22 MB），模擬器冷啟動約 7.5 秒。順序：先做 P-1（測量），每完成一項都把前後數據記入 android-performance.md §6。
+
+- [ ] **P-1 性能指標日誌與測量方法**（其他各項的前提，配合上面的「真機性能基準」；設計和開銷分析見 [android-performance.md §7](android-performance.md#7-性能指標日誌)）：
+  - **啟動階段**：用 `Process.getStartElapsedRealtime()` 取得進程真正的啟動時刻（包括我們的代碼運行之前、運行時初始化的時間），之後在這些時間點記錄耗時：`Application.OnCreate` 開始、Avalonia 初始化完成、AtomUI 主題加載完成、`MainActivity.OnCreate`、首幀、`BackendHost` 的各階段（打開 SQLite、遷移、加載規則、應用目錄掃描、引擎啟動）、VPN 建立。啟動結束時輸出一行彙總，註明啟動路徑（點擊圖標 / 開機恢復 / 系統拉起 VPN 服務）。
+  - **運行時**：VPN 重建耗時、規則發布耗時、詢問延遲（攔截到報文 → 通知或彈窗顯示）、應用目錄掃描耗時和應用數、頁面切換到渲染完成的耗時；超過閾值的操作記一條「慢操作」警告（例如界面線程上超過 100 ms）。
+  - **週期性指標**：每 10 分鐘（以及進入後台時）輸出一行：報文數、詢問數、託管內存（`GC.GetTotalMemory`）、GC 次數。PSS 用 `Debug.getMemoryInfo`，開銷較大，只在診斷導出時採集一次。
+  - **格式與輸出**：單獨的日誌分類 `NetworkControl.Perf`，每條一行 `key=value`，方便腳本解析；寫入 logcat 和現有的文件日誌，**診斷導出時一併打包**。在 `scripts/` 中提供提取腳本，把 logcat 或日誌文件中的指標整理成表格。
+  - **系統跟蹤**：同樣的階段用 `Android.OS.Trace.BeginSection` / `EndSection` 標記，在 Perfetto 中可以看到與系統事件對齊的時間線。只標記粗粒度的階段，不標記每個報文。
+  - **開銷控制**：啟動和運行時的里程碑默認開啟（每次只是讀時鐘加一條日誌）；詳細計時（例如每次重建 VPN 的分段耗時）由設定中的「詳細性能日誌」開關控制，默認關閉。報文處理等熱路徑**只累加計數器**，不逐條記日誌。日誌一律用 `[LoggerMessage]` 源生成，並先判斷日誌級別。
+  - **測量方法**寫入 development.md §11：`adb shell am start -W -S` 的 `TotalTime`、Perfetto 系統跟蹤、`dumpsys meminfo` 的 PSS；分別測點擊圖標、開機自動恢復、進程被殺後系統重新拉起 VPN 服務三條路徑。
+  - **驗證**：用 Release 構建分別測量開啟和關閉指標日誌時的冷啟動時間，確認差異在測量誤差以內，結果記入 android-performance.md §6。
+- [ ] **P-2 只發布 arm64**（收益最大，成本最低）：`scripts/android.ps1 publish` 默認只打 `android-arm64`，APK 約減半（45.9 MB → 約 24 MB）；`android-x64` 只用於模擬器調試（Debug 構建或單獨的參數）。上架 Google Play 時改用 AAB，由商店按 ABI 拆分。
+- [ ] **P-3 完整裁剪，剔除桌面專用依賴**：確認 Release 的 `TrimMode`，如果是 `partial` 就改為 `full`，並處理裁剪警告。驗收標準是 `obj/Release/net10.0-android/android-arm64/linked` 中不再有 `NWayland`、`Avalonia.Wayland` 等 Linux 桌面程序集（目前共 0.66 MB，經 `AtomUI.Desktop.Controls` → `Avalonia.Desktop` 引入）。完整裁剪後反射相關的問題只會在運行時暴露，必須在設備上跑完整的冒煙測試（詢問、規則、設定、配置文件、語言和主題切換）；需要時用 `TrimmerRootDescriptor` 保留。剔除不掉時，評估用 `ExcludeAssets` 排除傳遞依賴，或向 AtomUI 上游反饋。
+- [ ] **P-4 查明並縮小其他大塊依賴**：
+  - `System.Private.Xml`（1.54 MB）：查出引用來源。來自運行時解析 XLIFF 的話，評估改為構建時生成；來自 SVG 庫的話，記入 android-performance.md §3。
+  - `AtomUI.Icons.AntDesign`（1.24 MB，實際只用了幾十個圖標）：確認完整裁剪後能否只保留用到的圖標；不能的話，評估改用 Android 矢量資源或 Avalonia 的 `PathGeometry`。
+  - 功能開關：`EventSourceSupport=false`、`MetricsSupport=false` 等；`UseSystemResourceKeys=true` 會讓異常消息變成資源鍵、影響日誌可讀性，權衡後決定。
+- [ ] **P-5 Java / Kotlin 部分**：開啟 R8（`<AndroidLinkTool>r8</AndroidLinkTool>`）壓縮 `classes.dex`（現在解壓後 7.83 MB），補充 ProGuard 保留規則，避免 Avalonia.Android 和 AndroidX 用到的類被誤刪；用 `AndroidPackagingOptionsExclude` 排除 Kotlin 元數據目錄（`commonMain`、`nativeMain`、`kotlin` 等，約 0.2 MB）。開啟後在設備上跑完整的冒煙測試。
+- [ ] **P-6 自定義 AOT 配置文件**：現在用的是 .NET 自帶的通用 Profiled AOT 配置文件（每個 ABI 有 153 個 `libaot-*.so`，壓縮後 3.82 MB），不覆蓋本應用的啟動路徑。在真機上錄製本應用的啟動配置文件（`.aprof`，錄製工具和命令以 .NET 10 官方文檔為準），加入項目後重新測量；同時測一次「不用 AOT」作為對比，最後根據大小和啟動時間的權衡選定方案。錄製步驟寫入 development.md §11，啟動路徑有大的變化時重新錄製。
+- [ ] **P-7 後台路徑不初始化界面**（需要預研）：`AndroidApp` 繼承自 `AvaloniaAndroidApplication`，Avalonia 和 AtomUI 很可能在 `Application.OnCreate` 時就初始化，所以開機廣播、系統拉起 VPN 服務、進程被殺後重啟這些沒有界面的路徑也要付出界面初始化的成本，而這決定了**保護恢復前的空窗期**有多長。先用 P-1 的埋點確認；再預研 Avalonia 12 能否把初始化延遲到 `MainActivity` 創建時（例如改用普通的 `Application`，在 Activity 中初始化 Avalonia）。做不到的話，把「VPN 放到獨立進程」的方案（android-performance.md §4 方案 C）交給用戶決定。
+- [ ] **P-8 冷啟動優化**（依據 P-1 的數據決定先做哪些）：
+  - 啟動畫面：使用 Android 12 的 SplashScreen API，點擊圖標後立即顯示；
+  - 推遲非關鍵工作：流量統計採集、應用圖標加載推遲到首幀之後；
+  - 應用目錄改為增量：不在啟動時全量讀取所有應用並計算簽名 SHA-256，按 `lastUpdateTime` 只處理有變化的應用，結果緩存到本地；
+  - 並行：`BackendHost`（SQLite、遷移、規則加載、VPN）與界面初始化並行，界面先顯示骨架，數據到了再填充；
+  - 測量 AtomUI 主題初始化（`UseDesktopControls()` 為所有控件註冊主題）的耗時；佔比大的話，評估只註冊用到的控件（取決於 AtomUI 是否支持，不支持就向上游反饋）。
+- [ ] **P-9 防止回退**：CI 的 Android 任務輸出 APK 大小及各部分組成（託管程序集、AOT、原生庫、dex），超過基準 5% 時發出警告；冒煙測試腳本記錄冷啟動時間，與 android-performance.md §6 的最新數據比較。
+- [ ] **P-10 根據真機數據決定是否做架構級調整**（**需要用戶決定**）：P-1 到 P-8 完成後，如果 APK（arm64）仍大於 20 MB 或冷啟動仍超過 2 秒，在 android-performance.md §4 的方案 B（Android 界面不用 AtomUI）和方案 D（原生界面 + .NET 核心）之間選擇；同時持續關注 .NET Android 上的 Native AOT 進展（方案 E）。
+- [ ] **P-11 移動端 UI 庫對比實驗**（2026-11-14 用戶確認要做；P-10 決定的依據；背景見 [android-performance.md §4](android-performance.md#4-更進一步的方案架構級) 方案 B 和 [§8](android-performance.md#8-ui-庫對比atomui--fluent--materialavalonia)）：
+  - **目的**：用數據回答「Android 界面繼續用 AtomUI，還是換成更輕的方案」。Android 只用了 11 種 AtomUI 控件（`Button`、`Card`、`Segmented`、`IconPresenter`、`Alert`、`Tag`、`ToggleSwitch`、`Statistic`、`ComboBox`、`Spin`、`LineEdit`），卻要承擔 AtomUI 及其依賴約 14 MB 的託管代碼，以及啟動時為所有控件生成主題的成本；而且 `FluentTheme` 本來就在加載（基礎控件需要），現在是兩套主題並存。
+  - **做法**：在 `tools/ui-bench/`（或 scratchpad，不進主解決方案）建三個最小的 Avalonia Android 應用，內容相同（一個頁面：卡片 ×3、分段選擇、按鈕、開關、輸入框、50 行的列表、幾個圖標、中文文本），Avalonia 版本與正式項目一致：
+    1. **AtomUI**：與正式項目相同的初始化方式（`UseDesktopControls()`、`sans-serif` 字體）；
+    2. **Fluent + 自訂樣式**：`Card`、`Tag`、`Alert`、`Statistic` 用 `Border` 加樣式，`Segmented` 用橫向 `ListBox` 或 `RadioButton`，`Spin` 用不確定進度的 `ProgressBar`，圖標用 `PathGeometry`；
+    3. **Material.Avalonia**（社區的 Material Design 主題，符合 Android 的使用習慣）。
+  - **指標**：都用 Release + 只打 arm64 + 默認 AOT 配置構建，比較 APK 大小、裁剪後託管代碼大小、冷啟動（`am start -W -S` 的 `TotalTime`，每個測 10 次取中位數）、首幀時間、PSS 內存、列表滾動是否流暢（Perfetto 的掉幀數）。模擬器和真機各測一輪，以真機為準。
+  - **同時評估遷移成本**：界面文本要從 AtomUI 的 XLIFF 目錄遷移到別的機制（例如直接用 Android 的 `strings.xml`，通知文本本來就在用）；`AppearanceService` 的明暗切換建立在 AtomUI 的主題管理之上，需要重寫；`TouchAdapters` 和字體的特殊處理可能不再需要；觸控目標按 Android 建議不小於 48dp。
+  - **產出**：結果和遷移工作量估計記入 android-performance.md §8，給出建議。**是否遷移由用戶決定**；如果遷移，另開任務，桌面版不受影響。
 
 ### P2 依賴「使用情況存取權」的功能（打包一起做，一次完成授權引導）
 - [ ] 使用情況存取權（`PACKAGE_USAGE_STATS`）的授權引導，設定頁顯示授權狀態。
