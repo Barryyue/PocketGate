@@ -493,6 +493,7 @@ enum class S {
     ToolbarFloatingGlass,
     ToolbarFloatingFrosted,
     ToolbarFloatingTransparent,
+    FilterRuleAllowed,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1008,6 +1009,7 @@ private val EN = mapOf(
     S.ShortcutDndOff to "End quiet",
     S.ShortcutFocusOn to "Focus %1\$d min",
     S.ShortcutFocusOff to "End focus",
+    S.FilterRuleAllowed to "Allowed in rules",
 )
 
 private val CN = mapOf(
@@ -1499,6 +1501,7 @@ private val CN = mapOf(
     S.ShortcutDndOff to "结束勿扰",
     S.ShortcutFocusOn to "专注 %1\$d 分钟",
     S.ShortcutFocusOff to "结束专注",
+    S.FilterRuleAllowed to "规则中允许联网",
 )
 
 private val TW = mapOf(
@@ -1990,4 +1993,5 @@ private val TW = mapOf(
     S.ShortcutDndOff to "結束勿擾",
     S.ShortcutFocusOn to "專注 %1\$d 分鐘",
     S.ShortcutFocusOff to "結束專注",
+    S.FilterRuleAllowed to "規則中允許連網",
 )

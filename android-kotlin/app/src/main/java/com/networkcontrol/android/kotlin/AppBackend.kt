@@ -881,6 +881,15 @@ class AppBackend(val container: AppContainer) {
             .filter { it.packageName != context.packageName }
             .sortedBy { it.label.lowercase() }
 
+    /** 目前已啟用規則中允許聯網的應用包名集合。 */
+    fun allowedByRulePackages(
+        apps: List<com.networkcontrol.android.kotlin.core.model.InstalledApp> = installedApps(),
+    ): Set<String> = VpnRoutingPlanner.allowedByRulePackages(
+        rules = container.rules.ruleSet.value,
+        apps = apps,
+        network = container.network.current,
+    )
+
     fun canDrawOverlays(): Boolean = container.promptOverlay.canDrawOverlays()
 
     fun overlayPermissionIntent(): Intent {

@@ -115,6 +115,8 @@ fun SettingsScreen(
     val runtime by backend.runtime.collectAsStateWithLifecycle()
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val plan by backend.plan.collectAsStateWithLifecycle()
+    val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
+    val network by backend.network.collectAsStateWithLifecycle()
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
     var toolbarStyle by remember { mutableStateOf(backend.toolbarStyle()) }
     val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
@@ -1389,11 +1391,15 @@ fun SettingsScreen(
     }
 
     val directApps = pickerApps
+    val allowedByRulePackages = remember(directApps, ruleSet.version, network) {
+        directApps?.let { backend.allowedByRulePackages(it) } ?: emptySet()
+    }
     if (showDirectAppsDialog && directApps != null) {
         DirectAppsDialog(
             title = s[S.DirectApps],
             apps = directApps,
             initial = directPackages,
+            allowedByRulePackages = allowedByRulePackages,
             onDismiss = { showDirectAppsDialog = false },
             onSave = { packages ->
                 directPackages = packages
@@ -1408,6 +1414,7 @@ fun SettingsScreen(
             title = s[S.LockScreenWhitelist],
             apps = directApps,
             initial = lockWhitelist,
+            allowedByRulePackages = allowedByRulePackages,
             onDismiss = { showLockWhitelistDialog = false },
             onSave = { packages ->
                 lockWhitelist = packages
@@ -2055,21 +2062,21 @@ private fun DirectAppsDialog(
     title: String,
     apps: List<InstalledApp>,
     initial: Set<String>,
+    allowedByRulePackages: Set<String> = emptySet(),
     onDismiss: () -> Unit,
     onSave: (Set<String>) -> Unit,
 ) {
     val s = rememberUiStrings()
     var query by remember { mutableStateOf("") }
+    var onlyRuleAllowed by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(initial) }
-    val filtered = remember(query, apps) {
-        if (query.isBlank()) {
-            apps
-        } else {
-            apps.filter {
-                it.label.contains(query, ignoreCase = true) ||
-                    it.packageName.contains(query, ignoreCase = true)
-            }
-        }
+    val filtered = remember(query, onlyRuleAllowed, apps, allowedByRulePackages) {
+        com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.filterPickerApps(
+            apps = apps,
+            query = query,
+            onlyRuleAllowed = onlyRuleAllowed,
+            allowedByRulePackages = allowedByRulePackages,
+        )
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2081,30 +2088,91 @@ private fun DirectAppsDialog(
                     onValueChange = { query = it },
                     label = { Text(s[S.SearchApps]) },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
-                LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    items(filtered, key = { it.packageName }) { app ->
-                        val checked = app.packageName in selected
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selected = if (checked) selected - app.packageName else selected + app.packageName
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        selected = !onlyRuleAllowed,
+                        onClick = { onlyRuleAllowed = false },
+                        label = { Text("${s[S.FilterAll]} (${apps.size})") },
+                    )
+                    FilterChip(
+                        selected = onlyRuleAllowed,
+                        onClick = { onlyRuleAllowed = !onlyRuleAllowed },
+                        label = { Text("${s[S.FilterRuleAllowed]} (${allowedByRulePackages.size})") },
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        s.format(S.DirectAppsCount, selected.size),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = {
+                            selected = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.selectAllVisible(
+                                selected,
+                                filtered,
+                            )
+                        },
+                        enabled = filtered.isNotEmpty(),
+                    ) {
+                        Text(s[S.SelectAll])
+                    }
+                    TextButton(
+                        onClick = {
+                            selected = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.clearVisibleOrAll(
+                                selected,
+                                filtered,
+                            )
+                        },
+                        enabled = selected.isNotEmpty(),
+                    ) {
+                        Text(s[S.ClearSelection])
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                if (filtered.isEmpty()) {
+                    Text(
+                        s[S.NoApps],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 16.dp),
+                    )
+                } else {
+                    LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                        items(filtered, key = { it.packageName }) { app ->
+                            val checked = app.packageName in selected
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selected = if (checked) selected - app.packageName else selected + app.packageName
+                                    }
+                                    .padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(app.label, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        app.packageName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
-                                .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(app.label, style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    app.packageName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            if (checked) {
-                                Text("✓", color = MaterialTheme.colorScheme.primary)
+                                if (checked) {
+                                    Text("✓", color = MaterialTheme.colorScheme.primary)
+                                }
                             }
                         }
                     }

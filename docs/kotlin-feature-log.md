@@ -370,6 +370,13 @@
 |---|---|---|---|---|
 | K-142 | 玻璃質感重做：模糊層改用 `BlurredEdgeTreatment(30dp)` 自行裁圓角；玻璃底色降到 0.08 / 0.18，加內圈白光、頂部鏡面反光與底部內陰影；透明改為 10dp 輕度模糊 + 44% / 52% 底色，標籤不再壓在清晰內容上；圓角 30dp、外距 16/10dp | `AppRoot.AppBottomBar` | API 35 模擬器淺色 / 深色視覺對比、JVM 測試、Release 構建 | 真機（Android 12）未驗證；Haze 2 Glass 需要 API 33+ 且要升 AGP 9.1 / compileSdk 37，暫不採用，詳見 android-kotlin.md §59.3 |
 
+### v0.13.3-m4p20（2026-11-18）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-143 | 鎖屏允許聯網應用選擇框新增「全選 / 清除選擇」與「規則中允許連網」過濾：可只顯示目前已啟用規則中允許聯網的應用列表，並一鍵全選或取消當前篩選結果 | `VpnRoutingPlanner.allowedByRulePackages/filterPickerApps/selectAllVisible/clearVisibleOrAll`、`RuleSet.findAppRule`、`AppBackend.allowedByRulePackages`、`SettingsScreen.DirectAppsDialog`、`UiStrings` | JVM 測試（`RoutingPlannerTest`、`ReleaseNotesTest`）+ API 35 模擬器（`nc35`）端到端驗證（允許 2 個應用 → 彈框顯示 `全部 (60)` / `規則中允許連網 (2)` → 過濾後僅顯示 2 個應用 → 點全選變為 `已選 2 個` 並儲存顯示 `2 個應用`） | 真機待驗證 |
+| K-144 | 項目內置固定共享簽名密鑰（`android-kotlin/keystore/shared-release.jks`，解決跨機器 / CI 打包簽名衝突問題）與 GitHub Actions / Gitee Go 在線 APK 自動打包及 GitHub Releases 發布 | `android-kotlin/keystore/shared-release.jks`、`app/build.gradle.kts`、`.github/workflows/android-kotlin.yml`、`.gitee/workflows/android-kotlin.yml` | `keytool` 證書指紋驗證（SHA-256 `CF:66:52:C5...`）、Release 構建通過 | 待推送至 GitHub / Gitee 觸發雲端流水線 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

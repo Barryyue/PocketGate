@@ -1678,3 +1678,27 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 
 - 真機（Android 12）的實際觀感；模擬器是 API 35，RenderEffect 行為可能與 Android 12 略有差異。
 - Android 10 / 11 的 `fallbackTint` 降級外觀。
+
+## 60. v0.13.3-m4p20（2026-11-18）：鎖屏白名單選擇框支援「規則中允許連網」過濾與「全選」
+
+- 在「鎖屏時仍允許聯網的應用」（及共用 `DirectAppsDialog` 的多選應用對話框）中新增：
+  1. **過濾晶片**：`全部 (N)` 與 `規則中允許連網 (M)`，開啟過濾後只顯示目前已啟用規則（`RuleSet`）中允許聯網的應用列表（優先匹配目前網路條件，若無則匹配已啟用的允許規則；自動排除已停用規則、全域規則與簽章不符的應用）。
+  2. **全選 / 清除選擇**：顯示目前「已選 K 個」，點擊「全選」會將目前過濾 / 搜尋可見的應用全部加入已選集合；點擊「清除選擇」優先移除目前可見的已選應用（若目前可見列表無已選則清空全部）。
+- 新增 `RoutingPlannerTest` 單元測試與 `ReleaseNotes` 0.13.3 三語說明。
+
+### 60.1 交付物
+
+| 項目 | 值 |
+|---|---|
+| APK (arm64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.3-m4p20.apk` |
+| APK 大小 | 5,626,849 bytes（約 5.4 MB） |
+| APK SHA-256 | `7F9D87A48B0584527D33CC9230CD1F5DE420412A7735394BA81B18700A95947E` |
+| APK (x86_64) | `artifacts\kotlin-android\NetworkControl-KT-0.13.3-m4p20-x86_64-emulator.apk`（5,625,603 bytes，SHA-256 `0C88B348BF83D36F2964BD7CBD210FEA1628A3CAC89A8CC1EE650E4C289CF17C`） |
+| versionName / Code | `0.13.3-m4p20` / `51` |
+
+### 60.2 驗證
+
+- JVM 測試（`RoutingPlannerTest`、`ReleaseNotesTest` 等）/ Debug / Release 構建通過。
+- 模擬器（`nc35`，API 35）端到端驗證通過：將 2 個應用設為「允許」後，打開「鎖屏時仍允許聯網的應用」彈框顯示 `全部 (60)` 與 `規則中允許連網 (2)`；點擊 `規則中允許連網 (2)` 後列表只顯示該 2 個應用；點擊 `全選` 後變為 `已選 2 個` 且兩項均勾選 `✓`；點擊 `儲存` 後設定頁顯示 `2 個應用`。
+- 固化共享簽名密鑰 `android-kotlin/keystore/shared-release.jks`（SHA-256 `CF:66:52:C5:C6:E0:C4:4A:41:FC:2B:B3:96:17:0D:CE:67:AD:3F:4A:5A:F4:74:B5:CD:12:9E:B9:CB:D2:73:90`），並更新 `.github/workflows/android-kotlin.yml`（支援 `workflow_dispatch` 手動觸發、上傳重命名後的 APK 產物、打 Tag 或勾選選項時自動發佈 GitHub Release）與 `.gitee/workflows/android-kotlin.yml`（Gitee Go 流水線）。
+- 真機界面待驗證。

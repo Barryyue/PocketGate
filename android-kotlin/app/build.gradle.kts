@@ -10,6 +10,15 @@ android {
     compileSdk = 36
 
     signingConfigs {
+        val sharedKeystore = rootProject.file("keystore/shared-release.jks")
+        getByName("debug") {
+            if (sharedKeystore.exists()) {
+                storeFile = sharedKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
         val releaseKeystore = System.getenv("NC_ANDROID_KEYSTORE")
         if (!releaseKeystore.isNullOrBlank()) {
             create("release") {
@@ -18,6 +27,13 @@ android {
                 keyAlias = System.getenv("NC_ANDROID_KEY_ALIAS")
                 keyPassword = System.getenv("NC_ANDROID_KEY_PASSWORD")
             }
+        } else if (sharedKeystore.exists()) {
+            create("release") {
+                storeFile = sharedKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
     }
 
@@ -25,8 +41,8 @@ android {
         applicationId = "com.networkcontrol.android.kotlin"
         minSdk = 29
         targetSdk = 36
-        versionCode = 50
-        versionName = "0.13.2-m4p19"
+        versionCode = 51
+        versionName = "0.13.3-m4p20"
         vectorDrawables.useSupportLibrary = true
     }
 

@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.3",
+            date = "2026-11-18",
+            features = listOf(
+                t(
+                    "The lock-screen allowed apps picker now supports Select all and a filter that shows only apps allowed to connect in currently enabled rules.",
+                    "锁屏允许联网的应用选择框新增「全选」与「规则中允许联网」过滤，可一键筛选并勾选当前已启用规则中允许联网的应用。",
+                    "鎖屏允許連網的應用程式選擇框新增「全選」與「規則中允許連網」過濾，可一鍵篩選並勾選目前已啟用規則中允許連網的應用程式。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.2",
             date = "2026-11-18",
             features = emptyList(),

@@ -66,6 +66,56 @@ object VpnRoutingPlanner {
 
     fun isEnforceable(rule: Rule): Boolean = getSkipReason(rule) == null
 
+    /**
+     * 目前已啟用規則中允許聯網的應用包名集合。
+     * 優先按目前網路查找該應用生效的規則；若目前網路無匹配（例如只設了 Wi-Fi 允許但當下在行動網路或離線），
+     * 則回退檢查該應用在已啟用規則中最高優先級的規則是否為允許。
+     */
+    fun allowedByRulePackages(
+        rules: RuleSet,
+        apps: List<InstalledApp>,
+        network: NetworkContext = NetworkContext.None,
+    ): Set<String> = apps.asSequence()
+        .filter { app ->
+            val identity = toIdentity(app)
+            val rule = rules.findAppRule(identity, network) {
+                it.app != null && isEnforceable(it)
+            }.rule ?: rules.findAppRule(identity, ignoreNetwork = true) {
+                it.app != null && isEnforceable(it)
+            }.rule
+            rule?.action == VerdictAction.Allow
+        }
+        .map { it.packageName }
+        .toSet()
+
+    fun filterPickerApps(
+        apps: List<InstalledApp>,
+        query: String,
+        onlyRuleAllowed: Boolean,
+        allowedByRulePackages: Set<String>,
+    ): List<InstalledApp> = apps.asSequence()
+        .filter { !onlyRuleAllowed || it.packageName in allowedByRulePackages }
+        .filter {
+            query.isBlank() ||
+                it.label.contains(query, ignoreCase = true) ||
+                it.packageName.contains(query, ignoreCase = true)
+        }
+        .toList()
+
+    fun selectAllVisible(
+        selected: Set<String>,
+        visibleApps: List<InstalledApp>,
+    ): Set<String> = selected + visibleApps.map { it.packageName }
+
+    fun clearVisibleOrAll(
+        selected: Set<String>,
+        visibleApps: List<InstalledApp>,
+    ): Set<String> {
+        val visiblePackages = visibleApps.map { it.packageName }.toSet()
+        val visibleSelected = selected intersect visiblePackages
+        return if (visibleSelected.isNotEmpty()) selected - visibleSelected else emptySet()
+    }
+
     fun getSkipReason(rule: Rule): RuleSkipReason? {
         val conditions = rule.conditions
         if (conditions.direction == Direction.Inbound) return RuleSkipReason.Inbound

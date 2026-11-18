@@ -243,4 +243,75 @@ class RoutingPlannerTest {
         assertEquals(AppRoutingDecision.BlockAndAsk, plan.find(tampered.uid)?.decision)
         assertTrue(plan.find(tampered.uid)?.tamperedRuleId != null)
     }
+
+    @Test
+    fun allowedByRulePackagesFiltersOnlyAppsAllowedInEnabledRules() {
+        val telegram = InstalledApp("org.telegram.messenger", 10125, "Telegram", false, 1, 1, "signer-a")
+        val tampered = InstalledApp("com.example.tampered", 10126, "Tampered", false, 1, 1, "wrong-signer")
+        val globalRule = Rule(
+            id = "global-allow",
+            app = null,
+            conditions = RuleConditions(direction = Direction.Outbound),
+            action = VerdictAction.Allow,
+            lifetime = RuleLifetime.Permanent,
+            source = RuleSource.User,
+            createdAt = 1,
+            updatedAt = 1,
+        )
+        val rules = RuleSet(
+            listOf(
+                globalRule,
+                rule("com.android.chrome", VerdictAction.Allow),
+                rule("org.mozilla.firefox", VerdictAction.Deny),
+                rule(
+                    "org.telegram.messenger",
+                    VerdictAction.Allow,
+                    conditions = RuleConditions(networkKinds = setOf(NetworkKind.Wifi)),
+                ),
+                rule("com.example.tampered", VerdictAction.Allow),
+            ),
+        )
+        val allowed = VpnRoutingPlanner.allowedByRulePackages(
+            rules = rules,
+            apps = listOf(chrome, firefox, telegram, tampered, system),
+            network = NetworkContext(kind = NetworkKind.Cellular),
+        )
+        assertEquals(setOf("com.android.chrome", "org.telegram.messenger"), allowed)
+    }
+
+    @Test
+    fun pickerFilterAndSelectAllRespectRuleFilterAndQuery() {
+        val telegram = InstalledApp("org.telegram.messenger", 10125, "Telegram", false, 1, 1, "signer-a")
+        val allApps = listOf(chrome, firefox, telegram)
+        val allowedByRules = setOf("com.android.chrome", "org.telegram.messenger")
+
+        val onlyRuleAllowed = VpnRoutingPlanner.filterPickerApps(
+            apps = allApps,
+            query = "",
+            onlyRuleAllowed = true,
+            allowedByRulePackages = allowedByRules,
+        )
+        assertEquals(listOf(chrome, telegram), onlyRuleAllowed)
+
+        val selectedAfterSelectAll = VpnRoutingPlanner.selectAllVisible(
+            selected = setOf("com.other.kept"),
+            visibleApps = onlyRuleAllowed,
+        )
+        assertEquals(
+            setOf("com.other.kept", "com.android.chrome", "org.telegram.messenger"),
+            selectedAfterSelectAll,
+        )
+
+        val afterClearVisible = VpnRoutingPlanner.clearVisibleOrAll(
+            selected = selectedAfterSelectAll,
+            visibleApps = onlyRuleAllowed,
+        )
+        assertEquals(setOf("com.other.kept"), afterClearVisible)
+
+        val afterClearWhenNoVisibleSelected = VpnRoutingPlanner.clearVisibleOrAll(
+            selected = afterClearVisible,
+            visibleApps = onlyRuleAllowed,
+        )
+        assertTrue(afterClearWhenNoVisibleSelected.isEmpty())
+    }
 }

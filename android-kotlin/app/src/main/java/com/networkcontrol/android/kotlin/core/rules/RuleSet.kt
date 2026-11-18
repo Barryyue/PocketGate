@@ -167,12 +167,13 @@ class RuleSet(rules: List<Rule>, val version: Long = 0) {
     fun findAppRule(
         app: AppIdentity,
         network: NetworkContext = NetworkContext.None,
+        ignoreNetwork: Boolean = false,
         includeRule: (Rule) -> Boolean,
     ): RuleMatch {
         var tampered: Rule? = null
         for (candidate in compiled) {
             if (!includeRule(candidate.rule)) continue
-            if (!candidate.rule.conditions.matchesNetwork(network)) continue
+            if (!ignoreNetwork && !candidate.rule.conditions.matchesNetwork(network)) continue
             when (candidate.matchApp(app)) {
                 AppMatchOutcome.Match -> return RuleMatch(candidate.rule, tampered)
                 AppMatchOutcome.Tampered -> if (tampered == null) tampered = candidate.rule

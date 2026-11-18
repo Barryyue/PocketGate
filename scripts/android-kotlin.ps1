@@ -18,13 +18,56 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $root 'android-kotlin'
-$jdk = if ($env:NC_ANDROID_JDK) { $env:NC_ANDROID_JDK } else { 'D:\tools\android-dev\jdk' }
-$sdk = if ($env:NC_ANDROID_SDK) { $env:NC_ANDROID_SDK } else { 'D:\tools\android-dev\android-sdk' }
-$avdHome = if ($env:NC_ANDROID_AVD_HOME) { $env:NC_ANDROID_AVD_HOME } else { 'D:\tools\android-dev\avd' }
-$adb = Join-Path $sdk 'platform-tools\adb.exe'
-$emulator = 'D:\tools\android-dev\emu34\emulator\emulator.exe'
+$jdk = if ($env:NC_ANDROID_JDK) {
+    $env:NC_ANDROID_JDK
+} elseif (Test-Path 'D:\tools\android-dev\jdk') {
+    'D:\tools\android-dev\jdk'
+} elseif (Test-Path (Join-Path $env:USERPROFILE '.jdks\corretto-21.0.5')) {
+    Join-Path $env:USERPROFILE '.jdks\corretto-21.0.5'
+} elseif (Test-Path (Join-Path $env:USERPROFILE '.jdks\corretto-17.0.13')) {
+    Join-Path $env:USERPROFILE '.jdks\corretto-17.0.13'
+} else {
+    $env:JAVA_HOME
+}
+$sdk = if ($env:NC_ANDROID_SDK) {
+    $env:NC_ANDROID_SDK
+} elseif (Test-Path 'D:\tools\android-dev\android-sdk') {
+    'D:\tools\android-dev\android-sdk'
+} else {
+    Join-Path $env:LOCALAPPDATA 'Android\Sdk'
+}
+$avdHome = if ($env:NC_ANDROID_AVD_HOME) {
+    $env:NC_ANDROID_AVD_HOME
+} elseif (Test-Path 'D:\tools\android-dev\avd') {
+    'D:\tools\android-dev\avd'
+} else {
+    Join-Path $env:USERPROFILE '.android\avd'
+}
+$adb = if (Test-Path (Join-Path $sdk 'platform-tools\adb.exe')) {
+    Join-Path $sdk 'platform-tools\adb.exe'
+} elseif (Test-Path 'D:\tools\platform-tools\adb.exe') {
+    'D:\tools\platform-tools\adb.exe'
+} else {
+    'adb'
+}
+$emulator = if (Test-Path 'D:\tools\android-dev\emu34\emulator\emulator.exe') {
+    'D:\tools\android-dev\emu34\emulator\emulator.exe'
+} else {
+    Join-Path $sdk 'emulator\emulator.exe'
+}
 $package = 'com.networkcontrol.android.kotlin.debug'
-$version = '0.13.2-m4p19'
+$version = '0.13.3-m4p20'
+
+function Get-Sha256([string]$FilePath) {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($FilePath)
+        return [System.BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-', '')
+    }
+    finally {
+        $sha.Dispose()
+    }
+}
 
 $env:JAVA_HOME = $jdk
 $env:ANDROID_HOME = $sdk
@@ -76,7 +119,7 @@ switch ($Command) {
             $target = Join-Path $outDir $variant.Name
             Copy-Item $source $target -Force
             $size = (Get-Item $target).Length
-            $hash = (Get-FileHash $target -Algorithm SHA256).Hash
+            $hash = Get-Sha256 $target
             Write-Host ("Release APK ({0}): {1} ({2:N1} MB)" -f $variant.Abi, $target, ($size / 1MB))
             Write-Host ("Size: {0} bytes" -f $size)
             Write-Host ("SHA-256: {0}" -f $hash)
@@ -114,7 +157,7 @@ switch ($Command) {
         $target = Join-Path $outDir ("NetworkControl-KT-{0}.aab" -f $version)
         Copy-Item $source $target -Force
         $size = (Get-Item $target).Length
-        $hash = (Get-FileHash $target -Algorithm SHA256).Hash
+        $hash = Get-Sha256 $target
         Write-Host ("Release AAB: {0} ({1:N1} MB)" -f $target, ($size / 1MB))
         Write-Host ("Size: {0} bytes" -f $size)
         Write-Host ("SHA-256: {0}" -f $hash)
