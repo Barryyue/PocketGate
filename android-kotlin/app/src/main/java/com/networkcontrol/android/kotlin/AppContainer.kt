@@ -111,6 +111,7 @@ class AppContainer(context: Context) {
         scope = scope,
         open = { url -> underlyingNetwork.openConnection(url) as java.net.HttpURLConnection },
         isUnmetered = { underlyingNetwork.isUnmetered() },
+        offlineMode = { preferences.offlineMode },
     )
 
     val vpnEngine: VpnEngine = VpnEngine(

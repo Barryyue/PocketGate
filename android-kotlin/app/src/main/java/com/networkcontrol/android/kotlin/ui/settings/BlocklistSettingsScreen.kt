@@ -160,6 +160,10 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                         Button(
                             enabled = !state.updating,
                             onClick = {
+                                if (backend.offlineMode()) {
+                                    toast(s[S.OfflineModeBlocked])
+                                    return@Button
+                                }
                                 scope.launch {
                                     val result = backend.updateBlocklistsNow()
                                     toast(s.format(S.BlocklistsUpdateResult, result.updated, result.unchanged, result.failed))

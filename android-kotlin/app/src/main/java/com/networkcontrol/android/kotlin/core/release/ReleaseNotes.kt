@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.15.1",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "Offline mode: optional switch in Settings (off by default) that stops PocketGate itself from making any outbound requests (update checks, APK downloads, and online blocklist subscriptions) without affecting VPN firewall rules, forwarding, or local file imports",
+                    "纯离线模式：在设置中新增「纯离线模式」开关（默认关闭），开启后禁止 PocketGate 自身发起检查更新、下载安装包及拦截列表在线订阅请求，完全不影响现有 VPN 防火墙、逐连接转发或本地导入规则",
+                    "純離線模式：在設定中新增「純離線模式」開關（預設關閉），開啟後禁止 PocketGate 自身發起檢查更新、下載安裝包及攔截列表線上訂閱請求，完全不影響現有 VPN 防火牆、逐連線轉發或本機匯入規則",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.15.0",
             date = "2026-11-19",
             features = listOf(

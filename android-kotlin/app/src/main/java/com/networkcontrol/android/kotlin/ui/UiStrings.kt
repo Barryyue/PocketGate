@@ -524,6 +524,9 @@ enum class S {
     LiveNeedsForwarding,
     CutConnection,
     ConnectionCutDone,
+    OfflineMode,
+    OfflineModeHint,
+    OfflineModeBlocked,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1070,6 +1073,9 @@ private val EN = mapOf(
     S.LiveNeedsForwarding to "Enable Per-connection forwarding mode to inspect and cut live TCP connections.",
     S.CutConnection to "Cut",
     S.ConnectionCutDone to "Disconnect (RST) scheduled for %1\$s",
+    S.OfflineMode to "Offline mode (block self network)",
+    S.OfflineModeHint to "Prevents PocketGate itself from initiating outbound requests (update checks and online blocklist downloads). Firewall rules, forwarding, proxy and local imports keep working normally.",
+    S.OfflineModeBlocked to "Offline mode is on — PocketGate's own network requests are blocked.",
 )
 
 private val CN = mapOf(
@@ -1592,6 +1598,9 @@ private val CN = mapOf(
     S.LiveNeedsForwarding to "开启「逐连接（转发）模式」后，可在此实时查看活跃连接并一键断开。",
     S.CutConnection to "断开",
     S.ConnectionCutDone to "已下发双向断连（RST）：%1\$s",
+    S.OfflineMode to "纯离线模式（禁止本应用主动联网）",
+    S.OfflineModeHint to "开启后彻底禁止 PocketGate 自身发起外网请求（屏蔽检查更新与拦截清单在线订阅）；防火墙规则、转发代理与本地导入均不受影响。",
+    S.OfflineModeBlocked to "已开启纯离线模式，已拦截本应用主动联网请求。",
 )
 
 private val TW = mapOf(
@@ -2114,4 +2123,7 @@ private val TW = mapOf(
     S.LiveNeedsForwarding to "開啟「逐連線（轉發）模式」後，可在此即時檢視活躍連線並一鍵斷開。",
     S.CutConnection to "斷開",
     S.ConnectionCutDone to "已下發雙向斷連（RST）：%1\$s",
+    S.OfflineMode to "純離線模式（禁止本應用主動連網）",
+    S.OfflineModeHint to "開啟後徹底禁止 PocketGate 自身發起外網請求（屏蔽檢查更新與攔截清單線上訂閱）；防火牆規則、轉發代理與本地匯入均不受影響。",
+    S.OfflineModeBlocked to "已開啟純離線模式，已攔截本應用主動連網請求。",
 )

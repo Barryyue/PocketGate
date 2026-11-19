@@ -898,6 +898,12 @@ class AppBackend(val container: AppContainer) {
 
     fun isVpnPrepared(): Boolean = container.vpnTunnel.isPrepared
 
+    fun offlineMode(): Boolean = container.preferences.offlineMode
+
+    fun setOfflineMode(enabled: Boolean) {
+        container.preferences.offlineMode = enabled
+    }
+
     fun forwardingDirectPackages(): Set<String> = container.preferences.forwardingDirectPackages
 
     fun setForwardingDirectPackages(packages: Set<String>) {

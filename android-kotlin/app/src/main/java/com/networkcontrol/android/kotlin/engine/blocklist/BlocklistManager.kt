@@ -74,6 +74,8 @@ class BlocklistManager(
     private val clock: () -> Long = System::currentTimeMillis,
     /** 勾選 / 新增名單後立即在背景下載；測試中關閉以避免與手動更新競爭。 */
     private val autoDownload: Boolean = true,
+    /** 純離線模式：為 true 時禁止一切線上訂閱下載，僅保留本地匯入。 */
+    private val offlineMode: () -> Boolean = { false },
 ) {
     private val gate = Mutex()
     private val stateFile = File(directory, "state.json")
@@ -214,6 +216,7 @@ class BlocklistManager(
         onlyMissing: Boolean = false,
         ignoreMetered: Boolean = false,
     ): BlocklistUpdateSummary = withContext(Dispatchers.IO) {
+        if (offlineMode()) return@withContext BlocklistUpdateSummary(0, 0, 0)
         val snapshot = _state.value
         val now = clock()
         val candidates = snapshot.sources.filter { source ->

@@ -210,7 +210,7 @@ class BlocklistTest {
     private fun base() = "http://127.0.0.1:${http.port}"
 
     /** 測試只允許連本機伺服器，內建名單的真實地址一律失敗。 */
-    private fun manager() = BlocklistManager(
+    private fun manager(offlineMode: () -> Boolean = { false }) = BlocklistManager(
         dir,
         scope,
         open = { url ->
@@ -218,6 +218,7 @@ class BlocklistTest {
             url.openConnection() as java.net.HttpURLConnection
         },
         autoDownload = false,
+        offlineMode = offlineMode,
     )
 
     @Test
@@ -288,6 +289,26 @@ class BlocklistTest {
         manager.setEnabled(false)
         manager.setEnabled(true)
         assertFalse(manager.state.value.sources.first { it.id == "anti-ad" }.enabled)
+    }
+
+    @Test
+    fun offlineModeBlocksOnlineDownloadsButAllowsLocalImport() = runBlocking {
+        val manager = manager(offlineMode = { true })
+        manager.initialize()
+        manager.setEnabled(true)
+        manager.state.value.sources.filter { it.builtin && it.enabled }.forEach { manager.setSourceEnabled(it.id, false) }
+        assertNull(manager.addCustom("test", "${base()}/list.txt"))
+
+        val before = hits.get()
+        val result = manager.updateNow()
+        assertEquals(0, result.updated)
+        assertEquals(0, result.unchanged)
+        assertEquals(0, result.failed)
+        assertEquals(before, hits.get())
+
+        val count = manager.import("offline-local", "||offline.example^\n".byteInputStream())
+        assertEquals(1, count)
+        assertTrue(manager.matcher.value.match("sub.offline.example") != null)
     }
 }
 

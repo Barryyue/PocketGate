@@ -157,6 +157,7 @@ fun SettingsScreen(
     var lockWhitelist by remember { mutableStateOf(backend.lockScreenWhitelist()) }
     var showLockWhitelistDialog by remember { mutableStateOf(false) }
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
+    var offlineMode by remember { mutableStateOf(backend.offlineMode()) }
     var forwardingEnabled by remember(resumeKey) { mutableStateOf(backend.forwardingEnabled()) }
     val forwardingUpstream = remember(resumeKey) { backend.forwardingUpstream() }
     val viaProxy = forwardingUpstream == ForwardingUpstream.SOCKS5
@@ -589,6 +590,15 @@ fun SettingsScreen(
                         }
                     },
                 )
+                SwitchRow(
+                    title = s[S.OfflineMode],
+                    subtitle = s[S.OfflineModeHint],
+                    checked = offlineMode,
+                    onCheckedChange = { enabled ->
+                        offlineMode = enabled
+                        backend.setOfflineMode(enabled)
+                    },
+                )
                 PermissionRow(
                     title = s[S.PermVpn],
                     statusText = if (vpnOk) s[S.PermissionOk] else s[S.PermissionMissing],
@@ -683,6 +693,10 @@ fun SettingsScreen(
                     ) { Text(s[S.ExportDiagnostics]) }
                     OutlinedButton(
                         onClick = {
+                            if (offlineMode) {
+                                toast(s[S.OfflineModeBlocked])
+                                return@OutlinedButton
+                            }
                             if (checkingUpdate) return@OutlinedButton
                             checkingUpdate = true
                             scope.launch {
@@ -733,6 +747,10 @@ fun SettingsScreen(
                             TextButton(
                                 enabled = !downloadingUpdate,
                                 onClick = {
+                                    if (offlineMode) {
+                                        toast(s[S.OfflineModeBlocked])
+                                        return@TextButton
+                                    }
                                     val url = info.downloadUrl ?: return@TextButton
                                     if (!url.endsWith(".apk", ignoreCase = true)) {
                                         context.startActivity(
