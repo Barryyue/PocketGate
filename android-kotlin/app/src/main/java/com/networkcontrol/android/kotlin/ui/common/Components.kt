@@ -86,7 +86,10 @@ fun SectionCard(
     }
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = container),
+        colors = CardDefaults.cardColors(
+            containerColor = container,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
         shape = RoundedCornerShape(tokens.cardCornerRadius),
         border = border,
     ) {
@@ -117,7 +120,10 @@ fun MetricCard(label: String, value: String, modifier: Modifier = Modifier, hint
     }
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = container),
+        colors = CardDefaults.cardColors(
+            containerColor = container,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ),
         shape = RoundedCornerShape(tokens.metricCornerRadius),
         border = border,
     ) {

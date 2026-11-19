@@ -251,6 +251,48 @@ class ForwardingTest {
         }
     }
 
+    @Test
+    fun multiSlotUdpFastPathHandlesConcurrentFlowsWithoutThrashing() {
+        var now = 1000L
+        val filter = ForwardingPacketFilter(
+            ownerOf = { _, _, _ -> 10001 },
+            decide = { _, _, _ -> ForwardingDecision.Forward },
+            onBlocked = { _, _, _ -> },
+            blockUdp = { false },
+            clock = { now },
+        )
+        val writer = object : PacketWriter {
+            override fun write(packet: ByteArray) = Unit
+        }
+        val flows = (0 until 4).map { i ->
+            IpPacketBuilder.udp4(
+                InetSocketAddress(InetAddress.getByName("10.111.222.1"), 40000 + i),
+                InetSocketAddress(InetAddress.getByName("1.1.1.${i + 1}"), 443),
+                byteArrayOf(1, 2, 3, 4),
+            )
+        }
+        // 首包建立 4 條 UDP 流
+        flows.forEach { pkt -> assertTrue(filter.onTunPacket(pkt, pkt.size, writer)) }
+        assertEquals(4L, filter.counters.lookups.get())
+        // 交替發送 4 條流的後續封包，都應命中多槽位快速路徑，不再觸發完整解析與查詢
+        repeat(3) {
+            flows.forEach { pkt -> assertTrue(filter.onTunPacket(pkt, pkt.size, writer)) }
+        }
+        assertEquals(4L, filter.counters.lookups.get())
+        assertEquals(12L, filter.counters.udpFastPath.get())
+    }
+
+    @Test
+    fun tunnelConfigEquivalentIgnoresUpstreamUdpAndDetectsLoopbackHost() {
+        val a = VpnTunnelConfig(bypassPackages = setOf("a"), forwarding = true, upstreamUdp = true)
+        val b = VpnTunnelConfig(bypassPackages = setOf("a"), forwarding = true, upstreamUdp = false)
+        assertTrue(a.equivalentTo(b))
+        assertTrue(com.networkcontrol.android.kotlin.engine.vpn.VpnEngine.isLoopbackHost("127.0.0.1"))
+        assertTrue(com.networkcontrol.android.kotlin.engine.vpn.VpnEngine.isLoopbackHost("localhost"))
+        assertTrue(com.networkcontrol.android.kotlin.engine.vpn.VpnEngine.isLoopbackHost("::1"))
+        assertFalse(com.networkcontrol.android.kotlin.engine.vpn.VpnEngine.isLoopbackHost("192.168.1.5"))
+    }
+
     private fun routing(uid: Int, decision: AppRoutingDecision) =
         AppRouting(uid, "pkg.$uid", listOf("pkg.$uid"), decision, AppRoutingReason.Rule)
 

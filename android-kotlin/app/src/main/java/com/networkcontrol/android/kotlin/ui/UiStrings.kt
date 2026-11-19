@@ -501,6 +501,9 @@ enum class S {
     ThemeStyleAurora,
     ThemeStyleAmoled,
     ThemeStyleDynamic,
+    ProxyAppMissingWarning,
+    ProxyAppSuggested,
+    SwitchToDirect,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1024,6 +1027,9 @@ private val EN = mapOf(
     S.ThemeStyleAurora to "Aurora",
     S.ThemeStyleAmoled to "AMOLED",
     S.ThemeStyleDynamic to "Dynamic",
+    S.ProxyAppMissingWarning to "You are using a local SOCKS5 proxy without selecting a Proxy App. Traffic may loop infinitely and break internet access—please select your proxy app below.",
+    S.ProxyAppSuggested to "Detected proxy",
+    S.SwitchToDirect to "Switch to direct exit",
 )
 
 private val CN = mapOf(
@@ -1523,6 +1529,9 @@ private val CN = mapOf(
     S.ThemeStyleAurora to "极光流光",
     S.ThemeStyleAmoled to "纯黑省电",
     S.ThemeStyleDynamic to "动态取色",
+    S.ProxyAppMissingWarning to "当前使用本机 SOCKS5 代理但尚未选择「代理应用」，代理自身流量会回环进入 VPN 导致断网，请在下方选择您的代理应用。",
+    S.ProxyAppSuggested to "常见代理",
+    S.SwitchToDirect to "临时切回直连",
 )
 
 private val TW = mapOf(
@@ -2022,4 +2031,7 @@ private val TW = mapOf(
     S.ThemeStyleAurora to "極光流光",
     S.ThemeStyleAmoled to "純黑省電",
     S.ThemeStyleDynamic to "動態取色",
+    S.ProxyAppMissingWarning to "目前使用本機 SOCKS5 代理但尚未選擇「代理應用」，代理自身流量會回環進入 VPN 導致斷網，請在下方選擇您的代理應用。",
+    S.ProxyAppSuggested to "常見代理",
+    S.SwitchToDirect to "暫時切回直連",
 )

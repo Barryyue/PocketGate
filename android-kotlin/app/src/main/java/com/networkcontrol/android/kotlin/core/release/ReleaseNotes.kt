@@ -40,6 +40,23 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.9",
+            date = "2026-11-19",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Fixed dark theme styles (Obsidian Cyber, AMOLED Black, dark Aurora Glass) rendering dark text on dark cards by explicitly setting LocalContentColor and CardDefaults contentColor.",
+                    "修复黑曜石极客、纯黑省电与深色极光等深色主题下文字发暗看不清的问题，统一为画布与卡片显式指定高对比度文字颜色。",
+                    "修復黑曜石極客、純黑省電與深色極光等深色主題下文字發暗看不清的問題，統一為畫布與卡片顯式指定高對比度文字顏色。",
+                ),
+                t(
+                    "Optimized per-connection forwarding and external SOCKS5 proxy reliability: event-driven DNS pump (zero idle CPU wakeups), instant UDP toggle without VPN restart, 8-slot UDP fast-path for concurrent QUIC streams, immediate proxy health check with screen-off pause, loopback proxy-app loop warning, detected proxy apps pinned in picker, and one-tap fallback to built-in direct exit.",
+                    "优化逐连接转发与外部 SOCKS5 代理体验：DNS 队列改为事件驱动唤醒（空闲零 CPU 唤醒更省电）、切换 UDP 开关无感生效不重建 VPN、多槽位 UDP 快速路径优化多路 QUIC 吞吐、代理切入后立即探活并息屏暂停、本机代理漏选代理应用时醒目预警并置顶常见代理应用、代理异常时总览页支持一键切回直连。",
+                    "優化逐連線轉發與外部 SOCKS5 代理體驗：DNS 佇列改為事件驅動喚醒（空閒零 CPU 喚醒更省電）、切換 UDP 開關無感生效不重建 VPN、多槽位 UDP 快速路徑優化多路 QUIC 吞吐、代理切入後立即探活並息屏暫停、本機代理漏選代理應用時醒目預警並置頂常見代理應用、代理異常時總覽頁支援一鍵切回直連。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.8",
             date = "2026-11-19",
             features = listOf(

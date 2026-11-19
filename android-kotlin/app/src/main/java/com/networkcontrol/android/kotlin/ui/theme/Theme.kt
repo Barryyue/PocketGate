@@ -3,6 +3,7 @@ package com.networkcontrol.android.kotlin.ui.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -63,8 +64,11 @@ fun NetworkControlTheme(
     CompositionLocalProvider(LocalAppVisualTokens provides visualTokens) {
         MaterialTheme(
             colorScheme = colorScheme,
-            content = content,
-        )
+        ) {
+            CompositionLocalProvider(LocalContentColor provides colorScheme.onBackground) {
+                content()
+            }
+        }
     }
 }
 
@@ -222,8 +226,11 @@ private fun auroraDarkScheme(seed: Color): ColorScheme = darkScheme(seed).copy(
 /** 純黑省電（AMOLED） */
 private fun amoledBlackScheme(seed: Color): ColorScheme = darkScheme(seed).copy(
     background = Color.Black,
+    onBackground = Color(0xFFF5F5F5),
     surface = Color.Black,
+    onSurface = Color(0xFFF5F5F5),
     surfaceVariant = Color(0xFF141414),
+    onSurfaceVariant = Color(0xFFA8B0B9),
     outlineVariant = Color(0xFF262626),
 )
 

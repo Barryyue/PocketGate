@@ -51,7 +51,6 @@ data class VpnTunnelConfig(
             forwarding == other.forwarding &&
             upstreamHost == other.upstreamHost &&
             upstreamPort == other.upstreamPort &&
-            upstreamUdp == other.upstreamUdp &&
             upstreamUsername == other.upstreamUsername &&
             upstreamPassword == other.upstreamPassword &&
             bypassPackages == other.bypassPackages
@@ -321,10 +320,11 @@ class VpnTunnelController(
             newRelay.close()
             return false
         }
+        // 先重置過濾層與 DnsPacer，再啟動轉送與映射重放，避免清除剛建立的緩存或殘留舊隧道的在途 DNS。
+        filter.reset()
         newRelay.start()
         relay = newRelay
         forwardingActive = true
-        filter.reset()
         return true
     }
 

@@ -25,13 +25,39 @@ stages:
           - export ANDROID_HOME="$HOME/android-sdk"
           - export ANDROID_SDK_ROOT="$ANDROID_HOME"
           - mkdir -p "$ANDROID_HOME/cmdline-tools"
-          - test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" || (curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip && unzip -q /tmp/cmdtools.zip -d /tmp/cmdtools && mv /tmp/cmdtools/cmdline-tools "$ANDROID_HOME/cmdline-tools/latest")
-          - yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-36" "build-tools;35.0.0" >/dev/null
+          - |
+            if [ ! -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+              rm -rf /tmp/cmdtools /tmp/cmdtools.zip
+              curl -fsSL --retry 3 https://mirrors.cloud.tencent.com/AndroidSDK/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip \
+                || curl -fsSL --retry 3 https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip
+              unzip -q /tmp/cmdtools.zip -d /tmp/cmdtools
+              mv /tmp/cmdtools/cmdline-tools "$ANDROID_HOME/cmdline-tools/latest"
+            fi
+          - |
+            set +o pipefail
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" --licenses >/dev/null 2>&1 || true
+            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-36" "build-tools;35.0.0" >/dev/null
+            set -o pipefail
           - cd android-kotlin
           - sed -i 's|https\\://services.gradle.org/distributions/|https\\://mirrors.cloud.tencent.com/gradle/|g' gradle/wrapper/gradle-wrapper.properties
           - sed -i 's|networkTimeout=10000|networkTimeout=60000|g' gradle/wrapper/gradle-wrapper.properties
+          - |
+            cat > /tmp/gitee-mirrors.init.gradle << 'EOF'
+            allprojects {
+                buildscript {
+                    repositories {
+                        maven { url 'https://maven.aliyun.com/repository/google' }
+                        maven { url 'https://maven.aliyun.com/repository/public' }
+                    }
+                }
+                repositories {
+                    maven { url 'https://maven.aliyun.com/repository/google' }
+                    maven { url 'https://maven.aliyun.com/repository/public' }
+                }
+            }
+            EOF
           - chmod +x gradlew
-          - ./gradlew testDebugUnitTest assembleRelease --no-daemon
+          - ./gradlew --init-script /tmp/gitee-mirrors.init.gradle testDebugUnitTest assembleRelease --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8" -Dkotlin.daemon.jvm.options="-Xmx1024m"
           - version=$(grep -E 'versionName\s*=\s*"' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
           - mkdir -p ../dist
           - cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "../dist/PocketGate-${version}.apk"

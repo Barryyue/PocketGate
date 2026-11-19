@@ -71,7 +71,7 @@ class ForwardingPacketFilter(
     private val onForwarded: (PacketInfo, uid: Int?) -> Unit = { _, _ -> },
     private val dnsAddress: InetAddress = ForwardingDefaults.MapDnsAddress,
     private val dnsPort: Int = ForwardingDefaults.MAP_DNS_PORT,
-    private val clock: () -> Long = System::currentTimeMillis,
+    private val clock: () -> Long = { System.nanoTime() / 1_000_000L },
     private val maxEntries: Int = 8192,
 ) {
     val counters = ForwardingCounters()
@@ -122,6 +122,16 @@ class ForwardingPacketFilter(
         return dnsPacer.busy
     }
 
+    /** 事件驅動等待下一次 DNS 放行或重送時機；空閒時完全休眠。 */
+    fun awaitDnsWork(isStopped: () -> Boolean) {
+        dnsPacer.awaitWork(clock, isStopped)
+    }
+
+    /** 喚醒休眠中的 DNS 放行執行緒（關閉轉送層時呼叫）。 */
+    fun wakeDnsPump() {
+        dnsPacer.wake()
+    }
+
     /** 把查詢交給映射 DNS：可以立即放行就回傳 true，否則已排隊（之後由 [drainDns] 放行）。 */
     private fun forwardDnsQuery(packet: ByteArray, length: Int, now: Long): Boolean {
         val writer = toHev ?: return true
@@ -140,14 +150,15 @@ class ForwardingPacketFilter(
     }
 
     /**
-     * UDP 快速路徑：記住最近一條「已放行」UDP 流的原始位址 / 端口位元組，
-     * 同一條流（QUIC、影音）的後續封包不必完整解析、配置物件或取鎖。
-     * 只由虛擬網卡讀取執行緒存取；[invalidate] 透過 [epoch] 讓它失效。
+     * UDP 快速路徑：以固定 8 槽位扁平陣列記住最近已放行的 UDP 流（QUIC、影音多路並發不抖動），
+     * 後續封包不必完整解析、配置物件或取鎖。
+     * 只由虛擬網卡讀取執行緒存取；[invalidate] / [reset] 透過 [epoch] 讓它失效。
      */
-    private val lastUdpKey = ByteArray(UDP_KEY_MAX)
-    private var lastUdpKeyLength = 0
-    private var lastUdpEpoch = -1
-    private var lastUdpUntil = 0L
+    private val udpKeys = ByteArray(UDP_FAST_SLOTS * UDP_KEY_MAX)
+    private val udpKeyLengths = IntArray(UDP_FAST_SLOTS)
+    private val udpEpochs = IntArray(UDP_FAST_SLOTS) { -1 }
+    private val udpUntil = LongArray(UDP_FAST_SLOTS)
+    private var udpNextSlot = 0
 
     @Volatile
     private var epoch = 0
@@ -199,8 +210,9 @@ class ForwardingPacketFilter(
         }
     }
 
-    /** 新的隧道：舊連線都已經不存在，清空所有狀態。 */
+    /** 新的隧道：舊連線與舊在途 DNS 都已不存在，清空所有狀態。 */
     fun reset() {
+        dnsPacer.clear()
         synchronized(cacheLock) {
             decisions.clear()
             activeTcp.clear()
@@ -345,25 +357,39 @@ class ForwardingPacketFilter(
     }
 
     private fun isRecentForwardedUdp(packet: ByteArray, length: Int): Boolean {
-        if (lastUdpKeyLength == 0 || lastUdpEpoch != epoch) return false
         val keyLength = udpKeyLength(packet, length)
-        if (keyLength != lastUdpKeyLength) return false
-        if (!udpKeyEquals(packet, keyLength)) return false
-        if (clock() >= lastUdpUntil) {
-            lastUdpKeyLength = 0
-            return false
+        if (keyLength == 0) return false
+        val currentEpoch = epoch
+        for (slot in 0 until UDP_FAST_SLOTS) {
+            if (udpKeyLengths[slot] != keyLength || udpEpochs[slot] != currentEpoch) continue
+            if (!udpKeyEquals(packet, keyLength, slot * UDP_KEY_MAX)) continue
+            if (clock() >= udpUntil[slot]) {
+                udpKeyLengths[slot] = 0
+                return false
+            }
+            return true
         }
-        return true
+        return false
     }
 
     private fun rememberForwardedUdp(packet: ByteArray, length: Int, now: Long) {
         val keyLength = udpKeyLength(packet, length)
         if (keyLength == 0) return
-        copyUdpKey(packet, keyLength)
-        lastUdpKeyLength = keyLength
-        lastUdpEpoch = epoch
+        val currentEpoch = epoch
+        val deadline = now + UDP_FAST_PATH_MS
+        for (slot in 0 until UDP_FAST_SLOTS) {
+            if (udpKeyLengths[slot] == keyLength && udpEpochs[slot] == currentEpoch && udpKeyEquals(packet, keyLength, slot * UDP_KEY_MAX)) {
+                udpUntil[slot] = deadline
+                return
+            }
+        }
+        val slot = udpNextSlot
+        udpNextSlot = (slot + 1) % UDP_FAST_SLOTS
+        copyUdpKey(packet, keyLength, slot * UDP_KEY_MAX)
+        udpKeyLengths[slot] = keyLength
+        udpEpochs[slot] = currentEpoch
         // 快速路徑期限較短：到期後走完整路徑，順便刷新五元組緩存的滑動期限。
-        lastUdpUntil = now + UDP_FAST_PATH_MS
+        udpUntil[slot] = deadline
     }
 
     /** IPv4（無分片）回傳 12（兩個位址 + 兩個端口），IPv6（無擴展頭）回傳 36；其他回傳 0。 */
@@ -381,15 +407,15 @@ class ForwardingPacketFilter(
         }
     }
 
-    private fun udpKeyEquals(packet: ByteArray, keyLength: Int): Boolean {
-        var k = 0
-        forEachUdpKeyByte(packet, keyLength) { index -> if (packet[index] != lastUdpKey[k++]) return false }
+    private fun udpKeyEquals(packet: ByteArray, keyLength: Int, baseOffset: Int): Boolean {
+        var k = baseOffset
+        forEachUdpKeyByte(packet, keyLength) { index -> if (packet[index] != udpKeys[k++]) return false }
         return true
     }
 
-    private fun copyUdpKey(packet: ByteArray, keyLength: Int) {
-        var k = 0
-        forEachUdpKeyByte(packet, keyLength) { index -> lastUdpKey[k++] = packet[index] }
+    private fun copyUdpKey(packet: ByteArray, keyLength: Int, baseOffset: Int) {
+        var k = baseOffset
+        forEachUdpKeyByte(packet, keyLength) { index -> udpKeys[k++] = packet[index] }
     }
 
     private inline fun forEachUdpKeyByte(packet: ByteArray, keyLength: Int, action: (Int) -> Unit) {
@@ -518,6 +544,7 @@ class ForwardingPacketFilter(
         /** UDP 快速路徑的有效期；到期後重新走完整路徑（含緩存期限刷新）。 */
         const val UDP_FAST_PATH_MS = 2_000L
 
+        private const val UDP_FAST_SLOTS = 8
         private const val UDP_KEY_MAX = 36
 
         private const val PROTOCOL_TCP = 6

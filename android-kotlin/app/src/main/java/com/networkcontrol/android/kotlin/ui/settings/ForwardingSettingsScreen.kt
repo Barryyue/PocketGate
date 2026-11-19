@@ -40,6 +40,7 @@ import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.ForwardingUpstream
 import com.networkcontrol.android.kotlin.core.model.InstalledApp
 import com.networkcontrol.android.kotlin.engine.dns.DohProviders
+import com.networkcontrol.android.kotlin.engine.vpn.VpnEngine
 import com.networkcontrol.android.kotlin.platform.Socks5Probe
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
@@ -284,9 +285,12 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
                                 onClick = {
-                                    backend.setSocks5Host(socks5Host)
-                                    backend.setSocks5Port(socks5Port.toIntOrNull() ?: 7890)
-                                    backend.setSocks5Credentials(socks5User, socks5Pass)
+                                    backend.setSocks5Config(
+                                        host = socks5Host,
+                                        port = socks5Port.toIntOrNull() ?: 7890,
+                                        username = socks5User,
+                                        password = socks5Pass,
+                                    )
                                     toast(s[S.Done])
                                 },
                             ) { Text(s[S.Save]) }
@@ -348,6 +352,14 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
             item {
                 SectionCard(s[S.DirectApps]) {
                     if (viaProxy) {
+                        if (VpnEngine.isLoopbackHost(socks5Host) && proxyPackage.isNullOrBlank()) {
+                            Text(
+                                s[S.ProxyAppMissingWarning],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(s[S.ProxyApp], style = MaterialTheme.typography.bodyMedium)

@@ -1703,6 +1703,17 @@ internal fun updateSourceLabel(s: UiStrings, source: UpdateSource): String =
         UpdateSource.Custom -> s[S.UpdateSourceCustom]
     }
 
+private val KNOWN_PROXY_KEYWORDS = listOf(
+    "flclash", "clash", "v2ray", "nekobox", "singbox", "sfa", "reqable",
+    "surfboard", "shadowsocks", "hiddify", "karing", "mihomo", "xray", "kitsunebi", "igniter",
+)
+
+private fun isLikelyProxyApp(app: InstalledApp): Boolean {
+    val pkg = app.packageName.lowercase()
+    val lbl = app.label.lowercase()
+    return KNOWN_PROXY_KEYWORDS.any { pkg.contains(it) || lbl.contains(it) }
+}
+
 @Composable
 internal fun ProxyAppDialog(
     apps: List<InstalledApp>,
@@ -1713,7 +1724,7 @@ internal fun ProxyAppDialog(
     val s = rememberUiStrings()
     var query by remember { mutableStateOf("") }
     val filtered = remember(query, apps) {
-        if (query.isBlank()) {
+        val base = if (query.isBlank()) {
             apps
         } else {
             apps.filter {
@@ -1721,6 +1732,8 @@ internal fun ProxyAppDialog(
                     it.packageName.contains(query, ignoreCase = true)
             }
         }
+        // 將常見代理應用置頂，方便一鍵排除避免 VPN 回環。
+        base.sortedByDescending { isLikelyProxyApp(it) }
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1747,6 +1760,7 @@ internal fun ProxyAppDialog(
                         }
                     }
                     items(filtered, key = { it.packageName }) { app ->
+                        val suggested = isLikelyProxyApp(app)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1755,10 +1769,23 @@ internal fun ProxyAppDialog(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Text(
-                                    app.label,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    Text(
+                                        app.label,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (suggested) FontWeight.SemiBold else FontWeight.Normal,
+                                    )
+                                    if (suggested) {
+                                        Text(
+                                            s[S.ProxyAppSuggested],
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
                                 Text(
                                     app.packageName,
                                     style = MaterialTheme.typography.labelSmall,

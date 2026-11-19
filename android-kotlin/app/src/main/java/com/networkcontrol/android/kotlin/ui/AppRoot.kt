@@ -193,6 +193,7 @@ fun AppRoot(container: AppContainer) {
             }
             Scaffold(
                 containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onBackground,
                 bottomBar = {
                     if (!overlayToolbar) {
                         AppBottomBar(

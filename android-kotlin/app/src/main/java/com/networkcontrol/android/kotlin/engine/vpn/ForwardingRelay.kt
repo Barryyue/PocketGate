@@ -51,6 +51,7 @@ class ForwardingRelay(
     private var filterErrors = 0L
     private var upstream: Thread? = null
     private var downstream: Thread? = null
+    private var dnsPump: Thread? = null
 
     init {
         listOf(relaySide, hevSide).forEach { pfd ->
@@ -73,18 +74,14 @@ class ForwardingRelay(
         }
     }
 
-    /** 定期放行排隊中的映射 DNS 查詢、重送逾時未回覆的查詢（見 [DnsPacer]），不讓佇列等到下一個封包才前進。 */
+    /** 事件驅動放行排隊中的映射 DNS 查詢、重送逾時未回覆的查詢（見 [DnsPacer]），空閒時完全休眠不消耗 CPU。 */
     private fun startDnsPump() {
-        Thread({
+        dnsPump = Thread({
             raisePriority()
             while (!stopped) {
-                // 有排隊時每 1 ms 檢查一次（間隔與逾時都是毫秒級）；沒有排隊時低頻輪詢。
-                val pending = runCatching { filter.drainDns() }.getOrDefault(false)
-                try {
-                    Thread.sleep(if (pending) 1L else DNS_PUMP_INTERVAL_MS)
-                } catch (_: InterruptedException) {
-                    break
-                }
+                runCatching { filter.drainDns() }
+                if (stopped) break
+                runCatching { filter.awaitDnsWork { stopped } }
             }
         }, "NetworkControlKT.DnsPump").apply {
             isDaemon = true
@@ -173,8 +170,12 @@ class ForwardingRelay(
     override fun close() {
         if (stopped) return
         stopped = true
+        filter.wakeDnsPump()
         runCatching { relaySide.close() }
         runCatching { hevSide.close() }
+        dnsPump?.let { thread ->
+            if (Thread.currentThread() !== thread) runCatching { thread.join(300) }
+        }
         downstream?.let { thread ->
             if (Thread.currentThread() !== thread) runCatching { thread.join(500) }
         }
@@ -196,6 +197,5 @@ class ForwardingRelay(
                 runCatching { Os.close(second) }
             }
         }
-        private const val DNS_PUMP_INTERVAL_MS = 5L
     }
 }

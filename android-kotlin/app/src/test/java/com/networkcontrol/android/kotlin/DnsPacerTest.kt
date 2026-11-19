@@ -82,4 +82,31 @@ class DnsPacerTest {
         assertFalse(pacer.offer(query(5002, 2), now = 0))
         assertTrue(pacer.offer(query(5003, 3), now = 0))
     }
+
+    @Test
+    fun clearResetsInFlightAndQueues() {
+        val pacer = DnsPacer(limit = 1, retryMs = 25)
+        pacer.offer(query(7000, 1), now = 0)
+        pacer.offer(query(7001, 2), now = 0)
+        pacer.enqueuePriority(listOf(query(7002, 3)))
+        assertTrue(pacer.busy)
+        pacer.clear()
+        assertFalse(pacer.busy)
+        assertEquals(0, pacer.queued)
+        assertTrue(pacer.drain(now = 100).isEmpty())
+    }
+
+    @Test
+    fun awaitWorkWakesImmediatelyWhenWakeCalled() {
+        val pacer = DnsPacer()
+        val stopped = java.util.concurrent.atomic.AtomicBoolean(false)
+        val worker = Thread { pacer.awaitWork({ 0L }, { stopped.get() }) }
+        worker.start()
+        Thread.sleep(30)
+        assertTrue(worker.isAlive)
+        stopped.set(true)
+        pacer.wake()
+        worker.join(1_000)
+        assertFalse(worker.isAlive)
+    }
 }

@@ -68,6 +68,9 @@ class VpnEngine(
      */
     private val replanSignal = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
 
+    /** 立即觸發一次上游代理健康檢查的信號（切換代理設定或解鎖螢幕後即時回饋）。 */
+    private val upstreamCheckSignal = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+
     /** 也會被服務生命週期回呼（主執行緒）清空，所以要 volatile。 */
     @Volatile
     private var applied: VpnTunnelConfig? = null
@@ -257,7 +260,12 @@ class VpnEngine(
         scope.launch { settings.state.collect { requestReplan() } }
         // 網路類型 / SIM 變更會改變帶網路條件的應用規則，必須重新規劃路由。
         scope.launch { network.state.collect { requestReplan() } }
-        scope.launch { screenState.locked.collect { requestReplan() } }
+        scope.launch {
+            screenState.locked.collect { locked ->
+                requestReplan()
+                if (!locked) requestUpstreamCheck()
+            }
+        }
         scope.launch { focus.session.collect { requestReplan() } }
         scope.launch {
             replanSignal.receiveAsFlow().debounce(300).collect {
@@ -269,24 +277,33 @@ class VpnEngine(
 
         reporter.start()
         scope.launch {
-            delay(5_000)
+            delay(2_000)
             while (isActive) {
                 runCatching { checkForwarding() }
                     .onFailure { com.networkcontrol.android.kotlin.platform.AppLog.w("forwarding", "health check failed: ${it.message}") }
-                delay(UPSTREAM_CHECK_INTERVAL_MS)
+                kotlinx.coroutines.withTimeoutOrNull(UPSTREAM_CHECK_INTERVAL_MS) {
+                    upstreamCheckSignal.receive()
+                }
             }
         }
         requestReplan()
     }
 
+    /** 立即排程一次上游代理健康檢查。 */
+    fun requestUpstreamCheck() {
+        upstreamCheckSignal.trySend(Unit)
+    }
+
     /**
      * 轉發模式的健康檢查：
      * - 正在轉發：探測上游 SOCKS5，無法連線時在總覽顯示提示（連線會失敗，不會悄悄直連）；
-     * - 轉發曾啟動失敗並回退到黑洞模式：定期重試。
+     * - 轉發曾啟動失敗並回退到黑洞模式：定期重試；
+     * - 鎖屏息屏時跳過週期探測以節省電量，解鎖後立即補測。
      */
     private suspend fun checkForwarding() {
         if (!preferences.forwardingEnabled || !protection.isEnabled) return
         if (tunnel.state != VpnTunnelState.Active) return
+        if (screenState.locked.value) return
         if (!tunnel.isForwarding) {
             val now = System.currentTimeMillis()
             if (now - lastForwardingRetry >= FORWARDING_RETRY_INTERVAL_MS) {
@@ -303,6 +320,10 @@ class VpnEngine(
         }
         val host = preferences.socks5Host
         val port = preferences.socks5Port
+        if (isLoopbackHost(host) && preferences.socks5BypassPackage.isNullOrBlank()) {
+            tunnel.setWarning("本機代理 $host:$port 尚未選擇「代理應用」，流量可能回環斷網，請在逐連線設定中選擇代理應用。")
+            return
+        }
         val error = com.networkcontrol.android.kotlin.platform.Socks5Probe.handshake(
             host,
             port,
@@ -395,6 +416,9 @@ class VpnEngine(
         _forwardingActive.value = tunnel.isForwarding
         _tunnelState.value = tunnel.state
         _tunnelError.value = tunnel.lastError
+        if (config.forwarding && !direct && tunnel.isForwarding) {
+            requestUpstreamCheck()
+        }
         com.networkcontrol.android.kotlin.platform.AppLog.i(
             "vpn",
             "replan mode=${plan.mode} protection=${protection.isEnabled} bypass=${plan.bypassPackages.size} " +
@@ -422,12 +446,18 @@ class VpnEngine(
 
     fun createConsentIntent(): Intent? = tunnel.createPrepareIntent()
 
-    private companion object {
-        const val UPSTREAM_CHECK_INTERVAL_MS = 30_000L
-        const val FORWARDING_RETRY_INTERVAL_MS = 120_000L
-        const val DETACH_REBUILD_INTERVAL_MS = 10_000L
-        const val DNS_BYPASS_LIST_ID = "dns-bypass"
-        const val FAILURE_REBUILD_INTERVAL_MS = 10_000L
+    companion object {
+        private const val UPSTREAM_CHECK_INTERVAL_MS = 30_000L
+        private const val FORWARDING_RETRY_INTERVAL_MS = 120_000L
+        private const val DETACH_REBUILD_INTERVAL_MS = 10_000L
+        private const val DNS_BYPASS_LIST_ID = "dns-bypass"
+        private const val FAILURE_REBUILD_INTERVAL_MS = 10_000L
+
+        /** 判斷代理主機是否指向本機回環位址。 */
+        fun isLoopbackHost(host: String): Boolean {
+            val h = host.trim().lowercase()
+            return h.isEmpty() || h == "localhost" || h == "::1" || h == "0:0:0:0:0:0:0:1" || h.startsWith("127.")
+        }
     }
 
     fun status(): com.networkcontrol.android.kotlin.core.model.ProtectionStatus {

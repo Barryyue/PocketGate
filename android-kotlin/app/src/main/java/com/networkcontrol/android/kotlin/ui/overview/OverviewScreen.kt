@@ -197,7 +197,10 @@ fun OverviewScreen(backend: AppBackend) {
             }
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = baseContainer),
+                colors = CardDefaults.cardColors(
+                    containerColor = baseContainer,
+                    contentColor = scheme.onSurface,
+                ),
                 shape = RoundedCornerShape(tokens.cardCornerRadius),
                 border = if (heroBorderColor != Color.Transparent) BorderStroke(1.dp, heroBorderColor) else null,
             ) {
@@ -259,6 +262,15 @@ fun OverviewScreen(backend: AppBackend) {
                     // 保護開啟時也可能有提示（例如轉發回退到黑洞模式、上游代理無法連線）。
                     if (!error.isNullOrBlank() && (status == ProtectionStatus.Failed || status == ProtectionStatus.On)) {
                         Text(error, style = MaterialTheme.typography.bodySmall, color = scheme.error)
+                        if (backend.isUsingExternalProxy()) {
+                            OutlinedButton(
+                                onClick = {
+                                    backend.setForwardingUpstream(com.networkcontrol.android.kotlin.ForwardingUpstream.DIRECT)
+                                },
+                            ) {
+                                Text(s[S.SwitchToDirect])
+                            }
+                        }
                     }
                 }
             }

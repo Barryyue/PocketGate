@@ -26,6 +26,7 @@ class DnsPacer(
 ) {
     private class InFlight(val key: Long, val packet: ByteArray, var sentAt: Long, var attempts: Int)
 
+    private val lock = Object()
     private val inFlight = ArrayList<InFlight>(limit)
     private val queue = ArrayDeque<ByteArray>()
     private val priority = ArrayDeque<ByteArray>()
@@ -35,37 +36,79 @@ class DnsPacer(
      * @return true 表示立即轉給 hev；false 表示已排隊（之後由 [drain] 放行）。
      * 佇列已滿時直接放行，寧可讓 hev 自行處理也不無限排隊。
      */
-    @Synchronized
-    fun offer(packet: ByteArray, length: Int, now: Long): Boolean {
+    fun offer(packet: ByteArray, length: Int, now: Long): Boolean = synchronized(lock) {
         if (queue.isEmpty() && priority.isEmpty() && canSend(now)) {
             track(packet.copyOf(length), now)
-            return true
+            lock.notifyAll()
+            return@synchronized true
         }
-        if (queue.size >= maxQueue && priority.isEmpty()) return true
+        if (queue.size >= maxQueue && priority.isEmpty()) return@synchronized true
         queue.addLast(packet.copyOf(length))
-        return false
+        lock.notifyAll()
+        false
     }
 
     /** 排在所有應用查詢之前（映射重放用）。 */
-    @Synchronized
-    fun enqueuePriority(packets: List<ByteArray>) {
+    fun enqueuePriority(packets: List<ByteArray>) = synchronized(lock) {
         priority.addAll(packets)
+        if (packets.isNotEmpty()) lock.notifyAll()
     }
 
     /** 收到一個映射 DNS 回覆（不在這裡放行，交給 [drain] 依間隔放行）。 */
-    @Synchronized
-    fun onResponse(packet: ByteArray, length: Int, now: Long) {
+    fun onResponse(packet: ByteArray, length: Int, now: Long) = synchronized(lock) {
         val key = replyKey(packet, length)
         val index = inFlight.indexOfFirst { it.key == key }
         if (index >= 0) inFlight.removeAt(index) else if (inFlight.isNotEmpty() && key == NO_KEY) inFlight.removeAt(0)
         lastResponseAt = now
+        if (queue.isNotEmpty() || priority.isNotEmpty()) lock.notifyAll()
+    }
+
+    /** 新隧道啟動前清空上一輪遺留的在途與排隊查詢。 */
+    fun clear() = synchronized(lock) {
+        inFlight.clear()
+        queue.clear()
+        priority.clear()
+        lastResponseAt = Long.MIN_VALUE / 2
+        lock.notifyAll()
+    }
+
+    /** 喚醒休眠中的放行執行緒（關閉轉送層時呼叫）。 */
+    fun wake() = synchronized(lock) {
+        lock.notifyAll()
+    }
+
+    /**
+     * 事件驅動等待：空閒時無限期休眠（零 CPU 喚醒）；有排隊或逾時重送時只睡到下一個到期時間點。
+     */
+    fun awaitWork(now: () -> Long, isStopped: () -> Boolean) = synchronized(lock) {
+        if (isStopped()) return
+        val current = now()
+        val hasQueued = priority.isNotEmpty() || queue.isNotEmpty()
+        if (hasQueued && canSend(current)) return
+        val waitMs = when {
+            hasQueued && inFlight.size < limit -> (lastResponseAt + minGapMs - current).coerceAtLeast(1L)
+            inFlight.isNotEmpty() -> {
+                var earliest = Long.MAX_VALUE
+                for (i in 0 until inFlight.size) {
+                    val due = inFlight[i].sentAt + retryMs
+                    if (due < earliest) earliest = due
+                }
+                (earliest - current).coerceAtLeast(1L)
+            }
+            else -> 0L // 0 表示完全空閒，無限期等待直到 offer / enqueuePriority / wake 喚醒
+        }
+        try {
+            if (waitMs == 0L) lock.wait() else lock.wait(waitMs)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
     }
 
     /** 回傳現在要送給 hev 的封包：逾時未回覆的重送，以及可以放行的排隊查詢。 */
     fun drain(now: Long): List<ByteArray> {
         var dropped: ArrayList<ByteArray>? = null
         val out = ArrayList<ByteArray>(2)
-        synchronized(this) {
+        synchronized(lock) {
             val iterator = inFlight.iterator()
             while (iterator.hasNext()) {
                 val flight = iterator.next()
@@ -89,12 +132,10 @@ class DnsPacer(
         return out
     }
 
-    @get:Synchronized
-    val queued: Int get() = queue.size + priority.size
+    val queued: Int get() = synchronized(lock) { queue.size + priority.size }
 
     /** 是否還有需要放行執行緒處理的工作（排隊中或在途等待重送）。 */
-    @get:Synchronized
-    val busy: Boolean get() = queue.isNotEmpty() || priority.isNotEmpty() || inFlight.isNotEmpty()
+    val busy: Boolean get() = synchronized(lock) { queue.isNotEmpty() || priority.isNotEmpty() || inFlight.isNotEmpty() }
 
     private fun track(packet: ByteArray, now: Long) {
         inFlight += InFlight(queryKey(packet, packet.size), packet, now, 1)

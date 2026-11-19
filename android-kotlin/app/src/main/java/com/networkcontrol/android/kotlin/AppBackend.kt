@@ -833,12 +833,25 @@ class AppBackend(val container: AppContainer) {
         container.vpnEngine.requestReplan()
     }
 
+    /** 一次原子儲存 SOCKS5 代理設定並只觸發一次隧道重規劃。 */
+    fun setSocks5Config(host: String, port: Int, username: String, password: String) {
+        container.preferences.socks5Host = host.trim()
+        container.preferences.socks5Port = port.coerceIn(1, 65535)
+        container.preferences.socks5Username = username.trim()
+        container.preferences.socks5Password = password
+        container.vpnEngine.requestReplan()
+    }
+
     fun socks5Udp(): Boolean = container.preferences.socks5Udp
 
     fun setSocks5Udp(enabled: Boolean) {
         container.preferences.socks5Udp = enabled
-        container.vpnEngine.requestReplan()
+        // UDP 開關完全由過濾層動態控制，清空決策緩存即可無感生效，不必重建 VPN 與 hev。
+        container.vpnEngine.forwardingFilter.invalidate()
     }
+
+    fun isUsingExternalProxy(): Boolean =
+        container.preferences.forwardingEnabled && !container.preferences.usesDirectUpstream
 
     fun forwardingDirectPackages(): Set<String> = container.preferences.forwardingDirectPackages
 
