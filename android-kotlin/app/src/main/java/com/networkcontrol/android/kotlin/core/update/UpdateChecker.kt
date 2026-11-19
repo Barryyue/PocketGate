@@ -3,6 +3,9 @@ package com.networkcontrol.android.kotlin.core.update
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -22,6 +25,7 @@ data class UpdateInfo(
     val downloadUrl: String?,
     val error: String? = null,
     val currentVersion: String = "0.0.0",
+    val fallbackDownloadUrl: String? = null,
 ) {
     val hasUpdate: Boolean
         get() = latestVersion != null && compareVersions(latestVersion, currentVersion) > 0
@@ -34,6 +38,7 @@ data class UpdateInfo(
  * 預設自動檢查策略（[checkAuto]）：
  * 1. 優先查詢 GitHub Releases（[DEFAULT_GITHUB_REPO]），若有新版本則同時探測 GitHub 下載連結是否可連通；
  * 2. 若 GitHub API 連不通，或 GitHub 的 APK 下載連結無法連線，自動切換至 Gitee Releases（[DEFAULT_GITEE_REPO]），無須使用者手動選擇。
+ * 3. 支援在應用內直接下載 APK（[downloadApk]）：若主下載連結中途失敗，會自動回退至備用下載連結（或即時查詢 Gitee 鏡像下載）。
  */
 object UpdateChecker {
     const val DEFAULT_GITHUB_REPO = "Barryyue/PocketGate"
@@ -92,9 +97,9 @@ object UpdateChecker {
             val gitee = fetchGitee()
             if (gitee.error == null && !gitee.downloadUrl.isNullOrBlank()) {
                 return if (gitee.hasUpdate) {
-                    gitee
+                    gitee.copy(fallbackDownloadUrl = ghUrl)
                 } else {
-                    github.copy(downloadUrl = gitee.downloadUrl)
+                    github.copy(downloadUrl = gitee.downloadUrl, fallbackDownloadUrl = ghUrl)
                 }
             }
             return github
@@ -102,6 +107,126 @@ object UpdateChecker {
         val gitee = fetchGitee()
         return if (gitee.error == null || github.latestVersion == null) gitee else github
     }
+
+    /**
+     * 在應用內直接下載更新 APK 到 [targetFile]，並透過 [onProgress] 回報 0..100 的進度百分比。
+     * 若主連結 [url] 下載失敗，會自動嘗試 [fallbackUrl]（或自動查詢 Gitee Releases 鏡像下載）。
+     */
+    suspend fun downloadApk(
+        url: String,
+        targetFile: File,
+        fallbackUrl: String? = null,
+        currentVersion: String = "0.0.0",
+        onProgress: (Int) -> Unit = {},
+    ): Result<File> = withContext(Dispatchers.IO) {
+        val primaryResult = runCatching {
+            downloadFromUrl(url, targetFile, currentVersion, onProgress)
+        }
+        if (primaryResult.isSuccess) return@withContext primaryResult
+
+        val resolvedFallback = fallbackUrl?.takeIf { it.isNotBlank() && it != url }
+            ?: if (url.contains("github.com", ignoreCase = true)) {
+                val gitee = check(currentVersion, UpdateSource.Gitee, DEFAULT_GITEE_REPO).let {
+                    if (it.error != null) check(currentVersion, UpdateSource.Gitee, LEGACY_GITEE_REPO) else it
+                }
+                gitee.downloadUrl?.takeIf { it.endsWith(".apk", ignoreCase = true) && it != url }
+            } else {
+                null
+            }
+
+        if (resolvedFallback != null) {
+            onProgress(0)
+            runCatching {
+                downloadFromUrl(resolvedFallback, targetFile, currentVersion, onProgress)
+            }
+        } else {
+            primaryResult
+        }
+    }
+
+    private fun downloadFromUrl(
+        initialUrl: String,
+        targetFile: File,
+        currentVersion: String,
+        onProgress: (Int) -> Unit,
+    ): File {
+        targetFile.parentFile?.mkdirs()
+        val partFile = File(targetFile.parentFile, "${targetFile.name}.part")
+        var currentUrl = initialUrl
+        var redirects = 0
+        while (redirects < 6) {
+            val connection = (URL(currentUrl).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 20_000
+                requestMethod = "GET"
+                instanceFollowRedirects = false
+                setRequestProperty("Accept", "application/vnd.android.package-archive, application/octet-stream, */*")
+                setRequestProperty("User-Agent", "PocketGate/$currentVersion")
+            }
+            try {
+                val code = connection.responseCode
+                if (code in 300..399) {
+                    val location = connection.getHeaderField("Location")
+                        ?: throw IOException("Redirect without Location")
+                    currentUrl = URL(URL(currentUrl), location).toString()
+                    redirects++
+                    continue
+                }
+                if (code !in 200..299) {
+                    throw IOException("HTTP $code")
+                }
+                val totalBytes = connection.contentLengthLong
+                var downloadedBytes = 0L
+                var lastProgress = -1
+                onProgress(0)
+                connection.inputStream.use { input ->
+                    FileOutputStream(partFile).use { output ->
+                        val buffer = ByteArray(16 * 1024)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            downloadedBytes += read
+                            if (totalBytes > 0) {
+                                val percent = ((downloadedBytes * 100L) / totalBytes).toInt().coerceIn(0, 100)
+                                if (percent != lastProgress) {
+                                    lastProgress = percent
+                                    onProgress(percent)
+                                }
+                            }
+                        }
+                        output.flush()
+                    }
+                }
+                // 驗證下載到的檔案確實是 ZIP / APK（前 4 位元組為 PK\x03\x04），避免把 HTML 登入/錯誤頁當成 APK。
+                if (partFile.length() < 4L || !hasZipMagic(partFile)) {
+                    partFile.delete()
+                    throw IOException("Downloaded file is not a valid APK")
+                }
+                if (targetFile.exists()) targetFile.delete()
+                if (!partFile.renameTo(targetFile)) {
+                    partFile.copyTo(targetFile, overwrite = true)
+                    partFile.delete()
+                }
+                onProgress(100)
+                return targetFile
+            } finally {
+                connection.disconnect()
+            }
+        }
+        throw IOException("Too many redirects")
+    }
+
+    private fun hasZipMagic(file: File): Boolean = runCatching {
+        file.inputStream().use { input ->
+            val header = ByteArray(4)
+            input.read(header) == 4 &&
+                header[0] == 0x50.toByte() &&
+                header[1] == 0x4B.toByte() &&
+                header[2] == 0x03.toByte() &&
+                header[3] == 0x04.toByte()
+        }
+    }.getOrDefault(false)
 
     private fun isUrlReachable(url: String, currentVersion: String): Boolean = runCatching {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {

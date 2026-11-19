@@ -188,4 +188,52 @@ class UpdateCheckerTest {
             info.downloadUrl,
         )
     }
+
+    @Test
+    fun downloadsApkInAppAndFallsBackToMirrorOnFailure() {
+        val fakeApkBytes = byteArrayOf(0x50, 0x4B, 0x03, 0x04, 1, 2, 3, 4, 5, 6, 7, 8)
+        java.net.ServerSocket(0).use { server ->
+            val port = server.localPort
+            val thread = Thread {
+                // 第一次請求（模擬主源失敗 HTTP 502）
+                server.accept().use { socket ->
+                    val reader = socket.getInputStream().bufferedReader()
+                    while (!reader.readLine().isNullOrEmpty()) { /* consume headers */ }
+                    socket.getOutputStream().write("HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n".toByteArray())
+                }
+                // 第二次請求（模擬備用源回傳有效 APK）
+                server.accept().use { socket ->
+                    val reader = socket.getInputStream().bufferedReader()
+                    while (!reader.readLine().isNullOrEmpty()) { /* consume headers */ }
+                    val out = socket.getOutputStream()
+                    out.write(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.android.package-archive\r\nContent-Length: ${fakeApkBytes.size}\r\n\r\n"
+                            .toByteArray(),
+                    )
+                    out.write(fakeApkBytes)
+                    out.flush()
+                }
+            }.apply { isDaemon = true; start() }
+
+            val target = java.io.File.createTempFile("pocketgate-test-", ".apk")
+            try {
+                val progresses = mutableListOf<Int>()
+                val result = kotlinx.coroutines.runBlocking {
+                    UpdateChecker.downloadApk(
+                        url = "http://127.0.0.1:$port/primary.apk",
+                        targetFile = target,
+                        fallbackUrl = "http://127.0.0.1:$port/fallback.apk",
+                        currentVersion = "0.13.4",
+                        onProgress = { progresses.add(it) },
+                    )
+                }
+                thread.join(3_000)
+                assertTrue("download should succeed via fallback: ${result.exceptionOrNull()}", result.isSuccess)
+                assertEquals(fakeApkBytes.size.toLong(), target.length())
+                assertTrue(progresses.contains(100))
+            } finally {
+                target.delete()
+            }
+        }
+    }
 }

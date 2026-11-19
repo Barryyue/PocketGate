@@ -42,7 +42,13 @@ object ReleaseNotes {
         ReleaseNote(
             version = "0.13.4",
             date = "2026-11-19",
-            features = emptyList(),
+            features = listOf(
+                t(
+                    "In-app update download and installation: tapping Download after an update check now downloads the APK directly inside PocketGate with a live progress bar (automatically falling back to Gitee if GitHub download fails) and launches the system installer for in-place replacement.",
+                    "应用内直接下载并覆盖安装更新：检查到新版本后点击「下载」，直接在 PocketGate 内显示进度条下载 APK（GitHub 下载失败时自动回退到 Gitee），下载完成后自动拉起系统安装器原地覆盖升级。",
+                    "應用程式內直接下載並覆蓋安裝更新：檢查到新版本後點擊「下載」，直接在 PocketGate 內顯示進度條下載 APK（GitHub 下載失敗時自動回退到 Gitee），下載完成後自動拉起系統安裝器原地覆蓋升級。",
+                ),
+            ),
             improvements = listOf(
                 t(
                     "Beautified the connection prompt overlay and in-app card: added a top app header with the rounded app icon, bold app name, package subtitle and network badge, highlighted the app name in the prompt message with the theme color, and placed target details inside a rounded container.",

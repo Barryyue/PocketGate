@@ -38,6 +38,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -166,8 +167,49 @@ fun SettingsScreen(
 
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
+    var downloadingUpdate by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableIntStateOf(0) }
+    var pendingInstallApk by remember { mutableStateOf<java.io.File?>(null) }
     var showReleaseNotes by remember { mutableStateOf(false) }
     var showReleaseHistory by remember { mutableStateOf(false) }
+
+    fun launchApkInstaller(apkFile: java.io.File) {
+        if (!apkFile.exists()) return
+        if (!context.packageManager.canRequestPackageInstalls()) {
+            pendingInstallApk = apkFile
+            runCatching {
+                context.startActivity(
+                    Intent(
+                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:${context.packageName}"),
+                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+            return
+        }
+        pendingInstallApk = null
+        runCatching {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                apkFile,
+            )
+            val install = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(install)
+        }.onFailure {
+            Toast.makeText(context, it.message ?: "Install failed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        val pending = pendingInstallApk
+        if (pending != null && context.packageManager.canRequestPackageInstalls()) {
+            launchApkInstaller(pending)
+        }
+    }
 
     var importJson by remember { mutableStateOf<String?>(null) }
     var previewMerge by remember { mutableStateOf<RuleImportPreview?>(null) }
@@ -641,21 +683,70 @@ fun SettingsScreen(
                     )
                 }
                 updateInfo?.takeIf { it.hasUpdate }?.let { info ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            s.format(S.UpdateAvailable, info.latestVersion.orEmpty()),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.weight(1f),
-                        )
-                        TextButton(onClick = {
-                            info.downloadUrl?.let {
-                                context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, Uri.parse(it))
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                s.format(S.UpdateAvailable, info.latestVersion.orEmpty()),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(
+                                enabled = !downloadingUpdate,
+                                onClick = {
+                                    val url = info.downloadUrl ?: return@TextButton
+                                    if (!url.endsWith(".apk", ignoreCase = true)) {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                        )
+                                        return@TextButton
+                                    }
+                                    downloadingUpdate = true
+                                    downloadProgress = 0
+                                    val targetFile = java.io.File(
+                                        context.cacheDir,
+                                        "updates/PocketGate-${info.latestVersion ?: "latest"}.apk",
+                                    )
+                                    scope.launch {
+                                        val result = UpdateChecker.downloadApk(
+                                            url = url,
+                                            targetFile = targetFile,
+                                            fallbackUrl = info.fallbackDownloadUrl,
+                                            currentVersion = BuildConfig.VERSION_NAME,
+                                            onProgress = { progress -> downloadProgress = progress },
+                                        )
+                                        downloadingUpdate = false
+                                        result.onSuccess { file ->
+                                            launchApkInstaller(file)
+                                        }.onFailure { err ->
+                                            toast(s.format(S.UpdateFailed, err.message.orEmpty()))
+                                            // 若應用內下載失敗，兜底使用瀏覽器開啟下載連結
+                                            runCatching {
+                                                context.startActivity(
+                                                    Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                            ) {
+                                Text(
+                                    if (downloadingUpdate) {
+                                        "${s[S.Download]} $downloadProgress%"
+                                    } else {
+                                        s[S.UpdateDownload]
+                                    },
                                 )
                             }
-                        }) { Text(s[S.UpdateDownload]) }
+                        }
+                        if (downloadingUpdate) {
+                            LinearProgressIndicator(
+                                progress = { (downloadProgress / 100f).coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     }
                 }
             }
