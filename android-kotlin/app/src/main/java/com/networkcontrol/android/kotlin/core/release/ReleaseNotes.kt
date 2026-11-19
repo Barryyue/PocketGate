@@ -40,6 +40,27 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.0",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "WebDAV encrypted backup & cross-device restore: end-to-end AES-256-GCM encrypted rules backup to any WebDAV server (respects offline mode), plus one-tap local backup/restore in Downloads/PocketGate/",
+                    "WebDAV 加密备份与跨机恢复（K-164）：支持 PBKDF2 + AES-256-GCM 端到端加密上传与下载还原规则（严格遵守纯离线模式），并新增一键备份到本地 Download/PocketGate/ 目录与就近恢复",
+                    "WebDAV 加密備份與跨機還原（K-164）：支援 PBKDF2 + AES-256-GCM 端到端加密上傳與下載還原規則（嚴格遵守純離線模式），並新增一鍵備份到本機 Download/PocketGate/ 目錄與就近還原",
+                ),
+                t(
+                    "Independent clone app control: optional switch in Settings to stop cloned/multi-user apps from inheriting primary app allow rules in per-connection mode",
+                    "应用分身独立管控（K-164）：在设置中新增开关，开启后逐连接模式下分身应用不继承主应用放行规则，改为独立询问或按默认模式拦截",
+                    "應用分身獨立管控（K-164）：在設定中新增開關，開啟後逐連線模式下分身應用不繼承主應用放行規則，改為獨立詢問或按預設模式攔截",
+                ),
+                t(
+                    "Release notes in update dialog & widget polish: update prompts now display release changelogs directly, and home-screen Glance widgets match the minimalist PocketGate shield badge style",
+                    "更新弹窗直显更新日志与桌面小组件颜值对齐：发现新版本弹窗直接展示更新说明，桌面小组件同步升级极简护盾徽章与圆角排版",
+                    "更新彈窗直顯更新日誌與桌面小元件顏值對齊：發現新版本彈窗直接展示更新說明，桌面小元件同步升級極簡護盾徽章與圓角排版",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.15.7",
             date = "2026-11-19",
             features = listOf(

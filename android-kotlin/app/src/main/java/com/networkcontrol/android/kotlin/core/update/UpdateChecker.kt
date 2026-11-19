@@ -26,6 +26,7 @@ data class UpdateInfo(
     val error: String? = null,
     val currentVersion: String = "0.0.0",
     val fallbackDownloadUrl: String? = null,
+    val releaseNotes: String? = null,
 ) {
     val hasUpdate: Boolean
         get() = latestVersion != null && compareVersions(latestVersion, currentVersion) > 0
@@ -394,10 +395,16 @@ object UpdateChecker {
             .ifBlank { json.optString("url") }
             .ifBlank { json.optJSONObject("_links")?.optString("self").orEmpty() }
         val apk = findApk(source, json)
+        val notes = when (source) {
+            UpdateSource.GitLab -> json.optString("description")
+            UpdateSource.Custom -> json.optString("notes").ifBlank { json.optString("changelog") }
+            else -> json.optString("body")
+        }.trim().takeIf { it.isNotBlank() }
         return UpdateInfo(
             latestVersion = tag.takeIf { it.isNotBlank() },
             downloadUrl = apk ?: releaseUrl.takeIf { it.isNotBlank() },
             currentVersion = currentVersion,
+            releaseNotes = notes,
         )
     }
 

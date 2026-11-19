@@ -361,6 +361,7 @@ class VpnEngine(
             } else {
                 emptySet()
             },
+            cloneAppsInheritPrimary = preferences.cloneAppsInheritPrimary,
         )
         _plan.value = plan
         identities.clear()

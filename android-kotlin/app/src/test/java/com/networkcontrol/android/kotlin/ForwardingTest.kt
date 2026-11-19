@@ -306,6 +306,11 @@ class ForwardingTest {
         assertEquals(ForwardingDecision.Forward, ForwardingPolicy.decide(plan, wechatUid))
         assertEquals(ForwardingDecision.Forward, ForwardingPolicy.decide(plan, vivoCloneUid))
         assertEquals("pkg.$wechatUid", plan.find(vivoCloneUid)?.packageName)
+
+        val independentPlan = plan.copy(mode = FilterMode.Whitelist, cloneAppsInheritPrimary = false)
+        assertEquals(ForwardingDecision.Forward, ForwardingPolicy.decide(independentPlan, wechatUid))
+        assertEquals(ForwardingDecision.Block, ForwardingPolicy.decide(independentPlan, vivoCloneUid))
+        assertNull(independentPlan.find(vivoCloneUid))
     }
 
     @Test

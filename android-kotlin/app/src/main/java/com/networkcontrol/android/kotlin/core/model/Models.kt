@@ -376,13 +376,15 @@ data class VpnRoutingPlan(
     val bypassPackages: Set<String>,
     val byUid: Map<Int, AppRouting>,
     val skippedRules: List<SkippedRule>,
+    val cloneAppsInheritPrimary: Boolean = true,
 ) {
     /**
-     * 依 UID 查找路由決定；若屬於多使用者 / 應用分身（如 vivo / MIUI 的 user 999，UID = userId * 100000 + appId），
-     * 自動回退到主使用者的同 appId，讓分身應用繼承主應用規則並可正常識別與彈窗。
+     * 依 UID 查找路由決定；當 [cloneAppsInheritPrimary] 開啟時，屬於多使用者 / 應用分身
+     * （如 vivo / MIUI 的 user 999，UID = userId * 100000 + appId）自動回退到主使用者同 appId；
+     * 關閉後則不繼承主應用放行規則，讓分身獨立觸發詢問或預設攔截。
      */
     fun find(uid: Int): AppRouting? =
-        byUid[uid] ?: if (uid >= 100_000) byUid[uid % 100_000] else null
+        byUid[uid] ?: if (cloneAppsInheritPrimary && uid >= 100_000) byUid[uid % 100_000] else null
 
     companion object {
         val Empty = VpnRoutingPlan(FilterMode.Ask, emptySet(), emptyMap(), emptyList())

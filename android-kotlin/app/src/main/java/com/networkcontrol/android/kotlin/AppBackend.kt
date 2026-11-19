@@ -1067,6 +1067,59 @@ class AppBackend(val container: AppContainer) {
 
     fun exportRules(): String = RuleTransferService.export(container.rules.all)
 
+    fun cloneAppsInheritPrimary(): Boolean = container.preferences.cloneAppsInheritPrimary
+
+    fun setCloneAppsInheritPrimary(inherit: Boolean) {
+        container.preferences.cloneAppsInheritPrimary = inherit
+        container.vpnEngine.requestReplan()
+    }
+
+    fun webdavUrl(): String = container.preferences.webdavUrl
+    fun webdavUsername(): String = container.preferences.webdavUsername
+    fun webdavPassword(): String = container.preferences.webdavPassword
+    fun webdavPassphrase(): String = container.preferences.webdavPassphrase
+    fun webdavLastSyncAt(): Long = container.preferences.webdavLastSyncAt
+
+    fun saveWebdavConfig(url: String, username: String, password: String, passphrase: String) {
+        container.preferences.webdavUrl = url
+        container.preferences.webdavUsername = username
+        container.preferences.webdavPassword = password
+        container.preferences.webdavPassphrase = passphrase
+    }
+
+    suspend fun uploadWebdavBackup(): Result<String> {
+        if (offlineMode()) return Result.failure(IllegalStateException("offline_mode"))
+        val prefs = container.preferences
+        val result = com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.upload(
+            baseUrl = prefs.webdavUrl,
+            username = prefs.webdavUsername,
+            password = prefs.webdavPassword,
+            passphrase = prefs.webdavPassphrase,
+            jsonContent = exportRules(),
+        )
+        if (result.isSuccess) {
+            prefs.webdavLastSyncAt = System.currentTimeMillis()
+        }
+        return result
+    }
+
+    suspend fun downloadWebdavBackup(): Result<String> {
+        if (offlineMode()) return Result.failure(IllegalStateException("offline_mode"))
+        val prefs = container.preferences
+        return com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.download(
+            baseUrl = prefs.webdavUrl,
+            username = prefs.webdavUsername,
+            password = prefs.webdavPassword,
+            passphrase = prefs.webdavPassphrase,
+        )
+    }
+
+    fun saveLocalBackupToDownloads(): Result<String> =
+        com.networkcontrol.android.kotlin.data.backup.LocalRulesBackup.saveToDownloads(context, exportRules())
+
+    fun readLocalBackupFromDownloads(): Result<String> =
+        com.networkcontrol.android.kotlin.data.backup.LocalRulesBackup.readLatestFromDownloads(context)
+
     fun previewImport(json: String, mode: RuleImportMode): RuleImportPreview {
         val imported = RuleTransferService.importForPlan(json, container.profiles.all)
         val plan = RuleTransferService.plan(

@@ -296,4 +296,30 @@ class UpdateCheckerTest {
             dir.deleteRecursively()
         }
     }
+
+    @Test
+    fun parsesReleaseNotesAndEncryptsWebDavBackupRoundTrip() = kotlinx.coroutines.runBlocking {
+        val parsed = UpdateChecker.parse(
+            UpdateSource.GitHub,
+            """
+            {
+              "tag_name": "v0.16.0",
+              "body": "- WebDAV encrypted sync\n- Independent clone app rules",
+              "assets": [
+                {"name": "PocketGate-0.16.0.apk", "browser_download_url": "https://example.com/PocketGate-0.16.0.apk"}
+              ]
+            }
+            """.trimIndent(),
+            "0.15.7",
+        )
+        assertTrue(parsed.releaseNotes?.contains("WebDAV encrypted sync") == true)
+
+        val sampleJson = """{"format":"netcontrol-rules","version":1,"rules":[{"id":"r1"}]}"""
+        val encrypted = com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.encrypt(sampleJson, "my-secret-key")
+        assertEquals(sampleJson, com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.decrypt(encrypted, "my-secret-key"))
+        val wrongKey = runCatching {
+            com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.decrypt(encrypted, "wrong-key")
+        }
+        assertTrue(wrongKey.isFailure)
+    }
 }

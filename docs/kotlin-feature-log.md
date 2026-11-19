@@ -400,6 +400,8 @@
 | K-167 | 修復設定頁「顯示通知」開關點擊無即時重繪（2026-11-19，v0.15.3）：原本直接將 `SwitchRow.checked` 綁定至非可觀察的 `SharedPreferences` 屬性 `preferences.notificationsEnabled`，改用 `remember(resumeKey) { mutableStateOf(...) }` 同步狀態後點擊立即回饋 | `SettingsScreen.kt`、`ReleaseNotes.kt` | JVM 測試、Release APK 構建通過 | 真機秒響應待用戶確認 |
 | K-168 | 底部導覽列全域下滑自動隱藏與上滑恢復（2026-11-19，v0.15.4；v0.15.5/v0.15.6 修正最佳化）：於 `AppRoot` 以 `NestedScrollConnection.onPostScroll(consumed.y)` 監聽 5 個主頁實際滾動量（28dp 下滑死區 / 14dp 上滑喚回，短列表不誤隱、切頁自動復位）；v0.15.5 統一移除 `Scaffold(bottomBar)` 改為全高邊到邊畫布 + 浮層疊加消除空白佔位；v0.15.6 調校非對稱彈簧（出現 `dampingRatio=0.62, stiffness=240` 輕微過衝回彈、隱藏 `dampingRatio=0.86, stiffness=220` 從容下沉）與底部錨點縮放（`0.92..1.0`）；於設定 → 外觀新增開關（預設開啟） | `AppRoot.kt`、`ThemeController.kt`、`AppPreferences.kt`、`AppBackend.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`ReleaseNotes.kt` | JVM 測試、正式簽章 Release APK 構建通過 | 真機滑動手感與 6 套主題視覺待用戶確認 |
 | K-169 | 應用級自動檢查更新、總覽頂部下載進度條與跨頁不中斷下載安裝提醒（2026-11-19，v0.15.7）：新增 `AppUpdateManager`（掛載於 `AppContainer.scope`，切頁不中斷）與共用 `ApkInstaller`；進入應用時自動檢查新版本並彈窗提示更新（嚴格遵守純離線模式並帶 10 分鐘冷卻防重複打擾）；下載期間於總覽頂部顯示進度卡片，下載完成後全域彈窗提醒一鍵安裝並在總覽頂部保留「立即安裝」入口；設定頁同步共享同一狀態 | `AppUpdateManager.kt`、`ApkInstaller.kt`、`AppContainer.kt`、`AppBackend.kt`、`AppRoot.kt`、`OverviewScreen.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`UpdateCheckerTest.kt`、`ReleaseNotes.kt` | JVM 測試（含 `UpdateCheckerTest.appUpdateManagerChecksOnEnterRespectsOfflineAndTracksDownloadToReadyPrompt`、`ReleaseNotesTest`）、正式簽章 Release APK 構建通過 | 真機自動檢測彈窗與跨分頁背景下載安裝待用戶確認 |
+| K-164 | WebDAV 端到端加密備份同步、本機 `Download/PocketGate/` 留檔還原與應用分身獨立管控（2026-11-19，v0.16.0）：新增 `WebDavBackupClient`（PBKDF2WithHmacSHA256 + AES-256-GCM 密文上傳與還原，遵守純離線模式）；新增 `LocalRulesBackup` 透過 `MediaStore.Downloads` 一鍵備份與重裝就近還原；於 `VpnRoutingPlan` 新增 `cloneAppsInheritPrimary` 開關支援逐連線模式分身獨立觸發詢問或攔截 | `WebDavBackupClient.kt`、`LocalRulesBackup.kt`、`Models.kt`、`RoutingPlanner.kt`、`VpnEngine.kt`、`AppPreferences.kt`、`AppBackend.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`ForwardingTest.kt`、`UpdateCheckerTest.kt`、`ReleaseNotes.kt` | JVM 測試（含 WebDAV 加解密往返、分身獨立規則測試）、正式簽章 Release APK 構建通過 | 真機 WebDAV 伺服器同步、Download 留檔還原與分身獨立詢問待用戶確認 |
+| K-170 | 更新彈窗直顯更新日誌與桌面小元件視覺對齊（2026-11-19，v0.16.0）：`UpdateChecker.parse` 解析 GitHub/Gitee/GitLab/Custom 版本說明並在 `AppRoot` 發現新版本彈窗內捲動呈現；`NcWidgets` 對齊極簡護盾圓角徽章與 `22dp` 卡片圓角排版 | `UpdateChecker.kt`、`AppRoot.kt`、`NcWidgets.kt`、`UpdateCheckerTest.kt`、`ReleaseNotes.kt` | JVM 測試（含 `UpdateCheckerTest.parsesReleaseNotesAndEncryptsWebDavBackupRoundTrip`）、正式簽章 Release APK 構建通過 | 真機更新日誌彈窗與桌面小元件外觀待用戶確認 |
 | K-146 | 自動化發版與檢查更新閉環（2026-11-19）：`main` 分支推送即自動依 `versionName` 發布 GitHub Release（並支援配置 `GITEE_TOKEN` 自動同步 APK 至 Gitee Releases）；`UpdateChecker` 相容 `kt-v` / `v` 標籤前綴並在多 APK 附件時優先選擇 arm64 主安裝包；修正 Gitee Go 流水線 `version: '1.0'`、JDK 17 與騰訊雲 Gradle 鏡像 | `.github/workflows/android-kotlin.yml`、`.gitee/workflows/android-kotlin.yml`、`UpdateChecker.kt`、`UpdateCheckerTest.kt` | JVM 測試（`UpdateCheckerTest` 全部通過） | 推送至 GitHub / Gitee 後的雲端流水線與真機更新下載待驗證 |
 
 ### 尚未完成（待辦，不屬於完成項）
@@ -419,7 +421,7 @@
 | K-051e | 規則變更不會切斷既有 TCP 連線 | 已完成（K-112） |
 | K-051f | 真機 FlClash 吞吐 / 耗電 / UDP / QUIC / 長時間穩定性；firestack / gVisor 評估 | 待真機 |
 | K-163 | 逐連線模式按應用分流出口（同時支援內建直連與外部 SOCKS5，兼顧分流與防火牆/廣告攔截/日誌） | 待辦（P1；受限於 `libhev-socks5-tunnel.so` 單一上游全域單例且不透傳 UID，需後續評估多上游用戶態協議棧） |
-| K-164 | WebDAV 加密備份與跨機規則同步；應用分身可選獨立規則管控 | 待辦（P2） |
+| K-164 | WebDAV 加密備份與跨機規則同步；應用分身可選獨立規則管控 | 已完成（K-164，v0.16.0） |
 
 ## 3. 維護規則
 

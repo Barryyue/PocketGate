@@ -33,6 +33,7 @@ object VpnRoutingPlanner {
         trustedSigners: Set<String> = emptySet(),
         focusAllowedPackages: Set<String> = emptySet(),
         lockScreenAllowedPackages: Set<String> = emptySet(),
+        cloneAppsInheritPrimary: Boolean = true,
     ): VpnRoutingPlan {
         val skipped = rules.rules.mapNotNull { rule ->
             getSkipReason(rule)?.let { SkippedRule(rule.id, it) }
@@ -61,7 +62,7 @@ object VpnRoutingPlanner {
             if (routing.decision == AppRoutingDecision.Bypass) bypass.addAll(packages)
         }
 
-        return VpnRoutingPlan(mode, bypass, byUid, skipped)
+        return VpnRoutingPlan(mode, bypass, byUid, skipped, cloneAppsInheritPrimary)
     }
 
     fun isEnforceable(rule: Rule): Boolean = getSkipReason(rule) == null

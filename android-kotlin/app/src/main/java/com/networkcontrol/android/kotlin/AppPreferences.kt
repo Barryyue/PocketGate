@@ -342,6 +342,31 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_AUTO_HIDE_BOTTOM_BAR, true)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_HIDE_BOTTOM_BAR, value).apply()
 
+    /** 多使用者 / 應用分身是否繼承主應用規則（預設繼承；關閉後在逐連線模式下獨立詢問或攔截）。 */
+    var cloneAppsInheritPrimary: Boolean
+        get() = prefs.getBoolean(KEY_CLONE_APPS_INHERIT, true)
+        set(value) = prefs.edit().putBoolean(KEY_CLONE_APPS_INHERIT, value).apply()
+
+    var webdavUrl: String
+        get() = prefs.getString(KEY_WEBDAV_URL, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_WEBDAV_URL, value.trim()).apply()
+
+    var webdavUsername: String
+        get() = prefs.getString(KEY_WEBDAV_USERNAME, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_WEBDAV_USERNAME, value.trim()).apply()
+
+    var webdavPassword: String
+        get() = prefs.getString(KEY_WEBDAV_PASSWORD, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_WEBDAV_PASSWORD, value).apply()
+
+    var webdavPassphrase: String
+        get() = prefs.getString(KEY_WEBDAV_PASSPHRASE, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_WEBDAV_PASSPHRASE, value).apply()
+
+    var webdavLastSyncAt: Long
+        get() = prefs.getLong(KEY_WEBDAV_LAST_SYNC, 0L)
+        set(value) = prefs.edit().putLong(KEY_WEBDAV_LAST_SYNC, value).apply()
+
     private companion object {
         const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
         const val UPSTREAM_SOCKS5 = ForwardingUpstream.SOCKS5
@@ -395,6 +420,12 @@ class AppPreferences(context: Context) {
         const val KEY_PERMISSION_GUIDE_SHOWN = "permission_guide_shown"
         const val KEY_PERMISSION_BANNER_DISMISSED = "permission_banner_dismissed"
         const val KEY_AUTO_HIDE_BOTTOM_BAR = "auto_hide_bottom_bar"
+        const val KEY_CLONE_APPS_INHERIT = "clone_apps_inherit_primary"
+        const val KEY_WEBDAV_URL = "webdav_url"
+        const val KEY_WEBDAV_USERNAME = "webdav_username"
+        const val KEY_WEBDAV_PASSWORD = "webdav_password"
+        const val KEY_WEBDAV_PASSPHRASE = "webdav_passphrase"
+        const val KEY_WEBDAV_LAST_SYNC = "webdav_last_sync"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_SOCKS5_HOST = "socks5_host"
         const val KEY_SOCKS5_PORT = "socks5_port"

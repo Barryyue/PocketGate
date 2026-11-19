@@ -132,8 +132,21 @@ private fun cardModifier(padding: Dp = 14.dp): GlanceModifier =
         .fillMaxSize()
         .appWidgetBackground()
         .background(GlanceTheme.colors.widgetBackground)
-        .cornerRadius(24.dp)
+        .cornerRadius(22.dp)
         .padding(padding)
+
+@Composable
+private fun shieldBadge(active: Boolean, boxSize: Dp = 32.dp, iconSize: Dp = 18.dp) {
+    Box(
+        modifier = GlanceModifier
+            .size(boxSize)
+            .background(if (active) GlanceTheme.colors.primaryContainer else GlanceTheme.colors.surfaceVariant)
+            .cornerRadius(10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        icon(R.drawable.ic_shield, if (active) GlanceTheme.colors.primary else GlanceTheme.colors.outline, iconSize)
+    }
+}
 
 @Composable
 private fun label(text: String, size: TextUnit = 12.sp, color: ColorProvider = GlanceTheme.colors.onSurfaceVariant, bold: Boolean = false, maxLines: Int = 1) {
@@ -199,9 +212,9 @@ class StatusWidget : NcWidget() {
         val active = protectionActive(data)
         Column(modifier = cardModifier().clickable(openApp(context))) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                icon(R.drawable.ic_shield, if (active) GlanceTheme.colors.primary else GlanceTheme.colors.outline, 22.dp)
-                Spacer(GlanceModifier.width(6.dp))
-                label(strings[S.WidgetBrand], 12.sp)
+                shieldBadge(active, boxSize = 28.dp, iconSize = 16.dp)
+                Spacer(GlanceModifier.width(8.dp))
+                label(strings[S.WidgetBrand], 12.sp, bold = true)
             }
             Spacer(GlanceModifier.defaultWeight())
             label(statusText(data, strings), 20.sp, GlanceTheme.colors.onSurface, bold = true)
@@ -229,8 +242,8 @@ class OverviewWidget : NcWidget() {
                 modifier = GlanceModifier.fillMaxWidth().clickable(openApp(context)),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                icon(R.drawable.ic_shield, if (active) GlanceTheme.colors.primary else GlanceTheme.colors.outline, 26.dp)
-                Spacer(GlanceModifier.width(8.dp))
+                shieldBadge(active, boxSize = 36.dp, iconSize = 20.dp)
+                Spacer(GlanceModifier.width(10.dp))
                 Column(modifier = GlanceModifier.defaultWeight()) {
                     label(statusText(data, strings), 17.sp, GlanceTheme.colors.onSurface, bold = true)
                     data.state?.let { label(modeLabel(strings, it.mode), 12.sp) }

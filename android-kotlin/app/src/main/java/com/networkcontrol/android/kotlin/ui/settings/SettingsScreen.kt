@@ -164,6 +164,10 @@ fun SettingsScreen(
     var autoHideBottomBar by remember(resumeKey) {
         mutableStateOf(backend.autoHideBottomBar())
     }
+    var cloneIndependent by remember(resumeKey) {
+        mutableStateOf(!backend.cloneAppsInheritPrimary())
+    }
+    var showWebDavDialog by remember { mutableStateOf(false) }
     var forwardingEnabled by remember(resumeKey) { mutableStateOf(backend.forwardingEnabled()) }
     val forwardingUpstream = remember(resumeKey) { backend.forwardingUpstream() }
     val viaProxy = forwardingUpstream == ForwardingUpstream.SOCKS5
@@ -468,6 +472,15 @@ fun SettingsScreen(
                         onClick = { showLockWhitelistDialog = true },
                     )
                 }
+                SwitchRow(
+                    title = s[S.CloneIndependent],
+                    subtitle = s[S.CloneIndependentHint],
+                    checked = cloneIndependent,
+                    onCheckedChange = { independent ->
+                        cloneIndependent = independent
+                        backend.setCloneAppsInheritPrimary(!independent)
+                    },
+                )
                 SettingsNavRow(
                     title = s[S.Blocklists],
                     subtitle = if (blocklistState.enabled) {
@@ -667,6 +680,34 @@ fun SettingsScreen(
                     OutlinedButton(
                         onClick = {
                             scope.launch {
+                                val res = withContext(Dispatchers.IO) { backend.saveLocalBackupToDownloads() }
+                                res.onSuccess { path -> toast(s.format(S.LocalBackupSaved, path)) }
+                                    .onFailure { toast(s.format(S.ExportFailed, it.message.orEmpty())) }
+                            }
+                        },
+                    ) { Text(s[S.LocalBackupSave]) }
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                val res = withContext(Dispatchers.IO) { backend.readLocalBackupFromDownloads() }
+                                res.onSuccess { json ->
+                                    runCatching {
+                                        importJson = json
+                                        previewMerge = backend.previewImport(json, RuleImportMode.Merge)
+                                        previewReplace = backend.previewImport(json, RuleImportMode.Replace)
+                                        importMode = RuleImportMode.Merge
+                                        showImportDialog = true
+                                    }.onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
+                                }.onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
+                            }
+                        },
+                    ) { Text(s[S.LocalBackupRestore]) }
+                    OutlinedButton(onClick = { showWebDavDialog = true }) {
+                        Text(s[S.WebDavSync])
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
                                 runCatching { withContext(Dispatchers.IO) { backend.exportDiagnostics() } }
                                     .onSuccess { file ->
                                         val uri = backend.diagnosticsShareUri(file)
@@ -807,6 +848,26 @@ fun SettingsScreen(
         )
     }
 
+    if (showWebDavDialog) {
+        WebDavBackupDialog(
+            backend = backend,
+            offlineMode = offlineMode,
+            s = s,
+            onToast = ::toast,
+            onRestoreJson = { json ->
+                runCatching {
+                    importJson = json
+                    previewMerge = backend.previewImport(json, RuleImportMode.Merge)
+                    previewReplace = backend.previewImport(json, RuleImportMode.Replace)
+                    importMode = RuleImportMode.Merge
+                    showWebDavDialog = false
+                    showImportDialog = true
+                }.onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
+            },
+            onDismiss = { showWebDavDialog = false },
+        )
+    }
+
     if (showTrustedPublishersDialog) {
         TrustedPublishersDialog(
             signers = settings.trustedSigners,
@@ -929,6 +990,133 @@ private fun PermissionRow(
             }
         }
     }
+}
+
+@Composable
+private fun WebDavBackupDialog(
+    backend: AppBackend,
+    offlineMode: Boolean,
+    s: UiStrings,
+    onToast: (String) -> Unit,
+    onRestoreJson: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var url by remember { mutableStateOf(backend.webdavUrl()) }
+    var username by remember { mutableStateOf(backend.webdavUsername()) }
+    var password by remember { mutableStateOf(backend.webdavPassword()) }
+    var passphrase by remember { mutableStateOf(backend.webdavPassphrase()) }
+    var busy by remember { mutableStateOf(false) }
+    var lastSyncAt by remember { mutableStateOf(backend.webdavLastSyncAt()) }
+
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text(s[S.WebDavSync]) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text(s[S.WebDavUrl]) },
+                    placeholder = { Text("https://dav.example.com/pocketgate/") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text(s[S.WebDavUsername]) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text(s[S.WebDavPassword]) },
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = passphrase,
+                    onValueChange = { passphrase = it },
+                    label = { Text(s[S.WebDavPassphrase]) },
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (lastSyncAt > 0L) {
+                    Text(
+                        s.format(S.WebDavLastSync, com.networkcontrol.android.kotlin.ui.common.formatDateTime(lastSyncAt)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    androidx.compose.material3.Button(
+                        enabled = !busy && url.isNotBlank() && passphrase.isNotBlank(),
+                        onClick = {
+                            if (offlineMode) {
+                                onToast(s[S.OfflineModeBlocked])
+                                return@Button
+                            }
+                            backend.saveWebdavConfig(url, username, password, passphrase)
+                            busy = true
+                            scope.launch {
+                                val res = backend.uploadWebdavBackup()
+                                busy = false
+                                res.onSuccess {
+                                    lastSyncAt = backend.webdavLastSyncAt()
+                                    onToast(s[S.WebDavUploadOk])
+                                }.onFailure { err ->
+                                    onToast(s.format(S.ExportFailed, err.message.orEmpty()))
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(s[S.WebDavUpload]) }
+                    OutlinedButton(
+                        enabled = !busy && url.isNotBlank() && passphrase.isNotBlank(),
+                        onClick = {
+                            if (offlineMode) {
+                                onToast(s[S.OfflineModeBlocked])
+                                return@OutlinedButton
+                            }
+                            backend.saveWebdavConfig(url, username, password, passphrase)
+                            busy = true
+                            scope.launch {
+                                val res = backend.downloadWebdavBackup()
+                                busy = false
+                                res.onSuccess { json ->
+                                    onRestoreJson(json)
+                                }.onFailure { err ->
+                                    onToast(s.format(S.ImportFailed, err.message.orEmpty()))
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(s[S.WebDavRestore]) }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !busy,
+                onClick = {
+                    backend.saveWebdavConfig(url, username, password, passphrase)
+                    onDismiss()
+                },
+            ) { Text(s[S.Close]) }
+        },
+    )
 }
 
 @Composable
