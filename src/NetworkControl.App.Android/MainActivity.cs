@@ -9,7 +9,7 @@ namespace NetworkControl.Android;
 
 /// <summary>唯一的 Activity：承載 Avalonia 的主視圖，並提供需要 Activity 的系統交互（VPN 授權、通知權限、打開系統設定）。</summary>
 [Activity(
-    Label = "NetworkControl",
+    Label = "@string/app_name",
     Icon = "@mipmap/ic_launcher",
     Theme = "@style/NetworkControl.Theme",
     MainLauncher = true,
