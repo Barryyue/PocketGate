@@ -2,6 +2,8 @@ package com.networkcontrol.android.kotlin.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -14,11 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -77,11 +79,11 @@ import dev.chrisbanes.haze.rememberHazeState
 private data class Tab(val label: S, val icon: ImageVector)
 
 private val tabs = listOf(
-    Tab(S.Overview, Icons.Filled.Home),
-    Tab(S.Apps, Icons.AutoMirrored.Filled.List),
-    Tab(S.Rules, Icons.Filled.Lock),
-    Tab(S.Logs, Icons.Filled.Notifications),
-    Tab(S.Settings, Icons.Filled.Settings),
+    Tab(S.Overview, Icons.Rounded.Home),
+    Tab(S.Apps, Icons.AutoMirrored.Rounded.List),
+    Tab(S.Rules, Icons.Rounded.Lock),
+    Tab(S.Logs, Icons.Rounded.Notifications),
+    Tab(S.Settings, Icons.Rounded.Settings),
 )
 
 @Composable
@@ -224,19 +226,25 @@ fun AppRoot(container: AppContainer) {
                                     },
                                 ),
                         ) {
-                            when (selected) {
-                                0 -> OverviewScreen(backend)
-                                1 -> AppsScreen(backend)
-                                2 -> RulesScreen(backend)
-                                3 -> LogsScreen(backend)
-                                else -> SettingsScreen(
-                                    backend = backend,
-                                    onOpenIslandSettings = { settingsSubScreen = "island" },
-                                    onOpenBlocklists = { settingsSubScreen = "blocklists" },
-                                    onOpenPromptSettings = { settingsSubScreen = "prompts" },
-                                    onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
-                                    onOpenProfileSettings = { settingsSubScreen = "profiles" },
-                                )
+                            Crossfade(
+                                targetState = selected,
+                                animationSpec = tween(durationMillis = 180),
+                                label = "tab-transition",
+                            ) { tab ->
+                                when (tab) {
+                                    0 -> OverviewScreen(backend)
+                                    1 -> AppsScreen(backend)
+                                    2 -> RulesScreen(backend)
+                                    3 -> LogsScreen(backend)
+                                    else -> SettingsScreen(
+                                        backend = backend,
+                                        onOpenIslandSettings = { settingsSubScreen = "island" },
+                                        onOpenBlocklists = { settingsSubScreen = "blocklists" },
+                                        onOpenPromptSettings = { settingsSubScreen = "prompts" },
+                                        onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
+                                        onOpenProfileSettings = { settingsSubScreen = "profiles" },
+                                    )
+                                }
                             }
                         }
                     }

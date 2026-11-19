@@ -2,6 +2,7 @@ package com.networkcontrol.android.kotlin.ui.common
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,10 +28,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
 import com.networkcontrol.android.kotlin.core.model.L4Protocol
@@ -137,6 +140,97 @@ fun MetricCard(label: String, value: String, modifier: Modifier = Modifier, hint
             )
             if (hint != null) {
                 Text(hint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+/**
+ * 雙列 Bento 儀表盤瓷磚卡片：左上圖示徽章 + 短標題 + 核心等寬數值 + 輔助說明，
+ * 支援強調態邊框與點擊互動。
+ */
+@Composable
+fun BentoTile(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    accent: Color = MaterialTheme.colorScheme.primary,
+    highlighted: Boolean = false,
+    onClick: (() -> Unit)? = null,
+) {
+    val tokens = LocalAppVisualTokens.current
+    val scheme = MaterialTheme.colorScheme
+    val container = if (tokens.cardContainer != Color.Unspecified) {
+        tokens.cardContainer
+    } else {
+        scheme.surfaceVariant.copy(alpha = 0.45f)
+    }
+    val borderColor = when {
+        highlighted -> accent.copy(alpha = if (tokens.isDarkCanvas) 0.48f else 0.40f)
+        tokens.cardBorder != Color.Transparent -> tokens.cardBorder
+        else -> Color.Transparent
+    }
+    val shape = RoundedCornerShape(tokens.metricCornerRadius)
+    Card(
+        modifier = modifier
+            .clip(shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        colors = CardDefaults.cardColors(
+            containerColor = container,
+            contentColor = scheme.onSurface,
+        ),
+        shape = shape,
+        border = if (borderColor != Color.Transparent) BorderStroke(1.dp, borderColor) else null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(accent.copy(alpha = if (tokens.isDarkCanvas) 0.18f else 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(
+                value,
+                style = MaterialTheme.typography.titleLarge.copy(fontFeatureSettings = "tnum"),
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (highlighted) accent else scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

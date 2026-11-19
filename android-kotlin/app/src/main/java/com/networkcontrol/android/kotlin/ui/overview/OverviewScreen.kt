@@ -3,11 +3,22 @@ package com.networkcontrol.android.kotlin.ui.overview
 import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,34 +31,49 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,18 +83,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
+import com.networkcontrol.android.kotlin.ForwardingUpstream
 import com.networkcontrol.android.kotlin.R
 import com.networkcontrol.android.kotlin.core.model.FilterMode
-import com.networkcontrol.android.kotlin.core.model.ProtectionStatus
+import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import com.networkcontrol.android.kotlin.core.model.PromptSnapshot
+import com.networkcontrol.android.kotlin.core.model.ProtectionStatus
 import com.networkcontrol.android.kotlin.core.model.RuleLifetime
 import com.networkcontrol.android.kotlin.core.model.TrafficUsage
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
+import com.networkcontrol.android.kotlin.ui.LocalBottomContentPadding
 import com.networkcontrol.android.kotlin.ui.S
-import com.networkcontrol.android.kotlin.ui.common.MetricCard
+import com.networkcontrol.android.kotlin.ui.common.BentoTile
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
 import com.networkcontrol.android.kotlin.ui.common.formatBytes
@@ -80,6 +110,9 @@ import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private const val SPEED_HISTORY_POINTS = 36
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(backend: AppBackend) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
@@ -88,13 +121,15 @@ fun OverviewScreen(backend: AppBackend) {
     val runtime by backend.runtime.collectAsStateWithLifecycle()
     val protection by backend.protection.collectAsStateWithLifecycle()
     val tunnelState by backend.tunnelState.collectAsStateWithLifecycle()
+    val tunnelError by backend.tunnelError.collectAsStateWithLifecycle()
+    val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
     val prompts by backend.prompts.collectAsStateWithLifecycle()
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val settings by backend.settings.collectAsStateWithLifecycle()
     val quiet by backend.quietPeriod.collectAsStateWithLifecycle()
     val speed by backend.speed.collectAsStateWithLifecycle()
     val focus by backend.focus.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
+    val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
 
     var blockedToday by remember { mutableLongStateOf(0L) }
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
@@ -103,7 +138,28 @@ fun OverviewScreen(backend: AppBackend) {
     var showBatchPrompts by remember { mutableStateOf(false) }
     var showFocusDialog by remember { mutableStateOf(false) }
     var confirmEndFocus by remember { mutableStateOf(false) }
+    var showProfileSheet by remember { mutableStateOf(false) }
     var privateDnsMode by remember { mutableStateOf("off") }
+
+    // 滾動記錄最近 36 個取樣點的上下行速率，供平滑波形圖繪製。
+    val downHistory = remember {
+        mutableStateListOf<Long>().apply { repeat(SPEED_HISTORY_POINTS) { add(0L) } }
+    }
+    val upHistory = remember {
+        mutableStateListOf<Long>().apply { repeat(SPEED_HISTORY_POINTS) { add(0L) } }
+    }
+
+    // 每秒持續滾動取樣上下行速率，即使速度為 0 波形也平穩流動。
+    val latestSpeed by androidx.compose.runtime.rememberUpdatedState(speed)
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (downHistory.size >= SPEED_HISTORY_POINTS) downHistory.removeAt(0)
+            downHistory.add(latestSpeed.downloadBytesPerSecond.coerceAtLeast(0L))
+            if (upHistory.size >= SPEED_HISTORY_POINTS) upHistory.removeAt(0)
+            upHistory.add(latestSpeed.uploadBytesPerSecond.coerceAtLeast(0L))
+            kotlinx.coroutines.delay(1_000)
+        }
+    }
 
     LaunchedEffect(Unit) {
         privateDnsMode = withContext(Dispatchers.IO) {
@@ -150,460 +206,653 @@ fun OverviewScreen(backend: AppBackend) {
         if (consent != null) consentLauncher.launch(consent) else backend.setProtection(true)
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            start = 20.dp,
-            top = 20.dp,
-            end = 20.dp,
-            bottom = 20.dp + com.networkcontrol.android.kotlin.ui.LocalBottomContentPadding.current,
-        ),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        item {
-            ScreenHeader(s[S.Overview], s[S.OverviewSubtitle])
+    fun toggleProtection() {
+        if (!protection) {
+            enableProtection()
+        } else {
+            guard.run { backend.setProtection(false) }
         }
-        item {
-            val tokens = LocalAppVisualTokens.current
-            val scheme = MaterialTheme.colorScheme
-            val isBlockAll = runtime.mode == FilterMode.BlockAll
-            val isActive = status == ProtectionStatus.On
-            val heroAccent = when {
-                isBlockAll -> scheme.error
-                isActive -> scheme.primary
-                status == ProtectionStatus.Failed || status == ProtectionStatus.Revoked -> scheme.error
-                else -> scheme.onSurfaceVariant
-            }
-            val baseContainer = if (tokens.cardContainer != Color.Unspecified) {
-                tokens.cardContainer
-            } else {
-                scheme.surfaceVariant.copy(alpha = 0.45f)
-            }
-            val heroBorderColor = when {
-                isActive || isBlockAll -> heroAccent.copy(alpha = if (tokens.isDarkCanvas) 0.36f else 0.28f)
-                tokens.cardBorder != Color.Transparent -> tokens.cardBorder
-                else -> Color.Transparent
-            }
-            val heroGradient = if (isActive || isBlockAll) {
-                Brush.horizontalGradient(
-                    colors = listOf(
-                        heroAccent.copy(alpha = if (tokens.isDarkCanvas) 0.18f else 0.12f),
-                        heroAccent.copy(alpha = 0.03f),
-                        Color.Transparent,
-                    ),
+    }
+
+    val tokens = LocalAppVisualTokens.current
+    val scheme = MaterialTheme.colorScheme
+    val bottomPadding = LocalBottomContentPadding.current
+
+    val isBlockAll = runtime.mode == FilterMode.BlockAll
+    val isActive = status == ProtectionStatus.On
+    val heroAccent by animateColorAsState(
+        targetValue = when {
+            isBlockAll -> scheme.error
+            isActive -> scheme.primary
+            status == ProtectionStatus.Failed || status == ProtectionStatus.Revoked -> scheme.error
+            else -> scheme.onSurfaceVariant
+        },
+        animationSpec = tween(260),
+        label = "hero-accent",
+    )
+
+    val exitBadgeText = when {
+        !isActive -> s[S.Off]
+        forwardingActive && backend.isUsingExternalProxy() -> "${s[S.ForwardingMode]} · SOCKS5"
+        forwardingActive -> "${s[S.ForwardingMode]} · ${s[S.UpstreamDirect]}"
+        else -> activeProfile?.name ?: s[S.ProtectionOn]
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 18.dp,
+                top = 18.dp,
+                end = 18.dp,
+                // 底部額外留白給右下角懸浮主控按鈕
+                bottom = 92.dp + bottomPadding,
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // 1. 簡潔頂欄：標題 + 配置文件名 + 輕量刷新圖示
+            item {
+                ScreenHeader(
+                    title = s[S.Overview],
+                    subtitle = activeProfile?.let { "${s[S.Profile]} · ${it.name}" } ?: s[S.OverviewSubtitle],
+                    trailing = {
+                        IconButton(onClick = { refreshKey++ }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Refresh,
+                                contentDescription = s[S.Refresh],
+                                tint = scheme.onSurfaceVariant,
+                            )
+                        }
+                    },
                 )
-            } else {
-                null
             }
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = baseContainer,
-                    contentColor = scheme.onSurface,
-                ),
-                shape = RoundedCornerShape(tokens.cardCornerRadius),
-                border = if (heroBorderColor != Color.Transparent) BorderStroke(1.dp, heroBorderColor) else null,
-            ) {
-                Column(
+
+            // 2. 旗艦防護狀態橫幅卡片（點擊卡片或右下角 FAB 均可開關）
+            item {
+                val baseContainer = if (tokens.cardContainer != Color.Unspecified) {
+                    tokens.cardContainer
+                } else {
+                    scheme.surfaceVariant.copy(alpha = 0.45f)
+                }
+                val heroBorderColor = when {
+                    isActive || isBlockAll -> heroAccent.copy(alpha = if (tokens.isDarkCanvas) 0.40f else 0.30f)
+                    tokens.cardBorder != Color.Transparent -> tokens.cardBorder
+                    else -> Color.Transparent
+                }
+                val heroGradient = if (isActive || isBlockAll) {
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            heroAccent.copy(alpha = if (tokens.isDarkCanvas) 0.20f else 0.13f),
+                            heroAccent.copy(alpha = 0.04f),
+                            Color.Transparent,
+                        ),
+                    )
+                } else {
+                    null
+                }
+                val cardShape = RoundedCornerShape(tokens.cardCornerRadius)
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(if (heroGradient != null) Modifier.background(heroGradient) else Modifier)
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                        .clip(cardShape)
+                        .clickable { toggleProtection() },
+                    colors = CardDefaults.cardColors(
+                        containerColor = baseContainer,
+                        contentColor = scheme.onSurface,
+                    ),
+                    shape = cardShape,
+                    border = if (heroBorderColor != Color.Transparent) BorderStroke(1.dp, heroBorderColor) else null,
                 ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(if (heroGradient != null) Modifier.background(heroGradient) else Modifier)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(heroAccent.copy(alpha = if (tokens.isDarkCanvas) 0.22f else 0.14f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_shield),
+                                    contentDescription = null,
+                                    tint = heroAccent,
+                                    modifier = Modifier.size(26.dp),
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text(
+                                        statusText,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(heroAccent),
+                                    )
+                                }
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    exitBadgeText,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (isActive) heroAccent else scheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                        if (status == ProtectionStatus.NeedsConsent || status == ProtectionStatus.Revoked) {
+                            Text(
+                                s[S.VpnConsentRequired],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.error,
+                            )
+                        }
+                        if (!tunnelError.isNullOrBlank() && (status == ProtectionStatus.Failed || status == ProtectionStatus.On)) {
+                            Text(tunnelError!!, style = MaterialTheme.typography.bodySmall, color = scheme.error)
+                            if (backend.isUsingExternalProxy()) {
+                                OutlinedButton(
+                                    onClick = { backend.setForwardingUpstream(ForwardingUpstream.DIRECT) },
+                                ) {
+                                    Text(s[S.SwitchToDirect])
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. 旗艦即時網速平滑波形圖（佔滿整行，FlClash 標誌性視覺焦點）
+            item {
+                SpeedChartCard(
+                    title = s[S.CurrentSpeed],
+                    downloadBytesPerSec = speed.downloadBytesPerSecond,
+                    uploadBytesPerSec = speed.uploadBytesPerSecond,
+                    downloadHistory = downHistory,
+                    uploadHistory = upHistory,
+                )
+            }
+
+            // 4. 緊湊模式與配置文件控制條
+            item {
+                SectionCard {
+                    val options = listOf(FilterMode.Ask, FilterMode.Whitelist, FilterMode.Blacklist)
+                    val labels = listOf(s[S.ModeAsk], s[S.ModeWhitelist], s[S.ModeBlacklist])
+                    val selected = options.indexOf(runtime.mode)
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        options.forEachIndexed { index, mode ->
+                            SegmentedButton(
+                                selected = selected == index,
+                                onClick = { guard.run { backend.setMode(mode) } },
+                                shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                            ) {
+                                Text(labels[index], maxLines = 1)
+                            }
+                        }
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(50.dp)
-                                .clip(RoundedCornerShape(15.dp))
-                                .background(heroAccent.copy(alpha = if (tokens.isDarkCanvas) 0.20f else 0.14f)),
-                            contentAlignment = Alignment.Center,
+                        OutlinedButton(
+                            onClick = { showProfileSheet = true },
+                            modifier = Modifier.weight(1f),
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_shield),
-                                contentDescription = null,
-                                tint = heroAccent,
-                                modifier = Modifier.size(28.dp),
+                            Text(
+                                "${s[S.Profile]}：${activeProfile?.name ?: "—"}",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                statusText,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                s[S.ProtectionHint],
-                                style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant,
-                            )
+                        if (isBlockAll) {
+                            Button(onClick = { backend.setBlockAll(false) }) {
+                                Text(s[S.Restore], maxLines = 1)
+                            }
+                        } else {
+                            OutlinedButton(onClick = { backend.setBlockAll(true) }) {
+                                Text(s[S.BlockAll], maxLines = 1)
+                            }
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Switch(
-                            checked = protection,
-                            onCheckedChange = { enabled ->
-                                if (enabled) enableProtection() else guard.run { backend.setProtection(false) }
-                            },
-                        )
                     }
-                    if (status == ProtectionStatus.NeedsConsent || status == ProtectionStatus.Revoked) {
+                    if (isBlockAll) {
                         Text(
-                            s[S.VpnConsentRequired],
+                            s[S.BlockAllHint],
                             style = MaterialTheme.typography.bodySmall,
                             color = scheme.error,
                         )
                     }
-                    val error = backend.tunnelError.collectAsStateWithLifecycle().value
-                    // 保護開啟時也可能有提示（例如轉發回退到黑洞模式、上游代理無法連線）。
-                    if (!error.isNullOrBlank() && (status == ProtectionStatus.Failed || status == ProtectionStatus.On)) {
-                        Text(error, style = MaterialTheme.typography.bodySmall, color = scheme.error)
-                        if (backend.isUsingExternalProxy()) {
-                            OutlinedButton(
-                                onClick = {
-                                    backend.setForwardingUpstream(com.networkcontrol.android.kotlin.ForwardingUpstream.DIRECT)
-                                },
-                            ) {
-                                Text(s[S.SwitchToDirect])
-                            }
-                        }
-                    }
                 }
             }
-        }
-        if (privateDnsMode == "hostname") {
+
+            // 5. Bento 雙列網格 Row 1：今日攔截 + 待處理詢問
             item {
-                SectionCard(s[S.PrivateDnsTitle]) {
-                    Text(
-                        s[S.PrivateDnsHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-        item {
-            SectionCard(s[S.Mode]) {
-                val options = listOf(FilterMode.Ask, FilterMode.Whitelist, FilterMode.Blacklist)
-                val labels = listOf(s[S.ModeAsk], s[S.ModeWhitelist], s[S.ModeBlacklist])
-                val selected = options.indexOf(runtime.mode)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    options.forEachIndexed { index, mode ->
-                        SegmentedButton(
-                            selected = selected == index,
-                            onClick = { guard.run { backend.setMode(mode) } },
-                            shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                        ) {
-                            Text(labels[index])
-                        }
-                    }
-                }
-                Text(
-                    s[S.ModeHint],
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        var expanded by remember { mutableStateOf(false) }
-                        OutlinedButton(
-                            onClick = { expanded = true },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("${s[S.Profile]}：${activeProfile?.name ?: "—"}")
+                    BentoTile(
+                        label = s[S.BlockedToday],
+                        value = blockedToday.toString(),
+                        icon = Icons.Rounded.Warning,
+                        accent = if (blockedToday > 0) scheme.error else scheme.primary,
+                        subtitle = if (isActive) s[S.ProtectionOn] else s[S.ProtectionOff],
+                        modifier = Modifier.weight(1f),
+                    )
+                    BentoTile(
+                        label = s[S.PendingPrompts],
+                        value = prompts.size.toString(),
+                        icon = Icons.Rounded.Notifications,
+                        accent = if (prompts.isNotEmpty()) scheme.primary else scheme.onSurfaceVariant,
+                        highlighted = prompts.isNotEmpty(),
+                        subtitle = if (prompts.isNotEmpty()) s[S.BatchPrompts] else "—",
+                        onClick = if (prompts.isNotEmpty()) ({ showBatchPrompts = true }) else null,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            // 6. Bento 雙列網格 Row 2：今日流量 + 生效規則數
+            item {
+                val hasTraffic = backend.hasTrafficAccess()
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    BentoTile(
+                        label = s[S.TrafficToday],
+                        value = formatBytes(traffic.bytesIn + traffic.bytesOut),
+                        icon = Icons.Rounded.Info,
+                        accent = scheme.tertiary,
+                        subtitle = if (hasTraffic) {
+                            "↓ ${formatBytes(traffic.bytesIn)} · ↑ ${formatBytes(traffic.bytesOut)}"
+                        } else {
+                            s[S.GrantAccess]
+                        },
+                        highlighted = !hasTraffic,
+                        onClick = if (!hasTraffic) ({ context.startActivity(backend.trafficAccessIntent()) }) else null,
+                        modifier = Modifier.weight(1f),
+                    )
+                    BentoTile(
+                        label = s[S.Rules],
+                        value = ruleSet.count.toString(),
+                        icon = Icons.Rounded.Lock,
+                        accent = scheme.primary,
+                        subtitle = activeProfile?.name ?: "—",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            // 7. Bento 雙列網格 Row 3：專注模式 + 勿擾模式（可一鍵點擊）
+            item {
+                val activeFocus = focus
+                val dndUntil = runtime.doNotDisturbUntil
+                val dndActive = dndUntil != null && dndUntil > now
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    BentoTile(
+                        label = s[S.FocusMode],
+                        value = if (activeFocus != null) {
+                            formatRemaining((activeFocus.endsAt - now).coerceAtLeast(0))
+                        } else {
+                            s[S.Off]
+                        },
+                        icon = Icons.Rounded.Star,
+                        accent = if (activeFocus != null) scheme.primary else scheme.onSurfaceVariant,
+                        highlighted = activeFocus != null,
+                        subtitle = if (activeFocus != null) {
+                            "${s[S.FocusAllowedApps]}：${activeFocus.allowedPackages.size}"
+                        } else {
+                            s[S.FocusStart]
+                        },
+                        onClick = {
+                            if (activeFocus == null) showFocusDialog = true else confirmEndFocus = true
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    BentoTile(
+                        label = s[S.DoNotDisturb],
+                        value = if (dndActive) s[S.QuickOn] else s[S.Off],
+                        icon = Icons.AutoMirrored.Rounded.List,
+                        accent = if (dndActive) scheme.tertiary else scheme.onSurfaceVariant,
+                        highlighted = dndActive,
+                        subtitle = if (dndActive) {
+                            formatDateTime(dndUntil!!)
+                        } else {
+                            s[S.OneHour]
+                        },
+                        onClick = {
+                            if (dndActive) {
+                                backend.setDoNotDisturb(null)
+                            } else {
+                                backend.setDoNotDisturb(System.currentTimeMillis() + 60 * 60 * 1000L)
+                                if (!protection) enableProtection()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            // 專注進行中時展開快捷操作條（延長 15 分鐘 / 停止 / 存為配置）
+            focus?.let { active ->
+                item {
+                    SectionCard(s[S.FocusMode]) {
+                        val remaining = (active.endsAt - now).coerceAtLeast(0)
+                        Text(
+                            s.format(S.FocusRemaining, formatRemaining(remaining)),
+                            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        if (!protection) {
+                            Text(
+                                s[S.FocusNeedsProtection],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.error,
+                            )
+                            OutlinedButton(
+                                onClick = { enableProtection() },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(s[S.EnableProtection]) }
                         }
-                        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            profiles.forEach { profile ->
-                                DropdownMenuItem(
-                                    text = { Text(profile.name) },
-                                    onClick = {
-                                        backend.activateProfile(profile.id)
-                                        expanded = false
-                                    },
-                                )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { backend.extendFocus(15) },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(s[S.FocusExtend], maxLines = 1)
+                            }
+                            TextButton(
+                                onClick = { confirmEndFocus = true },
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Text(s[S.FocusStop], maxLines = 1)
                             }
                         }
-                    }
-                    if (runtime.mode == FilterMode.BlockAll) {
-                        Button(onClick = { backend.setBlockAll(false) }) {
-                            Text(s[S.Restore])
-                        }
-                    } else {
-                        OutlinedButton(onClick = { backend.setBlockAll(true) }) {
-                            Text(s[S.BlockAll])
-                        }
-                    }
-                }
-                if (runtime.mode == FilterMode.BlockAll) {
-                    Text(
-                        s[S.BlockAllHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-        }
-        item {
-            SectionCard(s[S.FocusMode]) {
-                val active = focus
-                if (active == null) {
-                    Text(
-                        s[S.FocusAllowedHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Button(
-                        onClick = { showFocusDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(s[S.FocusStart]) }
-                } else {
-                    val remaining = (active.endsAt - now).coerceAtLeast(0)
-                    Text(
-                        s.format(S.FocusRemaining, formatRemaining(remaining)),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        if (active.allowedPackages.isEmpty()) {
-                            s[S.FocusNoAllowed]
-                        } else {
-                            "${s[S.FocusAllowedApps]}：${active.allowedPackages.size}"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (!protection) {
-                        Text(
-                            s[S.FocusNeedsProtection],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
                         OutlinedButton(
-                            onClick = { enableProtection() },
+                            onClick = {
+                                backend.createFocusProfile(
+                                    allowedPackages = active.allowedPackages,
+                                    copyFromCurrent = false,
+                                )
+                            },
                             modifier = Modifier.fillMaxWidth(),
-                        ) { Text(s[S.EnableProtection]) }
+                        ) { Text(s[S.SaveAsProfile]) }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = { backend.extendFocus(15) },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(s[S.FocusExtend], maxLines = 1)
-                        }
-                        TextButton(
-                            onClick = { confirmEndFocus = true },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Text(s[S.FocusStop], maxLines = 1)
-                        }
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            backend.createFocusProfile(
-                                allowedPackages = active.allowedPackages,
-                                copyFromCurrent = false,
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(s[S.SaveAsProfile]) }
                 }
             }
-        }
-        item {
-            SectionCard(s[S.DoNotDisturb]) {
-                val until = runtime.doNotDisturbUntil
-                val active = until != null && until > now
-                if (active) {
-                    Text(s[S.DoNotDisturbOn], style = MaterialTheme.typography.bodyMedium)
-                    until?.let {
+
+            // 系統狀態異常提醒（僅在必要時顯示，平時保持零干擾）
+            if (privateDnsMode == "hostname") {
+                item {
+                    SectionCard(s[S.PrivateDnsTitle]) {
                         Text(
-                            formatDateTime(it),
+                            s[S.PrivateDnsHint],
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = scheme.onSurfaceVariant,
                         )
                     }
-                    if (!protection) {
+                }
+            }
+            if (!backend.notificationsAvailable()) {
+                item {
+                    SectionCard(s[S.Notifications]) {
                         Text(
-                            s[S.DndNeedsProtection],
+                            s[S.NotificationPermissionMissing],
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
+                            color = scheme.error,
                         )
-                        OutlinedButton(
-                            onClick = { enableProtection() },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text(s[S.EnableProtection]) }
-                    }
-                    OutlinedButton(onClick = { backend.setDoNotDisturb(null) }) {
-                        Text(s[S.Off])
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = {
-                            backend.setDoNotDisturb(System.currentTimeMillis() + 60 * 60 * 1000L)
-                            if (!protection) enableProtection()
-                        },
-                    ) {
-                        Text("${s[S.DoNotDisturb]} ${s[S.OneHour]}")
-                    }
-                }
-            }
-        }
-        if (!backend.notificationsAvailable()) {
-            item {
-                SectionCard(s[S.Notifications]) {
-                    Text(
-                        s[S.NotificationPermissionMissing],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    OutlinedButton(onClick = { context.startActivity(backend.openNotificationSettings()) }) {
-                        Text(s[S.OpenNotificationSettings])
-                    }
-                }
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                MetricCard(s[S.BlockedToday], blockedToday.toString(), Modifier.weight(1f))
-                MetricCard(s[S.PendingPrompts], prompts.size.toString(), Modifier.weight(1f))
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                MetricCard(
-                    s[S.Rules],
-                    backend.container.rules.ruleSet.value.count.toString(),
-                    Modifier.weight(1f),
-                )
-                MetricCard(
-                    s[S.TrafficToday],
-                    formatBytes(traffic.bytesIn + traffic.bytesOut),
-                    Modifier.weight(1f),
-                    hint = if (backend.hasTrafficAccess()) null else s[S.NoTraffic],
-                )
-            }
-        }
-        item {
-            SectionCard(s[S.TrafficToday]) {
-                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    Column {
-                        Text(s[S.CurrentSpeed], style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            "↓ ${formatBytes(speed.downloadBytesPerSecond)}/s · ↑ ${formatBytes(speed.uploadBytesPerSecond)}/s",
-                            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-                }
-                if (!backend.hasTrafficAccess()) {
-                    Text(
-                        s[S.NoTraffic],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedButton(onClick = { context.startActivity(backend.trafficAccessIntent()) }) {
-                        Text(s[S.GrantAccess])
-                    }
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                        Column {
-                            Text(s[S.Download], style = MaterialTheme.typography.labelMedium)
-                            Text(formatBytes(traffic.bytesIn), style = MaterialTheme.typography.titleMedium)
-                        }
-                        Column {
-                            Text(s[S.Upload], style = MaterialTheme.typography.labelMedium)
-                            Text(formatBytes(traffic.bytesOut), style = MaterialTheme.typography.titleMedium)
+                        OutlinedButton(onClick = { context.startActivity(backend.openNotificationSettings()) }) {
+                            Text(s[S.OpenNotificationSettings])
                         }
                     }
-                    val simLabels = backend.subscriptions().associateBy { it.subscriptionId }
-                    traffic.byNetwork.entries
-                        .filter { it.value.first + it.value.second > 0 }
-                        .sortedByDescending { it.value.first + it.value.second }
-                        .take(4)
-                        .forEach { (key, bytes) ->
+                }
+            }
+
+            // 8. 今日流量明細（網路分類 + Top 3 應用，帶比例進度條）
+            if (backend.hasTrafficAccess() && (traffic.bytesIn + traffic.bytesOut) > 0) {
+                item {
+                    SectionCard(s[S.TrafficToday]) {
+                        val simLabels = backend.subscriptions().associateBy { it.subscriptionId }
+                        val networks = traffic.byNetwork.entries
+                            .filter { it.value.first + it.value.second > 0 }
+                            .sortedByDescending { it.value.first + it.value.second }
+                            .take(4)
+                        networks.forEach { (key, bytes) ->
                             val label = when (key.kind) {
-                                com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi -> s[S.Wifi]
-                                com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular ->
+                                NetworkKind.Wifi -> s[S.Wifi]
+                                NetworkKind.Cellular ->
                                     key.subscriptionId?.let { simLabels[it]?.label } ?: s[S.Cellular]
-                                com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired -> s[S.Wired]
+                                NetworkKind.Wired -> s[S.Wired]
                                 else -> s[S.Other]
                             }
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
                                 Text(label, style = MaterialTheme.typography.bodyMedium)
                                 Text(
                                     formatBytes(bytes.first + bytes.second),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                                    color = scheme.onSurfaceVariant,
                                 )
                             }
                         }
-                    val top = traffic.byPackage.entries
-                        .sortedByDescending { it.value.first + it.value.second }
-                        .take(3)
-                    top.forEach { (packageName, usage) ->
-                        val label = backend.container.appCatalog.find(packageName)?.label ?: packageName
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(label, style = MaterialTheme.typography.bodyMedium)
+                        val top = traffic.byPackage.entries
+                            .sortedByDescending { it.value.first + it.value.second }
+                            .take(3)
+                        val maxAppBytes = top.firstOrNull()?.let { (it.value.first + it.value.second).coerceAtLeast(1L) } ?: 1L
+                        top.forEach { (packageName, usage) ->
+                            val total = usage.first + usage.second
+                            val ratio = (total.toFloat() / maxAppBytes.toFloat()).coerceIn(0.06f, 1f)
+                            val label = backend.container.appCatalog.find(packageName)?.label ?: packageName
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        label,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        formatBytes(total),
+                                        style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                                        color = scheme.onSurfaceVariant,
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(CircleShape)
+                                        .background(scheme.onSurface.copy(alpha = 0.08f)),
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(ratio)
+                                            .height(4.dp)
+                                            .clip(CircleShape)
+                                            .background(scheme.primary.copy(alpha = 0.85f)),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            quiet?.let { summary ->
+                item {
+                    SectionCard(s[S.QuietSummary]) {
+                        Text(
+                            "${s[S.BlockedToday]}：${summary.blockedCount}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            "${formatDateTime(summary.startedAt)} – ${formatDateTime(summary.endedAt)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant,
+                        )
+                        summary.topApps.forEach { (name, count) ->
+                            Text("$name ×$count", style = MaterialTheme.typography.bodySmall)
+                        }
+                        OutlinedButton(onClick = { backend.dismissQuietPeriod() }) {
+                            Text(s[S.Close])
+                        }
+                    }
+                }
+            }
+        }
+
+        // 右下角旗艦懸浮主控按鈕（FlClash 風格：形變 + 色彩漸變 + 播放/停止平滑切換）
+        val fabCorner by animateDpAsState(
+            targetValue = if (protection) 16.dp else 28.dp,
+            animationSpec = tween(240),
+            label = "fab-corner",
+        )
+        val fabContainer by animateColorAsState(
+            targetValue = when {
+                isBlockAll -> scheme.error
+                protection -> scheme.primary
+                else -> scheme.surfaceVariant
+            },
+            animationSpec = tween(240),
+            label = "fab-container",
+        )
+        val fabContent by animateColorAsState(
+            targetValue = when {
+                isBlockAll -> scheme.onError
+                protection -> scheme.onPrimary
+                else -> scheme.onSurface
+            },
+            animationSpec = tween(240),
+            label = "fab-content",
+        )
+        FloatingActionButton(
+            onClick = { toggleProtection() },
+            shape = RoundedCornerShape(fabCorner),
+            containerColor = fabContainer,
+            contentColor = fabContent,
+            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 20.dp, bottom = bottomPadding + 16.dp),
+        ) {
+            AnimatedContent(
+                targetState = protection,
+                transitionSpec = {
+                    (fadeIn(tween(180)) + scaleIn(initialScale = 0.8f, animationSpec = tween(180)))
+                        .togetherWith(fadeOut(tween(140)) + scaleOut(targetScale = 0.8f, animationSpec = tween(140)))
+                },
+                label = "fab-icon",
+            ) { running ->
+                if (running) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = s[S.ProtectionOff],
+                        modifier = Modifier.size(26.dp),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = s[S.ProtectionOn],
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
+        }
+    }
+
+    // 配置文件底部抽屜（ModalBottomSheet 取代生硬下拉選單）
+    if (showProfileSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showProfileSheet = false },
+            sheetState = sheetState,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    s[S.Profile],
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
+                profiles.forEach { profile ->
+                    val isSelected = profile.id == activeProfile?.id
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                if (isSelected) scheme.primary.copy(alpha = 0.12f) else Color.Transparent,
+                            )
+                            .clickable {
+                                backend.activateProfile(profile.id)
+                                showProfileSheet = false
+                            }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
                             Text(
-                                formatBytes(usage.first + usage.second),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                profile.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (isSelected) scheme.primary else scheme.onSurface,
+                            )
+                            val modeName = when (profile.mode) {
+                                FilterMode.Ask -> s[S.ModeAsk]
+                                FilterMode.Whitelist -> s[S.ModeWhitelist]
+                                FilterMode.Blacklist -> s[S.ModeBlacklist]
+                                FilterMode.BlockAll -> s[S.BlockAll]
+                                FilterMode.Disabled -> s[S.Off]
+                            }
+                            Text(
+                                modeName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = scheme.onSurfaceVariant,
+                            )
+                        }
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(20.dp),
                             )
                         }
                     }
                 }
-            }
-        }
-        if (prompts.isNotEmpty()) {
-            item {
-                SectionCard(s[S.PendingPrompts]) {
-                    Text(
-                        s.format(S.PromptFlows, prompts.size),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    OutlinedButton(
-                        onClick = { showBatchPrompts = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(s[S.BatchPrompts])
-                    }
-                }
-            }
-        }
-        quiet?.let { summary ->
-            item {
-                SectionCard(s[S.QuietSummary]) {
-                    Text(
-                        "${s[S.BlockedToday]}：${summary.blockedCount}",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        "${formatDateTime(summary.startedAt)} – ${formatDateTime(summary.endedAt)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    summary.topApps.forEach { (name, count) ->
-                        Text("$name ×$count", style = MaterialTheme.typography.bodySmall)
-                    }
-                    OutlinedButton(onClick = { backend.dismissQuietPeriod() }) {
-                        Text(s[S.Close])
-                    }
-                }
-            }
-        }
-        item {
-            OutlinedButton(
-                onClick = { refreshKey++ },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(s[S.Refresh])
             }
         }
     }

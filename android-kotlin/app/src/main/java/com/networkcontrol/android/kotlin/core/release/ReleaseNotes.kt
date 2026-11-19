@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.14.0",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "Redesigned the Overview tab into a modern Bento Grid dashboard across all 6 themes: live 36-point smooth Bezier speed waveform chart, 2-column icon Bento tiles (Blocked, Pending Prompts, Traffic, Rules, Focus, Do Not Disturb), proportional traffic bars, bottom-right animated master FAB, ModalBottomSheet profile picker, rounded navigation icons, and smooth Crossfade tab transitions.",
+                    "全面重构总览页为现代 Bento 双列仪表盘（兼容全部 6 套视觉主题）：新增实时网速平滑贝塞尔波形图卡片、带图标徽章的双列功能瓷砖（拦截/询问/流量/规则/专注/勿扰）、流量占比进度条、右下角形变悬浮主控开关、配置文件底部抽屉，以及圆角导航图标与平滑页面切换动效。",
+                    "全面重構總覽頁為現代 Bento 雙列儀表盤（相容全部 6 套視覺主題）：新增即時網速平滑貝茲波形圖卡片、帶圖示徽章的雙列功能瓷磚（攔截/詢問/流量/規則/專注/勿擾）、流量占比進度條、右下角形變懸浮主控開關、設定檔底部抽屜，以及圓角導覽圖示與平滑頁面切換動效。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.9",
             date = "2026-11-19",
             features = emptyList(),
