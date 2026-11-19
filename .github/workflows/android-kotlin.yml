@@ -62,7 +62,6 @@ jobs:
           dir=app/build/outputs/apk/release
           mkdir -p dist
           cp "$dir/app-arm64-v8a-release.apk" "dist/PocketGate-${version}.apk"
-          cp "$dir/app-x86_64-release.apk" "dist/PocketGate-${version}-x86_64-emulator.apk"
           sha256sum dist/*.apk > dist/SHA256SUMS.txt
 
           echo "### PocketGate ${version}" >> "$GITHUB_STEP_SUMMARY"
