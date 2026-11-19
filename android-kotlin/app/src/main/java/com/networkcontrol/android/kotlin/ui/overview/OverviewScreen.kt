@@ -43,8 +43,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -79,6 +81,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.ForwardingUpstream
 import com.networkcontrol.android.kotlin.R
+import com.networkcontrol.android.kotlin.platform.ApkInstaller
 import com.networkcontrol.android.kotlin.core.model.FilterMode
 import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import com.networkcontrol.android.kotlin.core.model.PromptSnapshot
@@ -125,6 +128,8 @@ fun OverviewScreen(backend: AppBackend) {
     val speed by backend.speed.collectAsStateWithLifecycle()
     val focus by backend.focus.collectAsStateWithLifecycle()
     val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
+    val updateState by backend.updateState.collectAsStateWithLifecycle()
+    var pendingInstallApk by remember { mutableStateOf<java.io.File?>(null) }
 
     var blockedToday by remember { mutableLongStateOf(0L) }
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
@@ -141,6 +146,11 @@ fun OverviewScreen(backend: AppBackend) {
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         permResumeKey++
+        val pending = pendingInstallApk
+        if (pending != null && context.packageManager.canRequestPackageInstalls()) {
+            pendingInstallApk = null
+            ApkInstaller.launch(context, pending)
+        }
     }
     val permHealth = rememberPermissionHealth(backend, permResumeKey)
     LaunchedEffect(permHealth.loaded) {
@@ -265,6 +275,71 @@ fun OverviewScreen(backend: AppBackend) {
                         }
                     },
                 )
+            }
+
+            // 1.5 全域更新下載進度與安裝提醒橫幅（切換導覽不中斷下載）
+            val readyApk = updateState.downloadedFile
+            if (updateState.downloading || readyApk != null) {
+                item {
+                    val latest = updateState.info?.latestVersion.orEmpty()
+                    val bannerShape = RoundedCornerShape(tokens.cardCornerRadius)
+                    val bannerContainer = if (tokens.cardContainer != Color.Unspecified) {
+                        tokens.cardContainer
+                    } else {
+                        scheme.surfaceVariant.copy(alpha = 0.55f)
+                    }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = bannerShape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = bannerContainer,
+                            contentColor = scheme.onSurface,
+                        ),
+                        border = BorderStroke(1.dp, scheme.primary.copy(alpha = 0.45f)),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            if (updateState.downloading) {
+                                Text(
+                                    s.format(S.UpdateDownloadingTitle, latest, updateState.progress),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = scheme.primary,
+                                )
+                                LinearProgressIndicator(
+                                    progress = { (updateState.progress / 100f).coerceIn(0f, 1f) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            } else if (readyApk != null) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        s.format(S.UpdateReadyTitle, latest),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = scheme.primary,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    FilledTonalButton(
+                                        onClick = {
+                                            if (!ApkInstaller.launch(context, readyApk)) {
+                                                pendingInstallApk = readyApk
+                                            }
+                                        },
+                                    ) {
+                                        Text(s[S.UpdateInstallNow])
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // 2. 旗艦防護狀態橫幅卡片（右側獨立開關防誤觸，滑動瀏覽不會誤關防護）

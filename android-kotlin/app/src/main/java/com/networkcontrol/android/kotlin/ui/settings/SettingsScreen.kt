@@ -177,42 +177,14 @@ fun SettingsScreen(
     var showTrustedPublishersDialog by remember { mutableStateOf(false) }
     var showThemeColorDialog by remember { mutableStateOf(false) }
 
-    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
-    var checkingUpdate by remember { mutableStateOf(false) }
-    var downloadingUpdate by remember { mutableStateOf(false) }
-    var downloadProgress by remember { mutableIntStateOf(0) }
+    val updateState by backend.updateState.collectAsStateWithLifecycle()
     var pendingInstallApk by remember { mutableStateOf<java.io.File?>(null) }
     var showReleaseNotes by remember { mutableStateOf(false) }
     var showReleaseHistory by remember { mutableStateOf(false) }
 
     fun launchApkInstaller(apkFile: java.io.File) {
-        if (!apkFile.exists()) return
-        if (!context.packageManager.canRequestPackageInstalls()) {
+        if (!com.networkcontrol.android.kotlin.platform.ApkInstaller.launch(context, apkFile)) {
             pendingInstallApk = apkFile
-            runCatching {
-                context.startActivity(
-                    Intent(
-                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                        Uri.parse("package:${context.packageName}"),
-                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            }
-            return
-        }
-        pendingInstallApk = null
-        runCatching {
-            val uri = androidx.core.content.FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                apkFile,
-            )
-            val install = Intent(Intent.ACTION_VIEW).apply {
-                setDataAndType(uri, "application/vnd.android.package-archive")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(install)
-        }.onFailure {
-            Toast.makeText(context, it.message ?: "Install failed", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -715,24 +687,20 @@ fun SettingsScreen(
                                 toast(s[S.OfflineModeBlocked])
                                 return@OutlinedButton
                             }
-                            if (checkingUpdate) return@OutlinedButton
-                            checkingUpdate = true
-                            scope.launch {
-                                val info = UpdateChecker.checkAuto(
-                                    currentVersion = BuildConfig.VERSION_NAME,
-                                )
-                                updateInfo = info
-                                checkingUpdate = false
-                                when {
-                                    info.error != null -> toast(s.format(S.UpdateFailed, info.error))
-                                    info.hasUpdate -> toast(s.format(S.UpdateAvailable, info.latestVersion))
-                                    else -> toast(s[S.UpToDate])
+                            if (updateState.checking) return@OutlinedButton
+                            backend.checkUpdateManually { info ->
+                                scope.launch(Dispatchers.Main) {
+                                    when {
+                                        info.error != null -> toast(s.format(S.UpdateFailed, info.error))
+                                        info.hasUpdate -> toast(s.format(S.UpdateAvailable, info.latestVersion))
+                                        else -> toast(s[S.UpToDate])
+                                    }
                                 }
                             }
                         },
-                        enabled = !checkingUpdate,
+                        enabled = !updateState.checking,
                     ) {
-                        Text(if (checkingUpdate) s[S.Loading] else s[S.CheckUpdates])
+                        Text(if (updateState.checking) s[S.Loading] else s[S.CheckUpdates])
                     }
                 }
                 SettingsNavRow(
@@ -753,7 +721,8 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                updateInfo?.takeIf { it.hasUpdate }?.let { info ->
+                updateState.info?.takeIf { it.hasUpdate }?.let { info ->
+                    val readyApk = updateState.downloadedFile
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -763,10 +732,14 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f),
                             )
                             TextButton(
-                                enabled = !downloadingUpdate,
+                                enabled = !updateState.downloading,
                                 onClick = {
                                     if (offlineMode) {
                                         toast(s[S.OfflineModeBlocked])
+                                        return@TextButton
+                                    }
+                                    if (readyApk != null) {
+                                        launchApkInstaller(readyApk)
                                         return@TextButton
                                     }
                                     val url = info.downloadUrl ?: return@TextButton
@@ -777,41 +750,25 @@ fun SettingsScreen(
                                         )
                                         return@TextButton
                                     }
-                                    downloadingUpdate = true
-                                    downloadProgress = 0
-                                    val targetFile = java.io.File(
-                                        context.cacheDir,
-                                        "updates/PocketGate-${info.latestVersion ?: "latest"}.apk",
-                                    )
-                                    scope.launch {
-                                        val result = UpdateChecker.downloadApk(
-                                            url = url,
-                                            targetFile = targetFile,
-                                            fallbackUrl = info.fallbackDownloadUrl,
-                                            currentVersion = BuildConfig.VERSION_NAME,
-                                            onProgress = { progress -> downloadProgress = progress },
-                                        )
-                                        downloadingUpdate = false
-                                        result.onSuccess { file ->
-                                            launchApkInstaller(file)
-                                        }.onFailure { err ->
-                                            toast(s.format(S.UpdateFailed, err.message.orEmpty()))
+                                    backend.startUpdateDownload(info) { err ->
+                                        scope.launch(Dispatchers.Main) {
+                                            toast(s.format(S.UpdateFailed, err))
                                         }
                                     }
                                 },
                             ) {
                                 Text(
-                                    if (downloadingUpdate) {
-                                        "${s[S.Download]} $downloadProgress%"
-                                    } else {
-                                        s[S.UpdateDownload]
+                                    when {
+                                        updateState.downloading -> "${s[S.Download]} ${updateState.progress}%"
+                                        readyApk != null -> s[S.UpdateInstallNow]
+                                        else -> s[S.UpdateDownload]
                                     },
                                 )
                             }
                         }
-                        if (downloadingUpdate) {
+                        if (updateState.downloading) {
                             LinearProgressIndicator(
-                                progress = { (downloadProgress / 100f).coerceIn(0f, 1f) },
+                                progress = { (updateState.progress / 100f).coerceIn(0f, 1f) },
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }

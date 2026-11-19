@@ -172,6 +172,12 @@ class AppContainer(context: Context) {
         preferences = preferences,
         timedMinutes = { settings.state.value.promptTimedMinutes },
     )
+    val updateManager = com.networkcontrol.android.kotlin.core.update.AppUpdateManager(
+        scope = scope,
+        updatesDir = java.io.File(appContext.cacheDir, "updates"),
+        currentVersion = BuildConfig.VERSION_NAME,
+        offlineMode = { preferences.offlineMode },
+    )
     val backend = AppBackend(this)
     /** 桌面掛件、控制中心磁貼、長按捷徑的同步中心。 */
     val quickSurfaces = com.networkcontrol.android.kotlin.platform.quick.QuickSurfaces(this)

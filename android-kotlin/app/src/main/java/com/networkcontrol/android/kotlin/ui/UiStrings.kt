@@ -542,6 +542,13 @@ enum class S {
     PermGuideDone,
     AutoHideBottomBar,
     AutoHideBottomBarHint,
+    UpdatePromptBody,
+    UpdateNow,
+    UpdateDownloadingTitle,
+    UpdateReadyTitle,
+    UpdateReadyBody,
+    UpdateInstallNow,
+    UpdateInstallLater,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1106,6 +1113,13 @@ private val EN = mapOf(
     S.PermGuideDone to "Done",
     S.AutoHideBottomBar to "Auto-hide navigation bar",
     S.AutoHideBottomBarHint to "Smoothly hide the bottom bar when scrolling down and reveal it when scrolling up.",
+    S.UpdatePromptBody to "Current version %1\$s. Download the update package in the background now?",
+    S.UpdateNow to "Update now",
+    S.UpdateDownloadingTitle to "Downloading update %1\$s · %2\$d%%",
+    S.UpdateReadyTitle to "Update %1\$s ready to install",
+    S.UpdateReadyBody to "Version %1\$s has finished downloading. Install it now?",
+    S.UpdateInstallNow to "Install now",
+    S.UpdateInstallLater to "Install later",
 )
 
 private val CN = mapOf(
@@ -1646,6 +1660,13 @@ private val CN = mapOf(
     S.PermGuideDone to "全部就绪",
     S.AutoHideBottomBar to "滚动时自动隐藏导航栏",
     S.AutoHideBottomBarHint to "列表向下滑动时顺滑收起底部导航栏，向上滑动或切换页面时立即恢复显示。",
+    S.UpdatePromptBody to "当前版本 %1\$s，是否立即在后台下载新版安装包？",
+    S.UpdateNow to "立即更新",
+    S.UpdateDownloadingTitle to "正在下载更新 %1\$s · %2\$d%%",
+    S.UpdateReadyTitle to "新版本 %1\$s 已下载完成",
+    S.UpdateReadyBody to "新版本 %1\$s 安装包已下载完成，是否立即安装？",
+    S.UpdateInstallNow to "立即安装",
+    S.UpdateInstallLater to "稍后安装",
 )
 
 private val TW = mapOf(
@@ -2186,4 +2207,11 @@ private val TW = mapOf(
     S.PermGuideDone to "全部就緒",
     S.AutoHideBottomBar to "滾動時自動隱藏導覽列",
     S.AutoHideBottomBarHint to "列表向下滑動時順滑收起底部導覽列，向上滑動或切換頁面時立即恢復顯示。",
+    S.UpdatePromptBody to "目前版本 %1\$s，是否立即在背景下載新版安裝包？",
+    S.UpdateNow to "立即更新",
+    S.UpdateDownloadingTitle to "正在下載更新 %1\$s · %2\$d%%",
+    S.UpdateReadyTitle to "新版本 %1\$s 已下載完成",
+    S.UpdateReadyBody to "新版本 %1\$s 安裝包已下載完成，是否立即安裝？",
+    S.UpdateInstallNow to "立即安裝",
+    S.UpdateInstallLater to "稍後安裝",
 )

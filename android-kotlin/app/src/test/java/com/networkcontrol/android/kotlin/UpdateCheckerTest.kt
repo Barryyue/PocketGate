@@ -236,4 +236,64 @@ class UpdateCheckerTest {
             }
         }
     }
+
+    @Test
+    fun appUpdateManagerChecksOnEnterRespectsOfflineAndTracksDownloadToReadyPrompt() = kotlinx.coroutines.runBlocking {
+        val dir = java.nio.file.Files.createTempDirectory("pg-upd").toFile()
+        val scope = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Unconfined,
+        )
+        try {
+            var offline = true
+            var checkCalls = 0
+            val manager = com.networkcontrol.android.kotlin.core.update.AppUpdateManager(
+                scope = scope,
+                updatesDir = dir,
+                currentVersion = "0.15.6",
+                offlineMode = { offline },
+                checkUpdate = {
+                    checkCalls++
+                    com.networkcontrol.android.kotlin.core.update.UpdateInfo(
+                        latestVersion = "0.15.7",
+                        downloadUrl = "https://example.com/PocketGate-0.15.7.apk",
+                        currentVersion = "0.15.6",
+                    )
+                },
+                downloadApk = { _, targetFile, _, onProgress ->
+                    onProgress(40)
+                    targetFile.parentFile?.mkdirs()
+                    targetFile.writeBytes(byteArrayOf(0x50, 0x4B, 0x03, 0x04, 1, 2, 3, 4))
+                    onProgress(100)
+                    Result.success(targetFile)
+                },
+                nowMs = { 1_000_000L },
+            )
+
+            // 純離線模式下進入應用不應發起自動檢查
+            manager.checkOnEnter()
+            assertEquals(0, checkCalls)
+
+            // 關閉離線模式後進入應用自動檢查並彈出新版本提示
+            offline = false
+            manager.checkOnEnter()
+            assertEquals(1, checkCalls)
+            assertTrue(manager.state.value.showAvailablePrompt)
+            assertEquals("0.15.7", manager.state.value.info?.latestVersion)
+
+            // 開始下載：進度寫入檔案，完成後清除「發現新版本」並彈出「已就緒提醒安裝」
+            manager.startDownload()
+            val state = manager.state.value
+            assertTrue(!state.downloading)
+            assertEquals(100, state.progress)
+            assertTrue(state.downloadedFile?.exists() == true)
+            assertTrue(state.showReadyPrompt)
+            assertTrue(!state.showAvailablePrompt)
+
+            manager.dismissReadyPrompt()
+            assertTrue(!manager.state.value.showReadyPrompt)
+            assertTrue(manager.state.value.downloadedFile != null)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 }

@@ -60,6 +60,7 @@ class AppBackend(val container: AppContainer) {
     val network = container.network.state
     val focus = container.focus.session
     val focusSchedules = container.focusScheduler.schedules
+    val updateState = container.updateManager.state
 
     fun protectionStatus(): ProtectionStatus = container.vpnEngine.status()
 
@@ -1048,6 +1049,21 @@ class AppBackend(val container: AppContainer) {
     fun autoHideBottomBar(): Boolean = container.theme.autoHideBottomBar.value
 
     fun setAutoHideBottomBar(enabled: Boolean) = container.theme.setAutoHideBottomBar(enabled)
+
+    fun checkUpdateOnEnter() = container.updateManager.checkOnEnter()
+
+    fun checkUpdateManually(
+        onResult: ((com.networkcontrol.android.kotlin.core.update.UpdateInfo) -> Unit)? = null,
+    ) = container.updateManager.checkManually(onResult)
+
+    fun startUpdateDownload(
+        info: com.networkcontrol.android.kotlin.core.update.UpdateInfo? = null,
+        onError: ((String) -> Unit)? = null,
+    ) = container.updateManager.startDownload(info, onError)
+
+    fun dismissUpdateAvailablePrompt() = container.updateManager.dismissAvailablePrompt()
+
+    fun dismissUpdateReadyPrompt() = container.updateManager.dismissReadyPrompt()
 
     fun exportRules(): String = RuleTransferService.export(container.rules.all)
 

@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -81,8 +82,12 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppContainer
+import com.networkcontrol.android.kotlin.BuildConfig
+import com.networkcontrol.android.kotlin.platform.ApkInstaller
 import com.networkcontrol.android.kotlin.core.model.ToolbarStyle
 import com.networkcontrol.android.kotlin.ui.apps.AppsScreen
 import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
@@ -153,6 +158,18 @@ fun AppRoot(container: AppContainer) {
     }
 
     val backend = container.backend
+    val updateState by backend.updateState.collectAsStateWithLifecycle()
+    var pendingInstallApk by remember { mutableStateOf<java.io.File?>(null) }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        backend.checkUpdateOnEnter()
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        val pending = pendingInstallApk
+        if (pending != null && context.packageManager.canRequestPackageInstalls()) {
+            pendingInstallApk = null
+            ApkInstaller.launch(context, pending)
+        }
+    }
     val toolbarStyle by container.theme.toolbarStyle.collectAsStateWithLifecycle()
     val autoHideBottomBar by container.theme.autoHideBottomBar.collectAsStateWithLifecycle()
     val density = LocalDensity.current
@@ -391,6 +408,72 @@ fun AppRoot(container: AppContainer) {
             },
             dismissButton = {
                 TextButton(onClick = { showAppListPermission = false }) { Text(s[S.PromptLater]) }
+            },
+        )
+    }
+
+    val availableInfo = updateState.info
+    if (updateState.showAvailablePrompt && availableInfo != null && availableInfo.hasUpdate) {
+        val latest = availableInfo.latestVersion.orEmpty()
+        AlertDialog(
+            onDismissRequest = { backend.dismissUpdateAvailablePrompt() },
+            title = { Text(s.format(S.UpdateAvailable, latest)) },
+            text = { Text(s.format(S.UpdatePromptBody, BuildConfig.VERSION_NAME)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val url = availableInfo.downloadUrl
+                        if (url != null && !url.endsWith(".apk", ignoreCase = true)) {
+                            backend.dismissUpdateAvailablePrompt()
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(url),
+                                    ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                                )
+                            }
+                        } else {
+                            backend.startUpdateDownload(availableInfo) { err ->
+                                android.widget.Toast.makeText(
+                                    context,
+                                    s.format(S.UpdateFailed, err),
+                                    android.widget.Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        }
+                    },
+                ) { Text(s[S.UpdateNow]) }
+            },
+            dismissButton = {
+                TextButton(onClick = { backend.dismissUpdateAvailablePrompt() }) {
+                    Text(s[S.PromptLater])
+                }
+            },
+        )
+    }
+
+    val readyFile = updateState.downloadedFile
+    if (updateState.showReadyPrompt && readyFile != null) {
+        val latest = updateState.info?.latestVersion.orEmpty()
+        AlertDialog(
+            onDismissRequest = { backend.dismissUpdateReadyPrompt() },
+            title = { Text(s.format(S.UpdateReadyTitle, latest)) },
+            text = { Text(s.format(S.UpdateReadyBody, latest)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        backend.dismissUpdateReadyPrompt()
+                        if (!ApkInstaller.launch(context, readyFile)) {
+                            pendingInstallApk = readyFile
+                        }
+                    },
+                ) { Text(s[S.UpdateInstallNow]) }
+            },
+            dismissButton = {
+                TextButton(onClick = { backend.dismissUpdateReadyPrompt() }) {
+                    Text(s[S.UpdateInstallLater])
+                }
             },
         )
     }

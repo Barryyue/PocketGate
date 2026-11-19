@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.15.7",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "Auto update check & background download: checks for new releases on app entry (respecting offline mode) with a prompt dialog, shows live download progress at the top of Overview without interrupting across tab switches, and prompts to install once finished",
+                    "自动检查更新与后台持久化下载：每次进入应用自动检测新版本并弹窗提醒（尊重纯离线模式），在总览顶部显示实时下载进度条，切换导航不中断下载，下载完成后弹窗与横幅双提醒一键安装",
+                    "自動檢查更新與背景持久化下載：每次進入應用自動偵測新版本並彈窗提醒（尊重純離線模式），在總覽頂部顯示即時下載進度條，切換導覽不中斷下載，下載完成後彈窗與橫幅雙提醒一鍵安裝",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.15.6",
             date = "2026-11-19",
             features = listOf(
