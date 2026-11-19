@@ -356,7 +356,11 @@ class SpeedIslandController(
         val color = textColor()
         speedText?.apply {
             setTextColor(color)
-            setShadowLayer(4f, 0f, 1f, contrastShadow(color))
+            if (opacity <= 0.15f) {
+                setShadowLayer(1.5f, 0f, 0.5f, contrastShadow(color))
+            } else {
+                setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+            }
             setTextSize(
                 TypedValue.COMPLEX_UNIT_SP,
                 scaledTextSize(if (currentMode == SpeedIslandMode.Mini) 10f else 12f),
@@ -381,13 +385,13 @@ class SpeedIslandController(
         return typefaceCache
     }
 
-    /** 背景全透明時靠陰影拉開與桌布的對比：亮字配黑陰影，暗字配白陰影。 */
+    /** 背景全透明時靠極輕微陰影拉開與桌布的對比：大多數顏色配半透明黑影，極暗字才配淡白影。 */
     private fun contrastShadow(color: Int): Int {
         val r = (color shr 16) and 0xFF
         val g = (color shr 8) and 0xFF
         val b = color and 0xFF
         val luma = 0.299 * r + 0.587 * g + 0.114 * b
-        return if (luma > 140) Color.BLACK else Color.WHITE
+        return if (luma > 55) 0x80000000.toInt() else 0x80FFFFFF.toInt()
     }
 
     private fun textColor(): Int = when (preferences.speedIslandTextColorMode) {
@@ -471,10 +475,11 @@ class SpeedIslandController(
             setTextColor(textColor())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, textSize)
             typeface = labelTypeface()
+            includeFontPadding = false
+            paintFlags = paintFlags or android.graphics.Paint.SUBPIXEL_TEXT_FLAG or android.graphics.Paint.ANTI_ALIAS_FLAG
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
             maxWidth = dp(320)
-            setShadowLayer(4f, 0f, 1f, Color.BLACK)
             text = SpeedIslandFormatter.format(
                 content = preferences.speedIslandContent,
                 mode = mode,

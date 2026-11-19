@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.5",
+            date = "2026-11-19",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Fixed blurry text on the Dynamic Island overlay: removed the unconditional 4px white shadow halo when the capsule background is opaque, and enabled subpixel anti-aliasing for crisp text.",
+                    "修复灵动岛文字发虚模糊的问题：在胶囊有底色时移除原本无条件叠加的 4px 白色发光阴影，并开启亚像素抗锯齿，让小字清晰锐利。",
+                    "修正靈動島文字發虛模糊的問題：在膠囊有底色時移除原本無條件疊加的 4px 白色發光陰影，並開啟亞像素抗鋸齒，讓小字清晰銳利。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.4",
             date = "2026-11-19",
             features = listOf(
