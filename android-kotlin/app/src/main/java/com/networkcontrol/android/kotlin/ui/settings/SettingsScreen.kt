@@ -1,8 +1,8 @@
 package com.networkcontrol.android.kotlin.ui.settings
 
+import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
-import android.app.TimePickerDialog
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -11,11 +11,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,19 +30,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,20 +50,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -71,31 +67,41 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.BuildConfig
+import com.networkcontrol.android.kotlin.ForwardingUpstream
+import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
+import com.networkcontrol.android.kotlin.core.model.AutoActivateCondition
 import com.networkcontrol.android.kotlin.core.model.FilterMode
 import com.networkcontrol.android.kotlin.core.model.InstalledApp
+import com.networkcontrol.android.kotlin.core.model.NetworkContext
+import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import com.networkcontrol.android.kotlin.core.model.Profile
 import com.networkcontrol.android.kotlin.core.model.RuleImportMode
 import com.networkcontrol.android.kotlin.core.model.RuleImportPreview
-import com.networkcontrol.android.kotlin.core.model.ToolbarStyle
-import com.networkcontrol.android.kotlin.core.model.VerdictAction
-import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
+import com.networkcontrol.android.kotlin.core.model.SimInfo
 import com.networkcontrol.android.kotlin.core.model.SpeedIslandContent
 import com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
+import com.networkcontrol.android.kotlin.core.model.ToolbarStyle
+import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.core.release.ReleaseNote
 import com.networkcontrol.android.kotlin.core.release.ReleaseNotes
 import com.networkcontrol.android.kotlin.core.update.UpdateChecker
 import com.networkcontrol.android.kotlin.core.update.UpdateInfo
 import com.networkcontrol.android.kotlin.core.update.UpdateSource
-import com.networkcontrol.android.kotlin.platform.Socks5Probe
+import com.networkcontrol.android.kotlin.engine.apps.AppCatalog
+import com.networkcontrol.android.kotlin.engine.dns.DohProviders
+import com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner
+import com.networkcontrol.android.kotlin.ui.LocalBottomContentPadding
 import com.networkcontrol.android.kotlin.ui.S
+import com.networkcontrol.android.kotlin.ui.UiStrings
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
+import com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.NumberFormat
 import java.time.DayOfWeek
-import java.time.LocalTime
 import java.time.format.TextStyle
 import java.util.Locale
 import java.util.UUID
@@ -106,8 +112,11 @@ fun SettingsScreen(
     backend: AppBackend,
     onOpenIslandSettings: () -> Unit = {},
     onOpenBlocklists: () -> Unit = {},
+    onOpenPromptSettings: () -> Unit = {},
+    onOpenForwardingSettings: () -> Unit = {},
+    onOpenProfileSettings: () -> Unit = {},
 ) {
-    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
+    val guard = LocalSensitiveAction.current
     val s = rememberUiStrings()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -120,90 +129,70 @@ fun SettingsScreen(
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
     var toolbarStyle by remember { mutableStateOf(backend.toolbarStyle()) }
     val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
-    var overlayKey by remember { mutableIntStateOf(0) }
+    val blocklistState by backend.blocklistState.collectAsStateWithLifecycle()
+    val blocklistMatcher by backend.blocklistMatcher.collectAsStateWithLifecycle()
+    val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
+    val forwardingAvailable = remember { backend.forwardingAvailable() }
+
+    var resumeKey by remember { mutableIntStateOf(0) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        overlayKey++
+        resumeKey++
         backend.refreshSpeedIsland()
     }
-    val canDrawOverlays = remember(overlayKey) { backend.canDrawOverlays() }
-    var promptMode by remember { mutableStateOf(backend.promptPresentationMode()) }
-    var promptPosition by remember { mutableStateOf(backend.promptOverlayPosition()) }
-    var promptRatio by remember { mutableFloatStateOf(backend.promptOverlayCustomRatio()) }
-    var showOverlayPositionDialog by remember { mutableStateOf(false) }
-    var speedIsland by remember { mutableStateOf(backend.speedIslandEnabled()) }
-    var islandOpacity by remember { mutableFloatStateOf(backend.speedIslandOpacity()) }
-    var islandMode by remember { mutableStateOf(backend.speedIslandMode()) }
-    var promptDetails by remember { mutableStateOf(backend.promptShowDetails()) }
-    var hideOnLock by remember { mutableStateOf(backend.promptHideDetailsOnLockScreen()) }
+    val canDrawOverlays = remember(resumeKey) { backend.canDrawOverlays() }
+    val hasTrafficAccess = remember(resumeKey) { backend.hasTrafficAccess() }
+    val promptMode = remember(resumeKey) { backend.promptPresentationMode() }
+    var speedIsland by remember(resumeKey) { mutableStateOf(backend.speedIslandEnabled()) }
+    val islandOpacity = remember(resumeKey) { backend.speedIslandOpacity() }
+    val islandMode = remember(resumeKey) { backend.speedIslandMode() }
+    val islandContent = remember(resumeKey) { backend.speedIslandContent() }
+
     var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
     var lockWhitelist by remember { mutableStateOf(backend.lockScreenWhitelist()) }
     var showLockWhitelistDialog by remember { mutableStateOf(false) }
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
-    var forwardingEnabled by remember { mutableStateOf(backend.forwardingEnabled()) }
-    var forwardingUpstream by remember { mutableStateOf(backend.forwardingUpstream()) }
-    var dnsBypass by remember { mutableStateOf(backend.dnsBypassProtection()) }
-    var exitDns by remember { mutableStateOf(backend.exitDnsProvider()) }
-    var exitDnsUrl by remember { mutableStateOf(backend.exitDnsCustomUrl()) }
-    var exitDnsFallback by remember { mutableStateOf(backend.exitDnsFallback()) }
-    val viaProxy = forwardingUpstream == com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
-    var socks5Host by remember { mutableStateOf(backend.socks5Host()) }
-    var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
-    var socks5Udp by remember { mutableStateOf(backend.socks5Udp()) }
-    var socks5User by remember { mutableStateOf(backend.socks5Username()) }
-    var socks5Pass by remember { mutableStateOf(backend.socks5Password()) }
-    var proxyTesting by remember { mutableStateOf(false) }
-    var proxyPackage by remember { mutableStateOf(backend.socks5BypassPackage()) }
-    var showProxyAppDialog by remember { mutableStateOf(false) }
-    var directPackages by remember { mutableStateOf(backend.forwardingDirectPackages()) }
-    var showDirectAppsDialog by remember { mutableStateOf(false) }
-    // 已安裝應用列表需要 PackageManager：在背景載入，不在主執行緒上卡住界面。
-    val pickerApps by androidx.compose.runtime.produceState<List<com.networkcontrol.android.kotlin.core.model.InstalledApp>?>(
-        initialValue = null,
-        showProxyAppDialog,
-        showDirectAppsDialog,
-        showLockWhitelistDialog,
-    ) {
-        if (showProxyAppDialog || showDirectAppsDialog || showLockWhitelistDialog) {
-            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.installedApps() }
-        }
-    }
-    val installedCount by androidx.compose.runtime.produceState(initialValue = -1) {
-        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { backend.container.appCatalog.getApps().size }
-    }
-    val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
-    var showTimedOption by remember { mutableStateOf(backend.promptShowTimedOption()) }
+    var forwardingEnabled by remember(resumeKey) { mutableStateOf(backend.forwardingEnabled()) }
+    val forwardingUpstream = remember(resumeKey) { backend.forwardingUpstream() }
+    val viaProxy = forwardingUpstream == ForwardingUpstream.SOCKS5
+    val socks5Host = remember(resumeKey) { backend.socks5Host() }
+    val socks5Port = remember(resumeKey) { backend.socks5Port() }
+    val exitDns = remember(resumeKey) { backend.exitDnsProvider() }
+    val directPackages = remember(resumeKey) { backend.forwardingDirectPackages() }
+
     var notificationTitle by remember { mutableStateOf(backend.protectionNotificationTitle()) }
-    var denyPermanent by remember { mutableStateOf(backend.promptDenyPermanent()) }
-    val forwardingAvailable = remember { backend.forwardingAvailable() }
-    var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
-    var showScheduleDialog by remember { mutableStateOf(false) }
+    var showNotificationTitleDialog by remember { mutableStateOf(false) }
+    var showTrustedPublishersDialog by remember { mutableStateOf(false) }
+    var showThemeColorDialog by remember { mutableStateOf(false) }
+
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var checkingUpdate by remember { mutableStateOf(false) }
-    var updateSource by remember { mutableStateOf(backend.updateSource()) }
-    var updateRepo by remember { mutableStateOf(backend.updateRepo()) }
-    var updateCustomUrl by remember { mutableStateOf(backend.updateCustomUrl()) }
     var showReleaseNotes by remember { mutableStateOf(false) }
     var showReleaseHistory by remember { mutableStateOf(false) }
 
-    var timeoutText by remember(settings.promptTimeoutSeconds) {
-        mutableStateOf(settings.promptTimeoutSeconds.toString())
-    }
-    var onceBackgroundText by remember { mutableStateOf(backend.onceBackgroundMinutes().toString()) }
-    var exitDetection by remember { mutableStateOf(backend.processExitDetection()) }
-    var grantingExitDetection by remember { mutableStateOf(false) }
-    var showExitGrantGuide by remember { mutableStateOf(false) }
-    var timedMinutesText by remember(settings.promptTimedMinutes) {
-        mutableStateOf(settings.promptTimedMinutes.toString())
-    }
-    var editingProfile by remember { mutableStateOf<Profile?>(null) }
-    var showProfileDialog by remember { mutableStateOf(false) }
-    var showThemeColorDialog by remember { mutableStateOf(false) }
-    var deletingProfile by remember { mutableStateOf<Profile?>(null) }
     var importJson by remember { mutableStateOf<String?>(null) }
     var previewMerge by remember { mutableStateOf<RuleImportPreview?>(null) }
     var previewReplace by remember { mutableStateOf<RuleImportPreview?>(null) }
     var importMode by remember { mutableStateOf(RuleImportMode.Merge) }
     var showImportDialog by remember { mutableStateOf(false) }
+
+    // 已安裝應用列表需要 PackageManager：在背景載入，不在主執行緒上卡住界面。
+    val pickerApps by produceState<List<InstalledApp>?>(
+        initialValue = null,
+        showLockWhitelistDialog,
+    ) {
+        if (showLockWhitelistDialog) {
+            value = withContext(Dispatchers.IO) { backend.installedApps() }
+        }
+    }
+    val installedCount by produceState(initialValue = -1) {
+        value = withContext(Dispatchers.IO) { backend.container.appCatalog.getApps().size }
+    }
+    val appList by produceState<AppCatalog.AppListVisibility?>(
+        initialValue = null,
+        key1 = resumeKey,
+    ) {
+        value = withContext(Dispatchers.IO) { backend.appListVisibility() }
+    }
 
     fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
 
@@ -253,16 +242,17 @@ fun SettingsScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+        contentPadding = PaddingValues(
             start = 20.dp,
             top = 20.dp,
             end = 20.dp,
-            bottom = 20.dp + com.networkcontrol.android.kotlin.ui.LocalBottomContentPadding.current,
+            bottom = 20.dp + LocalBottomContentPadding.current,
         ),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item { ScreenHeader(s[S.Settings], s[S.SettingsSubtitle]) }
 
+        // 1. 外觀與顯示（語言、主題、主題色、工具欄樣式 Dropdown、靈動島）
         item {
             SectionCard(s[S.Appearance]) {
                 DropdownSetting(
@@ -299,7 +289,7 @@ fun SettingsScreen(
                     Text(s[S.ThemeColor], style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                     Box(
                         Modifier
-                            .size(30.dp)
+                            .size(28.dp)
                             .clip(CircleShape)
                             .background(themeColor)
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
@@ -309,297 +299,14 @@ fun SettingsScreen(
                         Text(s[S.Edit])
                     }
                 }
-                Text(s[S.ToolbarStyle], style = MaterialTheme.typography.bodyMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ToolbarStyle.entries.forEach { style ->
-                        FilterChip(
-                            toolbarStyle == style,
-                            {
-                                toolbarStyle = style
-                                backend.setToolbarStyle(style)
-                            },
-                            { Text(toolbarStyleLabel(s, style)) },
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            SectionCard(s[S.PromptSettings]) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(s[S.PromptTimeout], style = MaterialTheme.typography.bodyMedium)
-                    }
-                    OutlinedTextField(
-                        value = timeoutText,
-                        onValueChange = { value ->
-                            timeoutText = value.filter { it.isDigit() }.take(4)
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.width(110.dp),
-                    )
-                    TextButton(
-                        onClick = {
-                            val seconds = timeoutText.toIntOrNull() ?: settings.promptTimeoutSeconds
-                            backend.updateSettings { it.copy(promptTimeoutSeconds = seconds) }
-                            toast(s[S.Done])
-                        },
-                    ) { Text(s[S.Save]) }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(s[S.PromptTimedDuration], style = MaterialTheme.typography.bodyMedium)
-                    }
-                    OutlinedTextField(
-                        value = timedMinutesText,
-                        onValueChange = { value ->
-                            timedMinutesText = value.filter { it.isDigit() }.take(4)
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.width(110.dp),
-                    )
-                    TextButton(
-                        onClick = {
-                            val minutes = timedMinutesText.toIntOrNull() ?: settings.promptTimedMinutes
-                            backend.updateSettings { it.copy(promptTimedMinutes = minutes) }
-                            toast(s[S.Done])
-                        },
-                    ) { Text(s[S.Save]) }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(s[S.OnceBackgroundMinutes], style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            s[S.OnceBackgroundMinutesHint],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    OutlinedTextField(
-                        value = onceBackgroundText,
-                        onValueChange = { value ->
-                            onceBackgroundText = value.filter { it.isDigit() }.take(4)
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.width(110.dp),
-                    )
-                    TextButton(
-                        onClick = {
-                            val minutes = onceBackgroundText.toIntOrNull() ?: backend.onceBackgroundMinutes()
-                            backend.setOnceBackgroundMinutes(minutes)
-                            onceBackgroundText = backend.onceBackgroundMinutes().toString()
-                            toast(s[S.Done])
-                        },
-                    ) { Text(s[S.Save]) }
-                }
-                // 關閉偵測（DUMP）：已授權時「僅一次」「禁止」在應用真正關閉時才失效。
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        if (exitDetection) s[S.OnceExitDetectionOn] else s[S.OnceExitDetectionOff],
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (exitDetection) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (!exitDetection) {
-                        TextButton(
-                            enabled = !grantingExitDetection,
-                            onClick = {
-                                grantingExitDetection = true
-                                scope.launch {
-                                    val outcome = backend.grantExitDetection()
-                                    grantingExitDetection = false
-                                    exitDetection = backend.processExitDetection()
-                                    when (outcome) {
-                                        com.networkcontrol.android.kotlin.platform.permissions.DumpGrantOutcome.Granted ->
-                                            toast(if (exitDetection) s[S.OnceExitGrantOk] else s[S.OnceExitGrantRestart])
-                                        com.networkcontrol.android.kotlin.platform.permissions.DumpGrantOutcome.NoTool ->
-                                            showExitGrantGuide = true
-                                        com.networkcontrol.android.kotlin.platform.permissions.DumpGrantOutcome.Denied ->
-                                            toast(s[S.OnceExitGrantDenied])
-                                        is com.networkcontrol.android.kotlin.platform.permissions.DumpGrantOutcome.Failed ->
-                                            toast(s.format(S.OnceExitGrantFailed, outcome.message))
-                                    }
-                                }
-                            },
-                        ) { Text(s[S.OnceExitGrant]) }
-                    }
-                }
-                if (showExitGrantGuide) {
-                    val command = remember { backend.exitDetectionAdbCommand() }
-                    AlertDialog(
-                        onDismissRequest = { showExitGrantGuide = false },
-                        title = { Text(s[S.OnceExitGuideTitle]) },
-                        text = {
-                            androidx.compose.foundation.text.selection.SelectionContainer {
-                                Text(s[S.OnceExitGuideBody] + "\n\n" + command)
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    context.getSystemService(android.content.ClipboardManager::class.java)
-                                        ?.setPrimaryClip(android.content.ClipData.newPlainText("adb", command))
-                                    toast(s[S.Done])
-                                },
-                            ) { Text(s[S.Copy]) }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showExitGrantGuide = false }) { Text(s[S.Close]) }
-                        },
-                    )
-                }
-                SwitchRow(
-                    title = s[S.PromptTimedVisible],
-                    subtitle = s[S.PromptTimedVisibleHint],
-                    checked = showTimedOption,
-                    onCheckedChange = {
-                        showTimedOption = it
-                        backend.setPromptShowTimedOption(it)
-                    },
-                )
-                SwitchRow(
-                    title = s[S.PromptDenyPermanent],
-                    subtitle = s[S.PromptDenyPermanentHint],
-                    checked = denyPermanent,
-                    onCheckedChange = {
-                        denyPermanent = it
-                        backend.setPromptDenyPermanent(it)
-                    },
-                )
-                SwitchRow(
-                    title = s[S.PromptDefaultAction],
-                    subtitle = if (settings.promptDefaultAction == VerdictAction.Deny) s[S.Deny] else s[S.Allow],
-                    checked = settings.promptDefaultAction == VerdictAction.Allow,
-                    onCheckedChange = { allow ->
-                        backend.updateSettings {
-                            it.copy(promptDefaultAction = if (allow) VerdictAction.Allow else VerdictAction.Deny)
-                        }
-                    },
-                )
-                SwitchRow(
-                    title = s[S.AllowIcmp],
-                    checked = settings.allowIcmpByDefault,
-                    onCheckedChange = { allow ->
-                        backend.updateSettings { it.copy(allowIcmpByDefault = allow) }
-                    },
-                )
-            }
-        }
-
-        item {
-            SectionCard(s[S.PromptPresentation]) {
-                val autoOverlay = promptMode == "auto"
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        autoOverlay,
-                        {
-                            promptMode = "auto"
-                            backend.setPromptPresentationMode("auto")
-                        },
-                        { Text(s[S.PromptPresentationAuto]) },
-                    )
-                    FilterChip(
-                        !autoOverlay,
-                        {
-                            promptMode = "notification"
-                            backend.setPromptPresentationMode("notification")
-                        },
-                        { Text(s[S.PromptPresentationNotification]) },
-                    )
-                }
-                Text(
-                    s[S.PromptPresentationHint],
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (autoOverlay) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            s[S.OverlayPermission],
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            if (canDrawOverlays) s[S.OverlayGranted] else s[S.OverlayDenied],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (canDrawOverlays) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.error
-                            },
-                        )
-                        if (!canDrawOverlays) {
-                            Spacer(Modifier.width(8.dp))
-                            OutlinedButton(onClick = { context.startActivity(backend.overlayPermissionIntent()) }) {
-                                Text(s[S.OverlayGrant])
-                            }
-                        }
-                    }
-                    Text(s[S.OverlayPosition], style = MaterialTheme.typography.bodyMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            promptPosition != "bottom",
-                            {
-                                promptPosition = "top"
-                                backend.setPromptOverlayPosition("top")
-                            },
-                            { Text(s[S.OverlayTop]) },
-                        )
-                        FilterChip(
-                            promptPosition == "bottom",
-                            {
-                                promptPosition = "bottom"
-                                backend.setPromptOverlayPosition("bottom")
-                            },
-                            { Text(s[S.OverlayBottom]) },
-                        )
-                        FilterChip(
-                            promptPosition == "custom",
-                            {
-                                promptPosition = "custom"
-                                backend.setPromptOverlayPosition("custom")
-                            },
-                            { Text(s[S.OverlayCustom]) },
-                        )
-                    }
-                    if (promptPosition == "custom") {
-                        OutlinedButton(onClick = { showOverlayPositionDialog = true }) {
-                            Text(
-                                "${s[S.OverlayAdjustPosition]} " +
-                                    "(${(promptRatio * 100).roundToInt()}%)",
-                            )
-                        }
-                        Text(
-                            s[S.OverlayCustomHint],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Text(
-                        s[S.OverlayOemHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(s[S.PromptContentSettings], style = MaterialTheme.typography.bodyMedium)
-                SwitchRow(
-                    title = s[S.ShowPromptDetails],
-                    checked = promptDetails,
-                    onCheckedChange = {
-                        promptDetails = it
-                        backend.setPromptShowDetails(it)
-                    },
-                )
-                SwitchRow(
-                    title = s[S.HidePromptDetailsOnLock],
-                    checked = hideOnLock,
-                    onCheckedChange = {
-                        hideOnLock = it
-                        backend.setPromptHideDetailsOnLockScreen(it)
+                DropdownSetting(
+                    label = s[S.ToolbarStyle],
+                    current = toolbarStyleLabel(s, toolbarStyle),
+                    options = ToolbarStyle.entries.map { toolbarStyleLabel(s, it) to it.name },
+                    onSelected = { name ->
+                        val style = ToolbarStyle.entries.firstOrNull { it.name == name } ?: ToolbarStyle.ClassicSolid
+                        toolbarStyle = style
+                        backend.setToolbarStyle(style)
                     },
                 )
                 SwitchRow(
@@ -621,108 +328,82 @@ fun SettingsScreen(
                         SpeedIslandMode.Cycle -> s[S.IslandModeCycle]
                         SpeedIslandMode.Mini -> s[S.IslandModeMini]
                     }
-                    val contentLabel = when (backend.speedIslandContent()) {
+                    val contentLabel = when (islandContent) {
                         SpeedIslandContent.Speed -> s[S.IslandContentSpeed]
                         SpeedIslandContent.Traffic -> s[S.IslandContentTraffic]
                         SpeedIslandContent.Blocked -> s[S.IslandContentBlocked]
                         SpeedIslandContent.Pending -> s[S.IslandContentPending]
                         SpeedIslandContent.Network -> s[S.IslandContentNetwork]
                     }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenIslandSettings() },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(s[S.IslandConfig], style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                "$contentLabel · $modeLabel · ${(islandOpacity * 100).roundToInt()}%",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        TextButton(onClick = onOpenIslandSettings) { Text(s[S.Edit]) }
-                    }
-                }
-            }
-        }
-
-        item {
-            SectionCard(s[S.TrustSettings]) {
-                SwitchRow(
-                    title = s[S.AllowSystemApps],
-                    subtitle = s[S.AllowSystemAppsHint],
-                    checked = settings.allowSystemAppsByDefault,
-                    onCheckedChange = { backend.setAllowSystemAppsByDefault(it) },
-                )
-                Text(s[S.TrustedPublishers], style = MaterialTheme.typography.bodyMedium)
-                if (settings.trustedSigners.isEmpty()) {
-                    Text(
-                        s[S.NoTrustedPublishers],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    SettingsNavRow(
+                        title = s[S.IslandConfig],
+                        subtitle = "$contentLabel · $modeLabel · ${(islandOpacity * 100).roundToInt()}%",
+                        actionText = s[S.Edit],
+                        onClick = onOpenIslandSettings,
                     )
-                } else {
-                    settings.trustedSigners.forEach { signer ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "${signer.take(20)}…",
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.weight(1f),
-                            )
-                            TextButton(onClick = { backend.untrustPublisher(signer) }) {
-                                Text(s[S.Delete])
-                            }
-                        }
-                    }
-                    OutlinedButton(onClick = { backend.clearTrustedPublishers() }) {
-                        Text(s[S.ClearTrustedPublishers])
-                    }
                 }
             }
         }
 
+        // 2. 聯網詢問與通知（詢問二級頁入口、通知開關、通知標題彈框、系統通知設定）
         item {
-            SectionCard(s[S.Notifications]) {
+            SectionCard("${s[S.PromptSettings]} · ${s[S.Notifications]}") {
+                val presentationLabel = if (promptMode == "auto") {
+                    s[S.PromptPresentationAuto]
+                } else {
+                    s[S.PromptPresentationNotification]
+                }
+                val defaultActionLabel = if (settings.promptDefaultAction == VerdictAction.Deny) {
+                    s[S.Deny]
+                } else {
+                    s[S.Allow]
+                }
+                SettingsNavRow(
+                    title = s[S.PromptSettings],
+                    subtitle = "$presentationLabel · ${settings.promptTimeoutSeconds}s · $defaultActionLabel",
+                    actionText = s[S.Edit],
+                    onClick = onOpenPromptSettings,
+                )
                 SwitchRow(
                     title = s[S.NotificationsEnabled],
                     checked = backend.container.preferences.notificationsEnabled,
                     onCheckedChange = { backend.setNotificationsEnabled(it) },
                 )
-                OutlinedTextField(
-                    value = notificationTitle,
-                    onValueChange = { notificationTitle = it.take(80) },
-                    label = { Text(s[S.NotificationTitle]) },
-                    placeholder = { Text(s[S.ProtectionOn]) },
-                    supportingText = { Text(s[S.NotificationTitleHint]) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                SettingsNavRow(
+                    title = s[S.NotificationTitle],
+                    subtitle = notificationTitle.ifBlank { s[S.ProtectionOn] },
+                    actionText = s[S.Edit],
+                    onClick = { showNotificationTitleDialog = true },
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(
-                        onClick = {
-                            notificationTitle = ""
-                            backend.setProtectionNotificationTitle("")
-                            toast(s[S.Reset])
-                        },
-                    ) { Text(s[S.Reset]) }
-                    Spacer(Modifier.weight(1f))
-                    TextButton(
-                        onClick = {
-                            backend.setProtectionNotificationTitle(notificationTitle)
-                            toast(s[S.Done])
-                        },
-                    ) { Text(s[S.Save]) }
-                }
                 OutlinedButton(onClick = { context.startActivity(backend.openNotificationSettings()) }) {
                     Text(s[S.OpenNotificationSettings])
                 }
             }
         }
 
+        // 3. 防護、信任與網路（系統應用、可信發布者、鎖屏斷網、攔截列表、逐連線轉發模式）
         item {
             SectionCard(s[S.VpnSettings]) {
+                SwitchRow(
+                    title = s[S.AllowSystemApps],
+                    subtitle = s[S.AllowSystemAppsHint],
+                    checked = settings.allowSystemAppsByDefault,
+                    onCheckedChange = { backend.setAllowSystemAppsByDefault(it) },
+                )
+                SettingsNavRow(
+                    title = s[S.TrustedPublishers],
+                    subtitle = if (settings.trustedSigners.isEmpty()) {
+                        s[S.NoTrustedPublishers]
+                    } else {
+                        "${settings.trustedSigners.size}"
+                    },
+                    actionText = if (settings.trustedSigners.isEmpty()) null else s[S.Edit],
+                    onClick = {
+                        if (settings.trustedSigners.isNotEmpty()) {
+                            showTrustedPublishersDialog = true
+                        }
+                    },
+                )
                 SwitchRow(
                     title = s[S.BlockOnLock],
                     subtitle = s[S.BlockOnLockHint],
@@ -733,217 +414,27 @@ fun SettingsScreen(
                     },
                 )
                 if (blockOnLock) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                s[S.LockScreenWhitelist],
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Text(
-                                s.format(S.LockScreenWhitelistCount, lockWhitelist.size),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        TextButton(onClick = { showLockWhitelistDialog = true }) {
-                            Text(s[S.Select])
-                        }
-                    }
-                    Text(
-                        s[S.LockScreenWhitelistHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    SettingsNavRow(
+                        title = s[S.LockScreenWhitelist],
+                        subtitle = s.format(S.LockScreenWhitelistCount, lockWhitelist.size),
+                        actionText = s[S.Select],
+                        onClick = { showLockWhitelistDialog = true },
                     )
                 }
-                SwitchRow(
-                    title = s[S.AppLock],
-                    subtitle = s[S.AppLockHint],
-                    checked = appLock,
-                    onCheckedChange = { enabled ->
-                        if (enabled && !backend.isDeviceSecure()) {
-                            toast(s[S.AppLockNoCredential])
-                        } else if (!enabled) {
-                            // 關閉應用鎖本身就是敏感操作
-                            guard.run {
-                                appLock = false
-                                backend.setAppLockEnabled(false)
-                            }
-                        } else {
-                            appLock = true
-                            backend.setAppLockEnabled(true)
-                        }
-                    },
-                )
-                OutlinedButton(onClick = { context.startActivity(backend.openAlwaysOnVpnSettings()) }) {
-                    Text(s[S.AlwaysOnVpn])
-                }
-                OutlinedButton(onClick = { context.startActivity(backend.openBatteryOptimizationSettings()) }) {
-                    Text(s[S.BatteryOptimization])
-                }
-                Text(
-                    s[S.VpnConsentRequired],
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        item {
-            SectionCard(s[S.FocusSchedule]) {
-                Text(
-                    s[S.ScheduleHint],
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (focusSchedules.isEmpty()) {
-                    Text(
-                        s[S.NoFocusSchedules],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                focusSchedules.forEach { schedule ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                "${schedule.dayLabel(context)} ${schedule.timeLabel()}",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                        Switch(
-                            checked = schedule.enabled,
-                            onCheckedChange = { backend.setFocusScheduleEnabled(schedule.id, it) },
+                SettingsNavRow(
+                    title = s[S.Blocklists],
+                    subtitle = if (blocklistState.enabled) {
+                        s.format(
+                            S.BlocklistsActive,
+                            NumberFormat.getIntegerInstance().format(blocklistMatcher.totalEntries),
+                            blocklistState.lists.count { it.enabled && it.entries > 0 },
                         )
-                        TextButton(onClick = { backend.deleteFocusSchedule(schedule.id) }) {
-                            Text(s[S.Delete])
-                        }
-                    }
-                }
-                OutlinedButton(onClick = {
-                    editingSchedule = null
-                    showScheduleDialog = true
-                }) { Text(s[S.AddSchedule]) }
-            }
-        }
-
-        item {
-            SectionCard(s[S.DataSettings]) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(s[S.UsageAccess], style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            if (backend.hasTrafficAccess()) s[S.UsageAccessGranted] else s[S.UsageAccessDenied],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (!backend.hasTrafficAccess()) {
-                        OutlinedButton(onClick = { context.startActivity(backend.trafficAccessIntent()) }) {
-                            Text(s[S.GrantAccess])
-                        }
-                    }
-                }
-                val appListKey = remember { mutableIntStateOf(0) }
-                LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { appListKey.intValue++ }
-                val appList by produceState<com.networkcontrol.android.kotlin.engine.apps.AppCatalog.AppListVisibility?>(
-                    initialValue = null,
-                    key1 = appListKey.intValue,
-                ) {
-                    value = withContext(Dispatchers.IO) { backend.appListVisibility() }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(s[S.AppListPermission], style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            if (appList?.restricted == true) s[S.AppListPermissionRestricted] else s[S.AppListPermissionOk],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (appList?.restricted == true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (appList?.restricted == true) {
-                        OutlinedButton(onClick = { context.startActivity(backend.openAppSettings()) }) {
-                            Text(s[S.GoToSettings])
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            SectionCard(s[S.ProfileSettings]) {
-                profiles.forEach { profile ->
-                    ProfileRow(
-                        profile = profile,
-                        active = profile.id == runtime.activeProfileId,
-                        s = s,
-                        onActivate = { backend.activateProfile(profile.id) },
-                        onEdit = {
-                            editingProfile = profile
-                            showProfileDialog = true
-                        },
-                        onDelete = { deletingProfile = profile },
-                    )
-                }
-                OutlinedButton(
-                    onClick = {
-                        editingProfile = null
-                        showProfileDialog = true
-                    },
-                ) { Text(s[S.AddProfile]) }
-                OutlinedButton(onClick = { backend.createFocusProfile(copyFromCurrent = true) }) {
-                    Text(s[S.CreateFocusProfile])
-                }
-            }
-        }
-
-        item {
-            SectionCard(s[S.Transfer]) {
-                OutlinedButton(onClick = { exportLauncher.launch("networkcontrol-rules.json") }) {
-                    Text(s[S.ExportRules])
-                }
-                OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) }) {
-                    Text(s[S.ImportRules])
-                }
-            }
-        }
-
-        item {
-            SectionCard(s[S.Diagnostics]) {
-                OutlinedButton(
-                    onClick = {
-                        scope.launch {
-                            runCatching { withContext(Dispatchers.IO) { backend.exportDiagnostics() } }
-                                .onSuccess { file ->
-                                    val uri = backend.diagnosticsShareUri(file)
-                                    val send = Intent(Intent.ACTION_SEND).apply {
-                                        type = "application/zip"
-                                        putExtra(Intent.EXTRA_STREAM, uri)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(Intent.createChooser(send, s[S.Share]))
-                                }
-                                .onFailure { toast(s.format(S.ExportFailed, it.message.orEmpty())) }
-                        }
-                    },
-                ) { Text(s[S.ExportDiagnostics]) }
-            }
-        }
-
-        item {
-            SectionCard(s[S.ForwardingMode]) {
-                Text(
-                    s[S.ForwardingHint],
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    if (forwardingAvailable) s[S.ForwardingAvailable] else s[S.ForwardingUnavailable],
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (forwardingAvailable) {
-                        MaterialTheme.colorScheme.primary
                     } else {
-                        MaterialTheme.colorScheme.error
+                        s[S.Off]
                     },
+                    subtitleHighlighted = blocklistState.enabled,
+                    actionText = s[S.Edit],
+                    onClick = onOpenBlocklists,
                 )
                 SwitchRow(
                     title = s[S.ForwardingMode],
@@ -959,382 +450,202 @@ fun SettingsScreen(
                         }
                     },
                 )
-                if (forwardingEnabled) {
-                    Text(
-                        if (forwardingActive) s[S.ForwardingStatusActive] else s[S.ForwardingStatusInactive],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (forwardingActive) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.error
-                        },
-                    )
-                    Text(s[S.ForwardingUpstream], style = MaterialTheme.typography.bodyMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = !viaProxy,
-                            onClick = {
-                                forwardingUpstream = com.networkcontrol.android.kotlin.ForwardingUpstream.DIRECT
-                                backend.setForwardingUpstream(forwardingUpstream)
-                            },
-                            label = { Text(s[S.UpstreamDirect]) },
-                        )
-                        FilterChip(
-                            selected = viaProxy,
-                            onClick = {
-                                forwardingUpstream = com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
-                                backend.setForwardingUpstream(forwardingUpstream)
-                            },
-                            label = { Text(s[S.UpstreamSocks5]) },
-                        )
-                    }
-                    if (!viaProxy) {
-                        Text(
-                            s[S.UpstreamDirectHint],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    if (viaProxy) {
-                    Text(
-                        s[S.ForwardingGuide],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedTextField(
-                        value = socks5Host,
-                        onValueChange = { socks5Host = it },
-                        label = { Text(s[S.Socks5Host]) },
-                        singleLine = true,
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = socks5Port,
-                            onValueChange = {
-                                socks5Port = it.filter { char -> char.isDigit() }.take(5)
-                            },
-                            label = { Text(s[S.Socks5Port]) },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        TextButton(
-                            onClick = {
-                                backend.setSocks5Host(socks5Host)
-                                backend.setSocks5Port(socks5Port.toIntOrNull() ?: 7890)
-                                backend.setSocks5Credentials(socks5User, socks5Pass)
-                                toast(s[S.Done])
-                            },
-                        ) { Text(s[S.Save]) }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = socks5User,
-                            onValueChange = { socks5User = it },
-                            label = { Text(s[S.Socks5Username]) },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                        )
-                        OutlinedTextField(
-                            value = socks5Pass,
-                            onValueChange = { socks5Pass = it },
-                            label = { Text(s[S.Socks5Password]) },
-                            singleLine = true,
-                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    }
-                    SwitchRow(
-                        title = s[S.Socks5Udp],
-                        subtitle = s[S.Socks5UdpHint],
-                        checked = socks5Udp,
-                        onCheckedChange = {
-                            socks5Udp = it
-                            backend.setSocks5Udp(it)
-                        },
-                    )
-                    SwitchRow(
-                        title = s[S.DnsBypassProtection],
-                        subtitle = s[S.DnsBypassProtectionHint],
-                        checked = dnsBypass,
-                        onCheckedChange = {
-                            val value = it
-                            guard.run {
-                                dnsBypass = value
-                                backend.setDnsBypassProtection(value)
-                            }
-                        },
-                    )
-                    if (!viaProxy) {
-                        Text(s[S.ExitDns], style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            s[S.ExitDnsHint],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        val dnsOptions = listOf("system" to s[S.ExitDnsSystem]) +
-                            com.networkcontrol.android.kotlin.engine.dns.DohProviders.all.map { it.id to it.name } +
-                            listOf("custom" to s[S.ExitDnsCustom])
-                        Row(
-                            modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            dnsOptions.forEach { (id, label) ->
-                                FilterChip(
-                                    selected = exitDns == id,
-                                    onClick = {
-                                        exitDns = id
-                                        backend.setExitDnsProvider(id)
-                                    },
-                                    label = { Text(label) },
-                                )
-                            }
-                        }
-                        if (exitDns == "custom") {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedTextField(
-                                    value = exitDnsUrl,
-                                    onValueChange = { exitDnsUrl = it.trim() },
-                                    label = { Text(s[S.ExitDnsCustomUrl]) },
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                TextButton(onClick = {
-                                    backend.setExitDnsCustomUrl(exitDnsUrl)
-                                    toast(s[S.Done])
-                                }) { Text(s[S.Save]) }
-                            }
-                        }
-                        if (exitDns != "system") {
-                            SwitchRow(
-                                title = s[S.ExitDnsFallback],
-                                subtitle = s[S.ExitDnsFallbackHint],
-                                checked = exitDnsFallback,
-                                onCheckedChange = {
-                                    exitDnsFallback = it
-                                    backend.setExitDnsFallback(it)
-                                },
-                            )
-                        }
-                    }
-                    if (viaProxy) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(s[S.ProxyApp], style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                proxyPackage ?: s[S.Unset],
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        TextButton(onClick = { showProxyAppDialog = true }) {
-                            Text(s[S.Select])
-                        }
-                    }
-                    Text(
-                        s[S.ProxyAppHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(s[S.DirectApps], style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                s.format(S.DirectAppsCount, directPackages.size),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        TextButton(onClick = { showDirectAppsDialog = true }) {
-                            Text(s[S.Select])
-                        }
-                    }
-                    Text(
-                        s[S.DirectAppsHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (viaProxy) {
-                    OutlinedButton(
-                        onClick = {
-                            proxyTesting = true
-                            scope.launch {
-                                val error = Socks5Probe.test(
-                                    host = socks5Host,
-                                    port = socks5Port.toIntOrNull() ?: 7890,
-                                    username = socks5User.trim().ifEmpty { null },
-                                    password = socks5Pass,
-                                )
-                                proxyTesting = false
-                                toast(
-                                    if (error == null) {
-                                        s[S.ProxyTestSuccess]
-                                    } else {
-                                        s.format(S.ProxyTestFailed, error)
-                                    },
-                                )
-                            }
-                        },
-                        enabled = !proxyTesting,
-                    ) {
-                        Text(if (proxyTesting) s[S.Loading] else s[S.ProxyTest])
-                    }
-                    Text(
-                        s[S.ForwardingDnsHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    }
-                    Text(
-                        s[S.ForwardingAbiHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                val exitDnsLabel = when (exitDns) {
+                    "system" -> s[S.ExitDnsSystem]
+                    "custom" -> s[S.ExitDnsCustom]
+                    else -> DohProviders.all.firstOrNull { it.id == exitDns }?.name ?: exitDns
                 }
+                val upstreamSummary = if (viaProxy) {
+                    "${s[S.UpstreamSocks5]} ($socks5Host:$socks5Port)"
+                } else {
+                    "${s[S.UpstreamDirect]} ($exitDnsLabel)"
+                }
+                val forwardingStatusSummary = when {
+                    !forwardingAvailable -> s[S.ForwardingUnavailable]
+                    forwardingEnabled && forwardingActive -> "${s[S.ForwardingStatusActive]} · $upstreamSummary"
+                    forwardingEnabled -> "${s[S.ForwardingStatusInactive]} · $upstreamSummary"
+                    else -> "$upstreamSummary · ${s.format(S.DirectAppsCount, directPackages.size)}"
+                }
+                SettingsNavRow(
+                    title = s[S.ForwardingUpstream],
+                    subtitle = forwardingStatusSummary,
+                    subtitleHighlighted = forwardingEnabled && forwardingActive,
+                    actionText = s[S.Edit],
+                    onClick = onOpenForwardingSettings,
+                )
             }
         }
 
+        // 4. 配置檔案與專注時間表
         item {
-            val blocklistState by backend.blocklistState.collectAsStateWithLifecycle()
-            val blocklistMatcher by backend.blocklistMatcher.collectAsStateWithLifecycle()
-            SectionCard(s[S.Blocklists]) {
+            SectionCard("${s[S.ProfileSettings]} · ${s[S.FocusSchedule]}") {
+                val activeProfile = profiles.firstOrNull { it.id == runtime.activeProfileId } ?: profiles.firstOrNull()
+                val profileSummary = if (activeProfile != null) {
+                    "${activeProfile.name} (${activeProfile.mode.name}) · ${profiles.size}"
+                } else {
+                    "${profiles.size}"
+                }
+                SettingsNavRow(
+                    title = s[S.ProfileSettings],
+                    subtitle = profileSummary,
+                    actionText = s[S.Edit],
+                    onClick = onOpenProfileSettings,
+                )
+                val scheduleSummary = if (focusSchedules.isEmpty()) {
+                    s[S.NoFocusSchedules]
+                } else {
+                    val activeCount = focusSchedules.count { it.enabled }
+                    val first = focusSchedules.first()
+                    "$activeCount / ${focusSchedules.size} · ${first.dayLabel(context)} ${first.timeLabel()}"
+                }
+                SettingsNavRow(
+                    title = s[S.FocusSchedule],
+                    subtitle = scheduleSummary,
+                    actionText = s[S.Edit],
+                    onClick = onOpenProfileSettings,
+                )
+            }
+        }
+
+        // 5. 安全與系統權限（應用鎖、權限檢查、常駐 VPN 與電池最佳化並排）
+        item {
+            SectionCard(s[S.DataSettings]) {
+                SwitchRow(
+                    title = s[S.AppLock],
+                    subtitle = s[S.AppLockHint],
+                    checked = appLock,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !backend.isDeviceSecure()) {
+                            toast(s[S.AppLockNoCredential])
+                        } else if (!enabled) {
+                            guard.run {
+                                appLock = false
+                                backend.setAppLockEnabled(false)
+                            }
+                        } else {
+                            appLock = true
+                            backend.setAppLockEnabled(true)
+                        }
+                    },
+                )
+                PermissionRow(
+                    title = s[S.UsageAccess],
+                    statusText = if (hasTrafficAccess) s[S.UsageAccessGranted] else s[S.UsageAccessDenied],
+                    ok = hasTrafficAccess,
+                    actionText = if (hasTrafficAccess) null else s[S.GrantAccess],
+                    onAction = { context.startActivity(backend.trafficAccessIntent()) },
+                )
+                val appListRestricted = appList?.restricted == true
+                PermissionRow(
+                    title = s[S.AppListPermission],
+                    statusText = if (appListRestricted) s[S.AppListPermissionRestricted] else s[S.AppListPermissionOk],
+                    ok = !appListRestricted,
+                    actionText = if (appListRestricted) s[S.GoToSettings] else null,
+                    onAction = { context.startActivity(backend.openAppSettings()) },
+                )
+                PermissionRow(
+                    title = s[S.OverlayPermission],
+                    statusText = if (canDrawOverlays) s[S.OverlayGranted] else s[S.OverlayDenied],
+                    ok = canDrawOverlays,
+                    actionText = if (canDrawOverlays) null else s[S.OverlayGrant],
+                    onAction = { context.startActivity(backend.overlayPermissionIntent()) },
+                )
                 Row(
-                    modifier = Modifier.fillMaxWidth().clickable { onOpenBlocklists() },
-                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(s[S.BlocklistsSubtitle], style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            if (blocklistState.enabled) {
-                                s.format(
-                                    S.BlocklistsActive,
-                                    java.text.NumberFormat.getIntegerInstance().format(blocklistMatcher.totalEntries),
-                                    blocklistState.lists.count { it.enabled && it.entries > 0 },
-                                )
-                            } else {
-                                s[S.Off]
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (blocklistState.enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    OutlinedButton(
+                        onClick = { context.startActivity(backend.openAlwaysOnVpnSettings()) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(s[S.AlwaysOnVpn])
                     }
-                    TextButton(onClick = onOpenBlocklists) { Text(s[S.Edit]) }
+                    OutlinedButton(
+                        onClick = { context.startActivity(backend.openBatteryOptimizationSettings()) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(s[S.BatteryOptimization])
+                    }
                 }
             }
         }
 
+        // 6. 資料、診斷與關於（規則導入導出 + 診斷 + 檢查更新並排、版本與狀態摘要）
         item {
             SectionCard(s[S.About]) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            showReleaseHistory = false
-                            showReleaseNotes = true
-                        },
-                    verticalAlignment = Alignment.CenterVertically,
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    DetailLine(s[S.Version], "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        s[S.ViewDetails],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                DetailLine(s[S.Engine], "AndroidVpn")
-                if (backend.isWorkProfile()) {
-                    DetailLine(s[S.WorkProfile], "✓")
-                    Text(
-                        s[S.WorkProfileHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                DetailLine(s[S.Status], "${runtime.mode.name} / ${backend.protectionStatus().name}")
-                DetailLine(s[S.SkippedRules], plan.skippedRules.size.toString())
-                DetailLine(s[S.AppsCount], if (installedCount < 0) "…" else installedCount.toString())
-                Text(s[S.UpdateSource], style = MaterialTheme.typography.bodyMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    UpdateSource.entries.forEach { source ->
-                        FilterChip(
-                            updateSource == source,
-                            {
-                                updateSource = source
-                                backend.setUpdateSource(source)
-                            },
-                            { Text(updateSourceLabel(s, source)) },
-                        )
+                    OutlinedButton(onClick = { exportLauncher.launch("pocketgate-rules.json") }) {
+                        Text(s[S.ExportRules])
+                    }
+                    OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) }) {
+                        Text(s[S.ImportRules])
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                runCatching { withContext(Dispatchers.IO) { backend.exportDiagnostics() } }
+                                    .onSuccess { file ->
+                                        val uri = backend.diagnosticsShareUri(file)
+                                        val send = Intent(Intent.ACTION_SEND).apply {
+                                            type = "application/zip"
+                                            putExtra(Intent.EXTRA_STREAM, uri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(Intent.createChooser(send, s[S.Share]))
+                                    }
+                                    .onFailure { toast(s.format(S.ExportFailed, it.message.orEmpty())) }
+                            }
+                        },
+                    ) { Text(s[S.ExportDiagnostics]) }
+                    OutlinedButton(
+                        onClick = {
+                            if (checkingUpdate) return@OutlinedButton
+                            checkingUpdate = true
+                            scope.launch {
+                                val info = UpdateChecker.checkAuto(
+                                    currentVersion = BuildConfig.VERSION_NAME,
+                                )
+                                updateInfo = info
+                                checkingUpdate = false
+                                when {
+                                    info.error != null -> toast(s.format(S.UpdateFailed, info.error))
+                                    info.hasUpdate -> toast(s.format(S.UpdateAvailable, info.latestVersion))
+                                    else -> toast(s[S.UpToDate])
+                                }
+                            }
+                        },
+                        enabled = !checkingUpdate,
+                    ) {
+                        Text(if (checkingUpdate) s[S.Loading] else s[S.CheckUpdates])
                     }
                 }
-                OutlinedTextField(
-                    value = if (updateSource == UpdateSource.Custom) updateCustomUrl else updateRepo,
-                    onValueChange = {
-                        if (updateSource == UpdateSource.Custom) updateCustomUrl = it
-                        else updateRepo = it
+                SettingsNavRow(
+                    title = "${s[S.Version]}：${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    subtitle = "AndroidVpn · ${runtime.mode.name} / ${backend.protectionStatus().name} · " +
+                        "${s[S.AppsCount]} ${if (installedCount < 0) "…" else installedCount} · " +
+                        "${s[S.SkippedRules]} ${plan.skippedRules.size}",
+                    actionText = s[S.ViewDetails],
+                    onClick = {
+                        showReleaseHistory = false
+                        showReleaseNotes = true
                     },
-                    label = {
-                        Text(
-                            if (updateSource == UpdateSource.Custom) {
-                                s[S.UpdateCustomUrl]
-                            } else {
-                                s[S.UpdateRepo]
-                            },
-                        )
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (backend.isWorkProfile()) {
                     Text(
-                        s[S.UpdateRepoHint],
+                        "${s[S.WorkProfile]} ✓ · ${s[S.WorkProfileHint]}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
                     )
-                    TextButton(
-                        onClick = {
-                            backend.setUpdateSource(updateSource)
-                            backend.setUpdateRepo(updateRepo)
-                            backend.setUpdateCustomUrl(updateCustomUrl)
-                            toast(s[S.Done])
-                        },
-                    ) { Text(s[S.Save]) }
-                }
-                OutlinedButton(
-                    onClick = {
-                        if (checkingUpdate) return@OutlinedButton
-                        checkingUpdate = true
-                        scope.launch {
-                            backend.setUpdateSource(updateSource)
-                            backend.setUpdateRepo(updateRepo)
-                            backend.setUpdateCustomUrl(updateCustomUrl)
-                            val info = UpdateChecker.check(
-                                currentVersion = BuildConfig.VERSION_NAME,
-                                source = updateSource,
-                                repo = updateRepo,
-                                customUrl = updateCustomUrl,
-                            )
-                            updateInfo = info
-                            checkingUpdate = false
-                            when {
-                                info.error != null -> toast(s.format(S.UpdateFailed, info.error))
-                                info.hasUpdate -> toast(s.format(S.UpdateAvailable, info.latestVersion))
-                                else -> toast(s[S.UpToDate])
-                            }
-                        }
-                    },
-                    enabled = !checkingUpdate,
-                ) {
-                    Text(if (checkingUpdate) s[S.Loading] else s[S.CheckUpdates])
                 }
                 updateInfo?.takeIf { it.hasUpdate }?.let { info ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             s.format(S.UpdateAvailable, info.latestVersion.orEmpty()),
                             style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.weight(1f),
                         )
                         TextButton(onClick = {
@@ -1353,21 +664,6 @@ fun SettingsScreen(
         item { Spacer(Modifier.height(12.dp)) }
     }
 
-    if (showProfileDialog) {
-        ProfileDialog(
-            profile = editingProfile,
-            currentNetwork = backend.container.network.current,
-            loadSims = { backend.subscriptions() },
-            onDismiss = { showProfileDialog = false },
-            onSave = { name, mode, auto ->
-                val current = editingProfile
-                if (current == null) backend.createProfile(name, mode, auto)
-                else backend.updateProfile(current.id, name, mode, auto)
-                showProfileDialog = false
-            },
-        )
-    }
-
     if (showThemeColorDialog) {
         ThemeColorDialog(
             current = themeColor,
@@ -1376,17 +672,34 @@ fun SettingsScreen(
         )
     }
 
-    val proxyApps = pickerApps
-    if (showProxyAppDialog && proxyApps != null) {
-        ProxyAppDialog(
-            apps = proxyApps,
-            selected = proxyPackage,
-            onDismiss = { showProxyAppDialog = false },
-            onSelect = { packageName ->
-                proxyPackage = packageName
-                backend.setSocks5BypassPackage(packageName)
-                showProxyAppDialog = false
+    if (showNotificationTitleDialog) {
+        NotificationTitleDialog(
+            initialTitle = notificationTitle,
+            onDismiss = { showNotificationTitleDialog = false },
+            onReset = {
+                notificationTitle = ""
+                backend.setProtectionNotificationTitle("")
+                showNotificationTitleDialog = false
+                toast(s[S.Reset])
             },
+            onSave = { newTitle ->
+                notificationTitle = newTitle
+                backend.setProtectionNotificationTitle(newTitle)
+                showNotificationTitleDialog = false
+                toast(s[S.Done])
+            },
+        )
+    }
+
+    if (showTrustedPublishersDialog) {
+        TrustedPublishersDialog(
+            signers = settings.trustedSigners,
+            onUntrust = { backend.untrustPublisher(it) },
+            onClearAll = {
+                backend.clearTrustedPublishers()
+                showTrustedPublishersDialog = false
+            },
+            onDismiss = { showTrustedPublishersDialog = false },
         )
     }
 
@@ -1394,21 +707,6 @@ fun SettingsScreen(
     val allowedByRulePackages = remember(directApps, ruleSet.version, network) {
         directApps?.let { backend.allowedByRulePackages(it) } ?: emptySet()
     }
-    if (showDirectAppsDialog && directApps != null) {
-        DirectAppsDialog(
-            title = s[S.DirectApps],
-            apps = directApps,
-            initial = directPackages,
-            allowedByRulePackages = allowedByRulePackages,
-            onDismiss = { showDirectAppsDialog = false },
-            onSave = { packages ->
-                directPackages = packages
-                guard.run { backend.setForwardingDirectPackages(packages) }
-                showDirectAppsDialog = false
-            },
-        )
-    }
-
     if (showLockWhitelistDialog && directApps != null) {
         DirectAppsDialog(
             title = s[S.LockScreenWhitelist],
@@ -1424,52 +722,12 @@ fun SettingsScreen(
         )
     }
 
-    if (showScheduleDialog) {
-        ScheduleDialog(
-            schedule = editingSchedule,
-            onDismiss = { showScheduleDialog = false },
-            onSave = { schedule ->
-                backend.saveFocusSchedule(schedule)
-                showScheduleDialog = false
-            },
-        )
-    }
-
-    if (showOverlayPositionDialog) {
-        OverlayPositionDialog(
-            initialRatio = promptRatio,
-            onDismiss = { showOverlayPositionDialog = false },
-            onSave = { ratio ->
-                promptRatio = ratio
-                backend.setPromptOverlayCustomRatio(ratio)
-                showOverlayPositionDialog = false
-            },
-        )
-    }
-
     if (showReleaseNotes) {
         ReleaseNotesDialog(
             currentVersion = BuildConfig.VERSION_NAME,
             history = showReleaseHistory,
             onToggleHistory = { showReleaseHistory = !showReleaseHistory },
             onDismiss = { showReleaseNotes = false },
-        )
-    }
-
-    deletingProfile?.let { profile ->
-        AlertDialog(
-            onDismissRequest = { deletingProfile = null },
-            title = { Text(s[S.DeleteProfile]) },
-            text = { Text(s[S.DeleteProfileConfirm]) },
-            confirmButton = {
-                TextButton(onClick = {
-                    backend.deleteProfile(profile.id)
-                    deletingProfile = null
-                }) { Text(s[S.Delete]) }
-            },
-            dismissButton = {
-                TextButton(onClick = { deletingProfile = null }) { Text(s[S.Cancel]) }
-            },
         )
     }
 
@@ -1495,10 +753,159 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun ProfileRow(
+private fun SettingsNavRow(
+    title: String,
+    subtitle: String,
+    actionText: String?,
+    subtitleHighlighted: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (subtitleHighlighted) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        }
+        if (actionText != null) {
+            TextButton(onClick = onClick) {
+                Text(actionText)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    title: String,
+    statusText: String,
+    ok: Boolean,
+    actionText: String?,
+    onAction: () -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                statusText,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (ok) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+            )
+        }
+        if (actionText != null) {
+            OutlinedButton(onClick = onAction) {
+                Text(actionText)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationTitleDialog(
+    initialTitle: String,
+    onDismiss: () -> Unit,
+    onReset: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var title by remember(initialTitle) { mutableStateOf(initialTitle) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.NotificationTitle]) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it.take(80) },
+                    label = { Text(s[S.NotificationTitle]) },
+                    placeholder = { Text(s[S.ProtectionOn]) },
+                    supportingText = { Text(s[S.NotificationTitleHint]) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(onClick = onReset) {
+                    Text(s[S.Reset])
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(title) }) { Text(s[S.Save]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
+}
+
+@Composable
+private fun TrustedPublishersDialog(
+    signers: Set<String>,
+    onUntrust: (String) -> Unit,
+    onClearAll: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val s = rememberUiStrings()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(s[S.TrustedPublishers]) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (signers.isEmpty()) {
+                    Text(
+                        s[S.NoTrustedPublishers],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    signers.forEach { signer ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "${signer.take(24)}…",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = { onUntrust(signer) }) {
+                                Text(s[S.Delete])
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Close]) }
+        },
+        dismissButton = {
+            if (signers.isNotEmpty()) {
+                TextButton(onClick = onClearAll) {
+                    Text(s[S.ClearTrustedPublishers])
+                }
+            }
+        },
+    )
+}
+
+@Composable
+internal fun ProfileRow(
     profile: Profile,
     active: Boolean,
-    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+    s: UiStrings,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -1517,9 +924,9 @@ private fun ProfileRow(
             )
             profile.autoActivate?.let { auto ->
                 val network = when (auto.kind) {
-                    com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi -> s[S.Wifi]
-                    com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular -> s[S.Cellular]
-                    com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired -> s[S.Wired]
+                    NetworkKind.Wifi -> s[S.Wifi]
+                    NetworkKind.Cellular -> s[S.Cellular]
+                    NetworkKind.Wired -> s[S.Wired]
                     else -> s[S.AnyNetwork]
                 }
                 Text(
@@ -1540,12 +947,12 @@ private fun ProfileRow(
 }
 
 @Composable
-private fun ProfileDialog(
+internal fun ProfileDialog(
     profile: Profile?,
-    currentNetwork: com.networkcontrol.android.kotlin.core.model.NetworkContext,
-    loadSims: () -> List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
+    currentNetwork: NetworkContext,
+    loadSims: () -> List<SimInfo>,
     onDismiss: () -> Unit,
-    onSave: (String, FilterMode, com.networkcontrol.android.kotlin.core.model.AutoActivateCondition?) -> Unit,
+    onSave: (String, FilterMode, AutoActivateCondition?) -> Unit,
 ) {
     val s = rememberUiStrings()
     var name by remember { mutableStateOf(profile?.name ?: "") }
@@ -1554,7 +961,6 @@ private fun ProfileDialog(
     var simSubscriptionId by remember { mutableStateOf(profile?.autoActivate?.subscriptionIds?.firstOrNull()) }
     var sims by remember { mutableStateOf(loadSims()) }
     var ssid by remember { mutableStateOf(profile?.autoActivate?.ssids?.firstOrNull().orEmpty()) }
-    val context = LocalContext.current
     val locationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {}
@@ -1582,20 +988,20 @@ private fun ProfileDialog(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(autoKind == null, { autoKind = null }, { Text(s[S.AnyNetwork]) })
                     FilterChip(
-                        autoKind == com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi,
-                        { autoKind = com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi },
+                        autoKind == NetworkKind.Wifi,
+                        { autoKind = NetworkKind.Wifi },
                         { Text(s[S.Wifi]) },
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
-                        autoKind == com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular,
-                        { autoKind = com.networkcontrol.android.kotlin.core.model.NetworkKind.Cellular },
+                        autoKind == NetworkKind.Cellular,
+                        { autoKind = NetworkKind.Cellular },
                         { Text(s[S.Cellular]) },
                     )
                     FilterChip(
-                        autoKind == com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired,
-                        { autoKind = com.networkcontrol.android.kotlin.core.model.NetworkKind.Wired },
+                        autoKind == NetworkKind.Wired,
+                        { autoKind = NetworkKind.Wired },
                         { Text(s[S.Wired]) },
                     )
                 }
@@ -1630,7 +1036,7 @@ private fun ProfileDialog(
                     label = { Text(s[S.Ssid]) },
                     singleLine = true,
                 )
-                if (currentNetwork.kind == com.networkcontrol.android.kotlin.core.model.NetworkKind.Wifi &&
+                if (currentNetwork.kind == NetworkKind.Wifi &&
                     currentNetwork.ssid == null
                 ) {
                     Text(
@@ -1649,7 +1055,7 @@ private fun ProfileDialog(
                         },
                     ) { Text(s[S.GrantAccess]) }
                 }
-                if (currentNetwork.kind != com.networkcontrol.android.kotlin.core.model.NetworkKind.None) {
+                if (currentNetwork.kind != NetworkKind.None) {
                     TextButton(
                         onClick = {
                             autoKind = currentNetwork.kind
@@ -1666,7 +1072,7 @@ private fun ProfileDialog(
                         val auto = if (autoKind == null && ssid.isBlank() && simSubscriptionId == null) {
                             null
                         } else {
-                            com.networkcontrol.android.kotlin.core.model.AutoActivateCondition(
+                            AutoActivateCondition(
                                 kind = autoKind,
                                 ssids = ssid.trim().takeIf { it.isNotEmpty() }?.let { listOf(it) } ?: emptyList(),
                                 subscriptionIds = simSubscriptionId?.let { listOf(it) } ?: emptyList(),
@@ -1723,7 +1129,7 @@ private fun ImportDialog(
 }
 
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     title: String,
     subtitle: String? = null,
     checked: Boolean,
@@ -1745,7 +1151,7 @@ private fun SwitchRow(
 }
 
 @Composable
-private fun DropdownSetting(
+internal fun DropdownSetting(
     label: String,
     current: String,
     options: List<Pair<String, String?>>,
@@ -1774,7 +1180,7 @@ private fun DropdownSetting(
 }
 
 @Composable
-private fun ScheduleDialog(
+internal fun ScheduleDialog(
     schedule: FocusSchedule?,
     onDismiss: () -> Unit,
     onSave: (FocusSchedule) -> Unit,
@@ -1869,9 +1275,9 @@ private fun ScheduleDialog(
     )
 }
 
-private fun FocusSchedule.timeLabel(): String = "${minutesToText(startMinute)}–${minutesToText(endMinute)}"
+internal fun FocusSchedule.timeLabel(): String = "${minutesToText(startMinute)}–${minutesToText(endMinute)}"
 
-private fun FocusSchedule.dayLabel(context: Context): String =
+internal fun FocusSchedule.dayLabel(context: Context): String =
     days.sorted().joinToString(" ") { day ->
         DayOfWeek.of(day).getDisplayName(
             TextStyle.SHORT,
@@ -1881,17 +1287,8 @@ private fun FocusSchedule.dayLabel(context: Context): String =
 
 private fun minutesToText(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
 
-private fun parseMinutes(text: String): Int? {
-    val parts = text.split(':')
-    if (parts.size != 2) return null
-    val hour = parts[0].toIntOrNull() ?: return null
-    val minute = parts[1].toIntOrNull() ?: return null
-    if (hour !in 0..23 || minute !in 0..59) return null
-    return hour * 60 + minute
-}
-
 @Composable
-private fun OverlayPositionDialog(
+internal fun OverlayPositionDialog(
     initialRatio: Float,
     onDismiss: () -> Unit,
     onSave: (Float) -> Unit,
@@ -1915,7 +1312,7 @@ private fun OverlayPositionDialog(
                         .height(380.dp)
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                            RoundedCornerShape(16.dp),
                         )
                         .pointerInput(Unit) {
                             detectVerticalDragGestures { _, dragAmount ->
@@ -1938,12 +1335,12 @@ private fun OverlayPositionDialog(
                             .padding(horizontal = 12.dp)
                             .background(
                                 MaterialTheme.colorScheme.primary,
-                                androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                                RoundedCornerShape(16.dp),
                             ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            "NetworkControl",
+                            "PocketGate",
                             color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -2015,7 +1412,7 @@ private fun ReleaseNotesDialog(
 @Composable
 private fun ReleaseNoteSection(
     note: ReleaseNote,
-    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+    s: UiStrings,
 ) {
     val language = s.noteLanguage
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2045,7 +1442,7 @@ private fun ReleaseNoteSection(
 }
 
 @Composable
-private fun DetailLine(label: String, value: String) {
+internal fun DetailLine(label: String, value: String) {
     Row {
         Text(
             "$label：",
@@ -2058,7 +1455,7 @@ private fun DetailLine(label: String, value: String) {
 }
 
 @Composable
-private fun DirectAppsDialog(
+internal fun DirectAppsDialog(
     title: String,
     apps: List<InstalledApp>,
     initial: Set<String>,
@@ -2071,7 +1468,7 @@ private fun DirectAppsDialog(
     var onlyRuleAllowed by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(initial) }
     val filtered = remember(query, onlyRuleAllowed, apps, allowedByRulePackages) {
-        com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.filterPickerApps(
+        VpnRoutingPlanner.filterPickerApps(
             apps = apps,
             query = query,
             onlyRuleAllowed = onlyRuleAllowed,
@@ -2120,7 +1517,7 @@ private fun DirectAppsDialog(
                     )
                     TextButton(
                         onClick = {
-                            selected = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.selectAllVisible(
+                            selected = VpnRoutingPlanner.selectAllVisible(
                                 selected,
                                 filtered,
                             )
@@ -2131,7 +1528,7 @@ private fun DirectAppsDialog(
                     }
                     TextButton(
                         onClick = {
-                            selected = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.clearVisibleOrAll(
+                            selected = VpnRoutingPlanner.clearVisibleOrAll(
                                 selected,
                                 filtered,
                             )
@@ -2188,8 +1585,8 @@ private fun DirectAppsDialog(
     )
 }
 
-private fun toolbarStyleLabel(
-    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+internal fun toolbarStyleLabel(
+    s: UiStrings,
     style: ToolbarStyle,
 ): String = when (style) {
     ToolbarStyle.ClassicSolid -> s[S.ToolbarClassicSolid]
@@ -2200,7 +1597,7 @@ private fun toolbarStyleLabel(
     ToolbarStyle.FloatingTransparent -> s[S.ToolbarFloatingTransparent]
 }
 
-private fun updateSourceLabel(s: com.networkcontrol.android.kotlin.ui.UiStrings, source: UpdateSource): String =
+internal fun updateSourceLabel(s: UiStrings, source: UpdateSource): String =
     when (source) {
         UpdateSource.GitHub -> s[S.UpdateSourceGitHub]
         UpdateSource.GitLab -> s[S.UpdateSourceGitLab]
@@ -2209,7 +1606,7 @@ private fun updateSourceLabel(s: com.networkcontrol.android.kotlin.ui.UiStrings,
     }
 
 @Composable
-private fun ProxyAppDialog(
+internal fun ProxyAppDialog(
     apps: List<InstalledApp>,
     selected: String?,
     onDismiss: () -> Unit,

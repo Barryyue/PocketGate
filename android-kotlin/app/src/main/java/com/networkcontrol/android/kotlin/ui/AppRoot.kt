@@ -58,6 +58,10 @@ import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
 import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
 import com.networkcontrol.android.kotlin.ui.rules.RulesScreen
+import com.networkcontrol.android.kotlin.ui.settings.BlocklistSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.ForwardingSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.ProfileScheduleSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.PromptSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.SettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.SpeedIslandSettingsScreen
 import dev.chrisbanes.haze.HazeState
@@ -84,8 +88,7 @@ fun AppRoot(container: AppContainer) {
     var ready by remember { mutableStateOf(false) }
     var showAppListPermission by remember { mutableStateOf(false) }
     var selected by rememberSaveable { mutableIntStateOf(0) }
-    var islandSettingsOpen by rememberSaveable { mutableStateOf(false) }
-    var blocklistsOpen by rememberSaveable { mutableStateOf(false) }
+    var settingsSubScreen by rememberSaveable { mutableStateOf<String?>(null) }
     val appListPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
@@ -121,25 +124,33 @@ fun AppRoot(container: AppContainer) {
     val toolbarStyle by container.theme.toolbarStyle.collectAsStateWithLifecycle()
     val hazeState = rememberHazeState()
     Box(Modifier.fillMaxSize()) {
-        if (blocklistsOpen) {
+        if (settingsSubScreen != null) {
             Box(
                 Modifier.fillMaxSize().widthIn(max = 760.dp),
                 contentAlignment = Alignment.TopCenter,
             ) {
-                com.networkcontrol.android.kotlin.ui.settings.BlocklistSettingsScreen(
-                    backend = backend,
-                    onBack = { blocklistsOpen = false },
-                )
-            }
-        } else if (islandSettingsOpen) {
-            Box(
-                Modifier.fillMaxSize().widthIn(max = 760.dp),
-                contentAlignment = Alignment.TopCenter,
-            ) {
-                SpeedIslandSettingsScreen(
-                    backend = backend,
-                    onBack = { islandSettingsOpen = false },
-                )
+                when (settingsSubScreen) {
+                    "blocklists" -> BlocklistSettingsScreen(
+                        backend = backend,
+                        onBack = { settingsSubScreen = null },
+                    )
+                    "island" -> SpeedIslandSettingsScreen(
+                        backend = backend,
+                        onBack = { settingsSubScreen = null },
+                    )
+                    "prompts" -> PromptSettingsScreen(
+                        backend = backend,
+                        onBack = { settingsSubScreen = null },
+                    )
+                    "forwarding" -> ForwardingSettingsScreen(
+                        backend = backend,
+                        onBack = { settingsSubScreen = null },
+                    )
+                    "profiles" -> ProfileScheduleSettingsScreen(
+                        backend = backend,
+                        onBack = { settingsSubScreen = null },
+                    )
+                }
             }
         } else {
             val floatingToolbar = toolbarStyle.isFloating
@@ -187,8 +198,11 @@ fun AppRoot(container: AppContainer) {
                                 3 -> LogsScreen(backend)
                                 else -> SettingsScreen(
                                     backend = backend,
-                                    onOpenIslandSettings = { islandSettingsOpen = true },
-                                    onOpenBlocklists = { blocklistsOpen = true },
+                                    onOpenIslandSettings = { settingsSubScreen = "island" },
+                                    onOpenBlocklists = { settingsSubScreen = "blocklists" },
+                                    onOpenPromptSettings = { settingsSubScreen = "prompts" },
+                                    onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
+                                    onOpenProfileSettings = { settingsSubScreen = "profiles" },
                                 )
                             }
                         }

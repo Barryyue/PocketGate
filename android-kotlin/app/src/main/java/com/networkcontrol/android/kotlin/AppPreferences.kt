@@ -299,8 +299,8 @@ class AppPreferences(context: Context) {
 
     /** GitHub / Gitee 為 owner/repo；GitLab 為 group/project。 */
     var updateRepo: String
-        get() = prefs.getString(KEY_UPDATE_REPO, "Barryyue/network-control")
-            ?: "Barryyue/network-control"
+        get() = prefs.getString(KEY_UPDATE_REPO, "Barryyue/PocketGate")
+            ?: "Barryyue/PocketGate"
         set(value) = prefs.edit().putString(KEY_UPDATE_REPO, value.trim()).apply()
 
     /** Custom 來源使用的 JSON URL。 */

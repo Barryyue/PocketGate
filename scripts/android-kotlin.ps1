@@ -56,7 +56,7 @@ $emulator = if (Test-Path 'D:\tools\android-dev\emu34\emulator\emulator.exe') {
     Join-Path $sdk 'emulator\emulator.exe'
 }
 $package = 'com.networkcontrol.android.kotlin.debug'
-$version = '0.13.3-m4p20'
+$version = '0.13.4'
 
 function Get-Sha256([string]$FilePath) {
     $sha = [System.Security.Cryptography.SHA256]::Create()
@@ -110,8 +110,8 @@ switch ($Command) {
         $outDir = Join-Path $root 'artifacts\kotlin-android'
         New-Item -ItemType Directory -Force $outDir | Out-Null
         $variants = @(
-            @{ Abi = 'arm64-v8a'; Name = ("NetworkControl-KT-{0}.apk" -f $version) },
-            @{ Abi = 'x86_64'; Name = ("NetworkControl-KT-{0}-x86_64-emulator.apk" -f $version) }
+            @{ Abi = 'arm64-v8a'; Name = ("PocketGate-{0}.apk" -f $version) },
+            @{ Abi = 'x86_64'; Name = ("PocketGate-{0}-x86_64-emulator.apk" -f $version) }
         )
         foreach ($variant in $variants) {
             $source = Join-Path $project ("app\build\outputs\apk\release\app-{0}-release.apk" -f $variant.Abi)
@@ -154,7 +154,7 @@ switch ($Command) {
         if (-not (Test-Path $source)) { throw "Release AAB not found: $source" }
         $outDir = Join-Path $root 'artifacts\kotlin-android'
         New-Item -ItemType Directory -Force $outDir | Out-Null
-        $target = Join-Path $outDir ("NetworkControl-KT-{0}.aab" -f $version)
+        $target = Join-Path $outDir ("PocketGate-{0}.aab" -f $version)
         Copy-Item $source $target -Force
         $size = (Get-Item $target).Length
         $hash = Get-Sha256 $target

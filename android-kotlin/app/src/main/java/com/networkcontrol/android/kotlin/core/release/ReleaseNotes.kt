@@ -40,6 +40,23 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.4",
+            date = "2026-11-19",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Renamed the app and release package to PocketGate, and simplified update checks to try GitHub Releases first and automatically fall back to Gitee Releases without manual source configuration.",
+                    "应用与安装包正式定名为 PocketGate；检查更新简化为优先走 GitHub Releases、连不通或下载不可达时自动回退到 Gitee Releases，无需手动配置更新来源。",
+                    "應用程式與安裝包正式定名為 PocketGate；檢查更新簡化為優先走 GitHub Releases、連不通或下載不可達時自動回退到 Gitee Releases，無須手動設定更新來源。",
+                ),
+                t(
+                    "Reorganized the Settings screen into six compact cards: prompt and overlay details, per-connection forwarding, and profiles with focus schedules now open in dedicated sub-pages, while notification title and trusted publishers open in dialogs.",
+                    "精简设置页面布局：合并为 6 张高内聚卡片，将联网询问与悬浮窗、逐连接转发模式、配置文件与专注时间表抽离为独立二级页面，并将通知标题、可信发布者与工具栏样式改为紧凑弹窗或下拉项。",
+                    "精簡設定頁面佈局：合併為 6 張高內聚卡片，將連網詢問與懸浮窗、逐連線轉發模式、配置檔案與專注時間表抽離為獨立二級頁面，並將通知標題、可信發布者與工具列樣式改為緊湊彈窗或下拉項。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.3",
             date = "2026-11-18",
             features = listOf(

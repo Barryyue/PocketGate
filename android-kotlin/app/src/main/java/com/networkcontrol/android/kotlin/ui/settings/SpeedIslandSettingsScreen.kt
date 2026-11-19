@@ -527,25 +527,3 @@ private fun fontWeightLabel(
     SpeedIslandFontWeight.Medium -> s[S.IslandFontWeightMedium]
     SpeedIslandFontWeight.Bold -> s[S.IslandFontWeightBold]
 }
-
-@Composable
-private fun SwitchRow(
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyMedium)
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}

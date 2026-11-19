@@ -1,47 +1,41 @@
+version: '1.0'
 name: android-kotlin-build
 displayName: 'Android (Kotlin) APK 打包'
 triggers:
+  trigger: auto
   push:
     branches:
       include:
         - main
         - 'agent/**'
-      paths:
-        include:
-          - 'android-kotlin/**'
-          - '.gitee/workflows/android-kotlin.yml'
-    tags:
-      include:
-        - 'kt-v*'
-        - 'v*'
 
 stages:
   - name: build-stage
     displayName: '測試與打包 APK'
+    strategy: naturally
+    trigger: auto
     steps:
       - step: build@maven
         name: build-android-kotlin
         displayName: 'Gradle 單元測試與 Release APK 打包'
-        jdkVersion: '21'
-        mavenVersion: '3.9.6'
+        jdkVersion: '17'
+        mavenVersion: '3.6.3'
         commands:
           - set -euo pipefail
           - export ANDROID_HOME="$HOME/android-sdk"
           - export ANDROID_SDK_ROOT="$ANDROID_HOME"
-          - if [ ! -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
-          -   mkdir -p "$ANDROID_HOME/cmdline-tools"
-          -   curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip
-          -   unzip -q /tmp/cmdtools.zip -d /tmp/cmdtools
-          -   mv /tmp/cmdtools/cmdline-tools "$ANDROID_HOME/cmdline-tools/latest"
-          - fi
+          - mkdir -p "$ANDROID_HOME/cmdline-tools"
+          - test -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" || (curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip && unzip -q /tmp/cmdtools.zip -d /tmp/cmdtools && mv /tmp/cmdtools/cmdline-tools "$ANDROID_HOME/cmdline-tools/latest")
           - yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-36" "build-tools;35.0.0" >/dev/null
           - cd android-kotlin
+          - sed -i 's|https\\://services.gradle.org/distributions/|https\\://mirrors.cloud.tencent.com/gradle/|g' gradle/wrapper/gradle-wrapper.properties
+          - sed -i 's|networkTimeout=10000|networkTimeout=60000|g' gradle/wrapper/gradle-wrapper.properties
           - chmod +x gradlew
           - ./gradlew testDebugUnitTest assembleRelease --no-daemon
           - version=$(grep -E 'versionName\s*=\s*"' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
           - mkdir -p ../dist
-          - cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "../dist/NetworkControl-KT-${version}.apk"
-          - cp app/build/outputs/apk/release/app-x86_64-release.apk "../dist/NetworkControl-KT-${version}-x86_64-emulator.apk"
+          - cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "../dist/PocketGate-${version}.apk"
+          - cp app/build/outputs/apk/release/app-x86_64-release.apk "../dist/PocketGate-${version}-x86_64-emulator.apk"
           - sha256sum ../dist/*.apk > ../dist/SHA256SUMS.txt
         artifacts:
           - name: BUILD_ARTIFACT
@@ -51,4 +45,4 @@ stages:
         name: publish-apk
         displayName: '上傳 APK 產物'
         dependArtifact: BUILD_ARTIFACT
-        artifactName: networkcontrol-kt-apk
+        artifactName: pocketgate-apk

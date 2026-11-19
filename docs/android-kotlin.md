@@ -1701,4 +1701,5 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試（`RoutingPlannerTest`、`ReleaseNotesTest` 等）/ Debug / Release 構建通過。
 - 模擬器（`nc35`，API 35）端到端驗證通過：將 2 個應用設為「允許」後，打開「鎖屏時仍允許聯網的應用」彈框顯示 `全部 (60)` 與 `規則中允許連網 (2)`；點擊 `規則中允許連網 (2)` 後列表只顯示該 2 個應用；點擊 `全選` 後變為 `已選 2 個` 且兩項均勾選 `✓`；點擊 `儲存` 後設定頁顯示 `2 個應用`。
 - 固化共享簽名密鑰 `android-kotlin/keystore/shared-release.jks`（SHA-256 `CF:66:52:C5:C6:E0:C4:4A:41:FC:2B:B3:96:17:0D:CE:67:AD:3F:4A:5A:F4:74:B5:CD:12:9E:B9:CB:D2:73:90`），並更新 `.github/workflows/android-kotlin.yml`（支援 `workflow_dispatch` 手動觸發、上傳重命名後的 APK 產物、打 Tag 或勾選選項時自動發佈 GitHub Release）與 `.gitee/workflows/android-kotlin.yml`（Gitee Go 流水線）。
+- **設定頁佈局精簡、品牌定名 `PocketGate` 與自動雙源更新（2026-11-19，K-145）**：應用顯示名稱與打包產物正式定名為 **`PocketGate`**（`PocketGate-<version>.apk`）；檢查更新改為 `UpdateChecker.checkAuto`（優先查詢 GitHub `Barryyue/network-control` 並探測下載連通性，失敗或下載不可達時自動回退至 Gitee `yuexiaobai/networkcontrol`，無須手動選擇更新源）；設定主頁由 13 張卡片重構為 6 張高內聚卡片，抽離 `PromptSettingsScreen`、`ForwardingSettingsScreen`、`ProfileScheduleSettingsScreen` 三個二級頁面，並將工具列樣式改為下拉選單、通知標題與可信發布者改為點擊彈窗。
 - 真機界面待驗證。

@@ -39,6 +39,27 @@ class UpdateCheckerTest {
     }
 
     @Test
+    fun stripsKtVTagPrefixAndPrefersArm64ApkOverEmulatorApk() {
+        val info = UpdateChecker.parse(
+            UpdateSource.GitHub,
+            """
+            {
+              "tag_name": "kt-v0.13.4-m4p20",
+              "html_url": "https://github.com/o/r/releases/tag/kt-v0.13.4-m4p20",
+              "assets": [
+                {"name": "NetworkControl-KT-0.13.4-m4p20-x86_64-emulator.apk", "browser_download_url": "https://example.com/NetworkControl-KT-0.13.4-m4p20-x86_64-emulator.apk"},
+                {"name": "NetworkControl-KT-0.13.4-m4p20.apk", "browser_download_url": "https://example.com/NetworkControl-KT-0.13.4-m4p20.apk"}
+              ]
+            }
+            """.trimIndent(),
+            "0.13.3-m4p20",
+        )
+        assertEquals("0.13.4-m4p20", info.latestVersion)
+        assertEquals("https://example.com/NetworkControl-KT-0.13.4-m4p20.apk", info.downloadUrl)
+        assertTrue(info.hasUpdate)
+    }
+
+    @Test
     fun parsesGitLabReleaseLinks() {
         val info = UpdateChecker.parse(
             UpdateSource.GitLab,
@@ -109,5 +130,62 @@ class UpdateCheckerTest {
         )
         assertNull(UpdateChecker.endpoint(UpdateSource.GitHub, "missing-slash", ""))
         assertNull(UpdateChecker.endpoint(UpdateSource.Custom, "", "http://insecure"))
+    }
+
+    @Test
+    fun fallsBackToGiteeWhenGitHubApiFails() {
+        var giteeCalled = false
+        val info = UpdateChecker.resolveWithFallback(
+            fetchGitHub = {
+                com.networkcontrol.android.kotlin.core.update.UpdateInfo(
+                    latestVersion = null,
+                    downloadUrl = null,
+                    error = "connect timed out",
+                    currentVersion = "0.13.3",
+                )
+            },
+            fetchGitee = {
+                giteeCalled = true
+                com.networkcontrol.android.kotlin.core.update.UpdateInfo(
+                    latestVersion = "0.14.0",
+                    downloadUrl = "https://gitee.com/yuexiaobai/networkcontrol/releases/download/v0.14.0/PocketGate-0.14.0.apk",
+                    currentVersion = "0.13.3",
+                )
+            },
+            isDownloadReachable = { true },
+        )
+        assertTrue(giteeCalled)
+        assertTrue(info.hasUpdate)
+        assertEquals("0.14.0", info.latestVersion)
+        assertEquals(
+            "https://gitee.com/yuexiaobai/networkcontrol/releases/download/v0.14.0/PocketGate-0.14.0.apk",
+            info.downloadUrl,
+        )
+    }
+
+    @Test
+    fun switchesToGiteeDownloadWhenGitHubDownloadIsUnreachable() {
+        val info = UpdateChecker.resolveWithFallback(
+            fetchGitHub = {
+                com.networkcontrol.android.kotlin.core.update.UpdateInfo(
+                    latestVersion = "0.14.0",
+                    downloadUrl = "https://github.com/Barryyue/network-control/releases/download/v0.14.0/PocketGate-0.14.0.apk",
+                    currentVersion = "0.13.3",
+                )
+            },
+            fetchGitee = {
+                com.networkcontrol.android.kotlin.core.update.UpdateInfo(
+                    latestVersion = "0.14.0",
+                    downloadUrl = "https://gitee.com/yuexiaobai/networkcontrol/releases/download/v0.14.0/PocketGate-0.14.0.apk",
+                    currentVersion = "0.13.3",
+                )
+            },
+            isDownloadReachable = { url -> !url.contains("github.com") },
+        )
+        assertTrue(info.hasUpdate)
+        assertEquals(
+            "https://gitee.com/yuexiaobai/networkcontrol/releases/download/v0.14.0/PocketGate-0.14.0.apk",
+            info.downloadUrl,
+        )
     }
 }
