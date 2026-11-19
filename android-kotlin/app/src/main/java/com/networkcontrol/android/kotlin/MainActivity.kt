@@ -7,11 +7,14 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.core.app.ActivityCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.ui.AppRoot
 import com.networkcontrol.android.kotlin.ui.security.AppLockGate
+import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import com.networkcontrol.android.kotlin.ui.theme.NetworkControlTheme
 
 class MainActivity : AppCompatActivity() {
@@ -22,7 +25,14 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val container = App.container(this)
             val themeColor by container.theme.color.collectAsStateWithLifecycle()
-            NetworkControlTheme(seedColor = themeColor) {
+            val themeStyle by container.theme.themeStyle.collectAsStateWithLifecycle()
+            NetworkControlTheme(seedColor = themeColor, themeStyle = themeStyle) {
+                val isDarkCanvas = LocalAppVisualTokens.current.isDarkCanvas
+                SideEffect {
+                    val controller = WindowInsetsControllerCompat(window, window.decorView)
+                    controller.isAppearanceLightStatusBars = !isDarkCanvas
+                    controller.isAppearanceLightNavigationBars = !isDarkCanvas
+                }
                 AppLockGate(container) {
                     AppRoot(container)
                 }

@@ -494,6 +494,13 @@ enum class S {
     ToolbarFloatingFrosted,
     ToolbarFloatingTransparent,
     FilterRuleAllowed,
+    ThemeStyle,
+    ThemeStyleClassic,
+    ThemeStyleObsidian,
+    ThemeStyleFrost,
+    ThemeStyleAurora,
+    ThemeStyleAmoled,
+    ThemeStyleDynamic,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1010,6 +1017,13 @@ private val EN = mapOf(
     S.ShortcutFocusOn to "Focus %1\$d min",
     S.ShortcutFocusOff to "End focus",
     S.FilterRuleAllowed to "Allowed in rules",
+    S.ThemeStyle to "Visual style",
+    S.ThemeStyleClassic to "Classic",
+    S.ThemeStyleObsidian to "Obsidian",
+    S.ThemeStyleFrost to "Frost",
+    S.ThemeStyleAurora to "Aurora",
+    S.ThemeStyleAmoled to "AMOLED",
+    S.ThemeStyleDynamic to "Dynamic",
 )
 
 private val CN = mapOf(
@@ -1502,6 +1516,13 @@ private val CN = mapOf(
     S.ShortcutFocusOn to "专注 %1\$d 分钟",
     S.ShortcutFocusOff to "结束专注",
     S.FilterRuleAllowed to "规则中允许联网",
+    S.ThemeStyle to "视觉风格",
+    S.ThemeStyleClassic to "经典",
+    S.ThemeStyleObsidian to "黑曜石",
+    S.ThemeStyleFrost to "极简霜白",
+    S.ThemeStyleAurora to "极光流光",
+    S.ThemeStyleAmoled to "纯黑省电",
+    S.ThemeStyleDynamic to "动态取色",
 )
 
 private val TW = mapOf(
@@ -1994,4 +2015,11 @@ private val TW = mapOf(
     S.ShortcutFocusOn to "專注 %1\$d 分鐘",
     S.ShortcutFocusOff to "結束專注",
     S.FilterRuleAllowed to "規則中允許連網",
+    S.ThemeStyle to "視覺風格",
+    S.ThemeStyleClassic to "經典",
+    S.ThemeStyleObsidian to "黑曜石",
+    S.ThemeStyleFrost to "極簡霜白",
+    S.ThemeStyleAurora to "極光流光",
+    S.ThemeStyleAmoled to "純黑省電",
+    S.ThemeStyleDynamic to "動態取色",
 )

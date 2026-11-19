@@ -40,6 +40,24 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.8",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "Added a visual theme style engine with 6 modern styles (Classic, Obsidian Cyber, Frost Minimal, Aurora Glass, AMOLED Black, and Android 12+ Material You) with a live preview card picker in Settings and automatic system-bar icon contrast.",
+                    "新增视觉主题引擎与 6 套现代风格（经典、黑曜石极客、极简霜白、极光流光、纯黑省电、系统取色），设置页支持缩略图卡片实时预览切换，并自动同步状态栏与导航栏图标对比度。",
+                    "新增視覺主題引擎與 6 套現代風格（經典、黑曜石極客、極簡霜白、極光流光、純黑省電、系統取色），設定頁支援縮略圖卡片即時預覽切換，並自動同步狀態欄與導覽列圖示對比度。",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Upgraded the Overview protection card into a flagship hero status card with the PocketGate shield icon and state-aware gradient tint, and enabled tabular numerals (tnum) for live speed and metric cards.",
+                    "升级总览页顶部防护卡片为旗舰状态卡片（融合 PocketGate 护盾图标与状态渐变光效），并对实时网速与统计指标启用等宽数字（Tabular Numerals）避免跳动。",
+                    "升級總覽頁頂部防護卡片為旗艦狀態卡片（融合 PocketGate 護盾圖示與狀態漸層光效），並對即時網速與統計指標啟用等寬數字（Tabular Numerals）避免跳動。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.7",
             date = "2026-11-19",
             features = emptyList(),

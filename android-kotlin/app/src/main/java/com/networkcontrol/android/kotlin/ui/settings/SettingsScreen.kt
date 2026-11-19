@@ -58,9 +58,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -70,6 +73,7 @@ import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.BuildConfig
 import com.networkcontrol.android.kotlin.ForwardingUpstream
 import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
+import com.networkcontrol.android.kotlin.core.model.AppThemeStyle
 import com.networkcontrol.android.kotlin.core.model.AutoActivateCondition
 import com.networkcontrol.android.kotlin.core.model.FilterMode
 import com.networkcontrol.android.kotlin.core.model.InstalledApp
@@ -128,6 +132,7 @@ fun SettingsScreen(
     val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
     val network by backend.network.collectAsStateWithLifecycle()
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
+    val themeStyle by backend.container.theme.themeStyle.collectAsStateWithLifecycle()
     var toolbarStyle by remember { mutableStateOf(backend.toolbarStyle()) }
     val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
     val blocklistState by backend.blocklistState.collectAsStateWithLifecycle()
@@ -327,6 +332,15 @@ fun SettingsScreen(
                     ),
                     onSelected = { backend.setTheme(it ?: "system") },
                 )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(s[S.ThemeStyle], style = MaterialTheme.typography.bodyMedium)
+                    ThemeStyleStrip(
+                        selected = themeStyle,
+                        seedColor = themeColor,
+                        s = s,
+                        onSelect = { backend.setThemeStyle(it) },
+                    )
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(s[S.ThemeColor], style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                     Box(
@@ -1763,4 +1777,130 @@ internal fun ProxyAppDialog(
             TextButton(onClick = onDismiss) { Text(s[S.Close]) }
         },
     )
+}
+
+private fun themeStyleLabel(s: UiStrings, style: AppThemeStyle): String = when (style) {
+    AppThemeStyle.Classic -> s[S.ThemeStyleClassic]
+    AppThemeStyle.ObsidianCyber -> s[S.ThemeStyleObsidian]
+    AppThemeStyle.FrostMinimal -> s[S.ThemeStyleFrost]
+    AppThemeStyle.AuroraGlass -> s[S.ThemeStyleAurora]
+    AppThemeStyle.AmoledBlack -> s[S.ThemeStyleAmoled]
+    AppThemeStyle.DynamicYou -> s[S.ThemeStyleDynamic]
+}
+
+@Composable
+private fun ThemeStyleStrip(
+    selected: AppThemeStyle,
+    seedColor: Color,
+    s: UiStrings,
+    onSelect: (AppThemeStyle) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        AppThemeStyle.entries.forEach { style ->
+            val isSelected = style == selected
+            val previewBg = when (style) {
+                AppThemeStyle.ObsidianCyber -> Color(0xFF08090B)
+                AppThemeStyle.FrostMinimal -> Color(0xFFF4F6F9)
+                AppThemeStyle.AuroraGlass -> Color(0xFF0E1B24)
+                AppThemeStyle.AmoledBlack -> Color(0xFF000000)
+                AppThemeStyle.DynamicYou -> MaterialTheme.colorScheme.secondaryContainer
+                AppThemeStyle.Classic -> MaterialTheme.colorScheme.surface
+            }
+            val previewCard = when (style) {
+                AppThemeStyle.ObsidianCyber -> Color(0xFF161B24)
+                AppThemeStyle.FrostMinimal -> Color(0xFFFFFFFF)
+                AppThemeStyle.AuroraGlass -> Color(0xFF1D3140)
+                AppThemeStyle.AmoledBlack -> Color(0xFF121212)
+                AppThemeStyle.DynamicYou -> MaterialTheme.colorScheme.surface
+                AppThemeStyle.Classic -> MaterialTheme.colorScheme.surfaceVariant
+            }
+            val previewAccent = when (style) {
+                AppThemeStyle.ObsidianCyber -> Color(0xFFC9F45A)
+                AppThemeStyle.FrostMinimal -> seedColor
+                AppThemeStyle.AuroraGlass -> Color(0xFF34D399)
+                AppThemeStyle.AmoledBlack -> Color(0xFF69F0AE)
+                AppThemeStyle.DynamicYou -> MaterialTheme.colorScheme.primary
+                AppThemeStyle.Classic -> seedColor
+            }
+            val borderColor = if (isSelected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+            }
+            Column(
+                modifier = Modifier
+                    .width(86.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .border(if (isSelected) 2.dp else 1.dp, borderColor, RoundedCornerShape(14.dp))
+                    .clickable { onSelect(style) }
+                    .padding(6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (style == AppThemeStyle.AuroraGlass) {
+                                Brush.linearGradient(listOf(Color(0xFF0E2A2F), Color(0xFF102438)))
+                            } else {
+                                Brush.verticalGradient(listOf(previewBg, previewBg))
+                            },
+                        )
+                        .padding(6.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(16.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(previewCard),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .padding(start = 5.dp)
+                                    .width(24.dp)
+                                    .height(5.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(previewAccent),
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(previewCard),
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(previewCard),
+                            )
+                        }
+                    }
+                }
+                Text(
+                    themeStyleLabel(s, style),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
 }

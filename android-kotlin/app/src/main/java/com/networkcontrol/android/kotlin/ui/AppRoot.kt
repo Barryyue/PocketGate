@@ -41,7 +41,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -64,6 +66,7 @@ import com.networkcontrol.android.kotlin.ui.settings.ProfileScheduleSettingsScre
 import com.networkcontrol.android.kotlin.ui.settings.PromptSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.SettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.SpeedIslandSettingsScreen
+import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -122,8 +125,36 @@ fun AppRoot(container: AppContainer) {
 
     val backend = container.backend
     val toolbarStyle by container.theme.toolbarStyle.collectAsStateWithLifecycle()
+    val visualTokens = LocalAppVisualTokens.current
+    val canvasBackground = MaterialTheme.colorScheme.background
     val hazeState = rememberHazeState()
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(canvasBackground)
+            .drawBehind {
+                if (visualTokens.auroraPrimary != Color.Transparent) {
+                    val primaryRadius = size.maxDimension * 0.65f
+                    drawRect(
+                        brush = Brush.radialGradient(
+                            colors = listOf(visualTokens.auroraPrimary, Color.Transparent),
+                            center = Offset(size.width * 0.12f, size.height * 0.08f),
+                            radius = primaryRadius,
+                        ),
+                    )
+                }
+                if (visualTokens.auroraSecondary != Color.Transparent) {
+                    val secondaryRadius = size.maxDimension * 0.62f
+                    drawRect(
+                        brush = Brush.radialGradient(
+                            colors = listOf(visualTokens.auroraSecondary, Color.Transparent),
+                            center = Offset(size.width * 0.90f, size.height * 0.86f),
+                            radius = secondaryRadius,
+                        ),
+                    )
+                }
+            },
+    ) {
         if (settingsSubScreen != null) {
             Box(
                 Modifier.fillMaxSize().widthIn(max = 760.dp),
@@ -161,6 +192,7 @@ fun AppRoot(container: AppContainer) {
                 else -> 84.dp
             }
             Scaffold(
+                containerColor = Color.Transparent,
                 bottomBar = {
                     if (!overlayToolbar) {
                         AppBottomBar(

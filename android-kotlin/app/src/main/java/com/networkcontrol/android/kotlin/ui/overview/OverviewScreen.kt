@@ -3,6 +3,8 @@ package com.networkcontrol.android.kotlin.ui.overview
 import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,16 +15,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -43,11 +51,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
+import com.networkcontrol.android.kotlin.R
 import com.networkcontrol.android.kotlin.core.model.FilterMode
 import com.networkcontrol.android.kotlin.core.model.ProtectionStatus
 import com.networkcontrol.android.kotlin.core.model.PromptSnapshot
@@ -63,6 +76,7 @@ import com.networkcontrol.android.kotlin.ui.common.formatDateTime
 import com.networkcontrol.android.kotlin.ui.common.protocolLabel
 import com.networkcontrol.android.kotlin.ui.prompt.promptDisplayName
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
+import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -150,38 +164,102 @@ fun OverviewScreen(backend: AppBackend) {
             ScreenHeader(s[S.Overview], s[S.OverviewSubtitle])
         }
         item {
-            SectionCard {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
+            val tokens = LocalAppVisualTokens.current
+            val scheme = MaterialTheme.colorScheme
+            val isBlockAll = runtime.mode == FilterMode.BlockAll
+            val isActive = status == ProtectionStatus.On
+            val heroAccent = when {
+                isBlockAll -> scheme.error
+                isActive -> scheme.primary
+                status == ProtectionStatus.Failed || status == ProtectionStatus.Revoked -> scheme.error
+                else -> scheme.onSurfaceVariant
+            }
+            val baseContainer = if (tokens.cardContainer != Color.Unspecified) {
+                tokens.cardContainer
+            } else {
+                scheme.surfaceVariant.copy(alpha = 0.45f)
+            }
+            val heroBorderColor = when {
+                isActive || isBlockAll -> heroAccent.copy(alpha = if (tokens.isDarkCanvas) 0.36f else 0.28f)
+                tokens.cardBorder != Color.Transparent -> tokens.cardBorder
+                else -> Color.Transparent
+            }
+            val heroGradient = if (isActive || isBlockAll) {
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        heroAccent.copy(alpha = if (tokens.isDarkCanvas) 0.18f else 0.12f),
+                        heroAccent.copy(alpha = 0.03f),
+                        Color.Transparent,
+                    ),
+                )
+            } else {
+                null
+            }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = baseContainer),
+                shape = RoundedCornerShape(tokens.cardCornerRadius),
+                border = if (heroBorderColor != Color.Transparent) BorderStroke(1.dp, heroBorderColor) else null,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (heroGradient != null) Modifier.background(heroGradient) else Modifier)
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(statusText, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            s[S.ProtectionHint],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(RoundedCornerShape(15.dp))
+                                .background(heroAccent.copy(alpha = if (tokens.isDarkCanvas) 0.20f else 0.14f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_shield),
+                                contentDescription = null,
+                                tint = heroAccent,
+                                modifier = Modifier.size(28.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                statusText,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                s[S.ProtectionHint],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Switch(
+                            checked = protection,
+                            onCheckedChange = { enabled ->
+                                if (enabled) enableProtection() else guard.run { backend.setProtection(false) }
+                            },
                         )
                     }
-                    Switch(
-                        checked = protection,
-                        onCheckedChange = { enabled ->
-                            if (enabled) enableProtection() else guard.run { backend.setProtection(false) }
-                        },
-                    )
-                }
-                if (status == ProtectionStatus.NeedsConsent || status == ProtectionStatus.Revoked) {
-                    Text(
-                        s[S.VpnConsentRequired],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                val error = backend.tunnelError.collectAsStateWithLifecycle().value
-                // 保護開啟時也可能有提示（例如轉發回退到黑洞模式、上游代理無法連線）。
-                if (!error.isNullOrBlank() && (status == ProtectionStatus.Failed || status == ProtectionStatus.On)) {
-                    Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    if (status == ProtectionStatus.NeedsConsent || status == ProtectionStatus.Revoked) {
+                        Text(
+                            s[S.VpnConsentRequired],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.error,
+                        )
+                    }
+                    val error = backend.tunnelError.collectAsStateWithLifecycle().value
+                    // 保護開啟時也可能有提示（例如轉發回退到黑洞模式、上游代理無法連線）。
+                    if (!error.isNullOrBlank() && (status == ProtectionStatus.Failed || status == ProtectionStatus.On)) {
+                        Text(error, style = MaterialTheme.typography.bodySmall, color = scheme.error)
+                    }
                 }
             }
         }
@@ -407,7 +485,8 @@ fun OverviewScreen(backend: AppBackend) {
                         Text(s[S.CurrentSpeed], style = MaterialTheme.typography.labelMedium)
                         Text(
                             "↓ ${formatBytes(speed.downloadBytesPerSecond)}/s · ↑ ${formatBytes(speed.uploadBytesPerSecond)}/s",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+                            fontWeight = FontWeight.Medium,
                         )
                     }
                 }

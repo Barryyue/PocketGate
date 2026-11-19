@@ -1,5 +1,6 @@
 package com.networkcontrol.android.kotlin.ui.common
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +39,7 @@ import com.networkcontrol.android.kotlin.engine.apps.AppCatalog
 import com.networkcontrol.android.kotlin.platform.AppIconLoader
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.UiStrings
+import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -70,10 +73,22 @@ fun SectionCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val tokens = LocalAppVisualTokens.current
+    val container = if (tokens.cardContainer != Color.Unspecified) {
+        tokens.cardContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+    }
+    val border = if (tokens.cardBorder != Color.Transparent) {
+        BorderStroke(1.dp, tokens.cardBorder)
+    } else {
+        null
+    }
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
-        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = container),
+        shape = RoundedCornerShape(tokens.cardCornerRadius),
+        border = border,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -89,15 +104,31 @@ fun SectionCard(
 
 @Composable
 fun MetricCard(label: String, value: String, modifier: Modifier = Modifier, hint: String? = null) {
+    val tokens = LocalAppVisualTokens.current
+    val container = if (tokens.cardContainer != Color.Unspecified) {
+        tokens.cardContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+    }
+    val border = if (tokens.cardBorder != Color.Transparent) {
+        BorderStroke(1.dp, tokens.cardBorder)
+    } else {
+        null
+    }
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
-        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = container),
+        shape = RoundedCornerShape(tokens.metricCornerRadius),
+        border = border,
     ) {
         Column(Modifier.padding(14.dp)) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(6.dp))
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                value,
+                style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
+                fontWeight = FontWeight.SemiBold,
+            )
             if (hint != null) {
                 Text(hint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

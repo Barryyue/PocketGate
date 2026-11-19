@@ -54,6 +54,15 @@ class AppPreferences(context: Context) {
         }.getOrDefault(com.networkcontrol.android.kotlin.core.model.ToolbarStyle.ClassicSolid)
         set(value) = prefs.edit().putString(KEY_TOOLBAR_STYLE, value.name).apply()
 
+    /** 視覺主題風格。 */
+    var themeStyle: com.networkcontrol.android.kotlin.core.model.AppThemeStyle
+        get() = runCatching {
+            enumValueOf<com.networkcontrol.android.kotlin.core.model.AppThemeStyle>(
+                prefs.getString(KEY_THEME_STYLE, "Classic").orEmpty(),
+            )
+        }.getOrDefault(com.networkcontrol.android.kotlin.core.model.AppThemeStyle.Classic)
+        set(value) = prefs.edit().putString(KEY_THEME_STYLE, value.name).apply()
+
     /** 詢問顯示方式：auto（可用時懸浮面板）/ notification（只用通知）。 */
     var promptPresentationMode: String
         get() = prefs.getString(KEY_PROMPT_PRESENTATION, "auto") ?: "auto"
@@ -323,6 +332,7 @@ class AppPreferences(context: Context) {
         const val KEY_NOTIFICATION_ASKED = "notification_asked"
         const val KEY_PROTECTION_NOTIFICATION_TITLE = "protection_notification_title"
         const val KEY_THEME_COLOR = "theme_color"
+        const val KEY_THEME_STYLE = "theme_style"
         const val KEY_TOOLBAR_STYLE = "toolbar_style"
         const val KEY_PROMPT_PRESENTATION = "prompt_presentation"
         const val KEY_PROMPT_OVERLAY_POSITION = "prompt_overlay_position"

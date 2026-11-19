@@ -957,6 +957,12 @@ class AppBackend(val container: AppContainer) {
 
     fun setThemeColor(color: androidx.compose.ui.graphics.Color) = container.theme.set(color)
 
+    fun themeStyle(): com.networkcontrol.android.kotlin.core.model.AppThemeStyle =
+        container.theme.themeStyle.value
+
+    fun setThemeStyle(style: com.networkcontrol.android.kotlin.core.model.AppThemeStyle) =
+        container.theme.setThemeStyle(style)
+
     fun toolbarStyle(): com.networkcontrol.android.kotlin.core.model.ToolbarStyle =
         container.theme.toolbarStyle.value
 

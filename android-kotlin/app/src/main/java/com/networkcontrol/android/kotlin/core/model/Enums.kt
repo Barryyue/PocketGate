@@ -272,3 +272,19 @@ enum class ToolbarStyle {
     val isFloating: Boolean
         get() = this != ClassicSolid && this != ClassicFrosted
 }
+
+/** 應用視覺主題風格（決定畫布材質、卡片層次、邊框高光與整體氣質）。 */
+enum class AppThemeStyle {
+    /** 經典 Material 3 風格。 */
+    Classic,
+    /** 黑曜石極客：炭黑畫布 + 微光描邊卡片 + 熒光綠強調（與官網及新 Logo 統一）。 */
+    ObsidianCyber,
+    /** 極簡霜白：溫潤淺灰畫布 + 純白浮雕卡片 + 1dp 細邊框。 */
+    FrostMinimal,
+    /** 極光流光：柔和環境光暈畫布 + 半透明玻璃質感卡片。 */
+    AuroraGlass,
+    /** 純黑省電：AMOLED 純黑底色 + 極細輪廓邊框。 */
+    AmoledBlack,
+    /** 動態取色：Android 12+ 跟隨系統壁紙取色（低版本自動回退經典）。 */
+    DynamicYou,
+}
