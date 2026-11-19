@@ -293,6 +293,21 @@ class ForwardingTest {
         assertFalse(com.networkcontrol.android.kotlin.engine.vpn.VpnEngine.isLoopbackHost("192.168.1.5"))
     }
 
+    @Test
+    fun cloneAppUidInheritsPrimaryUserRoutingDecision() {
+        val wechatUid = 10234
+        val vivoCloneUid = 999 * 100_000 + wechatUid
+        val plan = VpnRoutingPlan(
+            mode = FilterMode.Ask,
+            bypassPackages = setOf("com.tencent.mm"),
+            byUid = mapOf(wechatUid to routing(wechatUid, AppRoutingDecision.Bypass)),
+            skippedRules = emptyList(),
+        )
+        assertEquals(ForwardingDecision.Forward, ForwardingPolicy.decide(plan, wechatUid))
+        assertEquals(ForwardingDecision.Forward, ForwardingPolicy.decide(plan, vivoCloneUid))
+        assertEquals("pkg.$wechatUid", plan.find(vivoCloneUid)?.packageName)
+    }
+
     private fun routing(uid: Int, decision: AppRoutingDecision) =
         AppRouting(uid, "pkg.$uid", listOf("pkg.$uid"), decision, AppRoutingReason.Rule)
 

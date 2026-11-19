@@ -127,9 +127,11 @@ class SpeedIslandController(
         // 桌布改變（顏色不同）時重新取色：用 API 27+ 的 OnColorsChangedListener，取代已棄用的 ACTION_WALLPAPER_CHANGED 廣播。
         runCatching {
             context.getSystemService(android.app.WallpaperManager::class.java)?.addOnColorsChangedListener(
-                { _, _ ->
-                    refreshStatusBarColor(force = true)
-                    refresh()
+                { colors, which ->
+                    if ((which and WallpaperManager.FLAG_SYSTEM) != 0) {
+                        refreshStatusBarColor(force = true, colorsOverride = colors)
+                        refresh()
+                    }
                 },
                 android.os.Handler(android.os.Looper.getMainLooper()),
             )
@@ -181,11 +183,11 @@ class SpeedIslandController(
         if (visible) show(speedMonitor.speed.value) else hide()
     }
 
-    private fun refreshStatusBarColor(force: Boolean = false) {
+    private fun refreshStatusBarColor(force: Boolean = false, colorsOverride: WallpaperColors? = null) {
         val now = android.os.SystemClock.elapsedRealtime()
         if (!force && now - statusBarColorAt < 60_000) return
         statusBarColorAt = now
-        statusBarTextColor = computeStatusBarTextColor()
+        statusBarTextColor = computeStatusBarTextColor(colorsOverride)
     }
 
     private suspend fun refreshStats() {
@@ -401,25 +403,27 @@ class SpeedIslandController(
     }
 
     /**
-     * Android 不提供查詢狀態欄圖示顏色的 API；用系統深色模式 + 桌布色調做近似。
-     * 深色桌布通常配白色狀態欄圖示，淺色桌布配黑色。
+     * Android 不提供查詢前景應用狀態欄圖示顏色的公開 API；綜合系統深色模式 + 桌布色調與主色亮度判斷：
+     * - 系統深色模式一律白字；
+     * - 桌布標記 HINT_SUPPORTS_DARK_TEXT 時黑字、HINT_SUPPORTS_DARK_THEME 時白字；
+     * - 部分 OEM / 動態桌布不回傳 colorHints（為 0）時，改用 primaryColor 實際亮度判斷（暗桌布白字、亮桌布黑字）。
      */
-    private fun computeStatusBarTextColor(): Int {
-        if (isNightMode()) return Color.WHITE
-        val hints = runCatching {
+    private fun computeStatusBarTextColor(colorsOverride: WallpaperColors? = null): Int {
+        if (isSystemNightMode()) return Color.WHITE
+        val colors = colorsOverride ?: runCatching {
             context.getSystemService(WallpaperManager::class.java)
                 ?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
-                ?.colorHints
-        }.getOrNull() ?: 0
+        }.getOrNull() ?: return Color.WHITE
+        val hints = colors.colorHints
         return when {
             (hints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0 -> Color.BLACK
             (hints and WallpaperColors.HINT_SUPPORTS_DARK_THEME) != 0 -> Color.WHITE
-            else -> Color.BLACK
+            else -> if (colors.primaryColor.luminance() < 0.5f) Color.WHITE else Color.BLACK
         }
     }
 
-    private fun isNightMode(): Boolean =
-        (context.resources.configuration.uiMode and
+    private fun isSystemNightMode(): Boolean =
+        (android.content.res.Resources.getSystem().configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 

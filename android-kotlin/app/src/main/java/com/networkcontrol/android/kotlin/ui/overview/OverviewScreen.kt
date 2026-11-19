@@ -3,15 +3,8 @@ package com.networkcontrol.android.kotlin.ui.overview
 import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,11 +30,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Warning
@@ -52,8 +43,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +52,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -206,14 +196,6 @@ fun OverviewScreen(backend: AppBackend) {
         if (consent != null) consentLauncher.launch(consent) else backend.setProtection(true)
     }
 
-    fun toggleProtection() {
-        if (!protection) {
-            enableProtection()
-        } else {
-            guard.run { backend.setProtection(false) }
-        }
-    }
-
     val tokens = LocalAppVisualTokens.current
     val scheme = MaterialTheme.colorScheme
     val bottomPadding = LocalBottomContentPadding.current
@@ -245,8 +227,7 @@ fun OverviewScreen(backend: AppBackend) {
                 start = 18.dp,
                 top = 18.dp,
                 end = 18.dp,
-                // 底部額外留白給右下角懸浮主控按鈕
-                bottom = 92.dp + bottomPadding,
+                bottom = 20.dp + bottomPadding,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -267,7 +248,7 @@ fun OverviewScreen(backend: AppBackend) {
                 )
             }
 
-            // 2. 旗艦防護狀態橫幅卡片（點擊卡片或右下角 FAB 均可開關）
+            // 2. 旗艦防護狀態橫幅卡片（右側獨立開關防誤觸，滑動瀏覽不會誤關防護）
             item {
                 val baseContainer = if (tokens.cardContainer != Color.Unspecified) {
                     tokens.cardContainer
@@ -292,10 +273,7 @@ fun OverviewScreen(backend: AppBackend) {
                 }
                 val cardShape = RoundedCornerShape(tokens.cardCornerRadius)
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(cardShape)
-                        .clickable { toggleProtection() },
+                    modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = baseContainer,
                         contentColor = scheme.onSurface,
@@ -355,6 +333,13 @@ fun OverviewScreen(backend: AppBackend) {
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
+                            Spacer(Modifier.width(8.dp))
+                            Switch(
+                                checked = protection,
+                                onCheckedChange = { enabled ->
+                                    if (enabled) enableProtection() else guard.run { backend.setProtection(false) }
+                                },
+                            )
                         }
                         if (status == ProtectionStatus.NeedsConsent || status == ProtectionStatus.Revoked) {
                             Text(
@@ -723,64 +708,6 @@ fun OverviewScreen(backend: AppBackend) {
                             Text(s[S.Close])
                         }
                     }
-                }
-            }
-        }
-
-        // 右下角旗艦懸浮主控按鈕（FlClash 風格：形變 + 色彩漸變 + 播放/停止平滑切換）
-        val fabCorner by animateDpAsState(
-            targetValue = if (protection) 16.dp else 28.dp,
-            animationSpec = tween(240),
-            label = "fab-corner",
-        )
-        val fabContainer by animateColorAsState(
-            targetValue = when {
-                isBlockAll -> scheme.error
-                protection -> scheme.primary
-                else -> scheme.surfaceVariant
-            },
-            animationSpec = tween(240),
-            label = "fab-container",
-        )
-        val fabContent by animateColorAsState(
-            targetValue = when {
-                isBlockAll -> scheme.onError
-                protection -> scheme.onPrimary
-                else -> scheme.onSurface
-            },
-            animationSpec = tween(240),
-            label = "fab-content",
-        )
-        FloatingActionButton(
-            onClick = { toggleProtection() },
-            shape = RoundedCornerShape(fabCorner),
-            containerColor = fabContainer,
-            contentColor = fabContent,
-            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = bottomPadding + 16.dp),
-        ) {
-            AnimatedContent(
-                targetState = protection,
-                transitionSpec = {
-                    (fadeIn(tween(180)) + scaleIn(initialScale = 0.8f, animationSpec = tween(180)))
-                        .togetherWith(fadeOut(tween(140)) + scaleOut(targetScale = 0.8f, animationSpec = tween(140)))
-                },
-                label = "fab-icon",
-            ) { running ->
-                if (running) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = s[S.ProtectionOff],
-                        modifier = Modifier.size(26.dp),
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Rounded.PlayArrow,
-                        contentDescription = s[S.ProtectionOn],
-                        modifier = Modifier.size(28.dp),
-                    )
                 }
             }
         }

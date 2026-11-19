@@ -57,6 +57,8 @@ class AppCatalog(private val context: Context) {
 
     fun packagesForUid(uid: Int): List<String> {
         current().byUid[uid]?.let { return it }
+        // 應用分身（如 vivo / MIUI user 999）與主應用共用 appId = uid % 100_000
+        if (uid >= 100_000) current().byUid[uid % 100_000]?.let { return it }
         return runCatching {
             appContext.packageManager.getPackagesForUid(uid)?.sorted().orEmpty()
         }.getOrDefault(emptyList())

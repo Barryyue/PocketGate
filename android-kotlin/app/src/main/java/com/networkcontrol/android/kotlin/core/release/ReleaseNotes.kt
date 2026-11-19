@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.14.3",
+            date = "2026-11-19",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Fixed multi-user/clone app support (e.g. vivo/MIUI Dual Apps with user 999 UIDs) so cloned apps inherit their primary app's allow/deny rules and prompt properly instead of being silently blocked; removed the bottom-right FAB to prevent accidental protection toggles and restored the top Hero card Switch; improved Speed Island status-bar text color detection using true system dark mode and wallpaper primary luminance.",
+                    "修复应用分身（如 vivo / 小米等 user 999 双开分身）被误拒且无弹窗的问题，分身 UID 自动按 appId 继承主应用规则并正常弹窗；移除易误触的右下角悬浮开关，恢复顶部防护卡片右侧独立开关；优化灵动岛「跟随状态栏」文字取色，改用系统真实深色模式与壁纸主色亮度判断。",
+                    "修復應用分身（如 vivo / 小米等 user 999 雙開分身）被誤拒且無彈窗的問題，分身 UID 自動依 appId 繼承主應用規則並正常彈窗；移除易誤觸的右下角懸浮開關，恢復頂部防護卡片右側獨立開關；優化靈動島「跟隨狀態欄」文字取色，改用系統真實深色模式與桌布主色亮度判斷。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.14.2",
             date = "2026-11-19",
             features = emptyList(),

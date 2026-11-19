@@ -377,7 +377,12 @@ data class VpnRoutingPlan(
     val byUid: Map<Int, AppRouting>,
     val skippedRules: List<SkippedRule>,
 ) {
-    fun find(uid: Int): AppRouting? = byUid[uid]
+    /**
+     * 依 UID 查找路由決定；若屬於多使用者 / 應用分身（如 vivo / MIUI 的 user 999，UID = userId * 100000 + appId），
+     * 自動回退到主使用者的同 appId，讓分身應用繼承主應用規則並可正常識別與彈窗。
+     */
+    fun find(uid: Int): AppRouting? =
+        byUid[uid] ?: if (uid >= 100_000) byUid[uid % 100_000] else null
 
     companion object {
         val Empty = VpnRoutingPlan(FilterMode.Ask, emptySet(), emptyMap(), emptyList())
