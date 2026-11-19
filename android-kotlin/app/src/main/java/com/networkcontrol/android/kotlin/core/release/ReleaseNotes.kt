@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.6",
+            date = "2026-11-19",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Added GitHub release mirror acceleration (ghfast.top) and web redirect tag fallback for in-app update downloads, and removed the browser-redirect fallback so updates always stay inside the app.",
+                    "为应用内更新下载加入 GitHub 加速镜像（ghfast.top）与网页重定向解析兜底，并移除失败时自动跳转浏览器的行为，确保更新全程在应用内完成。",
+                    "為應用程式內更新下載加入 GitHub 加速鏡像（ghfast.top）與網頁重定向解析兜底，並移除失敗時自動跳轉瀏覽器的行為，確保更新全程在應用程式內完成。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.5",
             date = "2026-11-19",
             features = emptyList(),

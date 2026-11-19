@@ -56,7 +56,7 @@ $emulator = if (Test-Path 'D:\tools\android-dev\emu34\emulator\emulator.exe') {
     Join-Path $sdk 'emulator\emulator.exe'
 }
 $package = 'com.networkcontrol.android.kotlin.debug'
-$version = '0.13.5'
+$version = '0.13.6'
 
 function Get-Sha256([string]$FilePath) {
     $sha = [System.Security.Cryptography.SHA256]::Create()

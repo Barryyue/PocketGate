@@ -36,23 +36,25 @@ data class UpdateInfo(
  * 不要在這裡關閉代理，否則只能透過代理上網的裝置會失敗。
  *
  * 預設自動檢查策略（[checkAuto]）：
- * 1. 優先查詢 GitHub Releases（[DEFAULT_GITHUB_REPO]），若有新版本則同時探測 GitHub 下載連結是否可連通；
- * 2. 若 GitHub API 連不通，或 GitHub 的 APK 下載連結無法連線，自動切換至 Gitee Releases（[DEFAULT_GITEE_REPO]），無須使用者手動選擇。
- * 3. 支援在應用內直接下載 APK（[downloadApk]）：若主下載連結中途失敗，會自動回退至備用下載連結（或即時查詢 Gitee 鏡像下載）。
+ * 1. 優先查詢 GitHub Releases（[DEFAULT_GITHUB_REPO]；若 GitHub API 遇到 403 速率限制，自動改用 `releases/latest` 302 重定向解析版本與 APK 位址）；
+ * 2. 若發現新版本，自動探測 GitHub 附件實際下載域名（`release-assets.githubusercontent.com`）是否可連通；
+ * 3. 若 GitHub 連不通或下載域名被阻斷，自動依序回退至 Gitee Releases（[DEFAULT_GITEE_REPO]）與 GitHub 國內加速鏡像（[GITHUB_MIRROR_PREFIX]），全程在應用內完成下載。
  */
 object UpdateChecker {
     const val DEFAULT_GITHUB_REPO = "Barryyue/PocketGate"
     const val LEGACY_GITHUB_REPO = "Barryyue/network-control"
     const val DEFAULT_GITEE_REPO = "yuexiaobai/PocketGate"
     const val LEGACY_GITEE_REPO = "yuexiaobai/networkcontrol"
+    const val GITHUB_MIRROR_PREFIX = "https://ghfast.top/"
 
     private const val GITHUB_LATEST = "https://api.github.com/repos/%s/releases/latest"
+    private const val GITHUB_WEB_LATEST = "https://github.com/%s/releases/latest"
     private const val GITLAB_LATEST =
         "https://gitlab.com/api/v4/projects/%s/releases/permalink/latest"
     private const val GITEE_LATEST = "https://gitee.com/api/v5/repos/%s/releases/latest"
 
     /**
-     * 自動檢查更新：先走 GitHub，連不通或下載地址不可達時自動回退到 Gitee（同時相容改名前後的儲存庫名稱）。
+     * 自動檢查更新：先走 GitHub，連不通或下載地址不可達時自動回退到 Gitee 或國內加速鏡像。
      */
     suspend fun checkAuto(
         currentVersion: String,
@@ -61,9 +63,9 @@ object UpdateChecker {
     ): UpdateInfo = withContext(Dispatchers.IO) {
         resolveWithFallback(
             fetchGitHub = {
-                val primary = check(currentVersion, UpdateSource.GitHub, githubRepo)
+                val primary = checkGitHubWithWebFallback(currentVersion, githubRepo)
                 if (primary.error != null && githubRepo == DEFAULT_GITHUB_REPO) {
-                    val legacy = check(currentVersion, UpdateSource.GitHub, LEGACY_GITHUB_REPO)
+                    val legacy = checkGitHubWithWebFallback(currentVersion, LEGACY_GITHUB_REPO)
                     if (legacy.error == null) legacy else primary
                 } else {
                     primary
@@ -82,6 +84,49 @@ object UpdateChecker {
         )
     }
 
+    private suspend fun checkGitHubWithWebFallback(currentVersion: String, repo: String): UpdateInfo {
+        val apiResult = check(currentVersion, UpdateSource.GitHub, repo)
+        if (apiResult.error == null && apiResult.latestVersion != null) return apiResult
+        val webResult = checkGitHubRedirect(currentVersion, repo)
+        return if (webResult.error == null && webResult.latestVersion != null) webResult else apiResult
+    }
+
+    /**
+     * 當 `api.github.com` 遇到未登入 IP 速率限制（HTTP 403）時，
+     * 透過 `https://github.com/{owner}/{repo}/releases/latest` 的 302 Location 標頭解析最新 Tag 與 APK 位址。
+     */
+    internal fun checkGitHubRedirect(currentVersion: String, repo: String): UpdateInfo = runCatching {
+        val url = GITHUB_WEB_LATEST.format(repo.trim())
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 6_000
+            readTimeout = 6_000
+            requestMethod = "GET"
+            instanceFollowRedirects = false
+            setRequestProperty("User-Agent", "PocketGate/$currentVersion")
+        }
+        try {
+            val location = connection.getHeaderField("Location").orEmpty()
+            val marker = "/releases/tag/"
+            val idx = location.indexOf(marker)
+            if (idx < 0) {
+                return@runCatching UpdateInfo(null, null, "HTTP ${connection.responseCode}", currentVersion)
+            }
+            val rawTag = location.substring(idx + marker.length).substringBefore('?').substringBefore('/').trim()
+            val version = rawTag.removePrefix("kt-v").removePrefix("v")
+            if (version.isBlank()) {
+                return@runCatching UpdateInfo(null, null, "empty tag", currentVersion)
+            }
+            val apkUrl = "https://github.com/${repo.trim()}/releases/download/$rawTag/PocketGate-$version.apk"
+            UpdateInfo(
+                latestVersion = version,
+                downloadUrl = apkUrl,
+                currentVersion = currentVersion,
+            )
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrElse { UpdateInfo(null, null, it.message ?: it.javaClass.simpleName, currentVersion) }
+
     internal inline fun resolveWithFallback(
         fetchGitHub: () -> UpdateInfo,
         fetchGitee: () -> UpdateInfo,
@@ -91,16 +136,21 @@ object UpdateChecker {
         if (github.error == null && github.latestVersion != null) {
             if (!github.hasUpdate) return github
             val ghUrl = github.downloadUrl
+            val mirrorUrl = ghUrl?.takeIf { it.startsWith("https://github.com/", ignoreCase = true) }
+                ?.let { "$GITHUB_MIRROR_PREFIX$it" }
             if (!ghUrl.isNullOrBlank() && isDownloadReachable(ghUrl)) {
-                return github
+                return github.copy(fallbackDownloadUrl = mirrorUrl)
             }
             val gitee = fetchGitee()
             if (gitee.error == null && !gitee.downloadUrl.isNullOrBlank()) {
                 return if (gitee.hasUpdate) {
-                    gitee.copy(fallbackDownloadUrl = ghUrl)
+                    gitee.copy(fallbackDownloadUrl = mirrorUrl ?: ghUrl)
                 } else {
-                    github.copy(downloadUrl = gitee.downloadUrl, fallbackDownloadUrl = ghUrl)
+                    github.copy(downloadUrl = gitee.downloadUrl, fallbackDownloadUrl = mirrorUrl ?: ghUrl)
                 }
+            }
+            if (mirrorUrl != null) {
+                return github.copy(downloadUrl = mirrorUrl, fallbackDownloadUrl = ghUrl)
             }
             return github
         }
@@ -110,7 +160,7 @@ object UpdateChecker {
 
     /**
      * 在應用內直接下載更新 APK 到 [targetFile]，並透過 [onProgress] 回報 0..100 的進度百分比。
-     * 若主連結 [url] 下載失敗，會自動嘗試 [fallbackUrl]（或自動查詢 Gitee Releases 鏡像下載）。
+     * 若主連結 [url] 下載失敗，會依序嘗試 [fallbackUrl]、Gitee Releases 鏡像，以及 GitHub 加速鏡像（[GITHUB_MIRROR_PREFIX]）。
      */
     suspend fun downloadApk(
         url: String,
@@ -119,29 +169,49 @@ object UpdateChecker {
         currentVersion: String = "0.0.0",
         onProgress: (Int) -> Unit = {},
     ): Result<File> = withContext(Dispatchers.IO) {
-        val primaryResult = runCatching {
-            downloadFromUrl(url, targetFile, currentVersion, onProgress)
+        val candidates = linkedSetOf<String>()
+        candidates.add(url)
+        if (!fallbackUrl.isNullOrBlank()) {
+            candidates.add(fallbackUrl)
         }
-        if (primaryResult.isSuccess) return@withContext primaryResult
+        val rawGitHubUrl = when {
+            url.startsWith(GITHUB_MIRROR_PREFIX, ignoreCase = true) ->
+                url.removePrefix(GITHUB_MIRROR_PREFIX)
+            url.startsWith("https://github.com/", ignoreCase = true) -> url
+            fallbackUrl?.startsWith("https://github.com/", ignoreCase = true) == true -> fallbackUrl
+            else -> null
+        }
+        if (rawGitHubUrl != null) {
+            candidates.add("$GITHUB_MIRROR_PREFIX$rawGitHubUrl")
+            candidates.add(rawGitHubUrl)
+        }
 
-        val resolvedFallback = fallbackUrl?.takeIf { it.isNotBlank() && it != url }
-            ?: if (url.contains("github.com", ignoreCase = true)) {
-                val gitee = check(currentVersion, UpdateSource.Gitee, DEFAULT_GITEE_REPO).let {
-                    if (it.error != null) check(currentVersion, UpdateSource.Gitee, LEGACY_GITEE_REPO) else it
-                }
-                gitee.downloadUrl?.takeIf { it.endsWith(".apk", ignoreCase = true) && it != url }
-            } else {
-                null
-            }
-
-        if (resolvedFallback != null) {
+        var lastResult: Result<File> = Result.failure(IOException("No download URL"))
+        for (candidate in candidates) {
             onProgress(0)
-            runCatching {
-                downloadFromUrl(resolvedFallback, targetFile, currentVersion, onProgress)
+            val attempt = runCatching {
+                downloadFromUrl(candidate, targetFile, currentVersion, onProgress)
             }
-        } else {
-            primaryResult
+            if (attempt.isSuccess) return@withContext attempt
+            lastResult = attempt
         }
+
+        // 若以上候選皆失敗且尚未查過 Gitee，最後查詢一次 Gitee Releases
+        if (rawGitHubUrl != null) {
+            val gitee = check(currentVersion, UpdateSource.Gitee, DEFAULT_GITEE_REPO).let {
+                if (it.error != null) check(currentVersion, UpdateSource.Gitee, LEGACY_GITEE_REPO) else it
+            }
+            val giteeUrl = gitee.downloadUrl?.takeIf { it.endsWith(".apk", ignoreCase = true) && it !in candidates }
+            if (giteeUrl != null) {
+                onProgress(0)
+                val giteeAttempt = runCatching {
+                    downloadFromUrl(giteeUrl, targetFile, currentVersion, onProgress)
+                }
+                if (giteeAttempt.isSuccess) return@withContext giteeAttempt
+                lastResult = giteeAttempt
+            }
+        }
+        lastResult
     }
 
     private fun downloadFromUrl(
@@ -228,20 +298,36 @@ object UpdateChecker {
         }
     }.getOrDefault(false)
 
+    /**
+     * 追蹤最多 3 層重定向（例如 `github.com` 302 到 `release-assets.githubusercontent.com`），
+     * 確保實際承載 APK 的檔案伺服器也能連通，而不是只看到第一跳 302 就誤判可達。
+     */
     private fun isUrlReachable(url: String, currentVersion: String): Boolean = runCatching {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 4_000
-            readTimeout = 4_000
-            requestMethod = "GET"
-            instanceFollowRedirects = false
-            setRequestProperty("Range", "bytes=0-0")
-            setRequestProperty("User-Agent", "PocketGate/$currentVersion")
+        var currentUrl = url
+        var redirects = 0
+        while (redirects < 4) {
+            val connection = (URL(currentUrl).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 3_500
+                readTimeout = 3_500
+                requestMethod = "GET"
+                instanceFollowRedirects = false
+                setRequestProperty("Range", "bytes=0-0")
+                setRequestProperty("User-Agent", "PocketGate/$currentVersion")
+            }
+            try {
+                val code = connection.responseCode
+                if (code in 300..399) {
+                    val location = connection.getHeaderField("Location") ?: return@runCatching false
+                    currentUrl = URL(URL(currentUrl), location).toString()
+                    redirects++
+                    continue
+                }
+                return@runCatching code in 200..299
+            } finally {
+                connection.disconnect()
+            }
         }
-        try {
-            connection.responseCode in 200..399
-        } finally {
-            connection.disconnect()
-        }
+        false
     }.getOrDefault(false)
 
     suspend fun check(

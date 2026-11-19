@@ -721,13 +721,6 @@ fun SettingsScreen(
                                             launchApkInstaller(file)
                                         }.onFailure { err ->
                                             toast(s.format(S.UpdateFailed, err.message.orEmpty()))
-                                            // 若應用內下載失敗，兜底使用瀏覽器開啟下載連結
-                                            runCatching {
-                                                context.startActivity(
-                                                    Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                                                )
-                                            }
                                         }
                                     }
                                 },
