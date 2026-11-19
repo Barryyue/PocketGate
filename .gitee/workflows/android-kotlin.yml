@@ -43,16 +43,15 @@ stages:
           - sed -i 's|networkTimeout=10000|networkTimeout=60000|g' gradle/wrapper/gradle-wrapper.properties
           - |
             cat > /tmp/gitee-mirrors.init.gradle << 'EOF'
-            allprojects {
-                buildscript {
-                    repositories {
-                        maven { url 'https://maven.aliyun.com/repository/google' }
-                        maven { url 'https://maven.aliyun.com/repository/public' }
-                    }
+            beforeSettings { settings ->
+                settings.pluginManagement.repositories {
+                    maven { url = uri('https://maven.aliyun.com/repository/google') }
+                    maven { url = uri('https://maven.aliyun.com/repository/public') }
+                    maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
                 }
-                repositories {
-                    maven { url 'https://maven.aliyun.com/repository/google' }
-                    maven { url 'https://maven.aliyun.com/repository/public' }
+                settings.dependencyResolutionManagement.repositories {
+                    maven { url = uri('https://maven.aliyun.com/repository/google') }
+                    maven { url = uri('https://maven.aliyun.com/repository/public') }
                 }
             }
             EOF
