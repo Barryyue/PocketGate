@@ -110,9 +110,8 @@ switch ($Command) {
             Write-Warning '未設置 NC_ANDROID_KEYSTORE：使用調試簽名，只適合測試，不能用於正式分發。'
         }
         Invoke-Dotnet $publishArgs
-        $propsPath = Join-Path $root 'Directory.Build.props'
-        $versionMatch = Select-String -Path $propsPath -Pattern '<VersionPrefix>([^<]+)</VersionPrefix>' | Select-Object -First 1
-        $ver = if ($versionMatch) { $versionMatch.Matches[0].Groups[1].Value } else { '0.3.0' }
+        $versionMatch = Select-String -Path $project -Pattern '<AtomUiVersion>([^<]+)</AtomUiVersion>' | Select-Object -First 1
+        $ver = if ($versionMatch) { $versionMatch.Matches[0].Groups[1].Value } else { '0.3.1' }
         $signedApk = Get-ChildItem $outDir -Filter '*-Signed.apk' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if ($signedApk) {
             $atomUiTarget = Join-Path $outDir ("PocketGate-{0}-AtomUI.apk" -f $ver)

@@ -9,9 +9,10 @@
     <OutputType>Exe</OutputType>
     <ApplicationId>com.networkcontrol.android</ApplicationId>
     <ApplicationTitle>PocketGate (AtomUI)</ApplicationTitle>
-    <!-- 顯示版本取 Directory.Build.props 的 VersionPrefix；整數版本碼 = major*10000 + minor*100 + patch -->
-    <ApplicationDisplayVersion>$(VersionPrefix)</ApplicationDisplayVersion>
-    <ApplicationVersion>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($(VersionPrefix.Split('.')[0]), 10000)), $([MSBuild]::Multiply($(VersionPrefix.Split('.')[1]), 100)))), $(VersionPrefix.Split('.')[2])))</ApplicationVersion>
+    <!-- AtomUI 安卓版獨立版本號（與桌面版 Directory.Build.props 解耦）；整數版本碼 = major*10000 + minor*100 + patch -->
+    <AtomUiVersion>0.3.1</AtomUiVersion>
+    <ApplicationDisplayVersion>$(AtomUiVersion)</ApplicationDisplayVersion>
+    <ApplicationVersion>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($(AtomUiVersion.Split('.')[0]), 10000)), $([MSBuild]::Multiply($(AtomUiVersion.Split('.')[1]), 100)))), $(AtomUiVersion.Split('.')[2])))</ApplicationVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
