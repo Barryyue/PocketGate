@@ -379,19 +379,19 @@ private fun AppBottomBar(
         )
 
         // 玻璃：底色壓低到 0.08 / 0.18，讓模糊後的光影和顏色真的透上來；
-        // 高光只留在頂部一小段，底部加一層內陰影做出厚度，而不是整片泛白。
+        // backgroundColor 設為透明，避免未模糊底色在圓角處露邊。
         glass -> HazeStyle(
             blurRadius = 18.dp,
-            backgroundColor = scheme.surface,
-            noiseFactor = 0.06f,
+            backgroundColor = Color.Transparent,
+            noiseFactor = 0.04f,
             tints = listOf(
-                HazeTint(scheme.surface.copy(alpha = if (dark) 0.18f else 0.08f)),
+                HazeTint(scheme.surface.copy(alpha = if (dark) 0.20f else 0.10f)),
                 HazeTint(
                     Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = if (dark) 0.08f else 0.12f),
-                        0.25f to Color.Transparent,
-                        0.78f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = if (dark) 0.14f else 0.07f),
+                        0f to Color.White.copy(alpha = if (dark) 0.10f else 0.16f),
+                        0.28f to Color.Transparent,
+                        0.76f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = if (dark) 0.14f else 0.06f),
                     ),
                 ),
             ),
@@ -438,21 +438,21 @@ private fun AppBottomBar(
                 .then(
                     when {
                         glass -> Modifier.shadow(
-                            elevation = 20.dp,
+                            elevation = 18.dp,
                             shape = shape,
                             clip = false,
                             ambientColor = Color.Black.copy(alpha = 0.28f),
                             spotColor = Color.Black.copy(alpha = 0.38f),
                         )
-                        transparent -> Modifier.shadow(8.dp, shape)
-                        floating -> Modifier.shadow(10.dp, shape)
+                        transparent -> Modifier.shadow(8.dp, shape, clip = false)
+                        floating -> Modifier.shadow(10.dp, shape, clip = false)
                         else -> Modifier
                     },
                 )
+                // 在陰影之後裁切圓角：保留柔和外陰影，同時徹底消除 Haze 模糊與著色層在兩端露出的方形尾巴。
+                .then(if (floating) Modifier.clip(shape) else Modifier)
                 .then(
                     when {
-                        // 讓 Haze 自己按圓角裁切模糊層；用 Modifier.clip 會把它的取樣邊界一起切掉，
-                        // 圓角處反而出現方形的模糊斷面。
                         hazeStyle != null -> Modifier.hazeEffect(state = hazeState, style = hazeStyle) {
                             blurredEdgeTreatment = hazeEdgeTreatment
                         }
@@ -532,14 +532,14 @@ private fun AppBottomBar(
                     animationSpec = spring(dampingRatio = 0.62f, stiffness = 420f),
                     label = "nav-pill-offset",
                 )
-                // 帶彈性過衝的滑動膠囊指示器
+                // 帶彈性過衝的滑動膠囊指示器（同心圓角 24dp = 外框 30dp - 內距 6dp）
                 Box(
                     modifier = Modifier
                         .offset(x = pillOffset)
                         .width(slotWidth)
                         .fillMaxHeight()
                         .padding(horizontal = 3.dp)
-                        .clip(RoundedCornerShape(22.dp))
+                        .clip(RoundedCornerShape(24.dp))
                         .background(pillColor),
                 )
                 Row(modifier = Modifier.fillMaxSize()) {

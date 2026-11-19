@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.14.4",
+            date = "2026-11-19",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Fixed rectangular corner artifacts on the floating glass bottom navigation bar by clipping the Haze glass layer cleanly to its rounded capsule shape and setting transparent Haze backgroundColor with concentric 24dp inner pill corners.",
+                    "修复悬浮玻璃底部导航栏两端露出方形边角尾巴的问题：在投影之后精确按圆角胶囊裁切 Haze 玻璃层并将底色设为透明，同时将内部滑动胶囊调整为同心 24dp 圆角。",
+                    "修復懸浮玻璃底部導覽列兩端露出方形邊角尾巴的問題：在投影之後精確按圓角膠囊裁切 Haze 玻璃層並將底色設為透明，同時將內部滑動膠囊調整為同心 24dp 圓角。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.14.3",
             date = "2026-11-19",
             features = emptyList(),
