@@ -255,38 +255,26 @@ fun AppRoot(container: AppContainer) {
             }
         } else {
             val floatingToolbar = toolbarStyle.isFloating
-            val overlayToolbar = toolbarStyle != ToolbarStyle.ClassicSolid
-            val contentBottom = when {
-                !overlayToolbar -> 0.dp
-                floatingToolbar -> 104.dp
-                else -> 84.dp
-            }
+            val useHazeSource = toolbarStyle != ToolbarStyle.ClassicSolid
+            val barClearance = if (floatingToolbar) 104.dp else 84.dp
             val bottomBarHideModifier = Modifier.graphicsLayer {
                 translationY = bottomBarHideProgress * (size.height + 48.dp.toPx())
                 alpha = (1f - bottomBarHideProgress * 1.15f).coerceIn(0f, 1f)
             }
+            // 所有導覽列樣式統一採浮層疊加，避免 Scaffold(bottomBar) 預留底部空白佔位；
+            // 內容區延伸至螢幕最底端，導覽列下滑隱藏後列表即刻填滿釋放區域。
             Scaffold(
                 containerColor = Color.Transparent,
                 contentColor = MaterialTheme.colorScheme.onBackground,
-                bottomBar = {
-                    if (!overlayToolbar) {
-                        AppBottomBar(
-                            style = toolbarStyle,
-                            selected = selected,
-                            onSelect = { selected = it },
-                            hazeState = hazeState,
-                            modifier = bottomBarHideModifier,
-                        )
-                    }
-                },
             ) { padding ->
+                val navBottom = padding.calculateBottomPadding()
                 CompositionLocalProvider(
-                    LocalBottomContentPadding provides contentBottom,
+                    LocalBottomContentPadding provides (barClearance + navBottom),
                 ) {
                     Box(
                         Modifier
                             .fillMaxSize()
-                            .padding(padding)
+                            .padding(top = padding.calculateTopPadding())
                             .nestedScroll(bottomBarScrollConnection),
                         contentAlignment = Alignment.TopCenter,
                     ) {
@@ -295,7 +283,7 @@ fun AppRoot(container: AppContainer) {
                                 .widthIn(max = 760.dp)
                                 .fillMaxSize()
                                 .then(
-                                    if (overlayToolbar) {
+                                    if (useHazeSource) {
                                         Modifier.hazeSource(state = hazeState)
                                     } else {
                                         Modifier
@@ -340,17 +328,15 @@ fun AppRoot(container: AppContainer) {
                     }
                 }
             }
-            if (overlayToolbar) {
-                AppBottomBar(
-                    style = toolbarStyle,
-                    selected = selected,
-                    onSelect = { selected = it },
-                    hazeState = hazeState,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .then(bottomBarHideModifier),
-                )
-            }
+            AppBottomBar(
+                style = toolbarStyle,
+                selected = selected,
+                onSelect = { selected = it },
+                hazeState = hazeState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .then(bottomBarHideModifier),
+            )
         }
         PromptOverlay(
             backend = backend,

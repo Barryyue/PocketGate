@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.15.5",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "Fix blank space when bottom navigation bar hides: all toolbar styles now overlay an edge-to-edge full-height viewport so list content truly fills the bottom of the screen when the bar slides away",
+                    "修复导航栏下滑隐藏后底部残留空白占位的问题：所有工具栏样式统一改为全高沉浸画布 + 浮层叠加，导航栏收起后列表内容真正铺满屏幕底部",
+                    "修復導覽列下滑隱藏後底部殘留空白佔位的問題：所有工具列樣式統一改為全高沉浸畫布 + 浮層疊加，導覽列收起後列表內容真正鋪滿螢幕底部",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.15.4",
             date = "2026-11-19",
             features = listOf(
