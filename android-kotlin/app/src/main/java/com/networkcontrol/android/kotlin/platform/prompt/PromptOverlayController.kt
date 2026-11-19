@@ -2,17 +2,23 @@ package com.networkcontrol.android.kotlin.platform.prompt
 
 import android.content.Context
 import android.content.res.ColorStateList
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.RippleDrawable
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -20,6 +26,7 @@ import android.widget.RadioButton
 import android.widget.TextView
 import com.networkcontrol.android.kotlin.AppPreferences
 import com.networkcontrol.android.kotlin.R
+import com.networkcontrol.android.kotlin.core.model.NetworkKind
 import com.networkcontrol.android.kotlin.core.model.PromptSnapshot
 import com.networkcontrol.android.kotlin.core.model.RuleLifetime
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
@@ -28,6 +35,7 @@ import com.networkcontrol.android.kotlin.platform.AppLog
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.UiStrings
 import com.networkcontrol.android.kotlin.ui.prompt.promptDisplayName
+import com.networkcontrol.android.kotlin.ui.prompt.promptPackageName
 
 /**
  * 系統級懸浮詢問面板。只用原生 View，避免 ComposeView 在 WindowManager 中的生命週期問題。
@@ -37,7 +45,7 @@ class PromptOverlayController(
     private val context: Context,
     private val preferences: AppPreferences,
     private val timedMinutesProvider: () -> Int = { 60 },
-    private val networkKindProvider: () -> com.networkcontrol.android.kotlin.core.model.NetworkKind? = { null },
+    private val networkKindProvider: () -> NetworkKind? = { null },
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val windowManager = context.getSystemService(WindowManager::class.java)
@@ -189,7 +197,7 @@ class PromptOverlayController(
                 sheet -> 0
                 else -> dp(8)
             }
-            title = "NetworkControl prompt"
+            title = "PocketGate prompt"
             packageName = context.packageName
             if (Build.VERSION.SDK_INT >= 28) {
                 layoutInDisplayCutoutMode =
@@ -205,19 +213,20 @@ class PromptOverlayController(
             android.content.res.Configuration.UI_MODE_NIGHT_YES
         val accent = preferences.themeColor
         val surface = if (night) 0xFF2B2930.toInt() else Color.WHITE
+        val surfaceContainer = if (night) 0xFF38353E.toInt() else 0xFFF3F4F6.toInt()
         val onSurface = if (night) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
         val onSurfaceVariant = if (night) 0xFFCAC4D0.toInt() else 0xFF49454F.toInt()
         val divider = if (night) 0xFF49454F.toInt() else 0xFFE0E0E0.toInt()
         val error = if (night) 0xFFF2B8B5.toInt() else 0xFFB3261E.toInt()
         val sheet = preferences.promptOverlayPosition == "bottom"
 
-        // 仿紅魔：貼底白色面板、上方圓角；置頂 / 自訂位置時四角圓角並加細框。
+        // 仿紅魔：貼底面板、上方圓角；置頂 / 自訂位置時四角圓角並加細框。
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(22), dp(24), dp(6))
+            setPadding(dp(22), dp(20), dp(22), dp(6))
             background = GradientDrawable().apply {
                 setColor(surface)
-                val r = dp(20).toFloat()
+                val r = dp(22).toFloat()
                 cornerRadii = if (sheet) floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f) else FloatArray(8) { r }
                 if (!sheet) setStroke(dp(1), divider)
             }
@@ -228,15 +237,95 @@ class PromptOverlayController(
             ?: prompt.app?.name
             ?: promptDisplayName(prompt.executablePath)
             ?: strings[S.UnknownApp]
+        val pkgName = promptPackageName(prompt)
+        val networkKind = networkKindProvider()
+        val networkLabel = when (networkKind) {
+            NetworkKind.Wifi -> strings[S.PromptNetWlan]
+            NetworkKind.Cellular -> strings[S.PromptNetMobile]
+            else -> strings[S.PromptNetAny]
+        }
+
+        // 頂部應用識別列：圓角應用圖示 + 加粗突出應用名稱與包名 + 網路類型膠囊標籤
+        val header = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val iconView = ImageView(context).apply {
+            val bitmap = pkgName?.let { AppIconLoader.loadBitmap(context, it) }
+            if (bitmap != null) {
+                setImageBitmap(bitmap)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                clipToOutline = true
+                outlineProvider = ViewOutlineProvider.BACKGROUND
+                background = GradientDrawable().apply {
+                    setColor(surfaceContainer)
+                    cornerRadius = dp(12).toFloat()
+                }
+            } else {
+                setImageResource(R.drawable.ic_shield)
+                imageTintList = ColorStateList.valueOf(accent)
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setPadding(dp(10), dp(10), dp(10), dp(10))
+                background = GradientDrawable().apply {
+                    setColor((accent and 0x00FFFFFF) or 0x1F000000)
+                    cornerRadius = dp(12).toFloat()
+                }
+            }
+        }
+        header.addView(iconView, LinearLayout.LayoutParams(dp(46), dp(46)))
+
+        val titleCol = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), 0, dp(8), 0)
+        }
+        titleCol.addView(
+            textView(appLabel, 18f, onSurface, bold = true).apply {
+                maxLines = 1
+            },
+        )
+        val subtitleText = pkgName ?: promptDisplayName(prompt.executablePath) ?: ""
+        if (subtitleText.isNotBlank() && subtitleText != appLabel) {
+            titleCol.addView(
+                textView(subtitleText, 12f, onSurfaceVariant).apply {
+                    maxLines = 1
+                },
+            )
+        }
+        header.addView(
+            titleCol,
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f),
+        )
+
+        val netBadge = textView(networkLabel, 12f, accent, bold = true).apply {
+            maxLines = 1
+            setPadding(dp(10), dp(4), dp(10), dp(4))
+            background = GradientDrawable().apply {
+                setColor((accent and 0x00FFFFFF) or 0x22000000)
+                cornerRadius = dp(999).toFloat()
+                setStroke(dp(1), (accent and 0x00FFFFFF) or 0x55000000)
+            }
+        }
+        header.addView(netBadge)
+        root.addView(header)
+
+        // 主詢問文案：將應用名稱加粗並以主題色高亮
         val ownName = context.applicationInfo.loadLabel(context.packageManager).toString()
+        val rawMessage = PromptSheetText.message(strings, ownName, appLabel, networkKind)
+        val spannable = SpannableString(rawMessage)
+        val appStart = rawMessage.indexOf(appLabel)
+        if (appStart >= 0) {
+            val appEnd = appStart + appLabel.length
+            spannable.setSpan(StyleSpan(Typeface.BOLD), appStart, appEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannable.setSpan(ForegroundColorSpan(accent), appStart, appEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
         root.addView(
-            textView(
-                PromptSheetText.message(strings, ownName, appLabel, networkKindProvider()),
-                18f,
-                onSurface,
-            ).apply {
+            TextView(context).apply {
+                text = spannable
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                setTextColor(onSurface)
                 maxLines = 4
                 setLineSpacing(dp(4).toFloat(), 1f)
+                setPadding(0, dp(12), 0, 0)
             },
         )
 
@@ -246,17 +335,30 @@ class PromptOverlayController(
                 it.domains.firstOrNull() ?: "${it.remote.address.hostAddress}:${it.remote.port}"
             }.orEmpty()
             val more = if (prompt.flows.size > 1) " · " + strings.format(S.PromptFlows, prompt.flows.size) else ""
+            val detailBox = textView(
+                "${strings[S.PromptTarget]}：$target · ${first?.protocol?.name.orEmpty()}$more",
+                12.5f,
+                onSurfaceVariant,
+            ).apply {
+                setPadding(dp(12), dp(8), dp(12), dp(8))
+                background = GradientDrawable().apply {
+                    setColor(surfaceContainer)
+                    cornerRadius = dp(10).toFloat()
+                }
+            }
             root.addView(
-                textView(
-                    "${strings[S.PromptTarget]}：$target · ${first?.protocol?.name.orEmpty()}$more",
-                    13f,
-                    onSurfaceVariant,
-                ).apply { setPadding(0, dp(6), 0, 0) },
+                detailBox,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { topMargin = dp(10) },
             )
         }
         if (prompt.isTamperAlert) {
             root.addView(
-                textView(strings[S.PromptTamper], 13f, error).apply { setPadding(0, dp(6), 0, 0) },
+                textView(strings[S.PromptTamper], 13f, error, bold = true).apply {
+                    setPadding(0, dp(8), 0, 0)
+                },
             )
         }
 
@@ -266,7 +368,7 @@ class PromptOverlayController(
             // 勾選後「禁止」改為永久禁止；不勾只禁止到應用關閉。圓形勾選與紅魔一致。
             val dontAsk = RadioButton(context).apply {
                 text = strings[S.PromptDontAskAgain]
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
                 setTextColor(onSurface)
                 buttonTintList = ColorStateList(
                     arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
@@ -292,7 +394,7 @@ class PromptOverlayController(
         val actions = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(10), 0, 0)
+            setPadding(0, dp(8), 0, 0)
         }
         fun addAction(label: String, onClick: () -> Unit) {
             if (actions.childCount > 0) {
@@ -301,7 +403,7 @@ class PromptOverlayController(
                     LinearLayout.LayoutParams(dp(1), dp(22)),
                 )
             }
-            val button = textView(label, 17f, accent).apply {
+            val button = textView(label, 17f, accent, bold = true).apply {
                 gravity = Gravity.CENTER
                 setPadding(dp(4), 0, dp(4), 0)
                 // 一律單行；四個按鈕或大字體放不下時自動縮小，不換行。
@@ -343,18 +445,11 @@ class PromptOverlayController(
             this.text = text
             setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
             setTextColor(color)
-            if (bold) setTypeface(typeface, android.graphics.Typeface.BOLD)
+            if (bold) setTypeface(typeface, Typeface.BOLD)
             maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
         }
 
     private fun dp(value: Int): Int =
         (value * context.resources.displayMetrics.density).toInt()
-
-    private fun luminance(color: Int): Double {
-        val r = Color.red(color) / 255.0
-        val g = Color.green(color) / 255.0
-        val b = Color.blue(color) / 255.0
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b
-    }
 }

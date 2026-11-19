@@ -45,6 +45,11 @@ object ReleaseNotes {
             features = emptyList(),
             improvements = listOf(
                 t(
+                    "Beautified the connection prompt overlay and in-app card: added a top app header with the rounded app icon, bold app name, package subtitle and network badge, highlighted the app name in the prompt message with the theme color, and placed target details inside a rounded container.",
+                    "美化悬浮询问面板与应用内询问卡片：顶部新增圆角应用图标、加粗应用名称、包名副标题与网络类型胶囊标签，正文中将应用名称以主题色加粗高亮，并将连接目标放入圆角底色框中。",
+                    "美化懸浮詢問面板與應用程式內詢問卡片：頂部新增圓角應用程式圖示、加粗應用程式名稱、套件名稱副標題與網路類型膠囊標籤，內文中將應用程式名稱以主題色加粗高亮，並將連線目標放入圓角底色框中。",
+                ),
+                t(
                     "Renamed the app and release package to PocketGate, and simplified update checks to try GitHub Releases first and automatically fall back to Gitee Releases without manual source configuration.",
                     "应用与安装包正式定名为 PocketGate；检查更新简化为优先走 GitHub Releases、连不通或下载不可达时自动回退到 Gitee Releases，无需手动配置更新来源。",
                     "應用程式與安裝包正式定名為 PocketGate；檢查更新簡化為優先走 GitHub Releases、連不通或下載不可達時自動回退到 Gitee Releases，無須手動設定更新來源。",
