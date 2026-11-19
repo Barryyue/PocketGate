@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.15.6",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "Bouncy spring animation for bottom navigation bar: tuned asymmetric spring physics with subtle bottom-anchored scale so hiding glides smoothly and revealing pops back with a lively bounce",
+                    "优化底部导航栏隐藏与弹出的灵动弹簧动效：收起时柔和下沉缩小，上滑唤回时带轻微过冲回弹与缩放，节奏更从容灵动",
+                    "最佳化底部導覽列隱藏與彈出的靈動彈簧動效：收起時柔和下沉縮小，上滑喚回時帶輕微過衝回彈與縮放，節奏更從容靈動",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.15.5",
             date = "2026-11-19",
             features = listOf(

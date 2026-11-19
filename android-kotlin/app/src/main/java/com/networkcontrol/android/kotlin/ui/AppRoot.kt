@@ -67,6 +67,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -190,9 +191,16 @@ fun AppRoot(container: AppContainer) {
             }
         }
     }
+    val showBottomBar = bottomBarVisible || !autoHideBottomBar
     val bottomBarHideProgress by animateFloatAsState(
-        targetValue = if (bottomBarVisible || !autoHideBottomBar) 0f else 1f,
-        animationSpec = spring(dampingRatio = 0.84f, stiffness = 420f),
+        targetValue = if (showBottomBar) 0f else 1f,
+        animationSpec = if (showBottomBar) {
+            // 彈出顯示：較柔和剛度 + 輕微過衝回彈，呈現靈動上彈手感。
+            spring(dampingRatio = 0.62f, stiffness = 240f)
+        } else {
+            // 收起隱藏：從容順滑下沉，不反彈晃眼。
+            spring(dampingRatio = 0.86f, stiffness = 220f)
+        },
         label = "bottom-bar-hide",
     )
     val visualTokens = LocalAppVisualTokens.current
@@ -258,8 +266,12 @@ fun AppRoot(container: AppContainer) {
             val useHazeSource = toolbarStyle != ToolbarStyle.ClassicSolid
             val barClearance = if (floatingToolbar) 104.dp else 84.dp
             val bottomBarHideModifier = Modifier.graphicsLayer {
-                translationY = bottomBarHideProgress * (size.height + 48.dp.toPx())
-                alpha = (1f - bottomBarHideProgress * 1.15f).coerceIn(0f, 1f)
+                val scale = (1f - bottomBarHideProgress * 0.08f).coerceIn(0.88f, 1.04f)
+                transformOrigin = TransformOrigin(0.5f, 1f)
+                scaleX = scale
+                scaleY = scale
+                translationY = bottomBarHideProgress * (size.height + 56.dp.toPx())
+                alpha = (1f - bottomBarHideProgress * 0.95f).coerceIn(0f, 1f)
             }
             // 所有導覽列樣式統一採浮層疊加，避免 Scaffold(bottomBar) 預留底部空白佔位；
             // 內容區延伸至螢幕最底端，導覽列下滑隱藏後列表即刻填滿釋放區域。
