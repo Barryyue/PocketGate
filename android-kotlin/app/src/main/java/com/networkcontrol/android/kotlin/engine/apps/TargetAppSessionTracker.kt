@@ -13,6 +13,7 @@ import com.networkcontrol.android.kotlin.core.rules.RuleService
 import com.networkcontrol.android.kotlin.platform.AppLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -54,9 +55,17 @@ class TargetAppSessionTracker(
     init {
         scope.launch {
             while (isActive) {
+                if (rules.all.none { it.lifetime == RuleLifetime.UntilAppExit }) {
+                    // 沒有「僅一次」規則時完全掛起等待規則變更，空閒零喚醒。
+                    state.clear()
+                    seen.clear()
+                    lastQuery = 0L
+                    rules.ruleSet.first { rules.all.any { it.lifetime == RuleLifetime.UntilAppExit } }
+                }
                 runCatching { tick() }
                     .onFailure { AppLog.w("session", "tick failed: ${it.message}") }
-                delay(2_000)
+                val interactive = power?.isInteractive ?: true
+                delay(if (interactive) 2_000L else 10_000L)
             }
         }
     }

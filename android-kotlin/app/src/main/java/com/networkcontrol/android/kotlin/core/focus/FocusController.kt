@@ -8,7 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -25,11 +25,13 @@ class FocusController(
         if (_session.value?.isActive(Time.now()) == false) {
             clear()
         }
+        // 事件驅動到期：未開啟專注時完全掛起零喚醒；開啟後精確睡到 endsAt 自動結束。
         scope.launch {
-            while (isActive) {
-                delay(5_000)
-                val current = _session.value ?: continue
-                if (!current.isActive(Time.now())) {
+            _session.collectLatest { current ->
+                if (current == null) return@collectLatest
+                val remaining = current.endsAt - Time.now()
+                if (remaining > 0) delay(remaining)
+                if (_session.value == current && !current.isActive(Time.now())) {
                     clear()
                 }
             }

@@ -6,6 +6,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -38,11 +39,16 @@ class FocusScheduler(
     val schedules: StateFlow<List<FocusSchedule>> = _schedules.asStateFlow()
 
     init {
+        // 沒有啟用的專注時間表時完全掛起零喚醒；有啟用時對齊每分鐘整點檢查一次。
         scope.launch {
-            tick()
-            while (isActive) {
-                delay(30_000)
-                tick()
+            _schedules.collectLatest { list ->
+                if (list.none { it.enabled }) return@collectLatest
+                while (isActive) {
+                    tick()
+                    val now = ZonedDateTime.now()
+                    val waitMs = ((60 - now.second) * 1000L - now.nano / 1_000_000L).coerceIn(1_000L, 60_000L)
+                    delay(waitMs)
+                }
             }
         }
     }

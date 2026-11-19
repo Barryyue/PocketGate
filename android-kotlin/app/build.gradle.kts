@@ -41,8 +41,8 @@ android {
         applicationId = "com.networkcontrol.android.kotlin"
         minSdk = 29
         targetSdk = 36
-        versionCode = 59
-        versionName = "0.14.1"
+        versionCode = 60
+        versionName = "0.14.2"
         vectorDrawables.useSupportLibrary = true
     }
 

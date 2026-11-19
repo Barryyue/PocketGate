@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.14.2",
+            date = "2026-11-19",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Eliminated 4 idle background polling timers (TargetAppSessionTracker, FocusController, QuietPeriodTracker, FocusScheduler) by switching to event-driven suspension, cutting idle standby wakeups from ~3,360/hour to near zero; fixed the status-bar/notification PocketGate shield icon missing fillType='evenOdd' so the sliding pocket gate interior renders crisply.",
+                    "深度待机省电优化：将仅一次会话追踪、专注模式、勿扰汇总与专注时间表 4 处后台轮询全部改为事件驱动挂起，空闲待机唤醒从约 3,360 次/小时降至接近 0 次；修复状态栏与通知栏 PocketGate 护盾图标缺少 evenOdd 镂空属性导致显示为实心盾牌的问题。",
+                    "深度待機省電優化：將僅一次會話追蹤、專注模式、勿擾彙總與專注時間表 4 處背景輪詢全部改為事件驅動掛起，空閒待機喚醒從約 3,360 次/小時降至接近 0 次；修復狀態欄與通知欄 PocketGate 護盾圖示缺少 evenOdd 鏤空屬性導致顯示為實心盾牌的問題。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.14.1",
             date = "2026-11-19",
             features = emptyList(),

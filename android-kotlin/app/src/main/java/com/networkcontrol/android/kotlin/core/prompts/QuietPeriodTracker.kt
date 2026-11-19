@@ -8,7 +8,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /** 勿擾期間的阻斷彙總：只統計以「勿擾」為原因的判決。 */
@@ -24,15 +24,13 @@ class QuietPeriodTracker(
     private val byApp = linkedMapOf<String, Int>()
 
     init {
+        // 事件驅動：未開啟勿擾時完全掛起零喚醒；開啟後精確睡到到期時刻並產出彙總。
         scope.launch {
-            runtime.state.collect {
+            runtime.state.collectLatest { state ->
                 applyState()
-            }
-        }
-        // 勿擾到期不一定改變 RuntimeState，補一個低頻檢查。
-        scope.launch {
-            while (scope.isActive) {
-                delay(5_000)
+                val until = state.doNotDisturbUntil ?: return@collectLatest
+                val remaining = until - Time.now()
+                if (remaining > 0) delay(remaining)
                 applyState()
             }
         }
