@@ -71,6 +71,7 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     val dark = isSystemInDarkTheme()
 
     var enabled by remember { mutableStateOf(backend.speedIslandEnabled()) }
+    var nativeSpeedIcon by remember { mutableStateOf(backend.statusBarSpeedIcon()) }
     var mode by remember { mutableStateOf(backend.speedIslandMode()) }
     var content by remember { mutableStateOf(backend.speedIslandContent()) }
     var statusBarMode by remember { mutableStateOf(backend.speedIslandStatusBarMode()) }
@@ -142,6 +143,15 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                 enabled = value
                                 backend.setSpeedIslandEnabled(value)
                             }
+                        },
+                    )
+                    SwitchRow(
+                        title = s[S.StatusBarSpeedIcon],
+                        subtitle = s[S.StatusBarSpeedIconHint],
+                        checked = nativeSpeedIcon,
+                        onCheckedChange = { value ->
+                            nativeSpeedIcon = value
+                            backend.setStatusBarSpeedIcon(value)
                         },
                     )
                 }

@@ -308,6 +308,35 @@ class ForwardingTest {
         assertEquals("pkg.$wechatUid", plan.find(vivoCloneUid)?.packageName)
     }
 
+    @Test
+    fun activeConnectionsCanBeListedAndManuallyCut() {
+        var now = 1000L
+        val filter = ForwardingPacketFilter(
+            ownerOf = { _, _, _ -> 10001 },
+            decide = { _, _, _ -> ForwardingDecision.Forward },
+            onBlocked = { _, _, _ -> },
+            blockUdp = { false },
+            clock = { now },
+        )
+        val writer = object : PacketWriter {
+            override fun write(packet: ByteArray) = Unit
+        }
+        val local = InetSocketAddress(InetAddress.getByName("10.111.222.1"), 51234)
+        val remote = InetSocketAddress(InetAddress.getByName("93.184.216.34"), 443)
+        val syn = tcp4(local, remote, TcpFlags.SYN, sequence = 100)
+        assertTrue(filter.onTunPacket(syn, syn.size, writer))
+        val live = filter.activeConnections()
+        assertEquals(1, live.size)
+        assertEquals(remote, live[0].remote)
+        assertTrue(filter.cutConnection(local, remote))
+        assertTrue(filter.activeConnections().isEmpty())
+
+        // 驗證 StatusBarSpeedIcon 雙行網速格式
+        assertEquals("512" to "B/s", com.networkcontrol.android.kotlin.platform.StatusBarSpeedIcon.splitSpeed(512))
+        assertEquals("128" to "KB/s", com.networkcontrol.android.kotlin.platform.StatusBarSpeedIcon.splitSpeed(128 * 1024))
+        assertEquals("2.5" to "MB/s", com.networkcontrol.android.kotlin.platform.StatusBarSpeedIcon.splitSpeed((2.5 * 1024 * 1024).toLong()))
+    }
+
     private fun routing(uid: Int, decision: AppRoutingDecision) =
         AppRouting(uid, "pkg.$uid", listOf("pkg.$uid"), decision, AppRoutingReason.Rule)
 

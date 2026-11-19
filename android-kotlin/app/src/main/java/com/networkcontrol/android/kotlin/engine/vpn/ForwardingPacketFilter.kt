@@ -210,6 +210,45 @@ class ForwardingPacketFilter(
         }
     }
 
+    /** 規則或使用者主動查詢時回傳的活躍 TCP 連線快照。 */
+    data class ActiveTcpSnapshot(
+        val uid: Int?,
+        val local: InetSocketAddress,
+        val remote: InetSocketAddress,
+        val hostname: String?,
+        val createdAt: Long,
+    )
+
+    /** 列出目前追蹤中的活躍 TCP 連線（依建立時間由新到舊）。 */
+    fun activeConnections(): List<ActiveTcpSnapshot> {
+        val now = clock()
+        return synchronized(cacheLock) {
+            activeTcp.entries.removeAll { now - it.value.createdAt >= ACTIVE_TTL_MS }
+            activeTcp.values
+                .map { flow ->
+                    ActiveTcpSnapshot(
+                        uid = flow.uid,
+                        local = flow.info.source,
+                        remote = flow.info.destination,
+                        hostname = flow.hostname,
+                        createdAt = flow.createdAt,
+                    )
+                }
+                .sortedByDescending { it.createdAt }
+        }
+    }
+
+    /** 手動標記單條活躍 TCP 連線為待切斷（下一個封包經過時雙向送出精確序號的 RST）。 */
+    fun cutConnection(local: InetSocketAddress, remote: InetSocketAddress): Boolean {
+        val key = FlowKey(L4Protocol.Tcp, local, remote)
+        return synchronized(cacheLock) {
+            val existed = activeTcp.remove(key) != null
+            doomed += key
+            killPending = true
+            existed
+        }
+    }
+
     /** 新的隧道：舊連線與舊在途 DNS 都已不存在，清空所有狀態。 */
     fun reset() {
         dnsPacer.clear()

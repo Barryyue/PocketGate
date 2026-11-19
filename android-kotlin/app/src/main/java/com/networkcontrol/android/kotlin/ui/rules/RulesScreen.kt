@@ -1,6 +1,9 @@
 package com.networkcontrol.android.kotlin.ui.rules
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,7 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
@@ -37,6 +44,7 @@ import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.AppIcon
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
+import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import kotlinx.coroutines.launch
 
 @Composable
@@ -91,13 +99,30 @@ private fun RuleGroupCard(
 ) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
+    val tokens = LocalAppVisualTokens.current
+    val scheme = MaterialTheme.colorScheme
+    val container = if (tokens.cardContainer != Color.Unspecified) {
+        tokens.cardContainer
+    } else {
+        scheme.surfaceVariant.copy(alpha = 0.45f)
+    }
+    val border = if (tokens.cardBorder != Color.Transparent) {
+        BorderStroke(1.dp, tokens.cardBorder)
+    } else {
+        null
+    }
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+        colors = CardDefaults.cardColors(
+            containerColor = container,
+            contentColor = scheme.onSurface,
+        ),
+        shape = RoundedCornerShape(tokens.cardCornerRadius),
+        border = border,
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (group.packageName != null) {
-                    AppIcon(group.packageName, Modifier.width(36.dp).height(36.dp))
+                    AppIcon(group.packageName, Modifier.width(38.dp).height(38.dp))
                     Spacer(Modifier.width(10.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
@@ -105,20 +130,32 @@ private fun RuleGroupCard(
                         group.packageName?.let { group.label } ?: s[S.GlobalRule],
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     group.packageName?.let {
                         Text(
                             it,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
-                Text(
-                    "${group.rules.size}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(scheme.primary.copy(alpha = 0.14f))
+                        .padding(horizontal = 9.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        "${group.rules.size}",
+                        style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                        fontWeight = FontWeight.SemiBold,
+                        color = scheme.primary,
+                    )
+                }
             }
             group.rules.forEach { rule ->
                 RuleRow(
@@ -154,13 +191,36 @@ private fun RuleRow(
     onDelete: () -> Unit,
 ) {
     val s = rememberUiStrings()
+    val scheme = MaterialTheme.colorScheme
+    val accent = if (rule.action == VerdictAction.Allow) scheme.primary else scheme.error
     Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(34.dp)
+                .clip(RoundedCornerShape(99.dp))
+                .background(if (rule.enabled) accent else scheme.outlineVariant),
+        )
+        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                "${actionLabel(rule.action, s)} · ${networkScopeLabel(rule.conditions, sims, s)}",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    actionLabel(rule.action, s),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = accent,
+                )
+                Text(
+                    "· ${networkScopeLabel(rule.conditions, sims, s)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Text(
                 buildString {
                     append(rule.lifetime.name)
@@ -170,8 +230,8 @@ private fun RuleRow(
                         append(" · ${rule.hitCount}×")
                     }
                 },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                color = scheme.onSurfaceVariant,
             )
         }
         Switch(checked = rule.enabled, onCheckedChange = onToggle)

@@ -50,7 +50,24 @@ jobs:
       - name: Unit tests
         run: bash gradlew testDebugUnitTest --no-daemon
 
+      - name: Decode release keystore (if configured)
+        env:
+          NC_ANDROID_KEYSTORE_BASE64: ${{ secrets.NC_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -n "$NC_ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$NC_ANDROID_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/pocketgate-release.jks
+            echo "NC_ANDROID_KEYSTORE=/tmp/pocketgate-release.jks" >> "$GITHUB_ENV"
+            echo "Using official release keystore from GitHub Secrets."
+          else
+            echo "NC_ANDROID_KEYSTORE_BASE64 not set; falling back to shared keystore."
+          fi
+
       - name: Release APKs (per ABI)
+        env:
+          NC_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.NC_ANDROID_KEYSTORE_PASSWORD }}
+          NC_ANDROID_KEY_ALIAS: ${{ secrets.NC_ANDROID_KEY_ALIAS }}
+          NC_ANDROID_KEY_PASSWORD: ${{ secrets.NC_ANDROID_KEY_PASSWORD }}
         run: bash gradlew assembleRelease --no-daemon
 
       - name: Size report, budget check and rename APKs

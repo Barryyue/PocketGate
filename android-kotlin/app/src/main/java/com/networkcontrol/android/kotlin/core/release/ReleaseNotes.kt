@@ -40,6 +40,24 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.15.0",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "Added a native auto-tinting status-bar speed icon (SystemUI automatically switches it between black and white over any foreground app), a Live Connections tab with one-tap bidirectional RST disconnect, 3-stage SOCKS5 proxy diagnostics, and a 6-item Permissions & Keep-Alive health card.",
+                    "新增原生状态栏网速小图标（由系统原生自动随任意应用变黑/变白）、记录页「实时连接」分栏与单条连接一键双向 RST 断开、代理「三段式精准诊断」以及设置页 6 项「权限与保活体检」卡片。",
+                    "新增原生狀態欄網速小圖示（由系統原生自動隨任意應用變黑/變白）、記錄頁「即時連線」分欄與單條連線一鍵雙向 RST 斷開、代理「三段式精準診斷」以及設定頁 6 項「權限與保活體檢」卡片。",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Refined the PocketGate logo into a cleaner minimalist 3-element mark (including full-color notification largeIcon), unified Apps / Rules / Logs screens with all 6 modern visual themes, and switched release builds to official release keystore signing.",
+                    "精简升级 PocketGate 极简护盾 Logo 并为常驻通知补全彩色大图标，全面统一应用、规则与记录三页的 6 套现代主题视觉与状态色条，正式启用独立发布签名。",
+                    "精簡升級 PocketGate 極簡護盾 Logo 並為常駐通知補全彩色大圖示，全面統一應用、規則與記錄三頁的 6 套現代主題視覺與狀態色條，正式啟用獨立發布簽章。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.14.4",
             date = "2026-11-19",
             features = emptyList(),

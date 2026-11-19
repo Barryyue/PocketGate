@@ -125,6 +125,18 @@ class VpnForegroundNotifier(
     @Volatile
     private var speed: com.networkcontrol.android.kotlin.engine.traffic.SpeedSnapshot? = null
 
+    private val largeIcon: android.graphics.Bitmap? by lazy {
+        runCatching {
+            val drawable = ContextCompat.getDrawable(context, R.mipmap.ic_launcher) ?: return@runCatching null
+            val size = 96
+            val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            drawable.setBounds(0, 0, size, size)
+            drawable.draw(canvas)
+            bitmap
+        }.getOrNull()
+    }
+
     fun setSpeed(value: com.networkcontrol.android.kotlin.engine.traffic.SpeedSnapshot?) {
         speed = value
     }
@@ -152,14 +164,22 @@ class VpnForegroundNotifier(
                 context.getString(R.string.protection_active),
             )
         }
-        return NotificationCompat.Builder(context, NotificationChannels.PROTECTION)
-            .setSmallIcon(R.drawable.ic_shield)
+        val builder = NotificationCompat.Builder(context, NotificationChannels.PROTECTION)
+            .apply {
+                val currentSpeed = speed
+                if (!starting && preferences.statusBarSpeedIcon && currentSpeed != null) {
+                    setSmallIcon(com.networkcontrol.android.kotlin.platform.StatusBarSpeedIcon.render(currentSpeed))
+                } else {
+                    setSmallIcon(R.drawable.ic_shield)
+                }
+                largeIcon?.let { setLargeIcon(it) }
+            }
             .setContentTitle(title)
             .setContentText(body)
             .setContentIntent(intent)
             .setOngoing(true)
             .setSilent(true)
-            .build()
+        return builder.build()
     }
 
     private fun formatRate(bytes: Long): String {

@@ -78,6 +78,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var socks5User by remember { mutableStateOf(backend.socks5Username()) }
     var socks5Pass by remember { mutableStateOf(backend.socks5Password()) }
     var proxyTesting by remember { mutableStateOf(false) }
+    var probeReport by remember { mutableStateOf<com.networkcontrol.android.kotlin.platform.ProxyProbeReport?>(null) }
     var proxyPackage by remember { mutableStateOf(backend.socks5BypassPackage()) }
     var showProxyAppDialog by remember { mutableStateOf(false) }
     var directPackages by remember { mutableStateOf(backend.forwardingDirectPackages()) }
@@ -297,19 +298,26 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             OutlinedButton(
                                 onClick = {
                                     proxyTesting = true
+                                    probeReport = null
                                     scope.launch {
-                                        val error = Socks5Probe.test(
+                                        val report = Socks5Probe.diagnose(
                                             host = socks5Host,
                                             port = socks5Port.toIntOrNull() ?: 7890,
                                             username = socks5User.trim().ifEmpty { null },
                                             password = socks5Pass,
                                         )
+                                        probeReport = report
                                         proxyTesting = false
                                         toast(
-                                            if (error == null) {
-                                                s[S.ProxyTestSuccess]
+                                            if (report.allOk) {
+                                                "${s[S.ProxyTestSuccess]} (${report.latencyMs}ms)"
                                             } else {
-                                                s.format(S.ProxyTestFailed, error)
+                                                val err = when {
+                                                    !report.tcpOk -> report.tcpMessage
+                                                    !report.authOk -> report.authMessage
+                                                    else -> report.outboundMessage
+                                                }
+                                                s.format(S.ProxyTestFailed, err)
                                             },
                                         )
                                     }
@@ -317,6 +325,24 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                 enabled = !proxyTesting,
                             ) {
                                 Text(if (proxyTesting) s[S.Loading] else s[S.ProxyTest])
+                            }
+                        }
+                        probeReport?.let { report ->
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                ProbeStageRow(s[S.ProbeStepTcp], report.tcpOk, report.tcpMessage)
+                                ProbeStageRow(s[S.ProbeStepAuth], report.authOk, report.authMessage)
+                                ProbeStageRow(
+                                    s[S.ProbeStepOutbound],
+                                    report.outboundOk,
+                                    if (report.outboundOk) "${report.latencyMs} ms" else report.outboundMessage,
+                                )
+                                if (report.tcpOk && report.authOk && !report.outboundOk) {
+                                    Text(
+                                        s[S.ProbeOutboundHint],
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
                             }
                         }
                         Text(
@@ -431,6 +457,28 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                 guard.run { backend.setForwardingDirectPackages(packages) }
                 showDirectAppsDialog = false
             },
+        )
+    }
+}
+
+@Composable
+private fun ProbeStageRow(label: String, ok: Boolean, detail: String) {
+    val color = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "${if (ok) "✓" else "✗"} $label",
+            style = MaterialTheme.typography.bodySmall,
+            color = color,
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            detail,
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

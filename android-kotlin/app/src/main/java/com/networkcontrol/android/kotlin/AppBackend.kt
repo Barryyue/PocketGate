@@ -495,6 +495,13 @@ class AppBackend(val container: AppContainer) {
         container.speedIsland.refresh()
     }
 
+    fun statusBarSpeedIcon(): Boolean = container.preferences.statusBarSpeedIcon
+
+    fun setStatusBarSpeedIcon(enabled: Boolean) {
+        container.preferences.statusBarSpeedIcon = enabled
+        container.vpnEngine.refreshNotification()
+    }
+
     fun refreshSpeedIsland() {
         container.speedIsland.refresh()
     }
@@ -852,6 +859,44 @@ class AppBackend(val container: AppContainer) {
 
     fun isUsingExternalProxy(): Boolean =
         container.preferences.forwardingEnabled && !container.preferences.usesDirectUpstream
+
+    /** 即時活躍連線快照（逐連線模式專用）。 */
+    data class LiveConnection(
+        val uid: Int?,
+        val packageName: String?,
+        val appLabel: String,
+        val hostname: String?,
+        val local: java.net.InetSocketAddress,
+        val remote: java.net.InetSocketAddress,
+        val ageMillis: Long,
+    )
+
+    fun liveConnections(): List<LiveConnection> {
+        val now = System.nanoTime() / 1_000_000L
+        return container.vpnEngine.forwardingFilter.activeConnections().map { item ->
+            val pkg = item.uid?.let { container.appCatalog.packagesForUid(it).firstOrNull() }
+            val label = pkg?.let { container.appCatalog.find(it)?.label } ?: pkg ?: "UID ${item.uid ?: "?"}"
+            LiveConnection(
+                uid = item.uid,
+                packageName = pkg,
+                appLabel = label,
+                hostname = item.hostname,
+                local = item.local,
+                remote = item.remote,
+                ageMillis = (now - item.createdAt).coerceAtLeast(0L),
+            )
+        }
+    }
+
+    fun cutLiveConnection(local: java.net.InetSocketAddress, remote: java.net.InetSocketAddress): Boolean =
+        container.vpnEngine.forwardingFilter.cutConnection(local, remote)
+
+    fun isIgnoringBatteryOptimizations(): Boolean {
+        val pm = context.getSystemService(android.os.PowerManager::class.java)
+        return pm?.isIgnoringBatteryOptimizations(context.packageName) ?: true
+    }
+
+    fun isVpnPrepared(): Boolean = container.vpnTunnel.isPrepared
 
     fun forwardingDirectPackages(): Set<String> = container.preferences.forwardingDirectPackages
 

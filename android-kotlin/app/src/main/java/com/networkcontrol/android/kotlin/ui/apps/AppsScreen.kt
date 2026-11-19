@@ -1,6 +1,9 @@
 package com.networkcontrol.android.kotlin.ui.apps
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,11 +11,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,7 +38,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
@@ -52,6 +61,7 @@ import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.formatBytes
 import com.networkcontrol.android.kotlin.ui.common.formatDateTime
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
+import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -126,6 +136,7 @@ fun AppsScreen(backend: AppBackend) {
                 onValueChange = { query = it },
                 label = { Text(s[S.SearchApps]) },
                 singleLine = true,
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -194,27 +205,78 @@ private fun AppRow(
         AppRoutingDecision.BlockAndAsk -> s[S.ModeAsk]
     }
 
+    val tokens = LocalAppVisualTokens.current
+    val scheme = MaterialTheme.colorScheme
+    val container = if (tokens.cardContainer != Color.Unspecified) {
+        tokens.cardContainer
+    } else {
+        scheme.surfaceVariant.copy(alpha = 0.45f)
+    }
+    val border = if (tokens.cardBorder != Color.Transparent) {
+        BorderStroke(1.dp, tokens.cardBorder)
+    } else {
+        null
+    }
+    val statusDotColor = when (entry.effective) {
+        AppRoutingDecision.Bypass -> scheme.primary
+        AppRoutingDecision.Block -> scheme.error
+        AppRoutingDecision.BlockAndAsk -> scheme.onSurfaceVariant
+    }
+
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+        colors = CardDefaults.cardColors(
+            containerColor = container,
+            contentColor = scheme.onSurface,
+        ),
+        shape = RoundedCornerShape(tokens.metricCornerRadius),
+        border = border,
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AppIcon(entry.app.packageName, Modifier.width(44.dp).height(44.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(entry.app.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            entry.app.label,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(statusDotColor),
+                        )
+                    }
                     Text(
                         entry.app.packageName,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 if (entry.app.isSystem) {
-                    Text(
-                        s[S.FilterSystem],
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(scheme.primary.copy(alpha = 0.14f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            s[S.FilterSystem],
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.primary,
+                        )
+                    }
                 }
             }
 

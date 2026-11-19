@@ -227,6 +227,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_APP_LOCK, false)
         set(value) = prefs.edit().putBoolean(KEY_APP_LOCK, value).apply()
 
+    /** 是否以系統原生通知小圖示顯示即時網速（由 SystemUI 自動跟隨任意 App 變黑/變白）。 */
+    var statusBarSpeedIcon: Boolean
+        get() = prefs.getBoolean(KEY_STATUS_BAR_SPEED_ICON, false)
+        set(value) = prefs.edit().putBoolean(KEY_STATUS_BAR_SPEED_ICON, value).apply()
+
     var forwardingEnabled: Boolean
         get() = prefs.getBoolean(KEY_FORWARDING_ENABLED, false)
         set(value) = prefs.edit().putBoolean(KEY_FORWARDING_ENABLED, value).apply()
@@ -365,6 +370,7 @@ class AppPreferences(context: Context) {
         const val KEY_FOCUS_SESSION = "focus_session"
         const val KEY_FOCUS_SCHEDULES = "focus_schedules"
         const val KEY_APP_LOCK = "app_lock"
+        const val KEY_STATUS_BAR_SPEED_ICON = "status_bar_speed_icon"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_SOCKS5_HOST = "socks5_host"
         const val KEY_SOCKS5_PORT = "socks5_port"

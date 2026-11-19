@@ -1,66 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 盾牌內部暗門群組（裁切於護盾輪廓內） -->
-    <group>
-        <clip-path android:pathData="M54,23.5 L78.5,32.5 C78.5,57.5 69.2,73.2 54,84 C38.8,73.2 29.5,57.5 29.5,32.5 Z" />
-
-        <!-- 護盾內部微透底色 -->
-        <path
-            android:fillColor="#264ADE80"
-            android:pathData="M26,22 H82 V86 H26 Z" />
-
-        <!-- 左側滑出式暗門葉片（翡翠亮綠漸層） -->
-        <path android:pathData="M24,36 H46.8 C48.9,36 50.6,37.7 50.6,39.8 V67.2 C50.6,69.3 48.9,71 46.8,71 H24 Z">
-            <aapt:attr name="android:fillColor">
-                <gradient
-                    android:endX="50.6"
-                    android:endY="71"
-                    android:startX="28"
-                    android:startY="36"
-                    android:type="linear">
-                    <item
-                        android:color="#FA4ADE80"
-                        android:offset="0.0" />
-                    <item
-                        android:color="#F016A34A"
-                        android:offset="1.0" />
-                </gradient>
-            </aapt:attr>
-        </path>
-
-        <!-- 右側錯位滑出式暗門葉片（半透明磨砂玻璃層次） -->
-        <path
-            android:fillColor="#8CD1FAE5"
-            android:pathData="M84,41.5 H61.2 C59.1,41.5 57.4,43.2 57.4,45.3 V67.2 C57.4,69.3 59.1,71 61.2,71 H84 Z" />
-    </group>
-
-    <!-- 護盾外框 -->
+    <!-- 極簡 PocketGate 護盾外框 -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M54,22 L80,31.5 C80,58 70,75 54,86 C38,75 28,58 28,31.5 Z"
-        android:strokeColor="#F5F0FDF4"
-        android:strokeLineJoin="round"
-        android:strokeWidth="3.6" />
-
-    <!-- 門縫中央的垂直發光數據流通道 -->
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M54,32.5 V74.5"
-        android:strokeColor="#B8C9F45A"
+        android:pathData="M54,25 L78,33.5 V53 C78,67.5 68,78.5 54,83.5 C40,78.5 30,67.5 30,53 V33.5 Z"
+        android:strokeColor="#FFF4F8F5"
         android:strokeLineCap="round"
-        android:strokeWidth="1.5" />
+        android:strokeLineJoin="round"
+        android:strokeWidth="4.4" />
 
-    <!-- 判決核心光暈與發光綠點（#C9F45A） -->
+    <!-- 極簡對向雙閘門膠囊（左翡翠綠 / 右螢光綠） -->
     <path
-        android:fillColor="#59C9F45A"
-        android:pathData="M54,53.5 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0" />
+        android:fillColor="#FF34D399"
+        android:pathData="M39,45.5 H48.5 C50.4,45.5 52,47.1 52,49 C52,50.9 50.4,52.5 48.5,52.5 H39 C37.1,52.5 35.5,50.9 35.5,49 C35.5,47.1 37.1,45.5 39,45.5 Z" />
     <path
         android:fillColor="#FFC9F45A"
-        android:pathData="M54,53.5 m-3.6,0 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0" />
+        android:pathData="M59.5,55.5 H69 C70.9,55.5 72.5,57.1 72.5,59 C72.5,60.9 70.9,62.5 69,62.5 H59.5 C57.6,62.5 56,60.9 56,59 C56,57.1 57.6,55.5 59.5,55.5 Z" />
+
+    <!-- 單一極簡核心節點 -->
+    <path
+        android:fillColor="#FFC9F45A"
+        android:pathData="M54,54 m-3.2,0 a3.2,3.2 0 1,0 6.4,0 a3.2,3.2 0 1,0 -6.4,0" />
 </vector>

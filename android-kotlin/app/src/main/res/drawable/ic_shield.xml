@@ -4,21 +4,21 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- PocketGate 狀態欄 / 通知 / 磁貼單色「滑動暗門護盾」圖示（evenOdd 鏤空內框） -->
+    <!-- 極簡 PocketGate 狀態欄 / 通知 / 磁貼單色護盾圖示 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M12,2.5 L4.5,5.3 V11.5 C4.5,16.1 7.6,19.7 12,21.4 C16.4,19.7 19.5,16.1 19.5,11.5 V5.3 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="2.0" />
     <path
         android:fillColor="#FFFFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M12,1.8 L3.8,5.1 V11.2 C3.8,16.4 7.3,20.9 12,22.2 C16.7,20.9 20.2,16.4 20.2,11.2 V5.1 L12,1.8 Z M12,3.8 L18.3,6.3 V11.2 C18.3,15.3 15.6,18.9 12,20.1 C8.4,18.9 5.7,15.3 5.7,11.2 V6.3 L12,3.8 Z" />
-    <!-- 左暗門葉片（偏上） -->
+        android:pathData="M7.6,9.2 H10.4 C11.0,9.2 11.5,9.7 11.5,10.3 C11.5,10.9 11.0,11.4 10.4,11.4 H7.6 C7.0,11.4 6.5,10.9 6.5,10.3 C6.5,9.7 7.0,9.2 7.6,9.2 Z" />
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M7.1,7.8 H10.1 C10.6,7.8 11,8.2 11,8.7 V14.6 C11,15.1 10.6,15.5 10.1,15.5 H7.1 Z" />
-    <!-- 右暗門葉片（偏下錯位） -->
-    <path
-        android:fillColor="#B8FFFFFF"
-        android:pathData="M16.9,9.6 H13.9 C13.4,9.6 13,10.0 13,10.5 V15.5 C13,16.0 13.4,16.4 13.9,16.4 H16.9 Z" />
-    <!-- 中央判決核心點 -->
+        android:pathData="M13.6,12.6 H16.4 C17.0,12.6 17.5,13.1 17.5,13.7 C17.5,14.3 17.0,14.8 16.4,14.8 H13.6 C13.0,14.8 12.5,14.3 12.5,13.7 C12.5,13.1 13.0,12.6 13.6,12.6 Z" />
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M12,12 m-1.35,0 a1.35,1.35 0 1,0 2.7,0 a1.35,1.35 0 1,0 -2.7,0" />
+        android:pathData="M12,12 m-1.1,0 a1.1,1.1 0 1,0 2.2,0 a1.1,1.1 0 1,0 -2.2,0" />
 </vector>

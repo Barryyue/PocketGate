@@ -563,9 +563,14 @@ fun SettingsScreen(
             }
         }
 
-        // 5. 安全與系統權限（應用鎖、權限檢查、常駐 VPN 與電池最佳化並排）
+        // 5. 安全與系統權限（應用鎖、6 項紅綠燈權限體檢、常駐 VPN 與電池最佳化）
         item {
-            SectionCard(s[S.DataSettings]) {
+            val vpnOk = remember(resumeKey) { backend.isVpnPrepared() }
+            val notifOk = remember(resumeKey) { backend.notificationsAvailable() }
+            val batteryOk = remember(resumeKey) { backend.isIgnoringBatteryOptimizations() }
+            val appListRestricted = appList?.restricted == true
+            val okCount = listOf(vpnOk, notifOk, hasTrafficAccess, !appListRestricted, canDrawOverlays, batteryOk).count { it }
+            SectionCard("${s[S.PermissionHealth]} · $okCount / 6") {
                 SwitchRow(
                     title = s[S.AppLock],
                     subtitle = s[S.AppLockHint],
@@ -585,26 +590,46 @@ fun SettingsScreen(
                     },
                 )
                 PermissionRow(
-                    title = s[S.UsageAccess],
+                    title = s[S.PermVpn],
+                    statusText = if (vpnOk) s[S.PermissionOk] else s[S.PermissionMissing],
+                    ok = vpnOk,
+                    actionText = if (vpnOk) null else s[S.GoToSettings],
+                    onAction = { context.startActivity(backend.openAlwaysOnVpnSettings()) },
+                )
+                PermissionRow(
+                    title = s[S.PermNotifications],
+                    statusText = if (notifOk) s[S.PermissionOk] else s[S.PermissionMissing],
+                    ok = notifOk,
+                    actionText = if (notifOk) null else s[S.GoToSettings],
+                    onAction = { context.startActivity(backend.openNotificationSettings()) },
+                )
+                PermissionRow(
+                    title = s[S.PermUsage],
                     statusText = if (hasTrafficAccess) s[S.UsageAccessGranted] else s[S.UsageAccessDenied],
                     ok = hasTrafficAccess,
                     actionText = if (hasTrafficAccess) null else s[S.GrantAccess],
                     onAction = { context.startActivity(backend.trafficAccessIntent()) },
                 )
-                val appListRestricted = appList?.restricted == true
                 PermissionRow(
-                    title = s[S.AppListPermission],
+                    title = s[S.PermAppList],
                     statusText = if (appListRestricted) s[S.AppListPermissionRestricted] else s[S.AppListPermissionOk],
                     ok = !appListRestricted,
                     actionText = if (appListRestricted) s[S.GoToSettings] else null,
                     onAction = { context.startActivity(backend.openAppSettings()) },
                 )
                 PermissionRow(
-                    title = s[S.OverlayPermission],
+                    title = s[S.PermOverlay],
                     statusText = if (canDrawOverlays) s[S.OverlayGranted] else s[S.OverlayDenied],
                     ok = canDrawOverlays,
                     actionText = if (canDrawOverlays) null else s[S.OverlayGrant],
                     onAction = { context.startActivity(backend.overlayPermissionIntent()) },
+                )
+                PermissionRow(
+                    title = s[S.PermBattery],
+                    statusText = if (batteryOk) s[S.PermissionOk] else s[S.PermissionMissing],
+                    ok = batteryOk,
+                    actionText = if (batteryOk) null else s[S.GoToSettings],
+                    onAction = { context.startActivity(backend.openBatteryOptimizationSettings()) },
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
