@@ -88,12 +88,17 @@ import com.networkcontrol.android.kotlin.core.model.TrafficUsage
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.ui.LocalBottomContentPadding
 import com.networkcontrol.android.kotlin.ui.S
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.networkcontrol.android.kotlin.ui.common.BentoTile
+import com.networkcontrol.android.kotlin.ui.common.PermissionGuideDialog
+import com.networkcontrol.android.kotlin.ui.common.PermissionReminderBanner
 import com.networkcontrol.android.kotlin.ui.common.ScreenHeader
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
 import com.networkcontrol.android.kotlin.ui.common.formatBytes
 import com.networkcontrol.android.kotlin.ui.common.formatDateTime
 import com.networkcontrol.android.kotlin.ui.common.protocolLabel
+import com.networkcontrol.android.kotlin.ui.common.rememberPermissionHealth
 import com.networkcontrol.android.kotlin.ui.prompt.promptDisplayName
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
 import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
@@ -130,6 +135,20 @@ fun OverviewScreen(backend: AppBackend) {
     var confirmEndFocus by remember { mutableStateOf(false) }
     var showProfileSheet by remember { mutableStateOf(false) }
     var privateDnsMode by remember { mutableStateOf("off") }
+    var permResumeKey by remember { mutableIntStateOf(0) }
+    var showPermissionGuide by remember { mutableStateOf(false) }
+    var bannerDismissed by remember { mutableStateOf(backend.permissionBannerDismissed()) }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        permResumeKey++
+    }
+    val permHealth = rememberPermissionHealth(backend, permResumeKey)
+    LaunchedEffect(permHealth.loaded) {
+        if (permHealth.loaded && !backend.permissionGuideShown() && permHealth.missingCount > 0) {
+            backend.setPermissionGuideShown(true)
+            showPermissionGuide = true
+        }
+    }
 
     // 滾動記錄最近 36 個取樣點的上下行速率，供平滑波形圖繪製。
     val downHistory = remember {
@@ -359,6 +378,21 @@ fun OverviewScreen(backend: AppBackend) {
                             }
                         }
                     }
+                }
+            }
+
+            // 2.5 權限引導輕量橫幅（未配齊且未關閉時顯示，配齊自動消失）
+            if (permHealth.loaded && !bannerDismissed && permHealth.missingCount > 0) {
+                item {
+                    PermissionReminderBanner(
+                        health = permHealth,
+                        s = s,
+                        onConfigure = { showPermissionGuide = true },
+                        onDismiss = {
+                            bannerDismissed = true
+                            backend.setPermissionBannerDismissed(true)
+                        },
+                    )
                 }
             }
 
@@ -711,6 +745,16 @@ fun OverviewScreen(backend: AppBackend) {
                 }
             }
         }
+    }
+
+    // 首次權限初始化引導彈窗（也可從總覽橫幅隨時重開）
+    if (showPermissionGuide) {
+        PermissionGuideDialog(
+            backend = backend,
+            health = permHealth,
+            s = s,
+            onDismiss = { showPermissionGuide = false },
+        )
     }
 
     // 配置文件底部抽屜（ModalBottomSheet 取代生硬下拉選單）

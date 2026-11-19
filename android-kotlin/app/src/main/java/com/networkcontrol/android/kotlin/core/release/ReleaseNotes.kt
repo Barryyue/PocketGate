@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.15.2",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "First-launch permission setup guide & overview reminder: groups core keep-alive (notifications, battery optimization, app list) and enhanced permissions (overlay, usage access) into a one-stop dialog that auto-refreshes on return, plus a dismissible banner on Overview until all are ready",
+                    "首次启动权限初始化引导与总览待办横幅：重装或首次启动时弹出分级权限引导（核心保活：通知、电池优化、应用列表；进阶体验：悬浮窗、使用情况），返回自动打勾；跳过后总览页保留可关闭的轻量提示条，开启灵动岛缺权限时也自动跳转授权",
+                    "首次啟動權限初始化引導與總覽待辦橫幅：重裝或首次啟動時彈出分級權限引導（核心保活：通知、電池最佳化、應用列表；進階體驗：懸浮窗、使用情況），返回自動打勾；略過後總覽頁保留可關閉的輕量提示條，開啟靈動島缺權限時也自動跳轉授權",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.15.1",
             date = "2026-11-19",
             features = listOf(

@@ -327,6 +327,16 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_UPDATE_CUSTOM_URL, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_UPDATE_CUSTOM_URL, value.trim()).apply()
 
+    /** 首次啟動的權限引導彈窗是否已經展示或略過。 */
+    var permissionGuideShown: Boolean
+        get() = prefs.getBoolean(KEY_PERMISSION_GUIDE_SHOWN, false)
+        set(value) = prefs.edit().putBoolean(KEY_PERMISSION_GUIDE_SHOWN, value).apply()
+
+    /** 總覽頁權限待辦橫幅是否已被使用者手動關閉。 */
+    var permissionBannerDismissed: Boolean
+        get() = prefs.getBoolean(KEY_PERMISSION_BANNER_DISMISSED, false)
+        set(value) = prefs.edit().putBoolean(KEY_PERMISSION_BANNER_DISMISSED, value).apply()
+
     private companion object {
         const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
         const val UPSTREAM_SOCKS5 = ForwardingUpstream.SOCKS5
@@ -377,6 +387,8 @@ class AppPreferences(context: Context) {
         const val KEY_APP_LOCK = "app_lock"
         const val KEY_STATUS_BAR_SPEED_ICON = "status_bar_speed_icon"
         const val KEY_OFFLINE_MODE = "offline_mode"
+        const val KEY_PERMISSION_GUIDE_SHOWN = "permission_guide_shown"
+        const val KEY_PERMISSION_BANNER_DISMISSED = "permission_banner_dismissed"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_SOCKS5_HOST = "socks5_host"
         const val KEY_SOCKS5_PORT = "socks5_port"

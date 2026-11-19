@@ -139,6 +139,7 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                         onCheckedChange = { value ->
                             if (value && !Settings.canDrawOverlays(context)) {
                                 Toast.makeText(context, s[S.OverlayDenied], Toast.LENGTH_SHORT).show()
+                                runCatching { context.startActivity(backend.overlayPermissionIntent()) }
                             } else {
                                 enabled = value
                                 backend.setSpeedIslandEnabled(value)

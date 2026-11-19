@@ -998,6 +998,18 @@ class AppBackend(val container: AppContainer) {
             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
+    fun permissionGuideShown(): Boolean = container.preferences.permissionGuideShown
+
+    fun setPermissionGuideShown(shown: Boolean) {
+        container.preferences.permissionGuideShown = shown
+    }
+
+    fun permissionBannerDismissed(): Boolean = container.preferences.permissionBannerDismissed
+
+    fun setPermissionBannerDismissed(dismissed: Boolean) {
+        container.preferences.permissionBannerDismissed = dismissed
+    }
+
     fun setLanguage(tag: String?) {
         container.preferences.languageTag = tag
         val locales = if (tag.isNullOrBlank()) {
