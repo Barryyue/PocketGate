@@ -158,6 +158,9 @@ fun SettingsScreen(
     var showLockWhitelistDialog by remember { mutableStateOf(false) }
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
     var offlineMode by remember { mutableStateOf(backend.offlineMode()) }
+    var notificationsEnabled by remember(resumeKey) {
+        mutableStateOf(backend.container.preferences.notificationsEnabled)
+    }
     var forwardingEnabled by remember(resumeKey) { mutableStateOf(backend.forwardingEnabled()) }
     val forwardingUpstream = remember(resumeKey) { backend.forwardingUpstream() }
     val viaProxy = forwardingUpstream == ForwardingUpstream.SOCKS5
@@ -423,8 +426,11 @@ fun SettingsScreen(
                 )
                 SwitchRow(
                     title = s[S.NotificationsEnabled],
-                    checked = backend.container.preferences.notificationsEnabled,
-                    onCheckedChange = { backend.setNotificationsEnabled(it) },
+                    checked = notificationsEnabled,
+                    onCheckedChange = { enabled ->
+                        notificationsEnabled = enabled
+                        backend.setNotificationsEnabled(enabled)
+                    },
                 )
                 SettingsNavRow(
                     title = s[S.NotificationTitle],

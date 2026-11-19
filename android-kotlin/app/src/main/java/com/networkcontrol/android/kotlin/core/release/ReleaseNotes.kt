@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.15.3",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "Instant response for 'Show notifications' switch: fixed a Compose state binding oversight in Settings so toggling notifications updates immediately",
+                    "修复「显示通知」开关点击无即时响应的问题：补全 Compose 状态绑定，点击即刻切换生效",
+                    "修復「顯示通知」開關點擊無即時回應的問題：補全 Compose 狀態綁定，點擊即刻切換生效",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.15.2",
             date = "2026-11-19",
             features = listOf(
