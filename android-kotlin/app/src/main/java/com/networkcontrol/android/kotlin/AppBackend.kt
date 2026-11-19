@@ -1045,6 +1045,10 @@ class AppBackend(val container: AppContainer) {
     fun setToolbarStyle(style: com.networkcontrol.android.kotlin.core.model.ToolbarStyle) =
         container.theme.setToolbarStyle(style)
 
+    fun autoHideBottomBar(): Boolean = container.theme.autoHideBottomBar.value
+
+    fun setAutoHideBottomBar(enabled: Boolean) = container.theme.setAutoHideBottomBar(enabled)
+
     fun exportRules(): String = RuleTransferService.export(container.rules.all)
 
     fun previewImport(json: String, mode: RuleImportMode): RuleImportPreview {

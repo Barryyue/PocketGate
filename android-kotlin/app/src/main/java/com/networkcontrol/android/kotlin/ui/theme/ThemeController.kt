@@ -19,6 +19,9 @@ class ThemeController(private val preferences: AppPreferences) {
     private val _toolbarStyle = MutableStateFlow(preferences.toolbarStyle)
     val toolbarStyle: StateFlow<ToolbarStyle> = _toolbarStyle.asStateFlow()
 
+    private val _autoHideBottomBar = MutableStateFlow(preferences.autoHideBottomBar)
+    val autoHideBottomBar: StateFlow<Boolean> = _autoHideBottomBar.asStateFlow()
+
     val current: Color get() = _color.value
 
     fun set(color: Color) {
@@ -34,5 +37,10 @@ class ThemeController(private val preferences: AppPreferences) {
     fun setToolbarStyle(style: ToolbarStyle) {
         preferences.toolbarStyle = style
         _toolbarStyle.value = style
+    }
+
+    fun setAutoHideBottomBar(enabled: Boolean) {
+        preferences.autoHideBottomBar = enabled
+        _autoHideBottomBar.value = enabled
     }
 }

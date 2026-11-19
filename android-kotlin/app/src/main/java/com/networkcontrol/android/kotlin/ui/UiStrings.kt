@@ -540,6 +540,8 @@ enum class S {
     PermBannerAction,
     PermGuideLater,
     PermGuideDone,
+    AutoHideBottomBar,
+    AutoHideBottomBarHint,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1102,6 +1104,8 @@ private val EN = mapOf(
     S.PermBannerAction to "Set up",
     S.PermGuideLater to "Later",
     S.PermGuideDone to "Done",
+    S.AutoHideBottomBar to "Auto-hide navigation bar",
+    S.AutoHideBottomBarHint to "Smoothly hide the bottom bar when scrolling down and reveal it when scrolling up.",
 )
 
 private val CN = mapOf(
@@ -1640,6 +1644,8 @@ private val CN = mapOf(
     S.PermBannerAction to "去配置",
     S.PermGuideLater to "以后再说",
     S.PermGuideDone to "全部就绪",
+    S.AutoHideBottomBar to "滚动时自动隐藏导航栏",
+    S.AutoHideBottomBarHint to "列表向下滑动时顺滑收起底部导航栏，向上滑动或切换页面时立即恢复显示。",
 )
 
 private val TW = mapOf(
@@ -2178,4 +2184,6 @@ private val TW = mapOf(
     S.PermBannerAction to "去設定",
     S.PermGuideLater to "以後再說",
     S.PermGuideDone to "全部就緒",
+    S.AutoHideBottomBar to "滾動時自動隱藏導覽列",
+    S.AutoHideBottomBarHint to "列表向下滑動時順滑收起底部導覽列，向上滑動或切換頁面時立即恢復顯示。",
 )

@@ -161,6 +161,9 @@ fun SettingsScreen(
     var notificationsEnabled by remember(resumeKey) {
         mutableStateOf(backend.container.preferences.notificationsEnabled)
     }
+    var autoHideBottomBar by remember(resumeKey) {
+        mutableStateOf(backend.autoHideBottomBar())
+    }
     var forwardingEnabled by remember(resumeKey) { mutableStateOf(backend.forwardingEnabled()) }
     val forwardingUpstream = remember(resumeKey) { backend.forwardingUpstream() }
     val viaProxy = forwardingUpstream == ForwardingUpstream.SOCKS5
@@ -367,6 +370,15 @@ fun SettingsScreen(
                         val style = ToolbarStyle.entries.firstOrNull { it.name == name } ?: ToolbarStyle.ClassicSolid
                         toolbarStyle = style
                         backend.setToolbarStyle(style)
+                    },
+                )
+                SwitchRow(
+                    title = s[S.AutoHideBottomBar],
+                    subtitle = s[S.AutoHideBottomBarHint],
+                    checked = autoHideBottomBar,
+                    onCheckedChange = { enabled ->
+                        autoHideBottomBar = enabled
+                        backend.setAutoHideBottomBar(enabled)
                     },
                 )
                 SwitchRow(

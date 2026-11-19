@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.15.4",
+            date = "2026-11-19",
+            features = listOf(
+                t(
+                    "Auto-hide bottom navigation bar on scroll: smoothly slides away when scrolling down across all tabs and springs back on scroll up or tab switch (toggleable in Settings → Appearance)",
+                    "底部导航栏支持下滑自动隐藏、上滑立即恢复：5 个主页面全局生效，采用死区防误触与 GPU 弹簧动效，短列表不误隐、切页自动复位，可在设置 → 外观中随时开关",
+                    "底部導覽列支援下滑自動隱藏、上滑立即恢復：5 個主頁面全域生效，採用死區防誤觸與 GPU 彈簧動效，短列表不誤隱、切頁自動復位，可在設定 → 外觀中隨時開關",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.15.3",
             date = "2026-11-19",
             features = listOf(

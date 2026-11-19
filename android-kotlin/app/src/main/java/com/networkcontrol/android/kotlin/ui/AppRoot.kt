@@ -71,7 +71,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -149,6 +153,48 @@ fun AppRoot(container: AppContainer) {
 
     val backend = container.backend
     val toolbarStyle by container.theme.toolbarStyle.collectAsStateWithLifecycle()
+    val autoHideBottomBar by container.theme.autoHideBottomBar.collectAsStateWithLifecycle()
+    val density = LocalDensity.current
+    var bottomBarVisible by remember { mutableStateOf(true) }
+    LaunchedEffect(selected, autoHideBottomBar) {
+        bottomBarVisible = true
+    }
+    val bottomBarScrollConnection = remember(autoHideBottomBar, density) {
+        val hideThresholdPx = with(density) { 28.dp.toPx() }
+        val showThresholdPx = with(density) { 14.dp.toPx() }
+        var accum = 0f
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (!autoHideBottomBar) return Offset.Zero
+                val dy = consumed.y
+                if (dy < 0f) {
+                    if (accum > 0f) accum = 0f
+                    accum += dy
+                    if (accum <= -hideThresholdPx) {
+                        bottomBarVisible = false
+                        accum = 0f
+                    }
+                } else if (dy > 0f) {
+                    if (accum < 0f) accum = 0f
+                    accum += dy
+                    if (accum >= showThresholdPx) {
+                        bottomBarVisible = true
+                        accum = 0f
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
+    val bottomBarHideProgress by animateFloatAsState(
+        targetValue = if (bottomBarVisible || !autoHideBottomBar) 0f else 1f,
+        animationSpec = spring(dampingRatio = 0.84f, stiffness = 420f),
+        label = "bottom-bar-hide",
+    )
     val visualTokens = LocalAppVisualTokens.current
     val canvasBackground = MaterialTheme.colorScheme.background
     val hazeState = rememberHazeState()
@@ -215,6 +261,10 @@ fun AppRoot(container: AppContainer) {
                 floatingToolbar -> 104.dp
                 else -> 84.dp
             }
+            val bottomBarHideModifier = Modifier.graphicsLayer {
+                translationY = bottomBarHideProgress * (size.height + 48.dp.toPx())
+                alpha = (1f - bottomBarHideProgress * 1.15f).coerceIn(0f, 1f)
+            }
             Scaffold(
                 containerColor = Color.Transparent,
                 contentColor = MaterialTheme.colorScheme.onBackground,
@@ -225,6 +275,7 @@ fun AppRoot(container: AppContainer) {
                             selected = selected,
                             onSelect = { selected = it },
                             hazeState = hazeState,
+                            modifier = bottomBarHideModifier,
                         )
                     }
                 },
@@ -233,7 +284,10 @@ fun AppRoot(container: AppContainer) {
                     LocalBottomContentPadding provides contentBottom,
                 ) {
                     Box(
-                        Modifier.fillMaxSize().padding(padding),
+                        Modifier
+                            .fillMaxSize()
+                            .padding(padding)
+                            .nestedScroll(bottomBarScrollConnection),
                         contentAlignment = Alignment.TopCenter,
                     ) {
                         Box(
@@ -292,7 +346,9 @@ fun AppRoot(container: AppContainer) {
                     selected = selected,
                     onSelect = { selected = it },
                     hazeState = hazeState,
-                    modifier = Modifier.align(Alignment.BottomCenter),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .then(bottomBarHideModifier),
                 )
             }
         }

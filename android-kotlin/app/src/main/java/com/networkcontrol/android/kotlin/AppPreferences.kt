@@ -337,6 +337,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_PERMISSION_BANNER_DISMISSED, false)
         set(value) = prefs.edit().putBoolean(KEY_PERMISSION_BANNER_DISMISSED, value).apply()
 
+    /** 列表向下滾動時自動隱藏底部導覽列、向上滾動時恢復顯示（預設開啟）。 */
+    var autoHideBottomBar: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_HIDE_BOTTOM_BAR, true)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_HIDE_BOTTOM_BAR, value).apply()
+
     private companion object {
         const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
         const val UPSTREAM_SOCKS5 = ForwardingUpstream.SOCKS5
@@ -389,6 +394,7 @@ class AppPreferences(context: Context) {
         const val KEY_OFFLINE_MODE = "offline_mode"
         const val KEY_PERMISSION_GUIDE_SHOWN = "permission_guide_shown"
         const val KEY_PERMISSION_BANNER_DISMISSED = "permission_banner_dismissed"
+        const val KEY_AUTO_HIDE_BOTTOM_BAR = "auto_hide_bottom_bar"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_SOCKS5_HOST = "socks5_host"
         const val KEY_SOCKS5_PORT = "socks5_port"
