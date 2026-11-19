@@ -120,4 +120,11 @@ public enum SettingsLangResourceKind
     TabBlocked,
     TabLiveConnections,
     CutConnection,
+    PromptOverlayEnabled,
+    PromptOverlayPosition,
+    PromptPosBottom,
+    PromptPosTop,
+    PromptShowDetails,
+    PromptDenyPermanent,
+    PromptShowTimedOption,
 }

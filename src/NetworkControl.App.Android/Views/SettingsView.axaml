@@ -73,6 +73,27 @@
             </StackPanel>
             <atom:Button Grid.Column="1" VerticalAlignment="Center" Command="{Binding OpenNotificationSettingsCommand}" Content="{loc:SettingsLangResource Open}" />
           </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource PromptOverlayEnabled}" />
+            <atom:ToggleSwitch Grid.Column="1" IsChecked="{Binding PromptOverlayEnabled}" />
+          </Grid>
+          <TextBlock Classes="secondary" IsVisible="{Binding PromptOverlayEnabled}" Text="{loc:SettingsLangResource PromptOverlayPosition}" />
+          <atom:Segmented SelectedIndex="{Binding PromptOverlayPositionIndex}" IsVisible="{Binding PromptOverlayEnabled}" HorizontalAlignment="Stretch" IsExpanding="True">
+            <atom:SegmentedItem Content="{loc:SettingsLangResource PromptPosBottom}" />
+            <atom:SegmentedItem Content="{loc:SettingsLangResource PromptPosTop}" />
+          </atom:Segmented>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource PromptShowDetails}" />
+            <atom:ToggleSwitch Grid.Column="1" IsChecked="{Binding PromptShowDetails}" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource PromptDenyPermanent}" />
+            <atom:ToggleSwitch Grid.Column="1" IsChecked="{Binding PromptDenyPermanent}" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource PromptShowTimedOption}" />
+            <atom:ToggleSwitch Grid.Column="1" IsChecked="{Binding PromptShowTimedOption}" />
+          </Grid>
         </StackPanel>
       </atom:Card>
 

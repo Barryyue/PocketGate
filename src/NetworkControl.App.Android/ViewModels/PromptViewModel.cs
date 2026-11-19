@@ -51,9 +51,57 @@ public sealed partial class PromptViewModel : LocalizedViewModel
     public partial int DurationIndex { get; set; }
 
     [ObservableProperty]
+    public partial bool DontAskAgain { get; set; }
+
+    [ObservableProperty]
     public partial Bitmap? Icon { get; set; }
 
     public bool IsVisible => Current is not null;
+
+    public bool ShowDontAskAgain => !Backend.Preferences.PromptDenyPermanent;
+
+    public bool ShowDetails => Backend.Preferences.PromptShowDetails && Current is { Flows.Count: > 0 };
+
+    public bool ShowTimedOption => Backend.Preferences.PromptShowTimedOption;
+
+    public string TimedLabel => Loc.Format(PromptLangResourceKind.TimedShort, Backend.Preferences.PromptTimedMinutes);
+
+    public string NetworkBadgeText
+    {
+        get
+        {
+            try
+            {
+                var cm = global::Android.App.Application.Context.GetSystemService(global::Android.Content.Context.ConnectivityService) as global::Android.Net.ConnectivityManager;
+                var caps = cm?.GetNetworkCapabilities(cm.ActiveNetwork);
+                if (caps is not null)
+                {
+                    if (caps.HasTransport(global::Android.Net.TransportType.Wifi) || caps.HasTransport(global::Android.Net.TransportType.Ethernet))
+                    {
+                        return Loc.Get(PromptLangResourceKind.NetWlan);
+                    }
+
+                    if (caps.HasTransport(global::Android.Net.TransportType.Cellular))
+                    {
+                        return Loc.Get(PromptLangResourceKind.NetMobile);
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return Loc.Get(PromptLangResourceKind.NetAny);
+        }
+    }
+
+    public string AppDisplayName => Current is null ? "" : AppName(Current);
+
+    public string RequestMessage => Current is not { } p
+        ? ""
+        : Loc.Format(PromptLangResourceKind.RequestMessage, "PocketGate", AppName(p), NetworkBadgeText);
+
+    public string DetailText => string.IsNullOrEmpty(MoreText) ? TargetText : $"{TargetText} · {MoreText}";
 
     public string Title => Current is not { } p ? "" : Loc.Format(p.IsTamperAlert ? PromptLangResourceKind.TamperTitle : PromptLangResourceKind.Title, AppName(p));
 
@@ -124,10 +172,22 @@ public sealed partial class PromptViewModel : LocalizedViewModel
     }
 
     [RelayCommand]
-    private Task AllowAsync() => AnswerAsync(VerdictAction.Allow);
+    private Task AllowAsync() => AnswerAsync(VerdictAction.Allow, RuleLifetime.Permanent, null);
 
     [RelayCommand]
-    private Task BlockAsync() => AnswerAsync(VerdictAction.Deny);
+    private Task AllowOnceAsync() => AnswerAsync(VerdictAction.Allow, RuleLifetime.UntilRestart, null);
+
+    [RelayCommand]
+    private Task AllowTimedAsync() => AnswerAsync(
+        VerdictAction.Allow,
+        RuleLifetime.Timed,
+        TimeSpan.FromMinutes(Backend.Preferences.PromptTimedMinutes));
+
+    [RelayCommand]
+    private Task BlockAsync() => AnswerAsync(
+        VerdictAction.Deny,
+        Backend.Preferences.PromptDenyPermanent || DontAskAgain ? RuleLifetime.Permanent : RuleLifetime.UntilRestart,
+        null);
 
     [RelayCommand]
     private void Later()
@@ -140,19 +200,12 @@ public sealed partial class PromptViewModel : LocalizedViewModel
         ShowNext();
     }
 
-    private async Task AnswerAsync(VerdictAction action)
+    private async Task AnswerAsync(VerdictAction action, RuleLifetime lifetime, TimeSpan? duration)
     {
         if (Current is not { } prompt || !IsInteractive)
         {
             return;
         }
-
-        var (lifetime, duration) = DurationIndex switch
-        {
-            1 => (RuleLifetime.Timed, (TimeSpan?)TimeSpan.FromHours(1)),
-            2 => (RuleLifetime.UntilRestart, null),
-            _ => (RuleLifetime.Permanent, null),
-        };
 
         IsBusy = true;
         try
@@ -218,6 +271,7 @@ public sealed partial class PromptViewModel : LocalizedViewModel
         Current = prompt;
         Hold();
         DurationIndex = 0;
+        DontAskAgain = false;
         IsInteractive = false;
         Icon = null;
         _ = EnableAfterGuardAsync(prompt.Id);

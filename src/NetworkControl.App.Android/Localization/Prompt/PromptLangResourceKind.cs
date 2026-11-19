@@ -24,4 +24,12 @@ public enum PromptLangResourceKind
     ChannelService,
     ChannelServiceDescription,
     ChannelAlerts,
+    NetWlan,
+    NetMobile,
+    NetAny,
+    DontAskAgain,
+    Deny,
+    Once,
+    TimedShort,
+    RequestMessage,
 }

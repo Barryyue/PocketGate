@@ -2,6 +2,7 @@ package com.networkcontrol.android.kotlin.core.update
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
@@ -48,11 +49,11 @@ object UpdateChecker {
     const val LEGACY_GITEE_REPO = "yuexiaobai/networkcontrol"
     const val GITHUB_MIRROR_PREFIX = "https://ghfast.top/"
 
-    private const val GITHUB_LATEST = "https://api.github.com/repos/%s/releases/latest"
+    private const val GITHUB_LATEST = "https://api.github.com/repos/%s/releases?per_page=20"
     private const val GITHUB_WEB_LATEST = "https://github.com/%s/releases/latest"
     private const val GITLAB_LATEST =
         "https://gitlab.com/api/v4/projects/%s/releases/permalink/latest"
-    private const val GITEE_LATEST = "https://gitee.com/api/v5/repos/%s/releases/latest"
+    private const val GITEE_LATEST = "https://gitee.com/api/v5/repos/%s/releases?page=1&per_page=20"
 
     /**
      * 自動檢查更新：先走 GitHub，連不通或下載地址不可達時自動回退到 Gitee 或國內加速鏡像。
@@ -113,6 +114,9 @@ object UpdateChecker {
                 return@runCatching UpdateInfo(null, null, "HTTP ${connection.responseCode}", currentVersion)
             }
             val rawTag = location.substring(idx + marker.length).substringBefore('?').substringBefore('/').trim()
+            if (rawTag.startsWith("atomui-v", ignoreCase = true)) {
+                return@runCatching UpdateInfo(null, null, null, currentVersion)
+            }
             val version = rawTag.removePrefix("kt-v").removePrefix("v")
             if (version.isBlank()) {
                 return@runCatching UpdateInfo(null, null, "empty tag", currentVersion)
@@ -386,7 +390,44 @@ object UpdateChecker {
     }
 
     internal fun parse(source: UpdateSource, body: String, currentVersion: String): UpdateInfo {
-        val json = JSONObject(body)
+        val trimmed = body.trimStart()
+        if (trimmed.startsWith("[")) {
+            val array = JSONArray(trimmed)
+            for (i in 0 until array.length()) {
+                val item = array.optJSONObject(i) ?: continue
+                if (item.optBoolean("draft", false) || item.optBoolean("prerelease", false)) continue
+                val rawTag = item.optString("tag_name").trim()
+                if (rawTag.startsWith("atomui-v", ignoreCase = true)) continue
+                val parsed = parseObject(source, item, currentVersion)
+                if (parsed.latestVersion != null && !isAtomUiOnlyRelease(item, parsed.downloadUrl)) {
+                    return parsed
+                }
+            }
+            return UpdateInfo(null, null, null, currentVersion)
+        }
+        return parseObject(source, JSONObject(trimmed), currentVersion)
+    }
+
+    private fun isAtomUiOnlyRelease(json: JSONObject, chosenUrl: String?): Boolean {
+        if (chosenUrl != null && chosenUrl.endsWith(".apk", ignoreCase = true) && !chosenUrl.contains("AtomUI", ignoreCase = true)) {
+            return false
+        }
+        val assets = json.optJSONArray("assets") ?: return false
+        var hasApk = false
+        for (i in 0 until assets.length()) {
+            val asset = assets.optJSONObject(i) ?: continue
+            val url = asset.optString("browser_download_url")
+                .ifBlank { asset.optString("url") }
+                .ifBlank { asset.optString("direct_asset_url") }
+            if (url.endsWith(".apk", ignoreCase = true)) {
+                hasApk = true
+                if (!url.contains("AtomUI", ignoreCase = true)) return false
+            }
+        }
+        return hasApk
+    }
+
+    private fun parseObject(source: UpdateSource, json: JSONObject, currentVersion: String): UpdateInfo {
         val tag = when (source) {
             UpdateSource.Custom -> json.optString("version").ifBlank { json.optString("tag_name") }
             else -> json.optString("tag_name")
@@ -423,7 +464,7 @@ object UpdateChecker {
                 val url = asset.optString("browser_download_url")
                     .ifBlank { asset.optString("url") }
                     .ifBlank { asset.optString("direct_asset_url") }
-                if (url.endsWith(".apk", ignoreCase = true)) {
+                if (url.endsWith(".apk", ignoreCase = true) && !url.contains("AtomUI", ignoreCase = true)) {
                     if (!url.contains("x86_64", ignoreCase = true) && !url.contains("emulator", ignoreCase = true)) {
                         return url
                     }

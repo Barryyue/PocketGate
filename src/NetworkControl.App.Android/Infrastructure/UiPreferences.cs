@@ -49,6 +49,12 @@ public sealed class UiPreferences
     private const string WebDavPassKey = "webdav_password";
     private const string WebDavPassphraseKey = "webdav_passphrase";
     private const string WebDavLastSyncKey = "webdav_last_sync";
+    private const string PromptOverlayEnabledKey = "prompt_overlay_enabled";
+    private const string PromptOverlayPositionKey = "prompt_overlay_position";
+    private const string PromptShowDetailsKey = "prompt_show_details";
+    private const string PromptDenyPermanentKey = "prompt_deny_permanent";
+    private const string PromptShowTimedOptionKey = "prompt_show_timed_option";
+    private const string PromptTimedMinutesKey = "prompt_timed_minutes";
 
     private readonly ISharedPreferences _preferences;
 
@@ -200,6 +206,42 @@ public sealed class UiPreferences
     {
         get => _preferences.GetLong(WebDavLastSyncKey, 0L);
         set => Edit(e => e.PutLong(WebDavLastSyncKey, value));
+    }
+
+    public bool PromptOverlayEnabled
+    {
+        get => _preferences.GetBoolean(PromptOverlayEnabledKey, true);
+        set => Edit(e => e.PutBoolean(PromptOverlayEnabledKey, value));
+    }
+
+    public string PromptOverlayPosition
+    {
+        get => _preferences.GetString(PromptOverlayPositionKey, "bottom") ?? "bottom";
+        set => Edit(e => e.PutString(PromptOverlayPositionKey, value is "top" ? "top" : "bottom"));
+    }
+
+    public bool PromptShowDetails
+    {
+        get => _preferences.GetBoolean(PromptShowDetailsKey, true);
+        set => Edit(e => e.PutBoolean(PromptShowDetailsKey, value));
+    }
+
+    public bool PromptDenyPermanent
+    {
+        get => _preferences.GetBoolean(PromptDenyPermanentKey, false);
+        set => Edit(e => e.PutBoolean(PromptDenyPermanentKey, value));
+    }
+
+    public bool PromptShowTimedOption
+    {
+        get => _preferences.GetBoolean(PromptShowTimedOptionKey, false);
+        set => Edit(e => e.PutBoolean(PromptShowTimedOptionKey, value));
+    }
+
+    public int PromptTimedMinutes
+    {
+        get => Math.Clamp(_preferences.GetInt(PromptTimedMinutesKey, 60), 1, 1440);
+        set => Edit(e => e.PutInt(PromptTimedMinutesKey, Math.Clamp(value, 1, 1440)));
     }
 
     private void Edit(Action<ISharedPreferencesEditor> change)

@@ -98,6 +98,22 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     public partial bool SpeedIslandEnabled { get; set; }
 
     [ObservableProperty]
+    public partial bool PromptOverlayEnabled { get; set; } = true;
+
+    /// <summary>0 底部、1 頂部。</summary>
+    [ObservableProperty]
+    public partial int PromptOverlayPositionIndex { get; set; }
+
+    [ObservableProperty]
+    public partial bool PromptShowDetails { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool PromptDenyPermanent { get; set; }
+
+    [ObservableProperty]
+    public partial bool PromptShowTimedOption { get; set; }
+
+    [ObservableProperty]
     public partial bool OfflineMode { get; set; }
 
     [ObservableProperty]
@@ -236,6 +252,11 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
             ThemeStyleIndex = (int)prefs.ThemeStyle;
             AutoHideBottomBar = prefs.AutoHideBottomBar;
             SpeedIslandEnabled = prefs.SpeedIslandEnabled;
+            PromptOverlayEnabled = prefs.PromptOverlayEnabled;
+            PromptOverlayPositionIndex = prefs.PromptOverlayPosition == "top" ? 1 : 0;
+            PromptShowDetails = prefs.PromptShowDetails;
+            PromptDenyPermanent = prefs.PromptDenyPermanent;
+            PromptShowTimedOption = prefs.PromptShowTimedOption;
             OfflineMode = prefs.OfflineMode;
             CloneIndependent = !prefs.CloneAppsInheritPrimary;
             ForwardingEnabled = prefs.ForwardingEnabled;
@@ -722,6 +743,51 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
             }
             Backend.Preferences.SpeedIslandEnabled = value;
             Backend.UpdateSpeedIsland("↓ 0 B/s · ↑ 0 B/s");
+        }
+    }
+
+    partial void OnPromptOverlayEnabledChanged(bool value)
+    {
+        if (!_syncing)
+        {
+            if (value && MainActivity.Current is { } act && !global::Android.Provider.Settings.CanDrawOverlays(act))
+            {
+                AndroidPermissionHelper.OpenOverlaySettings(act);
+            }
+
+            Backend.Preferences.PromptOverlayEnabled = value;
+        }
+    }
+
+    partial void OnPromptOverlayPositionIndexChanged(int value)
+    {
+        if (!_syncing)
+        {
+            Backend.Preferences.PromptOverlayPosition = value == 1 ? "top" : "bottom";
+        }
+    }
+
+    partial void OnPromptShowDetailsChanged(bool value)
+    {
+        if (!_syncing)
+        {
+            Backend.Preferences.PromptShowDetails = value;
+        }
+    }
+
+    partial void OnPromptDenyPermanentChanged(bool value)
+    {
+        if (!_syncing)
+        {
+            Backend.Preferences.PromptDenyPermanent = value;
+        }
+    }
+
+    partial void OnPromptShowTimedOptionChanged(bool value)
+    {
+        if (!_syncing)
+        {
+            Backend.Preferences.PromptShowTimedOption = value;
         }
     }
 

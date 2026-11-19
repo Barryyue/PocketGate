@@ -376,6 +376,41 @@
         <source>Profiles</source>
       </segment>
     </unit>
+    <unit id="PromptDenyPermanent">
+      <segment>
+        <source>Deny permanently by default</source>
+      </segment>
+    </unit>
+    <unit id="PromptOverlayEnabled">
+      <segment>
+        <source>Floating prompt overlay</source>
+      </segment>
+    </unit>
+    <unit id="PromptOverlayPosition">
+      <segment>
+        <source>Overlay position</source>
+      </segment>
+    </unit>
+    <unit id="PromptPosBottom">
+      <segment>
+        <source>Bottom</source>
+      </segment>
+    </unit>
+    <unit id="PromptPosTop">
+      <segment>
+        <source>Top</source>
+      </segment>
+    </unit>
+    <unit id="PromptShowDetails">
+      <segment>
+        <source>Show target details</source>
+      </segment>
+    </unit>
+    <unit id="PromptShowTimedOption">
+      <segment>
+        <source>Show timed allow button</source>
+      </segment>
+    </unit>
     <unit id="PromptTimeout">
       <segment>
         <source>Answer within</source>

@@ -134,6 +134,14 @@ CATALOGS = {
         ('ChannelService', 'Protection status', '保護狀態', '保护状态'),
         ('ChannelServiceDescription', 'Shown while protection is on', '保護開啟時顯示', '保护开启时显示'),
         ('ChannelAlerts', 'Alerts', '提醒', '提醒'),
+        ('NetWlan', 'WLAN', 'WLAN', 'WLAN'),
+        ('NetMobile', 'Mobile', '行動網路', '移动网络'),
+        ('NetAny', 'All networks', '全部網路', '全部网络'),
+        ('DontAskAgain', "Don't ask again", '不再提示', '不再提示'),
+        ('Deny', 'Deny', '禁止', '禁止'),
+        ('Once', 'Once', '僅本次', '仅本次'),
+        ('TimedShort', '{0} min', '{0} 分鐘', '{0} 分钟'),
+        ('RequestMessage', '{0}: {1} is requesting {2} access', '{0} 提示：{1} 正在請求聯網權限（{2}）', '{0} 提示：{1} 正在请求联网权限（{2}）'),
     ],
     'Settings': [
         ('Language', 'Language', '語言', '语言'),
@@ -250,6 +258,13 @@ CATALOGS = {
         ('TabBlocked', 'Blocked logs', '攔截記錄', '拦截记录'),
         ('TabLiveConnections', 'Live connections', '即時連線', '实时连接'),
         ('CutConnection', 'Cut', '斷開', '断开'),
+        ('PromptOverlayEnabled', 'Floating prompt overlay', '背景懸浮詢問窗', '后台悬浮询问窗'),
+        ('PromptOverlayPosition', 'Overlay position', '懸浮窗位置', '悬浮窗位置'),
+        ('PromptPosBottom', 'Bottom', '底部', '底部'),
+        ('PromptPosTop', 'Top', '頂部', '顶部'),
+        ('PromptShowDetails', 'Show target details', '顯示目標詳情', '显示目标详情'),
+        ('PromptDenyPermanent', 'Deny permanently by default', '「禁止」預設永久生效', '“禁止”默认永久生效'),
+        ('PromptShowTimedOption', 'Show timed allow button', '顯示限時允許按鈕', '显示限时允许按钮'),
     ],
 }
 

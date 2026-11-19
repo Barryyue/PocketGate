@@ -451,6 +451,48 @@
         <target state="translated">設定檔</target>
       </segment>
     </unit>
+    <unit id="PromptDenyPermanent">
+      <segment>
+        <source>Deny permanently by default</source>
+        <target state="translated">「禁止」預設永久生效</target>
+      </segment>
+    </unit>
+    <unit id="PromptOverlayEnabled">
+      <segment>
+        <source>Floating prompt overlay</source>
+        <target state="translated">背景懸浮詢問窗</target>
+      </segment>
+    </unit>
+    <unit id="PromptOverlayPosition">
+      <segment>
+        <source>Overlay position</source>
+        <target state="translated">懸浮窗位置</target>
+      </segment>
+    </unit>
+    <unit id="PromptPosBottom">
+      <segment>
+        <source>Bottom</source>
+        <target state="translated">底部</target>
+      </segment>
+    </unit>
+    <unit id="PromptPosTop">
+      <segment>
+        <source>Top</source>
+        <target state="translated">頂部</target>
+      </segment>
+    </unit>
+    <unit id="PromptShowDetails">
+      <segment>
+        <source>Show target details</source>
+        <target state="translated">顯示目標詳情</target>
+      </segment>
+    </unit>
+    <unit id="PromptShowTimedOption">
+      <segment>
+        <source>Show timed allow button</source>
+        <target state="translated">顯示限時允許按鈕</target>
+      </segment>
+    </unit>
     <unit id="PromptTimeout">
       <segment>
         <source>Answer within</source>

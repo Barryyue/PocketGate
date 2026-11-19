@@ -26,6 +26,16 @@
         <source>Shown while protection is on</source>
       </segment>
     </unit>
+    <unit id="Deny">
+      <segment>
+        <source>Deny</source>
+      </segment>
+    </unit>
+    <unit id="DontAskAgain">
+      <segment>
+        <source>Don't ask again</source>
+      </segment>
+    </unit>
     <unit id="Duration">
       <segment>
         <source>Remember</source>
@@ -51,9 +61,29 @@
         <source>{0} connections</source>
       </segment>
     </unit>
+    <unit id="NetAny">
+      <segment>
+        <source>All networks</source>
+      </segment>
+    </unit>
+    <unit id="NetMobile">
+      <segment>
+        <source>Mobile</source>
+      </segment>
+    </unit>
+    <unit id="NetWlan">
+      <segment>
+        <source>WLAN</source>
+      </segment>
+    </unit>
     <unit id="NotificationMultiple">
       <segment>
         <source>{0} and {1} connections in total</source>
+      </segment>
+    </unit>
+    <unit id="Once">
+      <segment>
+        <source>Once</source>
       </segment>
     </unit>
     <unit id="OneHour">
@@ -64,6 +94,11 @@
     <unit id="Queue">
       <segment>
         <source>{0} more waiting</source>
+      </segment>
+    </unit>
+    <unit id="RequestMessage">
+      <segment>
+        <source>{0}: {1} is requesting {2} access</source>
       </segment>
     </unit>
     <unit id="TamperHint">
@@ -79,6 +114,11 @@
     <unit id="Target">
       <segment>
         <source>Destination</source>
+      </segment>
+    </unit>
+    <unit id="TimedShort">
+      <segment>
+        <source>{0} min</source>
       </segment>
     </unit>
     <unit id="Title">

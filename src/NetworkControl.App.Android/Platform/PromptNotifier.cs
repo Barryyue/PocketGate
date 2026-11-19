@@ -14,15 +14,40 @@ namespace NetworkControl.Android.Platform;
 /// 通知上的「允許 / 拒絕」按鈕生成此應用任意連線的永久規則；點擊通知正文打開應用內的完整詢問。
 /// 文本來自 AtomUI Catalog（與界面同源），語言切換後由 <see cref="RefreshPending"/> 刷新已顯示的通知。
 /// </summary>
-public sealed partial class PromptNotifier(Context context, PromptBroker prompts, ILogger<PromptNotifier> logger) : BackgroundService
+public sealed partial class PromptNotifier(
+    Context context,
+    PromptBroker prompts,
+    UiPreferences preferences,
+    PromptOverlayService overlay,
+    ILogger<PromptNotifier> logger) : BackgroundService
 {
     private readonly Context _context = context.ApplicationContext ?? context;
+    private bool _isUiForeground;
 
     /// <summary>詢問新增、更新或移除後觸發（後台線程）。</summary>
     public event EventHandler? PromptsChanged;
 
     /// <summary>界面在前台並且自己顯示詢問時設為 true：此時只更新通知，不懸浮打擾。</summary>
-    public bool IsUiForeground { get; set; }
+    public bool IsUiForeground
+    {
+        get => _isUiForeground;
+        set
+        {
+            _isUiForeground = value;
+            if (value)
+            {
+                overlay.Hide();
+            }
+            else if (preferences.PromptOverlayEnabled && overlay.CanDrawOverlays())
+            {
+                var first = prompts.GetPending().FirstOrDefault();
+                if (first is not null)
+                {
+                    overlay.Show(first);
+                }
+            }
+        }
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -35,10 +60,16 @@ public sealed partial class PromptNotifier(Context context, PromptBroker prompts
                 {
                     if (evt.Kind == PromptEventKind.Removed)
                     {
+                        overlay.HideIfCurrent(evt.Prompt.Id);
                         Cancel(evt.Prompt.Id);
                     }
                     else
                     {
+                        if (!IsUiForeground && preferences.PromptOverlayEnabled && overlay.CanDrawOverlays())
+                        {
+                            overlay.Show(evt.Prompt);
+                        }
+
                         Show(evt.Prompt);
                     }
                 }

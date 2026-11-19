@@ -113,7 +113,7 @@ class UpdateCheckerTest {
     @Test
     fun buildsProviderEndpoints() {
         assertEquals(
-            "https://api.github.com/repos/o/r/releases/latest",
+            "https://api.github.com/repos/o/r/releases?per_page=20",
             UpdateChecker.endpoint(UpdateSource.GitHub, "o/r", ""),
         )
         assertEquals(
@@ -121,7 +121,7 @@ class UpdateCheckerTest {
             UpdateChecker.endpoint(UpdateSource.GitLab, "g/p", ""),
         )
         assertEquals(
-            "https://gitee.com/api/v5/repos/o/r/releases/latest",
+            "https://gitee.com/api/v5/repos/o/r/releases?page=1&per_page=20",
             UpdateChecker.endpoint(UpdateSource.Gitee, "o/r", ""),
         )
         assertEquals(
@@ -130,6 +130,30 @@ class UpdateCheckerTest {
         )
         assertNull(UpdateChecker.endpoint(UpdateSource.GitHub, "missing-slash", ""))
         assertNull(UpdateChecker.endpoint(UpdateSource.Custom, "", "http://insecure"))
+    }
+
+    @Test
+    fun skipsAtomUiReleasesInList() {
+        val body = """
+            [
+              {
+                "tag_name": "atomui-v0.3.1",
+                "assets": [
+                  {"browser_download_url": "https://example.com/PocketGate-0.3.1-AtomUI.apk"}
+                ]
+              },
+              {
+                "tag_name": "v0.16.1",
+                "assets": [
+                  {"browser_download_url": "https://example.com/PocketGate-0.16.1.apk"}
+                ]
+              }
+            ]
+        """.trimIndent()
+        val info = UpdateChecker.parse(UpdateSource.GitHub, body, "0.16.0")
+        assertTrue(info.hasUpdate)
+        assertEquals("0.16.1", info.latestVersion)
+        assertEquals("https://example.com/PocketGate-0.16.1.apk", info.downloadUrl)
     }
 
     @Test

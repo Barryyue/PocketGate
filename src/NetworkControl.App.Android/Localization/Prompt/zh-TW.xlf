@@ -31,6 +31,18 @@
         <target state="translated">保護開啟時顯示</target>
       </segment>
     </unit>
+    <unit id="Deny">
+      <segment>
+        <source>Deny</source>
+        <target state="translated">禁止</target>
+      </segment>
+    </unit>
+    <unit id="DontAskAgain">
+      <segment>
+        <source>Don't ask again</source>
+        <target state="translated">不再提示</target>
+      </segment>
+    </unit>
     <unit id="Duration">
       <segment>
         <source>Remember</source>
@@ -61,10 +73,34 @@
         <target state="translated">共 {0} 個連線</target>
       </segment>
     </unit>
+    <unit id="NetAny">
+      <segment>
+        <source>All networks</source>
+        <target state="translated">全部網路</target>
+      </segment>
+    </unit>
+    <unit id="NetMobile">
+      <segment>
+        <source>Mobile</source>
+        <target state="translated">行動網路</target>
+      </segment>
+    </unit>
+    <unit id="NetWlan">
+      <segment>
+        <source>WLAN</source>
+        <target state="translated">WLAN</target>
+      </segment>
+    </unit>
     <unit id="NotificationMultiple">
       <segment>
         <source>{0} and {1} connections in total</source>
         <target state="translated">{0}，共 {1} 個連線</target>
+      </segment>
+    </unit>
+    <unit id="Once">
+      <segment>
+        <source>Once</source>
+        <target state="translated">僅本次</target>
       </segment>
     </unit>
     <unit id="OneHour">
@@ -77,6 +113,12 @@
       <segment>
         <source>{0} more waiting</source>
         <target state="translated">還有 {0} 個詢問</target>
+      </segment>
+    </unit>
+    <unit id="RequestMessage">
+      <segment>
+        <source>{0}: {1} is requesting {2} access</source>
+        <target state="translated">{0} 提示：{1} 正在請求聯網權限（{2}）</target>
       </segment>
     </unit>
     <unit id="TamperHint">
@@ -95,6 +137,12 @@
       <segment>
         <source>Destination</source>
         <target state="translated">目的地</target>
+      </segment>
+    </unit>
+    <unit id="TimedShort">
+      <segment>
+        <source>{0} min</source>
+        <target state="translated">{0} 分鐘</target>
       </segment>
     </unit>
     <unit id="Title">
