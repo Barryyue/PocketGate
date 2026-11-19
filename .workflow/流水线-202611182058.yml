@@ -66,6 +66,11 @@ stages:
           - name: BUILD_ARTIFACT
             path:
               - './dist'
+  - name: release-stage
+    displayName: '發布產物'
+    strategy: naturally
+    trigger: auto
+    steps:
       - step: publish@general_artifacts
         name: publish-apk
         displayName: '上傳 APK 產物'
