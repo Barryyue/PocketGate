@@ -95,6 +95,9 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     public partial bool AutoHideBottomBar { get; set; } = true;
 
     [ObservableProperty]
+    public partial bool SpeedIslandEnabled { get; set; }
+
+    [ObservableProperty]
     public partial bool OfflineMode { get; set; }
 
     [ObservableProperty]
@@ -232,6 +235,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
             var prefs = Backend.Preferences;
             ThemeStyleIndex = (int)prefs.ThemeStyle;
             AutoHideBottomBar = prefs.AutoHideBottomBar;
+            SpeedIslandEnabled = prefs.SpeedIslandEnabled;
             OfflineMode = prefs.OfflineMode;
             CloneIndependent = !prefs.CloneAppsInheritPrimary;
             ForwardingEnabled = prefs.ForwardingEnabled;
@@ -694,9 +698,31 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         }
     }
 
+    [RelayCommand]
+    private void SelectThemeStyle(string indexText)
+    {
+        if (int.TryParse(indexText, System.Globalization.CultureInfo.InvariantCulture, out var idx) && idx is >= 0 and <= 5)
+        {
+            ThemeStyleIndex = idx;
+        }
+    }
+
     partial void OnAutoHideBottomBarChanged(bool value)
     {
         if (!_syncing) Backend.Preferences.AutoHideBottomBar = value;
+    }
+
+    partial void OnSpeedIslandEnabledChanged(bool value)
+    {
+        if (!_syncing)
+        {
+            if (value && MainActivity.Current is { } act && !global::Android.Provider.Settings.CanDrawOverlays(act))
+            {
+                AndroidPermissionHelper.OpenOverlaySettings(act);
+            }
+            Backend.Preferences.SpeedIslandEnabled = value;
+            Backend.UpdateSpeedIsland("↓ 0 B/s · ↑ 0 B/s");
+        }
     }
 
     partial void OnOfflineModeChanged(bool value)
@@ -711,12 +737,20 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 
     partial void OnForwardingEnabledChanged(bool value)
     {
-        if (!_syncing) Backend.Preferences.ForwardingEnabled = value;
+        if (!_syncing)
+        {
+            Backend.Preferences.ForwardingEnabled = value;
+            Backend.RestartTunnelIfActive();
+        }
     }
 
     partial void OnForwardingUpstreamIndexChanged(int value)
     {
-        if (!_syncing) Backend.Preferences.ForwardingUpstream = value == 1 ? "socks5" : "direct";
+        if (!_syncing)
+        {
+            Backend.Preferences.ForwardingUpstream = value == 1 ? "socks5" : "direct";
+            Backend.RestartTunnelIfActive();
+        }
     }
 
     partial void OnBlocklistsEnabledChanged(bool value)

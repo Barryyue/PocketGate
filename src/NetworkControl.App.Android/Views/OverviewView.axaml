@@ -36,15 +36,22 @@
 
       <!-- 旗艦保護開關卡片 -->
       <atom:Card>
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-          <StackPanel Spacing="6">
-            <TextBlock Classes="title" Text="{Binding StatusText}"
-                       Classes.success="{Binding StatusColor, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=success}"
-                       Classes.warning="{Binding StatusColor, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=warning}"
-                       Classes.error="{Binding StatusColor, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=error}" />
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+          <Border Classes="hero-badge" VerticalAlignment="Center">
+            <atom:IconPresenter Icon="{antdicons:AntDesignIconProvider Kind=SafetyCertificateOutlined}"
+                                Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Classes="title" Text="{Binding StatusText}"
+                         Classes.success="{Binding StatusColor, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=success}"
+                         Classes.warning="{Binding StatusColor, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=warning}"
+                         Classes.error="{Binding StatusColor, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=error}" />
+              <atom:Tag Text="{Binding ExitBadgeText}" />
+            </StackPanel>
             <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding StatusHint}" />
           </StackPanel>
-          <atom:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding IsProtectionOn}" IsEnabled="{Binding !IsBusy}" />
+          <atom:ToggleSwitch Grid.Column="2" VerticalAlignment="Center" IsChecked="{Binding IsProtectionOn}" IsEnabled="{Binding !IsBusy}" />
         </Grid>
       </atom:Card>
 
@@ -140,10 +147,13 @@
             <ItemsControl ItemsSource="{Binding TopUsage}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:UsageRow">
-                  <Grid ColumnDefinitions="*,Auto" Margin="0,4">
-                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding Bytes}" Margin="12,0,0,0" />
-                  </Grid>
+                  <StackPanel Spacing="4" Margin="0,4">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Classes="secondary" Text="{Binding Bytes}" Margin="12,0,0,0" />
+                    </Grid>
+                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding Percent}" Height="4" />
+                  </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

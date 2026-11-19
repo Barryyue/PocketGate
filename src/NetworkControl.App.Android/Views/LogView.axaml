@@ -6,14 +6,19 @@
              xmlns:loc="using:NetworkControl.Android.Localization"
              x:Class="NetworkControl.Android.Views.LogView"
              x:DataType="vm:LogViewModel">
-  <Grid RowDefinitions="Auto,*">
+  <Grid RowDefinitions="Auto,Auto,*">
     <Grid Margin="16,16,16,8" ColumnDefinitions="*,Auto">
       <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavLog}" />
       <atom:Button Grid.Column="1" ButtonType="Text" Icon="{antdicons:AntDesignIconProvider Kind=ReloadOutlined}"
                    Command="{Binding RefreshCommand}" IsLoading="{Binding IsLoading}" Content="{loc:CommonLangResource Refresh}" />
     </Grid>
 
-    <ListBox Grid.Row="1" Classes="plain" ItemsSource="{Binding Items}">
+    <atom:Segmented Grid.Row="1" Margin="16,0,16,8" SelectedIndex="{Binding TabIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+      <atom:SegmentedItem Content="{loc:SettingsLangResource TabBlocked}" />
+      <atom:SegmentedItem Content="{loc:SettingsLangResource TabLiveConnections}" />
+    </atom:Segmented>
+
+    <ListBox Grid.Row="2" Classes="plain" Padding="0,4,0,96" ItemsSource="{Binding Items}" IsVisible="{Binding IsBlockedTab}">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="vm:LogItemViewModel">
           <Border Classes="row">
@@ -33,7 +38,24 @@
       </ListBox.ItemTemplate>
     </ListBox>
 
-    <TextBlock Grid.Row="1" Classes="secondary" HorizontalAlignment="Center" VerticalAlignment="Center"
+    <ListBox Grid.Row="2" Classes="plain" Padding="0,4,0,96" ItemsSource="{Binding LiveItems}" IsVisible="{Binding IsLiveTab}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:ActiveConnectionItemViewModel">
+          <Border Classes="row">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <StackPanel Spacing="2">
+                <TextBlock Classes="title" Text="{Binding Destination}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <atom:Button Grid.Column="1" ButtonType="Primary" IsDanger="True" VerticalAlignment="Center"
+                           Command="{Binding CutCommand}" Content="{loc:SettingsLangResource CutConnection}" />
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <TextBlock Grid.Row="2" Classes="secondary" HorizontalAlignment="Center" VerticalAlignment="Center"
                Text="{loc:LogLangResource Empty}" IsVisible="{Binding IsEmpty}" />
   </Grid>
 </UserControl>

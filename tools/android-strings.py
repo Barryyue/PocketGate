@@ -246,6 +246,10 @@ CATALOGS = {
         ('PermissionHealth', 'Permission & keep-alive health', '權限與保活體檢', '权限与保活体检'),
         ('RulesClearExpired', 'Clear expired', '清除已過期', '清除已过期'),
         ('NoRules', 'No rules yet', '尚無規則', '暂无规则'),
+        ('SpeedIsland', 'Floating speed island', '懸浮網速靈動島', '悬浮网速灵动岛'),
+        ('TabBlocked', 'Blocked logs', '攔截記錄', '拦截记录'),
+        ('TabLiveConnections', 'Live connections', '即時連線', '实时连接'),
+        ('CutConnection', 'Cut', '斷開', '断开'),
     ],
 }
 

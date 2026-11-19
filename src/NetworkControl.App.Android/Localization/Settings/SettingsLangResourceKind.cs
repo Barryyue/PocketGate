@@ -116,4 +116,8 @@ public enum SettingsLangResourceKind
     PermissionHealth,
     RulesClearExpired,
     NoRules,
+    SpeedIsland,
+    TabBlocked,
+    TabLiveConnections,
+    CutConnection,
 }

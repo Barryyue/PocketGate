@@ -85,11 +85,12 @@
   </Style>
 
   <Style Selector="Button.nav TextBlock">
-    <Setter Property="FontSize" Value="{atom:SharedTokenResource FontSizeSM}" />
+    <Setter Property="FontSize" Value="11" />
     <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
   </Style>
 
-  <!-- 列表行 -->
+  <!-- 現代圓角列表卡片（與 Bento 卡片統一） -->
   <Style Selector="ListBox.plain">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
@@ -103,8 +104,17 @@
   <Style Selector="Border.row">
     <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgContainer}" />
     <Setter Property="BorderBrush" Value="{atom:SharedTokenResource ColorBorderSecondary}" />
-    <Setter Property="BorderThickness" Value="0,0,0,1" />
-    <Setter Property="Padding" Value="16,10" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="16" />
+    <Setter Property="Margin" Value="14,4" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
+
+  <Style Selector="Border.hero-badge">
+    <Setter Property="Width" Value="44" />
+    <Setter Property="Height" Value="44" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorPrimaryBg}" />
   </Style>
 
   <!-- 詢問覆蓋層 -->

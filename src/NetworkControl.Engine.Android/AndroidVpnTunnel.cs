@@ -2,6 +2,7 @@ using global::Android.App;
 using global::Android.Content;
 using global::Android.Net;
 using Microsoft.Extensions.Logging;
+using NetworkControl.Engine.Vpn.Forwarding;
 using NetworkControl.Engine.Vpn.Platform;
 
 namespace NetworkControl.Engine.Android;
@@ -32,8 +33,13 @@ public sealed partial class AndroidVpnTunnel : IVpnTunnel
     private TaskCompletionSource<NcVpnService> _serviceReady = NewServiceSource();
     private NcVpnService? _service;
     private TunReader? _reader;
+    private ForwardingTunnelSession? _forwarding;
     private volatile VpnTunnelState _state;
     private volatile string? _lastError;
+
+    public Func<ForwardingTunnelOptions?>? ForwardingOptionsProvider { get; set; }
+
+    public ForwardingConnectionTracker ConnectionTracker { get; } = new();
 
     public AndroidVpnTunnel(Context context, IVpnForegroundNotifier notifier, ILogger<AndroidVpnTunnel> logger)
     {
@@ -88,16 +94,31 @@ public sealed partial class AndroidVpnTunnel : IVpnTunnel
             return;
         }
 
-        var reader = new TunReader(descriptor, sink, config.Mtu, OnReaderFailed);
+        var fwdOpts = ForwardingOptionsProvider?.Invoke();
+        TunReader? reader = null;
+        ForwardingTunnelSession? forwarding = null;
+        if (fwdOpts is { Enabled: true })
+        {
+            forwarding = new ForwardingTunnelSession(descriptor, fwdOpts, ConnectionTracker, _logger);
+        }
+        else
+        {
+            reader = new TunReader(descriptor, sink, config.Mtu, OnReaderFailed);
+        }
+
         TunReader? previous;
+        ForwardingTunnelSession? previousFwd;
         lock (_gate)
         {
             previous = _reader;
+            previousFwd = _forwarding;
             _reader = reader;
+            _forwarding = forwarding;
         }
 
         // 新網卡建立後再關閉舊的：切換期間不斷網
         previous?.Dispose();
+        previousFwd?.Dispose();
 
         try
         {
@@ -117,15 +138,20 @@ public sealed partial class AndroidVpnTunnel : IVpnTunnel
     public Task CloseAsync(CancellationToken cancellationToken)
     {
         TunReader? reader;
+        ForwardingTunnelSession? forwarding;
         NcVpnService? service;
         lock (_gate)
         {
             reader = _reader;
             _reader = null;
+            forwarding = _forwarding;
+            _forwarding = null;
             service = _service;
         }
 
         reader?.Dispose();
+        forwarding?.Dispose();
+        ConnectionTracker.Reset();
         service?.Shutdown();
         if (State is not (VpnTunnelState.Revoked or VpnTunnelState.NotPrepared))
         {

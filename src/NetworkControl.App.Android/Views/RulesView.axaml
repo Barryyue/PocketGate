@@ -14,7 +14,7 @@
 
     <atom:LineEdit Grid.Row="1" Margin="16,0,16,8" Text="{Binding SearchText}" PlaceholderText="{loc:AppsLangResource Search}" />
 
-    <ListBox Grid.Row="2" Classes="plain" ItemsSource="{Binding Items}">
+    <ListBox Grid.Row="2" Classes="plain" Padding="0,4,0,96" ItemsSource="{Binding Items}">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="vm:RuleItemViewModel">
           <Border Classes="row">

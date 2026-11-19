@@ -24,7 +24,7 @@
       </Grid>
     </StackPanel>
 
-    <ListBox Grid.Row="1" Classes="plain" ItemsSource="{Binding Visible}" SelectionMode="Single">
+    <ListBox Grid.Row="1" Classes="plain" Padding="0,4,0,96" ItemsSource="{Binding Visible}" SelectionMode="Single">
       <ListBox.ItemTemplate>
         <DataTemplate x:DataType="vm:AppItemViewModel">
           <Border Classes="row">

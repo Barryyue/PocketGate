@@ -41,6 +41,47 @@ public class ParityFeatureTests
     }
 
     [Fact]
+    public void UpdateCheckerSkipsKotlinReleasesAndMatchesOnlyAtomUiInReleaseList()
+    {
+        const string json = """
+            [
+              {
+                "tag_name": "v0.16.0",
+                "body": "Kotlin release",
+                "assets": [
+                  {"name": "PocketGate-0.16.0-arm64-v8a.apk", "browser_download_url": "https://example.com/PocketGate-0.16.0-arm64-v8a.apk"}
+                ]
+              },
+              {
+                "tag_name": "atomui-v0.3.1",
+                "body": "AtomUI release",
+                "assets": [
+                  {"name": "PocketGate-0.3.1-AtomUI.apk", "browser_download_url": "https://example.com/PocketGate-0.3.1-AtomUI.apk"}
+                ]
+              }
+            ]
+            """;
+        var info = AppUpdateChecker.ParseReleaseJson(UpdateSource.GitHub, json, "0.3.0");
+        Assert.True(info.HasUpdate);
+        Assert.Equal("0.3.1", info.LatestVersion);
+        Assert.Equal("https://example.com/PocketGate-0.3.1-AtomUI.apk", info.DownloadUrl);
+
+        const string kotlinOnly = """
+            [
+              {
+                "tag_name": "v0.16.0",
+                "assets": [
+                  {"name": "PocketGate-0.16.0-arm64-v8a.apk", "browser_download_url": "https://example.com/PocketGate-0.16.0-arm64-v8a.apk"}
+                ]
+              }
+            ]
+            """;
+        var none = AppUpdateChecker.ParseReleaseJson(UpdateSource.GitHub, kotlinOnly, "0.3.0");
+        Assert.False(none.HasUpdate);
+        Assert.Null(none.LatestVersion);
+    }
+
+    [Fact]
     public async Task AppUpdateManagerRespectsOfflineModeAndTracksDownload()
     {
         var dir = Directory.CreateTempSubdirectory("pg-atomui-upd");
@@ -76,8 +117,16 @@ public class ParityFeatureTests
             Assert.Equal(1, checks);
             Assert.True(manager.State.ShowAvailablePrompt);
 
+            var downloadDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            manager.StateChanged += state =>
+            {
+                if (!state.Downloading && state.DownloadedPath is not null)
+                {
+                    downloadDone.TrySetResult();
+                }
+            };
             manager.StartDownload();
-            await Task.Delay(150, TestContext.Current.CancellationToken);
+            await downloadDone.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
             Assert.False(manager.State.Downloading);
             Assert.Equal(100, manager.State.Progress);
             Assert.True(manager.State.ShowReadyPrompt);

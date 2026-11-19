@@ -32,8 +32,8 @@ public static class AppUpdateChecker
     public const string DefaultGiteeRepo = "yuexiaobai/PocketGate";
     public const string GitHubMirrorPrefix = "https://ghfast.top/";
 
-    private const string GitHubLatest = "https://api.github.com/repos/{0}/releases/latest";
-    private const string GiteeLatest = "https://gitee.com/api/v5/repos/{0}/releases/latest";
+    private const string GitHubReleases = "https://api.github.com/repos/{0}/releases?per_page=20";
+    private const string GiteeReleases = "https://gitee.com/api/v5/repos/{0}/releases?page=1&per_page=20";
 
     public static async Task<UpdateInfo> CheckAutoAsync(
         string currentVersion,
@@ -121,15 +121,45 @@ public static class AppUpdateChecker
     {
         using var doc = JsonDocument.Parse(body);
         var root = doc.RootElement;
+        if (root.ValueKind == JsonValueKind.Array)
+        {
+            return ParseReleasesArray(source, root, currentVersion, requireAtomUi: true);
+        }
+
+        return ParseReleaseElement(source, root, currentVersion, requireAtomUi: false);
+    }
+
+    private static UpdateInfo ParseReleasesArray(UpdateSource source, JsonElement array, string currentVersion, bool requireAtomUi)
+    {
+        foreach (var item in array.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object) continue;
+            if (item.TryGetProperty("draft", out var draft) && draft.ValueKind == JsonValueKind.True) continue;
+            if (item.TryGetProperty("prerelease", out var pre) && pre.ValueKind == JsonValueKind.True) continue;
+
+            var parsed = ParseReleaseElement(source, item, currentVersion, requireAtomUi);
+            if (parsed.LatestVersion is not null)
+            {
+                return parsed;
+            }
+        }
+
+        return new UpdateInfo(null, null, null, currentVersion);
+    }
+
+    private static UpdateInfo ParseReleaseElement(UpdateSource source, JsonElement root, string currentVersion, bool requireAtomUi)
+    {
         var rawTag = source == UpdateSource.Custom
             ? FirstString(root, "version", "tag_name")
             : FirstString(root, "tag_name");
         var version = rawTag.Trim();
-        if (version.StartsWith("atomui-v", StringComparison.OrdinalIgnoreCase)) version = version["atomui-v".Length..];
+        var isAtomUiTag = version.StartsWith("atomui-v", StringComparison.OrdinalIgnoreCase);
+        if (isAtomUiTag) version = version["atomui-v".Length..];
         else if (version.StartsWith("kt-v", StringComparison.OrdinalIgnoreCase)) version = version["kt-v".Length..];
         else if (version.StartsWith("v", StringComparison.OrdinalIgnoreCase)) version = version[1..];
 
         string? apkUrl = null;
+        var hasAtomUiAsset = false;
         if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
         {
             string? fallback = null;
@@ -144,6 +174,7 @@ public static class AppUpdateChecker
                 if (u.Contains("AtomUI", StringComparison.OrdinalIgnoreCase))
                 {
                     apkUrl = u;
+                    hasAtomUiAsset = true;
                     break;
                 }
 
@@ -153,7 +184,16 @@ public static class AppUpdateChecker
                 }
             }
 
-            apkUrl ??= fallback;
+            if (!requireAtomUi)
+            {
+                apkUrl ??= fallback;
+            }
+        }
+
+        // 只匹配 AtomUI 發行版（tag 以 atomui-v 開頭或資產包含 AtomUI），避免誤檢出 Kotlin 版
+        if (requireAtomUi && !isAtomUiTag && !hasAtomUiAsset)
+        {
+            return new UpdateInfo(null, null, null, currentVersion);
         }
 
         var releaseUrl = FirstString(root, "html_url", "url");
@@ -196,8 +236,8 @@ public static class AppUpdateChecker
     {
         var url = source switch
         {
-            UpdateSource.GitHub => string.Format(CultureInfo.InvariantCulture, GitHubLatest, repo.Trim()),
-            UpdateSource.Gitee => string.Format(CultureInfo.InvariantCulture, GiteeLatest, repo.Trim()),
+            UpdateSource.GitHub => string.Format(CultureInfo.InvariantCulture, GitHubReleases, repo.Trim()),
+            UpdateSource.Gitee => string.Format(CultureInfo.InvariantCulture, GiteeReleases, repo.Trim()),
             UpdateSource.Custom => customUrl.Trim(),
             _ => string.Empty,
         };

@@ -79,6 +79,7 @@ public static partial class BackendHost
         builder.Services.AddHostedService<ProfileSwitchNotifier>();
         builder.Services.AddHostedService<QuietPeriodNotifier>();
         builder.Services.AddSingleton(_ => new UiPreferences(context));
+        builder.Services.AddSingleton(_ => new SpeedIslandService(context));
         builder.Services.AddSingleton(sp =>
         {
             var prefs = sp.GetRequiredService<UiPreferences>();

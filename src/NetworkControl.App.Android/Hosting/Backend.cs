@@ -185,6 +185,14 @@ public interface IBackend
     string ReadLocalBackupFromDownloads();
 
     Task<Socks5DiagnosticResult> DiagnoseProxyAsync(CancellationToken cancellationToken);
+
+    IReadOnlyList<ActiveForwardingConnection> GetActiveConnections();
+
+    bool CutActiveConnection(string key);
+
+    void UpdateSpeedIsland(string text);
+
+    void RestartTunnelIfActive();
 }
 
 internal sealed class Backend : IBackend
@@ -212,6 +220,7 @@ internal sealed class Backend : IBackend
     private readonly IAppRepository _apps;
     private readonly UiPreferences _preferences;
     private readonly AppUpdateManager _updateManager;
+    private readonly SpeedIslandService _speedIsland;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<long, string?> _packagesByAppId = new();
     private readonly string _selfPackage;
 
@@ -238,7 +247,8 @@ internal sealed class Backend : IBackend
         ITrafficRepository traffic,
         IAppRepository apps,
         UiPreferences preferences,
-        AppUpdateManager updateManager)
+        AppUpdateManager updateManager,
+        SpeedIslandService speedIsland)
     {
         _context = context;
         _trafficSource = trafficSource;
@@ -248,8 +258,17 @@ internal sealed class Backend : IBackend
         _apps = apps;
         _preferences = preferences;
         _updateManager = updateManager;
+        _speedIsland = speedIsland;
         _engine = engine;
         _tunnel = tunnel;
+        _tunnel.ForwardingOptionsProvider = () => new ForwardingTunnelOptions(
+            _preferences.ForwardingEnabled,
+            _preferences.ForwardingUpstream != "socks5",
+            _preferences.Socks5Host,
+            _preferences.Socks5Port,
+            string.IsNullOrWhiteSpace(_preferences.Socks5Username) ? null : _preferences.Socks5Username,
+            string.IsNullOrEmpty(_preferences.Socks5Password) ? null : _preferences.Socks5Password,
+            Path.Combine(_context.FilesDir!.AbsolutePath, "hev"));
         _protection = protection;
         _network = network;
         _catalog = catalog;
@@ -603,6 +622,26 @@ internal sealed class Backend : IBackend
 
     public Task<Socks5DiagnosticResult> DiagnoseProxyAsync(CancellationToken cancellationToken) =>
         Socks5Probe.DiagnoseAsync(_preferences.Socks5Host, _preferences.Socks5Port, _preferences.Socks5Username, _preferences.Socks5Password, cancellationToken);
+
+    public IReadOnlyList<ActiveForwardingConnection> GetActiveConnections() =>
+        _tunnel.ConnectionTracker.Snapshot(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+
+    public bool CutActiveConnection(string key) =>
+        _tunnel.ConnectionTracker.RequestCut(key);
+
+    public void UpdateSpeedIsland(string text) =>
+        _speedIsland.Update(_preferences.SpeedIslandEnabled, text);
+
+    public void RestartTunnelIfActive()
+    {
+        if (!_protection.IsEnabled) return;
+        _ = Task.Run(async () =>
+        {
+            SetProtection(false);
+            await Task.Delay(150).ConfigureAwait(false);
+            SetProtection(true);
+        });
+    }
 
     /// <summary>
     /// 解析導入文件並計算差異。與 RulesGrpcService 一致：丟棄已過期的限時規則，

@@ -103,6 +103,12 @@
         <target state="translated">開啟後逐連線模式下分身應用不繼承主應用放行規則。</target>
       </segment>
     </unit>
+    <unit id="CutConnection">
+      <segment>
+        <source>Cut</source>
+        <target state="translated">斷開</target>
+      </segment>
+    </unit>
     <unit id="Data">
       <segment>
         <source>Data</source>
@@ -499,6 +505,12 @@
         <target state="translated">{0} 秒</target>
       </segment>
     </unit>
+    <unit id="SpeedIsland">
+      <segment>
+        <source>Floating speed island</source>
+        <target state="translated">懸浮網速靈動島</target>
+      </segment>
+    </unit>
     <unit id="Statistics">
       <segment>
         <source>Engine</source>
@@ -509,6 +521,18 @@
       <segment>
         <source>{0} packets, {1} attempts, {2} reported</source>
         <target state="translated">{0} 個封包，{1} 次連線嘗試，{2} 次回報</target>
+      </segment>
+    </unit>
+    <unit id="TabBlocked">
+      <segment>
+        <source>Blocked logs</source>
+        <target state="translated">攔截記錄</target>
+      </segment>
+    </unit>
+    <unit id="TabLiveConnections">
+      <segment>
+        <source>Live connections</source>
+        <target state="translated">即時連線</target>
       </segment>
     </unit>
     <unit id="TestProxy">

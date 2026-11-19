@@ -11,7 +11,7 @@ namespace NetworkControl.Android.ViewModels;
 
 /// <summary>總覽頁：保護開關、模式、一鍵斷網、今日阻擋、待決詢問。</summary>
 /// <summary>今日用量排行中的一行。</summary>
-public sealed record UsageRow(string Label, string Bytes);
+public sealed record UsageRow(string Label, string Bytes, double Percent = 0);
 
 /// <summary>總覽頁配置文件下拉中的一行。</summary>
 public sealed record ProfileChoice(Guid Id, string Name, bool IsActive)
@@ -119,6 +119,12 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
         ProtectionStatus.NeedsConsent => "warning",
         _ => "error",
     };
+
+    public string ExitBadgeText => Backend.Preferences.ForwardingEnabled
+        ? (Backend.Preferences.ForwardingUpstream == "socks5"
+            ? $"{Loc.Get(SettingsLangResourceKind.ForwardingMode)} · SOCKS5"
+            : $"{Loc.Get(SettingsLangResourceKind.ForwardingMode)} · {Loc.Get(SettingsLangResourceKind.ForwardingDirect)}")
+        : (Backend.ActiveProfile.Name);
 
     public bool IsProtectionActive => Status is ProtectionStatus.On or ProtectionStatus.Starting;
 
@@ -370,10 +376,14 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
             DownloadToday = Infrastructure.ByteSize.Format(usage.BytesIn);
             UploadToday = Infrastructure.ByteSize.Format(usage.BytesOut);
             var labels = Backend.GetApps().ToDictionary(a => a.App.PackageName, a => a.App.Label, StringComparer.Ordinal);
+            var top = usage.ByPackage.OrderByDescending(p => p.Value.In + p.Value.Out).Take(3).ToArray();
+            var maxBytes = top.Length > 0 ? Math.Max(1L, top[0].Value.In + top[0].Value.Out) : 1L;
             TopUsage.Clear();
-            foreach (var (package, bytes) in usage.ByPackage.OrderByDescending(p => p.Value.In + p.Value.Out).Take(3))
+            foreach (var (package, bytes) in top)
             {
-                TopUsage.Add(new UsageRow(labels.GetValueOrDefault(package) ?? package, Infrastructure.ByteSize.Format(bytes.In + bytes.Out)));
+                var total = bytes.In + bytes.Out;
+                var pct = Math.Clamp(total * 100.0 / maxBytes, 6.0, 100.0);
+                TopUsage.Add(new UsageRow(labels.GetValueOrDefault(package) ?? package, Infrastructure.ByteSize.Format(total), pct));
             }
 
             HasNoUsage = TopUsage.Count == 0;
@@ -444,6 +454,7 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
             UploadHistory = _upSamples.ToArray();
             CurrentDownloadSpeed = $"{Infrastructure.ByteSize.Format(dl)}/s";
             CurrentUploadSpeed = $"{Infrastructure.ByteSize.Format(ul)}/s";
+            Backend.UpdateSpeedIsland($"↓ {CurrentDownloadSpeed} · ↑ {CurrentUploadSpeed}");
         }
         catch
         {

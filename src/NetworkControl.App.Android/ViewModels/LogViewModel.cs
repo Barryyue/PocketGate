@@ -5,21 +5,53 @@ using NetworkControl.Android.Hosting;
 using NetworkControl.Android.Localization;
 using NetworkControl.Core.Activity;
 using NetworkControl.Core.Domain;
+using NetworkControl.Engine.Vpn.Forwarding;
 using NetworkControl.Engine.Vpn.Platform;
 
 namespace NetworkControl.Android.ViewModels;
 
-/// <summary>阻擋記錄頁：最近被阻擋的聯網嘗試。</summary>
+public sealed partial class ActiveConnectionItemViewModel(
+    ActiveForwardingConnection conn,
+    IBackend backend,
+    Action refresh) : ObservableObject
+{
+    public string Key => conn.Key;
+    public string Destination => $"{conn.Destination}:{conn.RemotePort}";
+    public string Subtitle => $"{conn.Protocol} · {conn.Key}";
+
+    [RelayCommand]
+    private void Cut()
+    {
+        backend.CutActiveConnection(Key);
+        refresh();
+    }
+}
+
+/// <summary>阻擋記錄與即時活躍連線頁。</summary>
 public sealed partial class LogViewModel(UiContext context) : LocalizedViewModel(context)
 {
     private const int PageSize = 300;
 
     public ObservableCollection<LogItemViewModel> Items { get; } = [];
+    public ObservableCollection<ActiveConnectionItemViewModel> LiveItems { get; } = [];
+
+    [ObservableProperty]
+    public partial int TabIndex { get; set; }
+
+    public bool IsBlockedTab => TabIndex == 0;
+    public bool IsLiveTab => TabIndex == 1;
 
     [ObservableProperty]
     public partial bool IsLoading { get; set; }
 
-    public bool IsEmpty => Items.Count == 0 && !IsLoading;
+    public bool IsEmpty => IsBlockedTab ? (Items.Count == 0 && !IsLoading) : LiveItems.Count == 0;
+
+    partial void OnTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsBlockedTab));
+        OnPropertyChanged(nameof(IsLiveTab));
+        _ = RefreshAsync();
+    }
 
     [RelayCommand]
     public async Task RefreshAsync()
@@ -27,11 +59,22 @@ public sealed partial class LogViewModel(UiContext context) : LocalizedViewModel
         IsLoading = true;
         try
         {
-            var entries = await Backend.GetBlockedAsync(PageSize, CancellationToken.None);
-            Items.Clear();
-            foreach (var entry in entries)
+            if (IsLiveTab)
             {
-                Items.Add(new LogItemViewModel(Context, entry));
+                LiveItems.Clear();
+                foreach (var conn in Backend.GetActiveConnections())
+                {
+                    LiveItems.Add(new ActiveConnectionItemViewModel(conn, Backend, () => _ = RefreshAsync()));
+                }
+            }
+            else
+            {
+                var entries = await Backend.GetBlockedAsync(PageSize, CancellationToken.None);
+                Items.Clear();
+                foreach (var entry in entries)
+                {
+                    Items.Add(new LogItemViewModel(Context, entry));
+                }
             }
         }
         finally

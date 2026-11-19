@@ -103,6 +103,12 @@
         <target state="translated">开启后逐连接模式下分身应用不继承主应用放行规则。</target>
       </segment>
     </unit>
+    <unit id="CutConnection">
+      <segment>
+        <source>Cut</source>
+        <target state="translated">断开</target>
+      </segment>
+    </unit>
     <unit id="Data">
       <segment>
         <source>Data</source>
@@ -499,6 +505,12 @@
         <target state="translated">{0} 秒</target>
       </segment>
     </unit>
+    <unit id="SpeedIsland">
+      <segment>
+        <source>Floating speed island</source>
+        <target state="translated">悬浮网速灵动岛</target>
+      </segment>
+    </unit>
     <unit id="Statistics">
       <segment>
         <source>Engine</source>
@@ -509,6 +521,18 @@
       <segment>
         <source>{0} packets, {1} attempts, {2} reported</source>
         <target state="translated">{0} 个数据包，{1} 次联网尝试，{2} 次上报</target>
+      </segment>
+    </unit>
+    <unit id="TabBlocked">
+      <segment>
+        <source>Blocked logs</source>
+        <target state="translated">拦截记录</target>
+      </segment>
+    </unit>
+    <unit id="TabLiveConnections">
+      <segment>
+        <source>Live connections</source>
+        <target state="translated">实时连接</target>
       </segment>
     </unit>
     <unit id="TestProxy">
