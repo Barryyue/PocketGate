@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.14.1",
+            date = "2026-11-19",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Upgraded bottom navigation with theme-colored active icons/labels, an elastic spring sliding pill indicator, bouncy icon scale/lift animations with subtle haptic feedback, and directional spring page transitions.",
+                    "升级底部导航栏质感与动效：选中图标与文字随主题主色高亮、新增带物理弹性过冲的滑动胶囊指示器、图标 Q 弹缩放上浮与轻微震动反馈，并将页面切换升级为带方向的弹簧滑入动效。",
+                    "升級底部導覽列質感與動效：選中圖示與文字隨主題主色高亮、新增帶物理彈性過衝的滑動膠囊指示器、圖示 Q 彈縮放上浮與輕微震動回饋，並將頁面切換升級為帶方向的彈簧滑入動效。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.14.0",
             date = "2026-11-19",
             features = listOf(

@@ -2,17 +2,36 @@ package com.networkcontrol.android.kotlin.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,9 +44,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -50,9 +67,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppContainer
@@ -226,9 +248,23 @@ fun AppRoot(container: AppContainer) {
                                     },
                                 ),
                         ) {
-                            Crossfade(
+                            AnimatedContent(
                                 targetState = selected,
-                                animationSpec = tween(durationMillis = 180),
+                                transitionSpec = {
+                                    val dir = if (targetState > initialState) 1 else -1
+                                    val enter = slideInHorizontally(
+                                        animationSpec = spring(dampingRatio = 0.80f, stiffness = 420f),
+                                        initialOffsetX = { (it / 14) * dir },
+                                    ) + fadeIn(tween(180)) + scaleIn(
+                                        initialScale = 0.98f,
+                                        animationSpec = spring(dampingRatio = 0.78f, stiffness = 420f),
+                                    )
+                                    val exit = slideOutHorizontally(
+                                        animationSpec = tween(130),
+                                        targetOffsetX = { -(it / 20) * dir },
+                                    ) + fadeOut(tween(110))
+                                    enter.togetherWith(exit)
+                                },
                                 label = "tab-transition",
                             ) { tab ->
                                 when (tab) {
@@ -478,33 +514,92 @@ private fun AppBottomBar(
                         ),
                 )
             }
-            NavigationBar(
-                containerColor = Color.Transparent,
-                tonalElevation = 0.dp,
-                windowInsets = WindowInsets(0, 0, 0, 0),
+            val haptic = LocalHapticFeedback.current
+            val pillColor = when {
+                glass -> scheme.primary.copy(alpha = if (dark) 0.24f else 0.16f)
+                transparent -> scheme.primary.copy(alpha = if (dark) 0.22f else 0.15f)
+                else -> scheme.primary.copy(alpha = if (dark) 0.20f else 0.13f)
+            }
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(68.dp)
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
             ) {
-                val indicator = if (glass) {
-                    Color.White.copy(alpha = if (dark) 0.18f else 0.58f)
-                } else if (transparent) {
-                    scheme.surface.copy(alpha = if (dark) 0.28f else 0.55f)
-                } else {
-                    scheme.secondaryContainer
-                }
-                val colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = indicator,
-                    selectedIconColor = if (glass || transparent) scheme.onSurface else scheme.onSecondaryContainer,
-                    selectedTextColor = scheme.onSurface,
-                    unselectedIconColor = scheme.onSurfaceVariant,
-                    unselectedTextColor = scheme.onSurfaceVariant,
+                val slotWidth = maxWidth / tabs.size
+                val pillOffset by animateDpAsState(
+                    targetValue = slotWidth * selected,
+                    animationSpec = spring(dampingRatio = 0.62f, stiffness = 420f),
+                    label = "nav-pill-offset",
                 )
-                tabs.forEachIndexed { index, tab ->
-                    NavigationBarItem(
-                        selected = selected == index,
-                        onClick = { onSelect(index) },
-                        colors = colors,
-                        icon = { Icon(tab.icon, contentDescription = s[tab.label]) },
-                        label = { Text(s[tab.label]) },
-                    )
+                // 帶彈性過衝的滑動膠囊指示器
+                Box(
+                    modifier = Modifier
+                        .offset(x = pillOffset)
+                        .width(slotWidth)
+                        .fillMaxHeight()
+                        .padding(horizontal = 3.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(pillColor),
+                )
+                Row(modifier = Modifier.fillMaxSize()) {
+                    tabs.forEachIndexed { index, tab ->
+                        val isSelected = selected == index
+                        val iconScale by animateFloatAsState(
+                            targetValue = if (isSelected) 1.15f else 1.0f,
+                            animationSpec = spring(dampingRatio = 0.45f, stiffness = 480f),
+                            label = "nav-icon-scale-$index",
+                        )
+                        val iconLift by animateDpAsState(
+                            targetValue = if (isSelected) (-1.5).dp else 0.dp,
+                            animationSpec = spring(dampingRatio = 0.50f, stiffness = 480f),
+                            label = "nav-icon-lift-$index",
+                        )
+                        val tint by animateColorAsState(
+                            targetValue = if (isSelected) scheme.primary else scheme.onSurfaceVariant,
+                            animationSpec = tween(220),
+                            label = "nav-tint-$index",
+                        )
+                        val interaction = remember { MutableInteractionSource() }
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(22.dp))
+                                .clickable(
+                                    interactionSource = interaction,
+                                    indication = null,
+                                ) {
+                                    if (!isSelected) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onSelect(index)
+                                    }
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                imageVector = tab.icon,
+                                contentDescription = s[tab.label],
+                                tint = tint,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .offset(y = iconLift)
+                                    .graphicsLayer {
+                                        scaleX = iconScale
+                                        scaleY = iconScale
+                                    },
+                            )
+                            Text(
+                                text = s[tab.label],
+                                color = tint,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
             }
         }
