@@ -129,8 +129,9 @@ MVP 已完成（2026-11-14，用戶已在真機上安裝確認）。進度、驗
   - **v0.2（2026-11-15）**：應用列表權限引導（GET_INSTALLED_APPS / GET_APP_LIST）、主題色（10 預設 + HSV 自訂）、規則按配置文件隔離（修正共享規則 bug + 舊資料遷移）、即時網速、勿擾入口/摘要、按網絡自動切換、P0/P1 審查修正。APK `NetworkControl-KT-0.2.0.apk`（3.17 MB）；JVM 測試 30 個通過；模擬器驗證主題色、配置文件規則隔離、勿擾與設定頁。
   - 未驗證：真機與 OEM ROM（v0.2 新增的應用列表權限、自動切換、主題色、通知路徑）、Chrome 實際加載（模擬器宿主無外網 DNS，關閉保護後同樣失敗）、Tile / 開機恢復 / 通知權限的實機路徑、規則導入導出的設備往返。
   - 已知差距：通知動作在進程回收後失效、部分 PackageManager 呼叫仍在主執行緒（見 `docs/kotlin-audit-2026-11-15.md`）；懸浮詢問面板、專注模式 / 時間表、鎖屏斷網、應用詳情頁、CSV 導出、轉發模式未做（Avalonia 版也尚未全部實現）。
+  - **目前（2026-11-20）：v0.16.1，定名 PocketGate**。v0.3 之後陸續完成轉發 / 逐連線模式、懸浮詢問、專注模式、桌面掛件與磁貼、視覺主題、自動發版與應用內更新、WebDAV 加密同步等，按版本摘要見 [android-kotlin.md](android-kotlin.md) 各版本章節（最新為 §61）。v0.15.0 起正式版改用倉庫外的正式簽名密鑰（舊版需卸載重裝）。未驗證：v0.13.4 之後的界面改動和應用內更新都還沒有真機驗證；CI 沒配置簽名 Secret 時仍會靜默退回倉庫內的共享密鑰。
   - 詳細計劃、功能對齊清單、量化對照和後續迭代見 **[android-kotlin.md](android-kotlin.md)**。
-  - **完成項落盤**：[kotlin-feature-log.md](kotlin-feature-log.md)（K-001…K-028）；網絡 / SIM 規劃見 [android-network-sim-plan.md](android-network-sim-plan.md)。
+  - **完成項落盤**：[kotlin-feature-log.md](kotlin-feature-log.md)（K-001…K-171）；網絡 / SIM 規劃見 [android-network-sim-plan.md](android-network-sim-plan.md)。
 
 ---
 

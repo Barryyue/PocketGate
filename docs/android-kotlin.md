@@ -7,7 +7,8 @@
 > **完成項記錄：** [kotlin-feature-log.md](kotlin-feature-log.md)（每個功能必須落盤，見 AGENTS.md 完成標準第 6 條）。
 > **網絡 / SIM 規劃：** [android-network-sim-plan.md](android-network-sim-plan.md)。
 >
-> **目前狀態（2026-11-15）：v0.2 已完成並打包。** 在 v0.1 基礎上新增應用列表權限引導、主題色（預設 + HSV 自訂）、規則按配置文件隔離、即時網速、勿擾入口與摘要通知、按網絡自動切換配置文件，並修正代碼審查發現的 P0/P1 問題。Release APK 約 3.2 MB（雙 ABI，Debug 簽名），模擬器冷啟動約 2.1 秒。真機仍需回歸 OEM 應用列表權限、自動切換、主題色與通知路徑，詳見 §11。
+> **目前狀態（2026-11-20）：v0.16.1（versionCode 72）。** 應用定名 **PocketGate**（applicationId 不變）；`main` 推送後由 GitHub Actions 自動打包 arm64 APK 並發布 Release（`v<versionName>`），應用內可自動選擇 GitHub / Gitee / ghfast 鏡像下載並覆蓋安裝。v0.13.4～v0.16.1 的變化見 §61，逐項記錄見 kotlin-feature-log.md（K-143～K-171）。v0.15.0 起正式版改用倉庫外的正式簽名密鑰，從舊版升級需要卸載重裝。大部分界面改動只在模擬器驗證過，真機待回歸（§61.4）。
+> 歷史狀態（2026-11-15）：v0.2 已完成並打包，Release APK 約 3.2 MB，模擬器冷啟動約 2.1 秒。
 
 ---
 
@@ -17,7 +18,7 @@
 |---|---|
 | 代碼位置 | 倉庫根目錄的 `android-kotlin/`，獨立 Gradle 構建，**不加入** `NetworkControl.slnx` / `NetworkControl.Android.slnx` |
 | 應用 ID | `com.networkcontrol.android.kotlin`，可與 Avalonia 版同時安裝、同時授權 VPN（系統一次只允許一個 VPN 生效，切換時會撤銷另一個，屬預期） |
-| 顯示名稱 | `NetworkControl KT`（暫定，正式名稱確定後統一改） |
+| 顯示名稱 | **`PocketGate`**（2026-11-19 起，K-145；之前為 `NetworkControl KT`）；產物 `PocketGate-<versionName>.apk` |
 | 共用邊界 | **不引用** .NET Core / Storage；規則語義、SQLite schema、導入導出格式以現有 C# 實作為參考，兩邊透過測試向量和格式保持對齊 |
 | 功能範圍 | 先追平 Avalonia 版**已實現**功能（MVP + M3 Android 批次）；Avalonia 版尚未實現的（轉發模式、懸浮詢問面板、專注模式、時間表等）不列入 v0.1 |
 | 最低版本 | Android 10（API 29）；compileSdk / targetSdk 36 |
@@ -1701,5 +1702,56 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - JVM 測試（`RoutingPlannerTest`、`ReleaseNotesTest` 等）/ Debug / Release 構建通過。
 - 模擬器（`nc35`，API 35）端到端驗證通過：將 2 個應用設為「允許」後，打開「鎖屏時仍允許聯網的應用」彈框顯示 `全部 (60)` 與 `規則中允許連網 (2)`；點擊 `規則中允許連網 (2)` 後列表只顯示該 2 個應用；點擊 `全選` 後變為 `已選 2 個` 且兩項均勾選 `✓`；點擊 `儲存` 後設定頁顯示 `2 個應用`。
 - 固化共享簽名密鑰 `android-kotlin/keystore/shared-release.jks`（SHA-256 `CF:66:52:C5:C6:E0:C4:4A:41:FC:2B:B3:96:17:0D:CE:67:AD:3F:4A:5A:F4:74:B5:CD:12:9E:B9:CB:D2:73:90`），並更新 `.github/workflows/android-kotlin.yml`（支援 `workflow_dispatch` 手動觸發、上傳重命名後的 APK 產物、打 Tag 或勾選選項時自動發佈 GitHub Release）與 `.gitee/workflows/android-kotlin.yml`（Gitee Go 流水線）。
-- **設定頁佈局精簡、品牌定名 `PocketGate` 與自動雙源更新（2026-11-19，K-145）**：應用顯示名稱與打包產物正式定名為 **`PocketGate`**（`PocketGate-<version>.apk`）；檢查更新改為 `UpdateChecker.checkAuto`（優先查詢 GitHub `Barryyue/network-control` 並探測下載連通性，失敗或下載不可達時自動回退至 Gitee `yuexiaobai/networkcontrol`，無須手動選擇更新源）；設定主頁由 13 張卡片重構為 6 張高內聚卡片，抽離 `PromptSettingsScreen`、`ForwardingSettingsScreen`、`ProfileScheduleSettingsScreen` 三個二級頁面，並將工具列樣式改為下拉選單、通知標題與可信發布者改為點擊彈窗。
 - 真機界面待驗證。
+
+## 61. v0.13.4～v0.16.1（2026-11-19～20）：PocketGate 定名、自動發版、界面翻新、正式簽名與加密同步
+
+> 本節是 2026-11-19 按提交整理的摘要（claude），逐項記錄見 [kotlin-feature-log.md](kotlin-feature-log.md) K-145～K-171。這一批版本由 CI 打包，沒有本機 APK 的大小與 SHA-256 記錄。
+
+### 61.1 版本對照
+
+| 版本 | versionCode | 提交 | 重點 |
+|---|---|---|---|
+| 0.13.4 | 52 | `2b34c84`、`a03ce7a`、`1cfbd65`、`4720fa6` | 定名 PocketGate；設定頁 13 張卡片收斂為 6 張，拆出詢問 / 轉發 / 配置文件與時間表三個二級頁（K-145）；懸浮詢問面板加應用識別列（K-146）；自動發版與雙源更新（K-171）；應用內下載 APK 並拉起覆蓋安裝（K-147） |
+| 0.13.5 | 53 | `87da285` | 靈動島文字去掉白色光暈，有底色時關閉陰影（K-148） |
+| 0.13.6 | 54 | `9d428b2` | 更新下載加 `ghfast.top` 鏡像與重定向可達性探測（K-149） |
+| 0.13.7 | 55 | `4628c08` | 新 Logo「滑動暗門護盾」，含 Android 13+ 單色圖示（K-150） |
+| 0.13.8 | 56 | `af3560a` | 視覺主題引擎：6 套風格（`AppThemeStyle` / `AppVisualTokens`），總覽頁旗艦狀態卡（K-151） |
+| 0.13.9 | 57 | `e0598df` | 深色主題文字對比修正；轉發層 `DnsPacer` / `ForwardingRelay` 改為事件驅動；外部代理探活、防回環提示、一鍵切回直連；Gitee 流水線修正（K-152） |
+| 0.14.0 | 58 | `fa20c04` | 總覽頁改為 Bento 雙列儀表盤、即時網速波形、配置文件底部抽屜（K-153） |
+| 0.14.1 | 59 | `91f8e55` | 底部導覽列滑動膠囊與彈簧動效、帶方向的頁面切換（K-154） |
+| 0.14.2 | 60 | `25a4fbe` | 4 處常駐輪詢改為事件驅動（待機喚醒約 3,360 次/小時 → 接近 0，為推算值）；`ic_shield` 補 `evenOdd` 鏤空（K-155） |
+| 0.14.3 | 61 | `cc0ae40` | 應用分身（UID ≥ 100000）回退到主用戶 appId 繼承規則；移除總覽頁 FAB（易誤觸）；靈動島按桌布亮度取色（K-156） |
+| 0.14.4 | 62 | `c9459fd` | 懸浮玻璃導覽列裁切到圓角，消除兩端方形尾巴（K-157） |
+| 0.15.0 | 63 | `5baa043` | 極簡 Logo 與三頁對齊 6 套主題（K-158）；狀態欄網速小圖示（K-159）；測試代理三段式診斷（K-160）；權限體檢卡（K-161）；活躍連線檢視與單條 RST（K-162）；**正式簽名密鑰**（K-046b） |
+| 0.15.1 | 64 | `bb803a1` | 純離線模式：禁止本應用自己聯網（檢查更新等）（K-165） |
+| 0.15.2 | 65 | `9699a5e` | 首次啟動權限引導與總覽待辦橫幅（K-166） |
+| 0.15.3 | 66 | `72e89f0` | 「顯示通知」開關綁定 Compose 狀態，點擊即時更新（K-167） |
+| 0.15.4～0.15.6 | 67～69 | `06f7229`、`4b04c35`、`9042c9a` | 底部導覽列下滑自動隱藏、上滑恢復，可在設定關閉；隱藏時釋放完整高度；非對稱彈簧動效（K-168） |
+| 0.15.7 | 70 | `9ee067a` | 進入應用自動檢查更新，總覽頂部顯示下載進度，切頁不中斷，下載完成提醒安裝（K-169） |
+| 0.16.0 | 71 | `4ae6324` | WebDAV 端到端加密同步（PBKDF2 + AES-256-GCM）、`Download/PocketGate/` 本機留檔還原、應用分身可獨立管控（K-164）；更新彈窗直接顯示更新日誌、桌面掛件視覺對齊（K-170） |
+| 0.16.1 | 72 | `b7b9627`、`1bd6d09`、`4a2229f` | 檢查更新跳過 AtomUI 版的 `atomui-v*` Release；靈動島移除不受支持的狀態欄自適應顏色選項 |
+
+`versionName` 從 0.13.4 起去掉了 `-m4pNN` 後綴。
+
+### 61.2 發版與更新鏈路
+
+1. **簽名**：v0.15.0 起 Release 用倉庫外的正式密鑰（2048-bit RSA，PKCS12，有效期 25 年），CI 從 Secret `NC_ANDROID_KEYSTORE_BASE64` 解碼，密碼與別名在 `NC_ANDROID_KEYSTORE_PASSWORD` / `NC_ANDROID_KEY_ALIAS` / `NC_ANDROID_KEY_PASSWORD`。倉庫內的共享密鑰 `android-kotlin/keystore/shared-release.jks`（K-144，密碼 `android`）現在用於 debug 簽名，以及**沒配置 Secret 時的 Release 後備**（構建日誌只打印一行提示，不會失敗）。從共享簽名換到正式簽名沒有做 v3 密鑰輪換，舊版用戶要匯出規則、卸載、安裝、再匯入。
+2. **GitHub Actions**（`.github/workflows/android-kotlin.yml`）：`main`、`agent/**` 分支和 `v*` / `kt-v*` 標籤都會觸發構建；**推送 `main` 或標籤時自動發布 GitHub Release**（標籤 `v<versionName>`，附件 `PocketGate-<versionName>.apk`，只放 arm64）。配置了 `GITEE_TOKEN` Secret 時同步到 Gitee Releases。
+3. **Gitee Go**：`.gitee/workflows/android-kotlin.yml` 與 `.workflow/流水線-202611182058.yml` 是兩份內容相近的流水線，修改時要同步；4 GiB 容器的限制見 AGENTS.md 第 6 節。
+4. **AtomUI 版共用同一個 Release 倉庫**（2026-11-20 起）：AtomUI 版（`PocketGate-<version>-AtomUI.apk`）用 `atomui-v*` 標籤發布，Kotlin 版用 `v*`；Kotlin 版檢查更新讀取最近 20 個 Release 並跳過 `atomui-v*`。
+5. **應用內更新**：`UpdateChecker.checkAuto` 先查 GitHub Releases 並探測下載是否可達（跟隨重定向），不可達時改查 Gitee，兩者都不行再走 `ghfast.top` 鏡像；`downloadApk` 校驗 ZIP 魔數後經 `FileProvider`（`cache/updates/`）拉起系統安裝器，需要 `REQUEST_INSTALL_PACKAGES`。標籤前綴 `v` / `kt-v` 都能識別，多個附件時優先 arm64。
+
+### 61.3 驗證
+
+- 每個版本：JVM 單元測試、Release（或 Debug）構建通過，見各 K 項。
+- 模擬器端到端只有 K-143（v0.13.3）有記錄；v0.13.4 之後的界面改動沒有模擬器或真機驗證記錄。
+- GitHub Actions 已實際發布 v0.14.2、v0.14.3 等 Release（遠端已有對應標籤）；Gitee 同步與 Gitee Go 流水線結果未在本文記錄。
+
+### 61.4 未驗證
+
+- 真機：6 套主題（特別是深色主題文字可讀性）、Bento 儀表盤、底部導覽列動效與玻璃圓角、新 Logo 與單色圖示、靈動島按桌布取色。
+- 真機：應用內下載與覆蓋安裝（含未授予「安裝未知應用」時的引導與返回後續裝）、三條下載來源的回退。
+- 真機：應用分身（vivo / MIUI user 999）繼承主應用規則、待機耗電的實際改善、外部 SOCKS5 代理的長時間穩定性。
+- 真機：WebDAV 加密同步與還原（不同 WebDAV 服務）、`Download/PocketGate/` 留檔在各 Android 版本的讀寫權限、導覽列自動隱藏手勢。
+- 已知問題（2026-11-20 用戶回報）：在系統設定授予「忽略電池最佳化」後，權限狀態要重啟應用才更新；模擬器上從應用按鈕跳轉授予可正常刷新，懷疑與小窗 / 分屏打開設定頁（應用一直在前台，收不到 `ON_RESUME`）有關，未修。
