@@ -56,7 +56,8 @@ stages:
             }
             EOF
           - chmod +x gradlew
-          - ./gradlew --init-script /tmp/gitee-mirrors.init.gradle testDebugUnitTest assembleRelease --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8" -Dkotlin.daemon.jvm.options="-Xmx1024m"
+          - ./gradlew --init-script /tmp/gitee-mirrors.init.gradle testDebugUnitTest --no-daemon --max-workers=2 -Dorg.gradle.jvmargs="-Xmx1792m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8" -Dkotlin.daemon.jvm.options="-Xmx768m"
+          - ./gradlew --init-script /tmp/gitee-mirrors.init.gradle assembleRelease -x lintVitalRelease --no-daemon --no-parallel --max-workers=1 -Dorg.gradle.jvmargs="-Xmx2048m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8" -Dkotlin.daemon.jvm.options="-Xmx768m"
           - version=$(grep -E 'versionName\s*=\s*"' app/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/')
           - mkdir -p ../dist
           - cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "../dist/PocketGate-${version}.apk"
