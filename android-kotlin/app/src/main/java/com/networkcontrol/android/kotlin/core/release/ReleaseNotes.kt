@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.13.7",
+            date = "2026-11-19",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Replaced the app launcher and status-bar shield icons with the new PocketGate Sliding Pocket Gate adaptive vector logo (including Android 13+ monochrome themed icon support).",
+                    "全新 PocketGate「滑动暗门护盾」自适应矢量应用图标上线，同步更新通知栏与快捷磁贴图标，并支持 Android 13+ 单色主题图标。",
+                    "全新 PocketGate「滑動暗門護盾」自適應矢量應用程式圖示上線，同步更新通知欄與快捷磁貼圖示，並支援 Android 13+ 單色主題圖示。",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.13.6",
             date = "2026-11-19",
             features = emptyList(),

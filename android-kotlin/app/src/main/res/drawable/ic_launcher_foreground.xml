@@ -1,19 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:scaleX="2.2"
-        android:scaleY="2.2"
-        android:translateX="27.6"
-        android:translateY="27.6">
+
+    <!-- 盾牌內部暗門群組（裁切於護盾輪廓內） -->
+    <group>
+        <clip-path android:pathData="M54,23.5 L78.5,32.5 C78.5,57.5 69.2,73.2 54,84 C38.8,73.2 29.5,57.5 29.5,32.5 Z" />
+
+        <!-- 護盾內部微透底色 -->
         <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M12,2 L4,5.5 V11 C4,16.05 7.41,20.74 12,22 C16.59,20.74 20,16.05 20,11 V5.5 L12,2 Z" />
+            android:fillColor="#264ADE80"
+            android:pathData="M26,22 H82 V86 H26 Z" />
+
+        <!-- 左側滑出式暗門葉片（翡翠亮綠漸層） -->
+        <path android:pathData="M24,36 H46.8 C48.9,36 50.6,37.7 50.6,39.8 V67.2 C50.6,69.3 48.9,71 46.8,71 H24 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:endX="50.6"
+                    android:endY="71"
+                    android:startX="28"
+                    android:startY="36"
+                    android:type="linear">
+                    <item
+                        android:color="#FA4ADE80"
+                        android:offset="0.0" />
+                    <item
+                        android:color="#F016A34A"
+                        android:offset="1.0" />
+                </gradient>
+            </aapt:attr>
+        </path>
+
+        <!-- 右側錯位滑出式暗門葉片（半透明磨砂玻璃層次） -->
         <path
-            android:fillColor="#FF1B5E20"
-            android:pathData="M11,7 H13 V13 H11 Z M11,15 H13 V17 H11 Z" />
+            android:fillColor="#8CD1FAE5"
+            android:pathData="M84,41.5 H61.2 C59.1,41.5 57.4,43.2 57.4,45.3 V67.2 C57.4,69.3 59.1,71 61.2,71 H84 Z" />
     </group>
+
+    <!-- 護盾外框 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,22 L80,31.5 C80,58 70,75 54,86 C38,75 28,58 28,31.5 Z"
+        android:strokeColor="#F5F0FDF4"
+        android:strokeLineJoin="round"
+        android:strokeWidth="3.6" />
+
+    <!-- 門縫中央的垂直發光數據流通道 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,32.5 V74.5"
+        android:strokeColor="#B8C9F45A"
+        android:strokeLineCap="round"
+        android:strokeWidth="1.5" />
+
+    <!-- 判決核心光暈與發光綠點（#C9F45A） -->
+    <path
+        android:fillColor="#59C9F45A"
+        android:pathData="M54,53.5 m-6.5,0 a6.5,6.5 0 1,0 13,0 a6.5,6.5 0 1,0 -13,0" />
+    <path
+        android:fillColor="#FFC9F45A"
+        android:pathData="M54,53.5 m-3.6,0 a3.6,3.6 0 1,0 7.2,0 a3.6,3.6 0 1,0 -7.2,0" />
 </vector>
