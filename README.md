@@ -10,15 +10,15 @@
 
 ## Android 版（PocketGate · Kotlin + Jetpack Compose）
 
-當前版本：**v0.13.9**（Android 10+，`arm64-v8a`，Release APK 約 5.5 MB）。
+當前版本：**v0.16.0**（Android 10+，`arm64-v8a`，Release APK 約 5.6 MB）。
 
 核心特性：
-- **雙模式本地 VPN 防護**：黑洞式按應用分流，或基於 `hev-socks5-tunnel` 的**逐連線轉發模式**（支援內建直連出口與外部 SOCKS5 代理，如 FlClash / v2rayNG / Clash Meta / Reqable）
-- **即時懸浮詢問與靈動島**：支援應用外懸浮詢問面板、狀態欄即時網速/流量/攔截靈動島（支援三種樣式與透明度自訂）
-- **域名攔截清單與追蹤器防護**：內建 7 份公開廣告/追蹤器名單，支援防 DNS 繞過、自訂訂閱與規則變更雙向 RST 斷連
-- **場景自動化**：多配置文件隔離、按網路類型 / Wi-Fi SSID / SIM 卡自動切換、專注模式與時間表、鎖屏斷網、桌面小工具與快捷磁貼
-- **現代視覺主題**：6 套內建風格（經典 / 黑曜石極客 / 極簡霜白 / 極光流光 / 純黑省電 / Android 12+ 動態取色）、Haze 懸浮玻璃工具欄、三語界面（簡體 / 繁體 / English）
-- **應用內自動更新**：支援 GitHub / Gitee / 國內加速鏡像自動切換，應用內直接下載並拉起原地覆蓋升級
+- **雙模式本地 VPN 防護**：黑洞式按應用分流，或基於 `hev-socks5-tunnel` 的**逐連線轉發模式**（支援內建直連出口與外部 SOCKS5 代理，如 FlClash / v2rayNG / Clash Meta / Reqable，並支援應用分身獨立管控）
+- **即時懸浮詢問、靈動島與原生狀態欄網速**：支援應用外懸浮詢問面板、狀態欄即時網速/流量/攔截靈動島，以及原生自動反色狀態欄即時網速小圖示
+- **域名攔截清單與即時連線斷開**：內建 7 份公開廣告/追蹤器名單，支援防 DNS 繞過、自訂訂閱、規則變更雙向 RST 斷連與即時活躍連線檢視一鍵斷開
+- **隱私安全與加密備份**：純離線模式（禁止本應用主動聯網）、`WebDAV` 端到端 AES-256-GCM 加密備份同步、本機 `Download/PocketGate/` 留檔一鍵還原、6 項權限體檢與首次引導
+- **場景自動化與現代視覺**：6 套視覺主題風格、Bento 雙列儀表盤與即時網速波形圖、彈性自動隱藏導覽列、桌面小工具與快捷磁貼、三語界面（簡體 / 繁體 / English）
+- **應用內自動更新閉環**：進入自動檢測並直顯更新日誌、總覽頂部下載進度條（切換導覽不中斷）、支援 GitHub / Gitee / 國內加速鏡像自動切換並一鍵原地覆蓋升級
 
 詳細構建與目錄說明見 [android-kotlin/README.md](android-kotlin/README.md)。
 
@@ -72,3 +72,9 @@ dotnet run --project src/NetworkControl.App
 - [開發指南](docs/development.md)：本地運行、擴展點、編碼約定
 - [進度看板](docs/progress.md)
 - [AGENTS.md](AGENTS.md)：AI 編碼助手共用的工作指南
+
+---
+
+## 開源協議
+
+本項目採用 [GNU General Public License v2.0 (GPL-2.0)](LICENSE) 開源發布。
