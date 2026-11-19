@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.1",
+            date = "2026-11-20",
+            features = listOf(
+                t(
+                    "Isolated update channel: update checker now filters out AtomUI releases so Kotlin PocketGate only tracks its own releases",
+                    "更新通道隔离：检查更新自动过滤 AtomUI 发行版，仅跟踪原生 Kotlin 版更新，避免双端版本号互相干扰",
+                    "更新通道隔離：檢查更新自動過濾 AtomUI 發行版，僅追蹤原生 Kotlin 版更新，避免雙端版本號互相干擾",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.0",
             date = "2026-11-19",
             features = listOf(
