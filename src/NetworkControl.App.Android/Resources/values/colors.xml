@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <color name="nc_window_background">#FFFFFFFF</color>
-  <color name="nc_primary">#FF1677FF</color>
+  <color name="nc_primary">#FF2E7D32</color>
+  <color name="ic_launcher_background">#0B1A12</color>
 </resources>

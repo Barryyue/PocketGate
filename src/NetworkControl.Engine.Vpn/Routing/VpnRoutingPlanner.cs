@@ -16,6 +16,9 @@ public sealed record VpnRoutingInput
 
     /// <summary>本應用的包名：始終排除在 VPN 之外。</summary>
     public required string SelfPackage { get; init; }
+
+    /// <summary>多用戶 / 應用分身是否繼承主應用規則（預設 true）。</summary>
+    public bool CloneAppsInheritPrimary { get; init; } = true;
 }
 
 /// <summary>
@@ -60,7 +63,7 @@ public static class VpnRoutingPlanner
             }
         }
 
-        return new VpnRoutingPlan(input.Mode, bypass, byUid, skipped);
+        return new VpnRoutingPlan(input.Mode, bypass, byUid, skipped, input.CloneAppsInheritPrimary);
     }
 
     /// <summary>規則能否在黑洞式 VPN 上執行：只能是「應用 + 出站 / 任意方向」，不能帶任何連接條件。</summary>

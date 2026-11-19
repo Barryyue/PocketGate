@@ -2,15 +2,39 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:atom="https://atomui.net"
              xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:controls="using:NetworkControl.Android.Controls"
              xmlns:vm="using:NetworkControl.Android.ViewModels"
              xmlns:loc="using:NetworkControl.Android.Localization"
              x:Class="NetworkControl.Android.Views.OverviewView"
              x:DataType="vm:OverviewViewModel">
   <ScrollViewer>
-    <StackPanel Margin="16" Spacing="16">
+    <StackPanel Margin="16,16,16,96" Spacing="14">
       <TextBlock Classes="page-title" Text="{loc:ShellLangResource AppTitle}" />
 
-      <!-- 保護開關 -->
+      <!-- 總覽頂部背景更新下載進度條 / 安裝就緒橫幅 -->
+      <atom:Card IsVisible="{Binding ShowUpdateBanner}">
+        <StackPanel Spacing="8">
+          <StackPanel Spacing="6" IsVisible="{Binding UpdateDownloading}">
+            <TextBlock Classes="title" Text="{Binding UpdateDownloadingText}" />
+            <atom:ProgressBar Value="{Binding UpdateDownloadProgress}" Minimum="0" Maximum="100" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" IsVisible="{Binding UpdateReady}">
+            <TextBlock Classes="title" VerticalAlignment="Center" Text="{Binding UpdateReadyText}" TextWrapping="Wrap" />
+            <atom:Button Grid.Column="1" ButtonType="Primary" Command="{Binding InstallUpdateCommand}" Content="{loc:OverviewLangResource UpdateInstallNow}" />
+          </Grid>
+        </StackPanel>
+      </atom:Card>
+
+      <!-- 權限待辦輕量橫幅 -->
+      <atom:Card IsVisible="{Binding ShowPermissionBanner}">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <TextBlock Classes="secondary" VerticalAlignment="Center" Text="{Binding PermissionBannerTitle}" TextWrapping="Wrap" />
+          <atom:Button Grid.Column="1" ButtonType="Primary" Command="{Binding OpenPermissionGuideCommand}" Content="{loc:OverviewLangResource PermBannerAction}" />
+          <atom:Button Grid.Column="2" ButtonType="Text" Icon="{antdicons:AntDesignIconProvider Kind=CloseOutlined}" Command="{Binding DismissPermissionBannerCommand}" />
+        </Grid>
+      </atom:Card>
+
+      <!-- 旗艦保護開關卡片 -->
       <atom:Card>
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
           <StackPanel Spacing="6">
@@ -22,6 +46,19 @@
           </StackPanel>
           <atom:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding IsProtectionOn}" IsEnabled="{Binding !IsBusy}" />
         </Grid>
+      </atom:Card>
+
+      <!-- 36 點平滑即時網速波形圖 -->
+      <atom:Card Header="{loc:OverviewLangResource CurrentSpeed}">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,*">
+            <TextBlock Classes="title" Text="{Binding CurrentDownloadSpeed}" />
+            <TextBlock Grid.Column="1" Classes="secondary" HorizontalAlignment="Right" Text="{Binding CurrentUploadSpeed}" />
+          </Grid>
+          <controls:SpeedChartControl Height="76"
+                                      DownloadHistory="{Binding DownloadHistory}"
+                                      UploadHistory="{Binding UploadHistory}" />
+        </StackPanel>
       </atom:Card>
 
       <atom:Alert Type="Warning" IsShowIcon="True" Message="{loc:OverviewLangResource BlockAllActive}" IsVisible="{Binding IsBlockAll}" />
@@ -69,7 +106,7 @@
         </StackPanel>
       </atom:Card>
 
-      <!-- 統計 -->
+      <!-- Bento 雙列統計 -->
       <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
         <atom:Card>
           <atom:Statistic Header="{loc:OverviewLangResource BlockedToday}" Value="{Binding BlockedToday}" />

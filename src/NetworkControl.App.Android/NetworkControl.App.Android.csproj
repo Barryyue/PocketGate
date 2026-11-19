@@ -8,7 +8,7 @@
     <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <ApplicationId>com.networkcontrol.android</ApplicationId>
-    <ApplicationTitle>NetworkControl</ApplicationTitle>
+    <ApplicationTitle>PocketGate (AtomUI)</ApplicationTitle>
     <!-- 顯示版本取 Directory.Build.props 的 VersionPrefix；整數版本碼 = major*10000 + minor*100 + patch -->
     <ApplicationDisplayVersion>$(VersionPrefix)</ApplicationDisplayVersion>
     <ApplicationVersion>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($(VersionPrefix.Split('.')[0]), 10000)), $([MSBuild]::Multiply($(VersionPrefix.Split('.')[1]), 100)))), $(VersionPrefix.Split('.')[2])))</ApplicationVersion>

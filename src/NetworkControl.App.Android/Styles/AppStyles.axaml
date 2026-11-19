@@ -46,24 +46,41 @@
     <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgLayout}" />
   </Style>
 
-  <!-- 底部導航 -->
+  <!-- 懸浮膠囊底部導航（與 Kotlin 版 PocketGate 對齊） -->
   <Style Selector="Border.bottom-nav">
-    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgContainer}" />
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBgElevated}" />
     <Setter Property="BorderBrush" Value="{atom:SharedTokenResource ColorBorderSecondary}" />
-    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="28" />
+    <Setter Property="Margin" Value="14,0,14,10" />
+    <Setter Property="Padding" Value="6,4" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.28" Easing="CubicEaseOut" />
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.35" Easing="BackEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Border.bottom-nav.hidden">
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="RenderTransform" Value="translateY(110px) scale(0.92)" />
   </Style>
 
   <Style Selector="Button.nav">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="22" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="MinHeight" Value="56" />
+    <Setter Property="MinHeight" Value="52" />
     <Setter Property="Padding" Value="0,6" />
     <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorTextSecondary}" />
   </Style>
 
   <Style Selector="Button.nav.active">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorPrimaryBg}" />
     <Setter Property="Foreground" Value="{atom:SharedTokenResource ColorPrimary}" />
   </Style>
 

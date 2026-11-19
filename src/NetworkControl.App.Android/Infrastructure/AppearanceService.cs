@@ -6,26 +6,25 @@ using Avalonia.Platform;
 namespace NetworkControl.Android.Infrastructure;
 
 /// <summary>
-/// 明暗外觀：跟隨系統 / 淺色 / 深色。與桌面版一樣自己實現跟隨系統（AtomUI 的 FollowSystem 會覆蓋用戶的手動選擇）。
+/// 明暗外觀與 6 套視覺風格引擎：與桌面版一樣自己實現跟隨系統，避免 AtomUI FollowSystem 覆蓋手動選擇。
 /// </summary>
 public sealed class AppearanceService(IThemeManager themes, UiPreferences preferences)
 {
     private IPlatformSettings? _platform;
     private bool? _appliedDark;
+    private AppThemeStyle? _appliedStyle;
 
     public ThemePreference Preference => preferences.Theme;
 
-    /// <summary>Avalonia 初始化之前按系統的夜間模式估計首幀外觀。</summary>
-    public static ThemeConfig InitialConfig(ThemePreference preference, bool systemDark) => ConfigFor(preference switch
-    {
-        ThemePreference.Dark => true,
-        ThemePreference.Light => false,
-        _ => systemDark,
-    });
+    public AppThemeStyle ThemeStyle => preferences.ThemeStyle;
+
+    public static ThemeConfig InitialConfig(ThemePreference preference, AppThemeStyle style, bool systemDark) =>
+        ConfigFor(ResolveDark(preference, style, systemDark));
 
     public Task InitializeAsync(Avalonia.Application application, bool initialDark)
     {
         _appliedDark = initialDark;
+        _appliedStyle = preferences.ThemeStyle;
         _platform = application.PlatformSettings;
         if (_platform is not null)
         {
@@ -33,37 +32,51 @@ public sealed class AppearanceService(IThemeManager themes, UiPreferences prefer
             {
                 if (Preference == ThemePreference.System)
                 {
-                    _ = ApplyAsync(ThemePreference.System);
+                    _ = ApplyAsync(ThemePreference.System, ThemeStyle);
                 }
             };
         }
 
-        return ApplyAsync(Preference);
+        return ApplyAsync(Preference, ThemeStyle);
     }
 
     public Task SetPreferenceAsync(ThemePreference preference)
     {
         preferences.Theme = preference;
-        return ApplyAsync(preference);
+        return ApplyAsync(preference, ThemeStyle);
     }
 
-    private Task ApplyAsync(ThemePreference preference)
+    public Task SetThemeStyleAsync(AppThemeStyle style)
     {
-        var dark = preference switch
-        {
-            ThemePreference.Dark => true,
-            ThemePreference.Light => false,
-            _ => _platform?.GetColorValues().ThemeVariant == PlatformThemeVariant.Dark,
-        };
+        preferences.ThemeStyle = style;
+        return ApplyAsync(Preference, style);
+    }
 
-        if (_appliedDark == dark)
+    private Task ApplyAsync(ThemePreference preference, AppThemeStyle style)
+    {
+        var systemDark = _platform?.GetColorValues().ThemeVariant == PlatformThemeVariant.Dark;
+        var dark = ResolveDark(preference, style, systemDark);
+        if (_appliedDark == dark && _appliedStyle == style)
         {
             return Task.CompletedTask;
         }
 
         _appliedDark = dark;
+        _appliedStyle = style;
         return themes.ApplyThemeAsync(new ThemeRequest(IThemeManager.DEFAULT_THEME_ID, ConfigFor(dark), ThemeTransitionReason.UserRequest));
     }
+
+    private static bool ResolveDark(ThemePreference preference, AppThemeStyle style, bool systemDark) => style switch
+    {
+        AppThemeStyle.ObsidianCyber or AppThemeStyle.AmoledBlack => true,
+        AppThemeStyle.FrostMinimal => false,
+        _ => preference switch
+        {
+            ThemePreference.Dark => true,
+            ThemePreference.Light => false,
+            _ => systemDark,
+        },
+    };
 
     private static ThemeConfig ConfigFor(bool dark) => dark
         ? new ThemeConfigBuilder().WithAlgorithms(ThemeAlgorithm.Default, ThemeAlgorithm.Dark).Build()

@@ -6,6 +6,7 @@ using NetworkControl.Android.Hosting;
 using NetworkControl.Android.Infrastructure;
 using NetworkControl.Android.Localization;
 using NetworkControl.Android.Platform;
+using NetworkControl.Engine.Vpn.Update;
 
 namespace NetworkControl.Android.ViewModels;
 
@@ -13,6 +14,8 @@ namespace NetworkControl.Android.ViewModels;
 public sealed partial class MainViewModel(LocalizationService localization, AppearanceService appearance) : ObservableObject
 {
     private DispatcherTimer? _refreshDebounce;
+    private IBackend? _backend;
+    private double _scrollAccum;
 
     [ObservableProperty]
     public partial bool IsLoading { get; set; } = true;
@@ -20,7 +23,7 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
     [ObservableProperty]
     public partial string? StartError { get; set; }
 
-    /// <summary>0 總覽、1 應用程式、2 阻擋記錄、3 設定。</summary>
+    /// <summary>0 總覽、1 應用程式、2 規則、3 阻擋記錄、4 設定。</summary>
     [ObservableProperty]
     public partial int SelectedTab { get; set; }
 
@@ -31,6 +34,9 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
     public partial AppsViewModel? Apps { get; set; }
 
     [ObservableProperty]
+    public partial RulesViewModel? Rules { get; set; }
+
+    [ObservableProperty]
     public partial LogViewModel? Log { get; set; }
 
     [ObservableProperty]
@@ -39,13 +45,44 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
     [ObservableProperty]
     public partial PromptViewModel? Prompt { get; set; }
 
+    [ObservableProperty]
+    public partial bool BottomBarVisible { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ShowUpdateAvailableDialog { get; set; }
+
+    [ObservableProperty]
+    public partial string UpdateAvailableTitle { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string UpdateAvailableBody { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string UpdateReleaseNotes { get; set; } = string.Empty;
+
+    public bool HasUpdateReleaseNotes => !string.IsNullOrWhiteSpace(UpdateReleaseNotes);
+
+    [ObservableProperty]
+    public partial bool ShowUpdateReadyDialog { get; set; }
+
+    [ObservableProperty]
+    public partial string UpdateReadyTitle { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool ShowPermissionGuide { get; set; }
+
+    [ObservableProperty]
+    public partial PermissionHealthSnapshot? PermissionHealth { get; set; }
+
     public bool IsOverview => SelectedTab == 0;
 
     public bool IsApps => SelectedTab == 1;
 
-    public bool IsLog => SelectedTab == 2;
+    public bool IsRules => SelectedTab == 2;
 
-    public bool IsSettings => SelectedTab == 3;
+    public bool IsLog => SelectedTab == 3;
+
+    public bool IsSettings => SelectedTab == 4;
 
     public async Task InitializeAsync()
     {
@@ -55,20 +92,24 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
         {
             var host = await BackendHost.EnsureStartedAsync(global::Android.App.Application.Context);
             var services = host.Services;
+            var backend = services.GetRequiredService<IBackend>();
+            _backend = backend;
             var context = new UiContext(
-                services.GetRequiredService<IBackend>(),
+                backend,
                 localization,
                 appearance,
                 services.GetRequiredService<AppIconLoader>(),
                 services.GetRequiredService<PromptNotifier>());
 
             Prompt = new PromptViewModel(context);
-            Overview = new OverviewViewModel(context, () => Prompt.OpenFirst());
+            Overview = new OverviewViewModel(context, () => Prompt.OpenFirst(), () => ShowPermissionGuide = true);
             Apps = new AppsViewModel(context);
+            Rules = new RulesViewModel(context);
             Log = new LogViewModel(context);
             Settings = new SettingsViewModel(context);
 
-            context.Backend.Changed += (_, _) => Dispatcher.UIThread.Post(ScheduleRefresh);
+            backend.UpdateManager.StateChanged += state => Dispatcher.UIThread.Post(() => ApplyUpdateState(state));
+            backend.Changed += (_, _) => Dispatcher.UIThread.Post(ScheduleRefresh);
             MainActivity.PromptRequested += (_, id) => Dispatcher.UIThread.Post(() => OpenPrompt(id));
             MainActivity.NavigationRequested += (_, request) => Dispatcher.UIThread.Post(() => NavigateFromNotification(context, request));
             MainActivity.ForegroundChanged += (_, foreground) =>
@@ -77,13 +118,26 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
                 Prompt.IsForeground = foreground;
                 if (foreground)
                 {
-                    Dispatcher.UIThread.Post(RefreshAll);
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        RefreshAll();
+                        RefreshPermissions();
+                        backend.UpdateManager.CheckOnEnter();
+                    });
                 }
             };
             context.Notifier.IsUiForeground = true;
 
             Prompt.Start();
             RefreshAll();
+            RefreshPermissions();
+            if (!backend.Preferences.PermissionGuideShown && (PermissionHealth?.MissingGuideCount ?? 0) > 0)
+            {
+                backend.Preferences.PermissionGuideShown = true;
+                ShowPermissionGuide = true;
+            }
+
+            backend.UpdateManager.CheckOnEnter();
             if (MainActivity.PendingPromptId is { } pending)
             {
                 OpenPrompt(pending);
@@ -118,11 +172,139 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
 
     partial void OnSelectedTabChanged(int value)
     {
+        BottomBarVisible = true;
+        _scrollAccum = 0;
         OnPropertyChanged(nameof(IsOverview));
         OnPropertyChanged(nameof(IsApps));
+        OnPropertyChanged(nameof(IsRules));
         OnPropertyChanged(nameof(IsLog));
         OnPropertyChanged(nameof(IsSettings));
         RefreshAll();
+    }
+
+    public void ReportScrollDelta(double dy)
+    {
+        if (_backend is not null && !_backend.Preferences.AutoHideBottomBar)
+        {
+            BottomBarVisible = true;
+            return;
+        }
+
+        if (dy > 0)
+        {
+            if (_scrollAccum < 0) _scrollAccum = 0;
+            _scrollAccum += dy;
+            if (_scrollAccum >= 28)
+            {
+                BottomBarVisible = false;
+                _scrollAccum = 0;
+            }
+        }
+        else if (dy < 0)
+        {
+            if (_scrollAccum > 0) _scrollAccum = 0;
+            _scrollAccum += dy;
+            if (_scrollAccum <= -14)
+            {
+                BottomBarVisible = true;
+                _scrollAccum = 0;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void AcceptUpdate()
+    {
+        ShowUpdateAvailableDialog = false;
+        _backend?.UpdateManager.StartDownload();
+    }
+
+    [RelayCommand]
+    private void DismissUpdate()
+    {
+        ShowUpdateAvailableDialog = false;
+        _backend?.UpdateManager.DismissAvailablePrompt();
+    }
+
+    [RelayCommand]
+    private void InstallUpdateNow()
+    {
+        ShowUpdateReadyDialog = false;
+        _backend?.UpdateManager.DismissReadyPrompt();
+        if (_backend?.UpdateManager.State.DownloadedPath is { } path)
+        {
+            ApkInstaller.Launch(global::Android.App.Application.Context, path);
+        }
+    }
+
+    [RelayCommand]
+    private void DismissUpdateReady()
+    {
+        ShowUpdateReadyDialog = false;
+        _backend?.UpdateManager.DismissReadyPrompt();
+    }
+
+    [RelayCommand]
+    private void DismissPermissionGuide() => ShowPermissionGuide = false;
+
+    [RelayCommand]
+    private void OpenPermNotifications() => AndroidPermissionHelper.OpenNotificationSettings(global::Android.App.Application.Context);
+
+    [RelayCommand]
+    private void OpenPermBattery() => AndroidPermissionHelper.OpenBatteryOptimizationSettings(global::Android.App.Application.Context);
+
+    [RelayCommand]
+    private void OpenPermAppList() => AndroidPermissionHelper.OpenAppSettings(global::Android.App.Application.Context);
+
+    [RelayCommand]
+    private void OpenPermOverlay() => AndroidPermissionHelper.OpenOverlaySettings(global::Android.App.Application.Context);
+
+    [RelayCommand]
+    private void OpenPermUsage()
+    {
+        if (_backend is not null)
+        {
+            var intent = _backend.CreateTrafficAccessIntent().AddFlags(global::Android.Content.ActivityFlags.NewTask);
+            global::Android.App.Application.Context.StartActivity(intent);
+        }
+    }
+
+    private void RefreshPermissions()
+    {
+        if (_backend is null) return;
+        PermissionHealth = _backend.CheckPermissionHealth();
+        Overview?.UpdatePermissionHealth(PermissionHealth);
+        Settings?.UpdatePermissionHealth(PermissionHealth);
+    }
+
+    private void ApplyUpdateState(AppUpdateState state)
+    {
+        Overview?.ApplyUpdateState(state);
+        Settings?.ApplyUpdateState(state);
+        if (state.ShowAvailablePrompt && state.Info is { HasUpdate: true } info)
+        {
+            var latest = info.LatestVersion ?? "";
+            var current = global::Android.App.Application.Context.PackageManager?.GetPackageInfo(global::Android.App.Application.Context.PackageName!, 0)?.VersionName ?? "0.3.0";
+            UpdateAvailableTitle = localization.Format(OverviewLangResourceKind.UpdateAvailableTitle, latest);
+            UpdateAvailableBody = localization.Format(OverviewLangResourceKind.UpdateAvailableBody, current);
+            UpdateReleaseNotes = info.ReleaseNotes ?? string.Empty;
+            OnPropertyChanged(nameof(HasUpdateReleaseNotes));
+            ShowUpdateAvailableDialog = true;
+        }
+        else
+        {
+            ShowUpdateAvailableDialog = false;
+        }
+
+        if (state.ShowReadyPrompt && state.DownloadedPath is not null)
+        {
+            UpdateReadyTitle = localization.Format(OverviewLangResourceKind.UpdateReady, state.Info?.LatestVersion ?? "");
+            ShowUpdateReadyDialog = true;
+        }
+        else
+        {
+            ShowUpdateReadyDialog = false;
+        }
     }
 
     private void OpenPrompt(Guid promptId)
@@ -135,7 +317,13 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
     private void NavigateFromNotification(UiContext context, (int Tab, bool DismissQuietSummary) request)
     {
         MainActivity.PendingNavigation = null;
-        SelectedTab = Math.Clamp(request.Tab, 0, 3);
+        var mappedTab = request.Tab switch
+        {
+            2 => 3, // Log moved to index 3
+            3 => 4, // Settings moved to index 4
+            _ => Math.Clamp(request.Tab, 0, 4),
+        };
+        SelectedTab = mappedTab;
         if (request.DismissQuietSummary)
         {
             context.Backend.DismissQuietPeriod();
@@ -164,9 +352,12 @@ public sealed partial class MainViewModel(LocalizationService localization, Appe
                 Apps?.Refresh();
                 break;
             case 2:
-                _ = Log?.RefreshAsync();
+                Rules?.Refresh();
                 break;
             case 3:
+                _ = Log?.RefreshAsync();
+                break;
+            case 4:
                 Settings?.Refresh();
                 break;
         }

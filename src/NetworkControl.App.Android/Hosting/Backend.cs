@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using global::Android.Content;
+using NetworkControl.Android.Infrastructure;
 using NetworkControl.Android.Platform;
 using NetworkControl.Core.Activity;
 using NetworkControl.Core.Apps;
@@ -11,8 +12,11 @@ using NetworkControl.Core.Settings;
 using NetworkControl.Core.Traffic;
 using NetworkControl.Engine.Android;
 using NetworkControl.Engine.Vpn;
+using NetworkControl.Engine.Vpn.Backup;
+using NetworkControl.Engine.Vpn.Forwarding;
 using NetworkControl.Engine.Vpn.Platform;
 using NetworkControl.Engine.Vpn.Routing;
+using NetworkControl.Engine.Vpn.Update;
 using NetworkControl.Storage.Serialization;
 
 namespace NetworkControl.Android.Hosting;
@@ -159,6 +163,28 @@ public interface IBackend
 
     /// <summary>按 <see cref="RuleImportMode"/> 執行導入：先新增、再更新，最後刪除。</summary>
     Task<RuleImportPreview> ApplyImportAsync(string json, RuleImportMode mode, CancellationToken cancellationToken);
+
+    UiPreferences Preferences { get; }
+
+    AppUpdateManager UpdateManager { get; }
+
+    PermissionHealthSnapshot CheckPermissionHealth();
+
+    Task DeleteRuleAsync(Guid ruleId, CancellationToken cancellationToken);
+
+    Task ToggleRuleEnabledAsync(Guid ruleId, CancellationToken cancellationToken);
+
+    Task ClearExpiredRulesAsync(CancellationToken cancellationToken);
+
+    Task<string> UploadWebDavBackupAsync(CancellationToken cancellationToken);
+
+    Task<string> DownloadWebDavBackupAsync(CancellationToken cancellationToken);
+
+    string SaveLocalBackupToDownloads();
+
+    string ReadLocalBackupFromDownloads();
+
+    Task<Socks5DiagnosticResult> DiagnoseProxyAsync(CancellationToken cancellationToken);
 }
 
 internal sealed class Backend : IBackend
@@ -184,6 +210,8 @@ internal sealed class Backend : IBackend
     private readonly TrafficAggregator _trafficAggregator;
     private readonly ITrafficRepository _traffic;
     private readonly IAppRepository _apps;
+    private readonly UiPreferences _preferences;
+    private readonly AppUpdateManager _updateManager;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<long, string?> _packagesByAppId = new();
     private readonly string _selfPackage;
 
@@ -208,7 +236,9 @@ internal sealed class Backend : IBackend
         UidTrafficCollector trafficCollector,
         TrafficAggregator trafficAggregator,
         ITrafficRepository traffic,
-        IAppRepository apps)
+        IAppRepository apps,
+        UiPreferences preferences,
+        AppUpdateManager updateManager)
     {
         _context = context;
         _trafficSource = trafficSource;
@@ -216,6 +246,8 @@ internal sealed class Backend : IBackend
         _trafficAggregator = trafficAggregator;
         _traffic = traffic;
         _apps = apps;
+        _preferences = preferences;
+        _updateManager = updateManager;
         _engine = engine;
         _tunnel = tunnel;
         _protection = protection;
@@ -498,6 +530,79 @@ internal sealed class Backend : IBackend
 
     public Task UpdateSettingsAsync(Func<UserSettings, UserSettings> update, CancellationToken cancellationToken) =>
         _settings.UpdateAsync(update, cancellationToken);
+
+    public UiPreferences Preferences => _preferences;
+
+    public AppUpdateManager UpdateManager => _updateManager;
+
+    public PermissionHealthSnapshot CheckPermissionHealth()
+    {
+        var appListOk = _catalog.GetApps().Count > 0;
+        return AndroidPermissionHelper.Check(_context, HasTrafficAccess, appListOk);
+    }
+
+    public async Task DeleteRuleAsync(Guid ruleId, CancellationToken cancellationToken)
+    {
+        await _ruleService.RemoveAsync([ruleId], RuleEndReason.Deleted, cancellationToken).ConfigureAwait(false);
+        Raise(this, EventArgs.Empty);
+    }
+
+    public async Task ToggleRuleEnabledAsync(Guid ruleId, CancellationToken cancellationToken)
+    {
+        var rule = _ruleService.All.FirstOrDefault(r => r.Id == ruleId);
+        if (rule is null) return;
+        await _ruleService.UpdateAsync(rule with { Enabled = !rule.Enabled, UpdatedAt = _time.GetUtcNow() }, cancellationToken).ConfigureAwait(false);
+        Raise(this, EventArgs.Empty);
+    }
+
+    public async Task ClearExpiredRulesAsync(CancellationToken cancellationToken)
+    {
+        var now = _time.GetUtcNow();
+        var expired = _ruleService.All
+            .Where(r => r.Lifetime == RuleLifetime.Timed && r.ExpiresAt <= now)
+            .Select(r => r.Id)
+            .ToArray();
+        if (expired.Length > 0)
+        {
+            await _ruleService.RemoveAsync(expired, RuleEndReason.Expired, cancellationToken).ConfigureAwait(false);
+            Raise(this, EventArgs.Empty);
+        }
+    }
+
+    public async Task<string> UploadWebDavBackupAsync(CancellationToken cancellationToken)
+    {
+        if (_preferences.OfflineMode) throw new InvalidOperationException("offline_mode");
+        var json = await ExportRulesAsync(cancellationToken).ConfigureAwait(false);
+        var url = await WebDavBackupClient.UploadAsync(
+            _preferences.WebDavUrl,
+            _preferences.WebDavUsername,
+            _preferences.WebDavPassword,
+            _preferences.WebDavPassphrase,
+            json,
+            cancellationToken).ConfigureAwait(false);
+        _preferences.WebDavLastSyncAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        return url;
+    }
+
+    public async Task<string> DownloadWebDavBackupAsync(CancellationToken cancellationToken)
+    {
+        if (_preferences.OfflineMode) throw new InvalidOperationException("offline_mode");
+        return await WebDavBackupClient.DownloadAsync(
+            _preferences.WebDavUrl,
+            _preferences.WebDavUsername,
+            _preferences.WebDavPassword,
+            _preferences.WebDavPassphrase,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public string SaveLocalBackupToDownloads() =>
+        LocalRulesBackup.SaveToDownloads(_context, RuleExportSerializer.Export(_ruleService.All, PathPlaceholderMapper.None));
+
+    public string ReadLocalBackupFromDownloads() =>
+        LocalRulesBackup.ReadLatestFromDownloads(_context);
+
+    public Task<Socks5DiagnosticResult> DiagnoseProxyAsync(CancellationToken cancellationToken) =>
+        Socks5Probe.DiagnoseAsync(_preferences.Socks5Host, _preferences.Socks5Port, _preferences.Socks5Username, _preferences.Socks5Password, cancellationToken);
 
     /// <summary>
     /// 解析導入文件並計算差異。與 RulesGrpcService 一致：丟棄已過期的限時規則，

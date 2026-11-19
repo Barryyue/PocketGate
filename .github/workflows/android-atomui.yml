@@ -1,0 +1,102 @@
+name: Android (Avalonia + AtomUI)
+
+on:
+  push:
+    branches: [main, "agent/**"]
+    tags: ["atomui-v*"]
+    paths:
+      - "src/NetworkControl.Core/**"
+      - "src/NetworkControl.Storage/**"
+      - "src/NetworkControl.Diagnostics/**"
+      - "src/NetworkControl.Engine.Vpn/**"
+      - "src/NetworkControl.Engine.Android/**"
+      - "src/NetworkControl.App.Android/**"
+      - ".github/workflows/android-atomui.yml"
+  pull_request:
+    paths:
+      - "src/NetworkControl.Core/**"
+      - "src/NetworkControl.Storage/**"
+      - "src/NetworkControl.Diagnostics/**"
+      - "src/NetworkControl.Engine.Vpn/**"
+      - "src/NetworkControl.Engine.Android/**"
+      - "src/NetworkControl.App.Android/**"
+      - ".github/workflows/android-atomui.yml"
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: "同時發佈 AtomUI APK 到 GitHub Releases"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-atomui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test, build and package AtomUI APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install .NET Android workload
+        run: dotnet workload install android
+
+      - name: Run Engine.Vpn unit tests
+        run: dotnet test --project tests/NetworkControl.Engine.Vpn.Tests/NetworkControl.Engine.Vpn.Tests.csproj -c Release
+
+      - name: Decode release keystore (if configured)
+        env:
+          NC_ANDROID_KEYSTORE_BASE64: ${{ secrets.NC_ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -n "$NC_ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$NC_ANDROID_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/pocketgate-release.jks
+            echo "NC_ANDROID_KEYSTORE=/tmp/pocketgate-release.jks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Publish AtomUI Release APK
+        env:
+          NC_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.NC_ANDROID_KEYSTORE_PASSWORD }}
+          NC_ANDROID_KEY_ALIAS: ${{ secrets.NC_ANDROID_KEY_ALIAS }}
+          NC_ANDROID_KEY_PASSWORD: ${{ secrets.NC_ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          args=(publish src/NetworkControl.App.Android/NetworkControl.App.Android.csproj -c Release -o dist-atomui)
+          if [ -n "${NC_ANDROID_KEYSTORE:-}" ]; then
+            args+=(
+              -p:AndroidKeyStore=true
+              "-p:AndroidSigningKeyStore=$NC_ANDROID_KEYSTORE"
+              "-p:AndroidSigningKeyAlias=$NC_ANDROID_KEY_ALIAS"
+              -p:AndroidSigningStorePass=env:NC_ANDROID_KEYSTORE_PASSWORD
+              -p:AndroidSigningKeyPass=env:NC_ANDROID_KEY_PASSWORD
+            )
+          fi
+          dotnet "${args[@]}"
+          ver=$(grep -E '<VersionPrefix>' Directory.Build.props | sed -E 's/.*<VersionPrefix>([^<]+)<\/VersionPrefix>.*/\1/')
+          signed=$(ls -t dist-atomui/*-Signed.apk | head -n1)
+          cp "$signed" "dist-atomui/PocketGate-${ver}-AtomUI.apk"
+          sha256sum "dist-atomui/PocketGate-${ver}-AtomUI.apk" > dist-atomui/SHA256SUMS-AtomUI.txt
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PocketGate-AtomUI
+          path: |
+            dist-atomui/PocketGate-*-AtomUI.apk
+            dist-atomui/SHA256SUMS-AtomUI.txt
+          retention-days: 30

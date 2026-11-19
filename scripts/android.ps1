@@ -25,8 +25,24 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $toolchain = if ($env:NC_ANDROID_TOOLCHAIN) { $env:NC_ANDROID_TOOLCHAIN } else { 'D:\tools\android-dev' }
 $dotnet = Join-Path $toolchain 'dotnet\dotnet.exe'
-$sdk = Join-Path $toolchain 'android-sdk'
-$jdk = Join-Path $toolchain 'jdk'
+$sdk = if ($env:NC_ANDROID_SDK) {
+    $env:NC_ANDROID_SDK
+} elseif (Test-Path (Join-Path $toolchain 'android-sdk')) {
+    Join-Path $toolchain 'android-sdk'
+} else {
+    Join-Path $env:LOCALAPPDATA 'Android\Sdk'
+}
+$jdk = if ($env:NC_ANDROID_JDK) {
+    $env:NC_ANDROID_JDK
+} elseif (Test-Path (Join-Path $toolchain 'jdk')) {
+    Join-Path $toolchain 'jdk'
+} elseif (Test-Path (Join-Path $env:USERPROFILE '.jdks\corretto-21.0.5')) {
+    Join-Path $env:USERPROFILE '.jdks\corretto-21.0.5'
+} elseif (Test-Path (Join-Path $env:USERPROFILE '.jdks\corretto-17.0.13')) {
+    Join-Path $env:USERPROFILE '.jdks\corretto-17.0.13'
+} else {
+    $env:JAVA_HOME
+}
 $adb = Join-Path $sdk 'platform-tools\adb.exe'
 $project = Join-Path $root 'src\NetworkControl.App.Android\NetworkControl.App.Android.csproj'
 $packageId = 'com.networkcontrol.android'
@@ -76,19 +92,35 @@ switch ($Command) {
     }
     'publish' {
         $config = if ($Configuration) { $Configuration } else { 'Release' }
-        $publishArgs = @('publish', $project, '-c', $config, '-o', (Join-Path $root 'artifacts\android')) + $commonArgs
+        $outDir = Join-Path $root 'artifacts\android'
+        $publishArgs = @('publish', $project, '-c', $config, '-o', $outDir) + $commonArgs
+        $storePass = if ($env:NC_ANDROID_STORE_PASS) { $env:NC_ANDROID_STORE_PASS } else { $env:NC_ANDROID_KEYSTORE_PASSWORD }
+        $keyPass = if ($env:NC_ANDROID_KEY_PASS) { $env:NC_ANDROID_KEY_PASS } else { $env:NC_ANDROID_KEY_PASSWORD }
         if ($env:NC_ANDROID_KEYSTORE) {
+            $env:NC_ANDROID_STORE_PASS = $storePass
+            $env:NC_ANDROID_KEY_PASS = $keyPass
             $publishArgs += @(
                 '-p:AndroidKeyStore=true',
                 "-p:AndroidSigningKeyStore=$env:NC_ANDROID_KEYSTORE",
                 "-p:AndroidSigningKeyAlias=$env:NC_ANDROID_KEY_ALIAS",
-                "-p:AndroidSigningStorePass=env:NC_ANDROID_STORE_PASS",
-                "-p:AndroidSigningKeyPass=env:NC_ANDROID_KEY_PASS")
+                '-p:AndroidSigningStorePass=env:NC_ANDROID_STORE_PASS',
+                '-p:AndroidSigningKeyPass=env:NC_ANDROID_KEY_PASS')
         }
         else {
             Write-Warning '未設置 NC_ANDROID_KEYSTORE：使用調試簽名，只適合測試，不能用於正式分發。'
         }
         Invoke-Dotnet $publishArgs
-        Get-ChildItem (Join-Path $root 'artifacts\android') -Filter '*-Signed.apk' | ForEach-Object { Write-Host $_.FullName }
+        $propsPath = Join-Path $root 'Directory.Build.props'
+        $versionMatch = Select-String -Path $propsPath -Pattern '<VersionPrefix>([^<]+)</VersionPrefix>' | Select-Object -First 1
+        $ver = if ($versionMatch) { $versionMatch.Matches[0].Groups[1].Value } else { '0.3.0' }
+        $signedApk = Get-ChildItem $outDir -Filter '*-Signed.apk' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($signedApk) {
+            $atomUiTarget = Join-Path $outDir ("PocketGate-{0}-AtomUI.apk" -f $ver)
+            Copy-Item $signedApk.FullName $atomUiTarget -Force
+            $sha = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.IO.File]::ReadAllBytes($atomUiTarget))).Replace('-', '')
+            $size = (Get-Item $atomUiTarget).Length
+            Write-Host ("AtomUI APK: {0} ({1:N1} MB, {2} bytes)" -f $atomUiTarget, ($size / 1MB), $size)
+            Write-Host ("SHA-256: {0}" -f $sha)
+        }
     }
 }

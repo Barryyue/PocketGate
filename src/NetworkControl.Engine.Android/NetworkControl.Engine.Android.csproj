@@ -13,4 +13,13 @@
     <ProjectReference Include="..\NetworkControl.Core\NetworkControl.Core.csproj" />
     <ProjectReference Include="..\NetworkControl.Engine.Vpn\NetworkControl.Engine.Vpn.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <AndroidNativeLibrary Include="JniLibs\arm64-v8a\libhev-socks5-tunnel.so">
+      <Abi>arm64-v8a</Abi>
+    </AndroidNativeLibrary>
+    <AndroidNativeLibrary Include="JniLibs\x86_64\libhev-socks5-tunnel.so">
+      <Abi>x86_64</Abi>
+    </AndroidNativeLibrary>
+  </ItemGroup>
 </Project>

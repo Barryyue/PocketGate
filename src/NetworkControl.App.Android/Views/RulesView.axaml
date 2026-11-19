@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:atom="https://atomui.net"
+             xmlns:antdicons="https://atomui.net/icons/antdesign"
+             xmlns:vm="using:NetworkControl.Android.ViewModels"
+             xmlns:loc="using:NetworkControl.Android.Localization"
+             x:Class="NetworkControl.Android.Views.RulesView"
+             x:DataType="vm:RulesViewModel">
+  <Grid RowDefinitions="Auto,Auto,*">
+    <Grid Margin="16,16,16,8" ColumnDefinitions="*,Auto">
+      <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavRules}" />
+      <atom:Button Grid.Column="1" ButtonType="Text" Command="{Binding ClearExpiredCommand}" Content="{loc:SettingsLangResource RulesClearExpired}" />
+    </Grid>
+
+    <atom:LineEdit Grid.Row="1" Margin="16,0,16,8" Text="{Binding SearchText}" PlaceholderText="{loc:AppsLangResource Search}" />
+
+    <ListBox Grid.Row="2" Classes="plain" ItemsSource="{Binding Items}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:RuleItemViewModel">
+          <Border Classes="row">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="2">
+                <TextBlock Classes="title" Text="{Binding TargetLabel}" TextTrimming="CharacterEllipsis" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <atom:Tag Text="{Binding ActionLabel}" />
+                  <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding ScopeLabel}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </StackPanel>
+              <atom:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding IsEnabled}" Command="{Binding ToggleCommand}" />
+              <atom:Button Grid.Column="2" ButtonType="Text" IsDanger="True" VerticalAlignment="Center"
+                           Icon="{antdicons:AntDesignIconProvider Kind=DeleteOutlined}" Command="{Binding DeleteCommand}" />
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <TextBlock Grid.Row="2" Classes="secondary" HorizontalAlignment="Center" VerticalAlignment="Center"
+               Text="{loc:SettingsLangResource NoRules}" IsVisible="{Binding IsEmpty}" />
+  </Grid>
+</UserControl>

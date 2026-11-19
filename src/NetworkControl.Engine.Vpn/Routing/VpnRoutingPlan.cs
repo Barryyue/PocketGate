@@ -70,9 +70,15 @@ public sealed record VpnRoutingPlan(
     FilterMode Mode,
     IReadOnlySet<string> BypassPackages,
     IReadOnlyDictionary<int, AppRouting> ByUid,
-    IReadOnlyList<SkippedRule> SkippedRules)
+    IReadOnlyList<SkippedRule> SkippedRules,
+    bool CloneAppsInheritPrimary = true)
 {
     public static VpnRoutingPlan Empty { get; } = new(FilterMode.Ask, new HashSet<string>(StringComparer.Ordinal), new Dictionary<int, AppRouting>(), []);
 
-    public AppRouting? Find(int uid) => ByUid.GetValueOrDefault(uid);
+    /// <summary>
+    /// 依 UID 查找路由決定；開啟 <see cref="CloneAppsInheritPrimary"/> 時，多用戶 / 應用分身（UID >= 100000）
+    /// 自動回退到主使用者的同 appId；關閉後不繼承主應用放行規則。
+    /// </summary>
+    public AppRouting? Find(int uid) =>
+        ByUid.GetValueOrDefault(uid) ?? (CloneAppsInheritPrimary && uid >= 100_000 ? ByUid.GetValueOrDefault(uid % 100_000) : null);
 }

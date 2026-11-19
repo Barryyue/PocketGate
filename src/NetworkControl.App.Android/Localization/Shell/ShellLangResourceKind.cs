@@ -13,4 +13,5 @@ public enum ShellLangResourceKind
     NavSettings,
     Starting,
     StartFailed,
+    NavRules,
 }

@@ -16,6 +16,11 @@
         <source>Blocked today</source>
       </segment>
     </unit>
+    <unit id="CurrentSpeed">
+      <segment>
+        <source>Live speed</source>
+      </segment>
+    </unit>
     <unit id="Dismiss">
       <segment>
         <source>Dismiss</source>
@@ -76,6 +81,16 @@
         <source>Waiting for you</source>
       </segment>
     </unit>
+    <unit id="PermBannerAction">
+      <segment>
+        <source>Set up</source>
+      </segment>
+    </unit>
+    <unit id="PermBannerTitle">
+      <segment>
+        <source>{0} recommended permissions missing</source>
+      </segment>
+    </unit>
     <unit id="Profiles">
       <segment>
         <source>Profile</source>
@@ -134,6 +149,41 @@
     <unit id="StatusStarting">
       <segment>
         <source>Starting protection…</source>
+      </segment>
+    </unit>
+    <unit id="UpdateAvailableBody">
+      <segment>
+        <source>Current version {0}. Download in background now?</source>
+      </segment>
+    </unit>
+    <unit id="UpdateAvailableTitle">
+      <segment>
+        <source>New version {0} available</source>
+      </segment>
+    </unit>
+    <unit id="UpdateDownloading">
+      <segment>
+        <source>Downloading update {0} · {1}%</source>
+      </segment>
+    </unit>
+    <unit id="UpdateInstallNow">
+      <segment>
+        <source>Install now</source>
+      </segment>
+    </unit>
+    <unit id="UpdateLater">
+      <segment>
+        <source>Later</source>
+      </segment>
+    </unit>
+    <unit id="UpdateNow">
+      <segment>
+        <source>Update now</source>
+      </segment>
+    </unit>
+    <unit id="UpdateReady">
+      <segment>
+        <source>Update {0} ready to install</source>
       </segment>
     </unit>
     <unit id="Upload">

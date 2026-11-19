@@ -3,9 +3,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NetworkControl.Android.Infrastructure;
 using NetworkControl.Android.Platform;
 using NetworkControl.Core.Hosting;
 using NetworkControl.Engine.Android;
+using NetworkControl.Engine.Vpn.Update;
 using NetworkControl.Storage;
 
 namespace NetworkControl.Android.Hosting;
@@ -76,6 +78,16 @@ public static partial class BackendHost
         builder.Services.AddHostedService(sp => sp.GetRequiredService<PromptNotifier>());
         builder.Services.AddHostedService<ProfileSwitchNotifier>();
         builder.Services.AddHostedService<QuietPeriodNotifier>();
+        builder.Services.AddSingleton(_ => new UiPreferences(context));
+        builder.Services.AddSingleton(sp =>
+        {
+            var prefs = sp.GetRequiredService<UiPreferences>();
+            var ver = context.PackageManager?.GetPackageInfo(context.PackageName!, 0)?.VersionName ?? "0.3.0";
+            return new AppUpdateManager(
+                Path.Combine(context.CacheDir!.AbsolutePath, "updates"),
+                ver,
+                () => prefs.OfflineMode);
+        });
         builder.Services.AddSingleton<Backend>();
         builder.Services.AddSingleton<IBackend>(sp => sp.GetRequiredService<Backend>());
         builder.Services.AddSingleton<AppIconLoader>();

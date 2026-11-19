@@ -1,8 +1,11 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using NetworkControl.Android.Hosting;
 using NetworkControl.Android.Localization;
+using NetworkControl.Android.Platform;
 using NetworkControl.Core.Domain;
+using NetworkControl.Engine.Vpn.Update;
 
 namespace NetworkControl.Android.ViewModels;
 
@@ -22,13 +25,26 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
     private static readonly FilterMode[] SelectableModes = [FilterMode.Ask, FilterMode.Whitelist, FilterMode.Blacklist];
 
     private readonly Action _showPrompt;
+    private readonly Action _openPermissionGuide;
+    private readonly DispatcherTimer _speedTimer;
+    private long _lastBytesIn = -1;
+    private long _lastBytesOut = -1;
     private bool _syncing;
     private bool _syncingProfile;
 
-    public OverviewViewModel(UiContext context, Action showPrompt)
+    public OverviewViewModel(UiContext context, Action showPrompt, Action openPermissionGuide)
         : base(context)
     {
         _showPrompt = showPrompt;
+        _openPermissionGuide = openPermissionGuide;
+        for (var i = 0; i < 36; i++)
+        {
+            _downSamples.Add(0L);
+            _upSamples.Add(0L);
+        }
+
+        _speedTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => SampleSpeed());
+        _speedTimer.Start();
         Refresh();
     }
 
@@ -126,6 +142,44 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
 
     [ObservableProperty]
     public partial string DownloadToday { get; set; } = "—";
+
+    private readonly List<long> _downSamples = new(36);
+    private readonly List<long> _upSamples = new(36);
+
+    [ObservableProperty]
+    public partial IReadOnlyList<long> DownloadHistory { get; set; } = [];
+
+    [ObservableProperty]
+    public partial IReadOnlyList<long> UploadHistory { get; set; } = [];
+
+    [ObservableProperty]
+    public partial string CurrentDownloadSpeed { get; set; } = "0 B/s";
+
+    [ObservableProperty]
+    public partial string CurrentUploadSpeed { get; set; } = "0 B/s";
+
+    [ObservableProperty]
+    public partial bool UpdateDownloading { get; set; }
+
+    [ObservableProperty]
+    public partial int UpdateDownloadProgress { get; set; }
+
+    [ObservableProperty]
+    public partial string UpdateDownloadingText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool UpdateReady { get; set; }
+
+    [ObservableProperty]
+    public partial string UpdateReadyText { get; set; } = string.Empty;
+
+    public bool ShowUpdateBanner => UpdateDownloading || UpdateReady;
+
+    [ObservableProperty]
+    public partial bool ShowPermissionBanner { get; set; }
+
+    [ObservableProperty]
+    public partial string PermissionBannerTitle { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string UploadToday { get; set; } = "—";
@@ -327,6 +381,72 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
         catch (Exception ex) when (ex is InvalidOperationException or IOException or Microsoft.Data.Sqlite.SqliteException)
         {
             // 統計失敗不影響其他功能
+        }
+    }
+
+    public void ApplyUpdateState(AppUpdateState state)
+    {
+        var latest = state.Info?.LatestVersion ?? "";
+        UpdateDownloading = state.Downloading;
+        UpdateDownloadProgress = state.Progress;
+        UpdateDownloadingText = state.Downloading
+            ? Loc.Format(OverviewLangResourceKind.UpdateDownloading, latest, state.Progress)
+            : string.Empty;
+        UpdateReady = !state.Downloading && state.DownloadedPath is not null;
+        UpdateReadyText = UpdateReady
+            ? Loc.Format(OverviewLangResourceKind.UpdateReady, latest)
+            : string.Empty;
+        OnPropertyChanged(nameof(ShowUpdateBanner));
+    }
+
+    public void UpdatePermissionHealth(PermissionHealthSnapshot health)
+    {
+        var missing = health.MissingGuideCount;
+        ShowPermissionBanner = !Backend.Preferences.PermissionBannerDismissed && missing > 0;
+        PermissionBannerTitle = missing > 0 ? Loc.Format(OverviewLangResourceKind.PermBannerTitle, missing) : string.Empty;
+    }
+
+    [RelayCommand]
+    private void InstallUpdate()
+    {
+        if (Backend.UpdateManager.State.DownloadedPath is { } path)
+        {
+            ApkInstaller.Launch(global::Android.App.Application.Context, path);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenPermissionGuide() => _openPermissionGuide();
+
+    [RelayCommand]
+    private void DismissPermissionBanner()
+    {
+        Backend.Preferences.PermissionBannerDismissed = true;
+        ShowPermissionBanner = false;
+    }
+
+    private async void SampleSpeed()
+    {
+        if (!HasTrafficAccess) return;
+        try
+        {
+            var today = new DateTimeOffset(DateTimeOffset.Now.Date, DateTimeOffset.Now.Offset);
+            var usage = await Backend.GetTrafficAsync(today, today.AddDays(1), CancellationToken.None);
+            var dl = _lastBytesIn >= 0 ? Math.Max(0L, usage.BytesIn - _lastBytesIn) : 0L;
+            var ul = _lastBytesOut >= 0 ? Math.Max(0L, usage.BytesOut - _lastBytesOut) : 0L;
+            _lastBytesIn = usage.BytesIn;
+            _lastBytesOut = usage.BytesOut;
+            if (_downSamples.Count >= 36) _downSamples.RemoveAt(0);
+            _downSamples.Add(dl);
+            if (_upSamples.Count >= 36) _upSamples.RemoveAt(0);
+            _upSamples.Add(ul);
+            DownloadHistory = _downSamples.ToArray();
+            UploadHistory = _upSamples.ToArray();
+            CurrentDownloadSpeed = $"{Infrastructure.ByteSize.Format(dl)}/s";
+            CurrentUploadSpeed = $"{Infrastructure.ByteSize.Format(ul)}/s";
+        }
+        catch
+        {
         }
     }
 }

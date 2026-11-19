@@ -19,6 +19,12 @@
         <target state="translated">若要在 NetworkControl 停止时仍阻断应用，请在系统设置中为 NetworkControl 开启“始终开启的 VPN”和“屏蔽未使用 VPN 的连接”。</target>
       </segment>
     </unit>
+    <unit id="AutoHideBottomBar">
+      <segment>
+        <source>Auto-hide navigation bar</source>
+        <target state="translated">滚动时自动隐藏导航栏</target>
+      </segment>
+    </unit>
     <unit id="AutoSwitch">
       <segment>
         <source>Auto switch</source>
@@ -65,6 +71,36 @@
       <segment>
         <source>Some phones stop background apps aggressively. Exclude NetworkControl from battery optimization if protection turns off by itself.</source>
         <target state="translated">部分手机会积极停止后台应用。如果保护会自行关闭，请将 NetworkControl 排除在电池优化之外。</target>
+      </segment>
+    </unit>
+    <unit id="Blocklists">
+      <segment>
+        <source>Domain blocklists</source>
+        <target state="translated">域名拦截清单</target>
+      </segment>
+    </unit>
+    <unit id="BlocklistsHint">
+      <segment>
+        <source>Built-in 7 public ad/tracker lists with DNS bypass protection.</source>
+        <target state="translated">内置 7 份公开广告与追踪器名单及防 DNS 绕过。</target>
+      </segment>
+    </unit>
+    <unit id="CheckUpdates">
+      <segment>
+        <source>Check for updates</source>
+        <target state="translated">检查更新</target>
+      </segment>
+    </unit>
+    <unit id="CloneIndependent">
+      <segment>
+        <source>Independent clone app control</source>
+        <target state="translated">应用分身独立管控</target>
+      </segment>
+    </unit>
+    <unit id="CloneIndependentHint">
+      <segment>
+        <source>Do not inherit primary app allow rules for cloned/multi-user apps in forwarding mode.</source>
+        <target state="translated">开启后逐连接模式下分身应用不继承主应用放行规则。</target>
       </segment>
     </unit>
     <unit id="Data">
@@ -125,6 +161,24 @@
       <segment>
         <source>System</source>
         <target state="translated">跟随系统</target>
+      </segment>
+    </unit>
+    <unit id="ForwardingDirect">
+      <segment>
+        <source>Built-in direct exit</source>
+        <target state="translated">内置直连出口</target>
+      </segment>
+    </unit>
+    <unit id="ForwardingMode">
+      <segment>
+        <source>Per-connection forwarding</source>
+        <target state="translated">逐连接转发模式</target>
+      </segment>
+    </unit>
+    <unit id="ForwardingSocks5">
+      <segment>
+        <source>External SOCKS5 proxy</source>
+        <target state="translated">外部 SOCKS5 代理</target>
       </segment>
     </unit>
     <unit id="ImportApply">
@@ -193,6 +247,18 @@
         <target state="translated">语言</target>
       </segment>
     </unit>
+    <unit id="LocalBackupRestore">
+      <segment>
+        <source>Restore local backup</source>
+        <target state="translated">恢复本地备份</target>
+      </segment>
+    </unit>
+    <unit id="LocalBackupSave">
+      <segment>
+        <source>Backup to Downloads</source>
+        <target state="translated">备份到下载目录</target>
+      </segment>
+    </unit>
     <unit id="NetworkKind">
       <segment>
         <source>Network type</source>
@@ -241,6 +307,12 @@
         <target state="translated">以逗号分隔，例如：家里、公司</target>
       </segment>
     </unit>
+    <unit id="NoRules">
+      <segment>
+        <source>No rules yet</source>
+        <target state="translated">暂无规则</target>
+      </segment>
+    </unit>
     <unit id="Notifications">
       <segment>
         <source>Notifications</source>
@@ -259,10 +331,34 @@
         <target state="translated">已开启</target>
       </segment>
     </unit>
+    <unit id="OfflineMode">
+      <segment>
+        <source>Offline mode (block self network)</source>
+        <target state="translated">纯离线模式（禁止本应用主动联网）</target>
+      </segment>
+    </unit>
+    <unit id="OfflineModeBlocked">
+      <segment>
+        <source>Offline mode is on — request blocked.</source>
+        <target state="translated">已开启纯离线模式，已拦截本次联网请求。</target>
+      </segment>
+    </unit>
+    <unit id="OfflineModeHint">
+      <segment>
+        <source>Prevents PocketGate itself from making outbound requests (updates and online blocklists).</source>
+        <target state="translated">开启后彻底禁止 PocketGate 自身发起外网请求（屏蔽检查更新与在线订阅）。</target>
+      </segment>
+    </unit>
     <unit id="Open">
       <segment>
         <source>Open</source>
         <target state="translated">打开</target>
+      </segment>
+    </unit>
+    <unit id="PermissionHealth">
+      <segment>
+        <source>Permission &amp; keep-alive health</source>
+        <target state="translated">权限与保活体检</target>
       </segment>
     </unit>
     <unit id="ProfileActivate">
@@ -391,6 +487,12 @@
         <target state="translated">规则使用 netcontrol-rules 格式，可在 Android 与桌面之间转移。临时规则不会导出；桌面应用路径和连接条件在 Android 上不生效。</target>
       </segment>
     </unit>
+    <unit id="RulesClearExpired">
+      <segment>
+        <source>Clear expired</source>
+        <target state="translated">清除已过期</target>
+      </segment>
+    </unit>
     <unit id="Seconds">
       <segment>
         <source>{0} s</source>
@@ -409,6 +511,12 @@
         <target state="translated">{0} 个数据包，{1} 次联网尝试，{2} 次上报</target>
       </segment>
     </unit>
+    <unit id="TestProxy">
+      <segment>
+        <source>Test proxy (3-stage)</source>
+        <target state="translated">三段式测试代理</target>
+      </segment>
+    </unit>
     <unit id="Theme">
       <segment>
         <source>Appearance</source>
@@ -425,6 +533,48 @@
       <segment>
         <source>Light</source>
         <target state="translated">浅色</target>
+      </segment>
+    </unit>
+    <unit id="ThemeStyle">
+      <segment>
+        <source>Visual style</source>
+        <target state="translated">视觉风格</target>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleAmoled">
+      <segment>
+        <source>AMOLED Black</source>
+        <target state="translated">纯黑省电</target>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleAurora">
+      <segment>
+        <source>Aurora Glass</source>
+        <target state="translated">极光流光</target>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleClassic">
+      <segment>
+        <source>Classic</source>
+        <target state="translated">经典</target>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleDynamic">
+      <segment>
+        <source>Dynamic You</source>
+        <target state="translated">系统取色</target>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleFrost">
+      <segment>
+        <source>Frost Minimal</source>
+        <target state="translated">极简霜白</target>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleObsidian">
+      <segment>
+        <source>Obsidian Cyber</source>
+        <target state="translated">黑曜石极客</target>
       </segment>
     </unit>
     <unit id="Traffic">
@@ -451,6 +601,12 @@
         <target state="translated">尚未允许使用情况访问权限</target>
       </segment>
     </unit>
+    <unit id="UpToDate">
+      <segment>
+        <source>You are on the latest version</source>
+        <target state="translated">当前已是最新版本</target>
+      </segment>
+    </unit>
     <unit id="UseCurrentWifi">
       <segment>
         <source>Use current Wi-Fi</source>
@@ -461,6 +617,48 @@
       <segment>
         <source>Version</source>
         <target state="translated">版本</target>
+      </segment>
+    </unit>
+    <unit id="WebDavPass">
+      <segment>
+        <source>Password</source>
+        <target state="translated">密码</target>
+      </segment>
+    </unit>
+    <unit id="WebDavPassphrase">
+      <segment>
+        <source>Encryption passphrase</source>
+        <target state="translated">端到端加密口令</target>
+      </segment>
+    </unit>
+    <unit id="WebDavRestore">
+      <segment>
+        <source>Download &amp; restore</source>
+        <target state="translated">下载恢复</target>
+      </segment>
+    </unit>
+    <unit id="WebDavSync">
+      <segment>
+        <source>WebDAV encrypted sync</source>
+        <target state="translated">WebDAV 加密同步</target>
+      </segment>
+    </unit>
+    <unit id="WebDavUpload">
+      <segment>
+        <source>Encrypt &amp; upload</source>
+        <target state="translated">加密上传</target>
+      </segment>
+    </unit>
+    <unit id="WebDavUrl">
+      <segment>
+        <source>WebDAV URL</source>
+        <target state="translated">WebDAV 地址</target>
+      </segment>
+    </unit>
+    <unit id="WebDavUser">
+      <segment>
+        <source>Username</source>
+        <target state="translated">用户名</target>
       </segment>
     </unit>
   </file>

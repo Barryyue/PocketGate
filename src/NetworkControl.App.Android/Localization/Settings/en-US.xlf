@@ -16,6 +16,11 @@
         <source>To keep apps blocked even if NetworkControl stops, turn on "Always-on VPN" and "Block connections without VPN" for NetworkControl in system settings.</source>
       </segment>
     </unit>
+    <unit id="AutoHideBottomBar">
+      <segment>
+        <source>Auto-hide navigation bar</source>
+      </segment>
+    </unit>
     <unit id="AutoSwitch">
       <segment>
         <source>Auto switch</source>
@@ -54,6 +59,31 @@
     <unit id="BatteryHint">
       <segment>
         <source>Some phones stop background apps aggressively. Exclude NetworkControl from battery optimization if protection turns off by itself.</source>
+      </segment>
+    </unit>
+    <unit id="Blocklists">
+      <segment>
+        <source>Domain blocklists</source>
+      </segment>
+    </unit>
+    <unit id="BlocklistsHint">
+      <segment>
+        <source>Built-in 7 public ad/tracker lists with DNS bypass protection.</source>
+      </segment>
+    </unit>
+    <unit id="CheckUpdates">
+      <segment>
+        <source>Check for updates</source>
+      </segment>
+    </unit>
+    <unit id="CloneIndependent">
+      <segment>
+        <source>Independent clone app control</source>
+      </segment>
+    </unit>
+    <unit id="CloneIndependentHint">
+      <segment>
+        <source>Do not inherit primary app allow rules for cloned/multi-user apps in forwarding mode.</source>
       </segment>
     </unit>
     <unit id="Data">
@@ -104,6 +134,21 @@
     <unit id="FollowSystem">
       <segment>
         <source>System</source>
+      </segment>
+    </unit>
+    <unit id="ForwardingDirect">
+      <segment>
+        <source>Built-in direct exit</source>
+      </segment>
+    </unit>
+    <unit id="ForwardingMode">
+      <segment>
+        <source>Per-connection forwarding</source>
+      </segment>
+    </unit>
+    <unit id="ForwardingSocks5">
+      <segment>
+        <source>External SOCKS5 proxy</source>
       </segment>
     </unit>
     <unit id="ImportApply">
@@ -161,6 +206,16 @@
         <source>Language</source>
       </segment>
     </unit>
+    <unit id="LocalBackupRestore">
+      <segment>
+        <source>Restore local backup</source>
+      </segment>
+    </unit>
+    <unit id="LocalBackupSave">
+      <segment>
+        <source>Backup to Downloads</source>
+      </segment>
+    </unit>
     <unit id="NetworkKind">
       <segment>
         <source>Network type</source>
@@ -201,6 +256,11 @@
         <source>Comma separated, e.g. Home, Office</source>
       </segment>
     </unit>
+    <unit id="NoRules">
+      <segment>
+        <source>No rules yet</source>
+      </segment>
+    </unit>
     <unit id="Notifications">
       <segment>
         <source>Notifications</source>
@@ -216,9 +276,29 @@
         <source>On</source>
       </segment>
     </unit>
+    <unit id="OfflineMode">
+      <segment>
+        <source>Offline mode (block self network)</source>
+      </segment>
+    </unit>
+    <unit id="OfflineModeBlocked">
+      <segment>
+        <source>Offline mode is on — request blocked.</source>
+      </segment>
+    </unit>
+    <unit id="OfflineModeHint">
+      <segment>
+        <source>Prevents PocketGate itself from making outbound requests (updates and online blocklists).</source>
+      </segment>
+    </unit>
     <unit id="Open">
       <segment>
         <source>Open</source>
+      </segment>
+    </unit>
+    <unit id="PermissionHealth">
+      <segment>
+        <source>Permission &amp; keep-alive health</source>
       </segment>
     </unit>
     <unit id="ProfileActivate">
@@ -326,6 +406,11 @@
         <source>Rules use the netcontrol-rules format and can be moved between Android and desktop. Temporary rules are not exported; desktop app paths and connection conditions do not take effect on Android.</source>
       </segment>
     </unit>
+    <unit id="RulesClearExpired">
+      <segment>
+        <source>Clear expired</source>
+      </segment>
+    </unit>
     <unit id="Seconds">
       <segment>
         <source>{0} s</source>
@@ -341,6 +426,11 @@
         <source>{0} packets, {1} attempts, {2} reported</source>
       </segment>
     </unit>
+    <unit id="TestProxy">
+      <segment>
+        <source>Test proxy (3-stage)</source>
+      </segment>
+    </unit>
     <unit id="Theme">
       <segment>
         <source>Appearance</source>
@@ -354,6 +444,41 @@
     <unit id="ThemeLight">
       <segment>
         <source>Light</source>
+      </segment>
+    </unit>
+    <unit id="ThemeStyle">
+      <segment>
+        <source>Visual style</source>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleAmoled">
+      <segment>
+        <source>AMOLED Black</source>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleAurora">
+      <segment>
+        <source>Aurora Glass</source>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleClassic">
+      <segment>
+        <source>Classic</source>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleDynamic">
+      <segment>
+        <source>Dynamic You</source>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleFrost">
+      <segment>
+        <source>Frost Minimal</source>
+      </segment>
+    </unit>
+    <unit id="ThemeStyleObsidian">
+      <segment>
+        <source>Obsidian Cyber</source>
       </segment>
     </unit>
     <unit id="Traffic">
@@ -376,6 +501,11 @@
         <source>Usage access not granted</source>
       </segment>
     </unit>
+    <unit id="UpToDate">
+      <segment>
+        <source>You are on the latest version</source>
+      </segment>
+    </unit>
     <unit id="UseCurrentWifi">
       <segment>
         <source>Use current Wi-Fi</source>
@@ -384,6 +514,41 @@
     <unit id="Version">
       <segment>
         <source>Version</source>
+      </segment>
+    </unit>
+    <unit id="WebDavPass">
+      <segment>
+        <source>Password</source>
+      </segment>
+    </unit>
+    <unit id="WebDavPassphrase">
+      <segment>
+        <source>Encryption passphrase</source>
+      </segment>
+    </unit>
+    <unit id="WebDavRestore">
+      <segment>
+        <source>Download &amp; restore</source>
+      </segment>
+    </unit>
+    <unit id="WebDavSync">
+      <segment>
+        <source>WebDAV encrypted sync</source>
+      </segment>
+    </unit>
+    <unit id="WebDavUpload">
+      <segment>
+        <source>Encrypt &amp; upload</source>
+      </segment>
+    </unit>
+    <unit id="WebDavUrl">
+      <segment>
+        <source>WebDAV URL</source>
+      </segment>
+    </unit>
+    <unit id="WebDavUser">
+      <segment>
+        <source>Username</source>
       </segment>
     </unit>
   </file>

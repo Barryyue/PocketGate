@@ -10,6 +10,7 @@ using NetworkControl.Android.Localization;
 using NetworkControl.Android.Platform;
 using NetworkControl.Core.Domain;
 using NetworkControl.Core.Profiles;
+using NetworkControl.Engine.Vpn.Update;
 using NetworkControl.Storage.Serialization;
 
 namespace NetworkControl.Android.ViewModels;
@@ -88,6 +89,72 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     public partial bool IsExporting { get; set; }
 
     [ObservableProperty]
+    public partial int ThemeStyleIndex { get; set; }
+
+    [ObservableProperty]
+    public partial bool AutoHideBottomBar { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool OfflineMode { get; set; }
+
+    [ObservableProperty]
+    public partial bool CloneIndependent { get; set; }
+
+    [ObservableProperty]
+    public partial bool ForwardingEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial int ForwardingUpstreamIndex { get; set; }
+
+    [ObservableProperty]
+    public partial string Socks5Host { get; set; } = "127.0.0.1";
+
+    [ObservableProperty]
+    public partial string Socks5PortText { get; set; } = "7890";
+
+    [ObservableProperty]
+    public partial string Socks5Username { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Socks5Password { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string? ProxyDiagStatus { get; set; }
+
+    [ObservableProperty]
+    public partial bool BlocklistsEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial string PermissionHealthSummary { get; set; } = "0 / 6";
+
+    [ObservableProperty]
+    public partial bool ShowWebDavDialog { get; set; }
+
+    [ObservableProperty]
+    public partial string WebDavUrl { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string WebDavUsername { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string WebDavPassword { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string WebDavPassphrase { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string? WebDavStatus { get; set; }
+
+    [ObservableProperty]
+    public partial bool WebDavBusy { get; set; }
+
+    [ObservableProperty]
+    public partial bool UpdateChecking { get; set; }
+
+    [ObservableProperty]
+    public partial string? UpdateStatusText { get; set; }
+
+    [ObservableProperty]
     public partial string? DiagnosticsStatus { get; set; }
 
     [ObservableProperty]
@@ -161,6 +228,23 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
             TimeoutIndex = Array.IndexOf(TimeoutSeconds, seconds) is var i and >= 0 ? i : 1;
             DefaultActionIndex = settings.PromptDefaultAction == VerdictAction.Allow ? 1 : 0;
             NotificationsEnabled = MainActivity.Current?.AreNotificationsEnabled ?? false;
+
+            var prefs = Backend.Preferences;
+            ThemeStyleIndex = (int)prefs.ThemeStyle;
+            AutoHideBottomBar = prefs.AutoHideBottomBar;
+            OfflineMode = prefs.OfflineMode;
+            CloneIndependent = !prefs.CloneAppsInheritPrimary;
+            ForwardingEnabled = prefs.ForwardingEnabled;
+            ForwardingUpstreamIndex = prefs.ForwardingUpstream == "socks5" ? 1 : 0;
+            Socks5Host = prefs.Socks5Host;
+            Socks5PortText = prefs.Socks5Port.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Socks5Username = prefs.Socks5Username;
+            Socks5Password = prefs.Socks5Password;
+            BlocklistsEnabled = prefs.BlocklistsEnabled;
+            WebDavUrl = prefs.WebDavUrl;
+            WebDavUsername = prefs.WebDavUsername;
+            WebDavPassword = prefs.WebDavPassword;
+            WebDavPassphrase = prefs.WebDavPassphrase;
         }
         finally
         {
@@ -168,6 +252,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         }
 
         RefreshProfiles();
+        UpdatePermissionHealth(Backend.CheckPermissionHealth());
         OnPropertyChanged(nameof(NotificationsText));
         OnPropertyChanged(nameof(TrafficAccessText));
         OnPropertyChanged(nameof(StatisticsText));
@@ -600,4 +685,213 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 
     [RelayCommand]
     private void OpenTrafficSettings() => MainActivity.Current?.StartActivity(Backend.CreateTrafficAccessIntent());
+
+    partial void OnThemeStyleIndexChanged(int value)
+    {
+        if (!_syncing && value >= 0 && value <= 5)
+        {
+            _ = Context.Appearance.SetThemeStyleAsync((AppThemeStyle)value);
+        }
+    }
+
+    partial void OnAutoHideBottomBarChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.AutoHideBottomBar = value;
+    }
+
+    partial void OnOfflineModeChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.OfflineMode = value;
+    }
+
+    partial void OnCloneIndependentChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.CloneAppsInheritPrimary = !value;
+    }
+
+    partial void OnForwardingEnabledChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.ForwardingEnabled = value;
+    }
+
+    partial void OnForwardingUpstreamIndexChanged(int value)
+    {
+        if (!_syncing) Backend.Preferences.ForwardingUpstream = value == 1 ? "socks5" : "direct";
+    }
+
+    partial void OnBlocklistsEnabledChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.BlocklistsEnabled = value;
+    }
+
+    public void UpdatePermissionHealth(PermissionHealthSnapshot health)
+    {
+        PermissionHealthSummary = $"{health.ReadyCount} / 6";
+    }
+
+    public void ApplyUpdateState(AppUpdateState state)
+    {
+        UpdateChecking = state.Checking;
+        if (!string.IsNullOrEmpty(state.Error))
+        {
+            UpdateStatusText = state.Error;
+        }
+        else if (state.Info is { HasUpdate: true } info)
+        {
+            UpdateStatusText = Loc.Format(OverviewLangResourceKind.UpdateAvailableTitle, info.LatestVersion ?? "");
+        }
+        else if (state.Info is not null && !state.Checking)
+        {
+            UpdateStatusText = Loc.Get(SettingsLangResourceKind.UpToDate);
+        }
+    }
+
+    [RelayCommand]
+    private async Task TestProxyAsync()
+    {
+        SaveSocks5Fields();
+        ProxyDiagStatus = "…";
+        var res = await Backend.DiagnoseProxyAsync(CancellationToken.None);
+        ProxyDiagStatus = res.InternetReachable
+            ? $"✓ Port · ✓ Auth · ✓ Internet ({res.LatencyMs} ms)"
+            : $"✗ {res.ErrorStage}: {res.ErrorMessage}";
+    }
+
+    [RelayCommand]
+    private void SaveLocalBackup()
+    {
+        try
+        {
+            var path = Backend.SaveLocalBackupToDownloads();
+            RuleTransferStatus = path;
+        }
+        catch (Exception ex)
+        {
+            RuleTransferStatus = Loc.Format(SettingsLangResourceKind.ExportFailed, ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private void RestoreLocalBackup()
+    {
+        try
+        {
+            var json = Backend.ReadLocalBackupFromDownloads();
+            _importJson = json;
+            _importPreview = Backend.PreviewImport(json, RuleImportMode.Merge);
+            ImportSummary = Loc.Format(
+                SettingsLangResourceKind.ImportPreview,
+                _importPreview.Total, _importPreview.Added, _importPreview.Updated, _importPreview.Removed, _importPreview.Unchanged);
+            IsImportDialogOpen = true;
+        }
+        catch (Exception ex)
+        {
+            RuleTransferStatus = Loc.Format(SettingsLangResourceKind.ImportFailed, ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenWebDavDialog()
+    {
+        WebDavStatus = null;
+        ShowWebDavDialog = true;
+    }
+
+    [RelayCommand]
+    private void CloseWebDavDialog()
+    {
+        SaveWebDavFields();
+        ShowWebDavDialog = false;
+    }
+
+    [RelayCommand]
+    private async Task UploadWebDavAsync()
+    {
+        if (OfflineMode)
+        {
+            WebDavStatus = Loc.Get(SettingsLangResourceKind.OfflineModeBlocked);
+            return;
+        }
+
+        SaveWebDavFields();
+        WebDavBusy = true;
+        WebDavStatus = null;
+        try
+        {
+            var url = await Backend.UploadWebDavBackupAsync(CancellationToken.None);
+            WebDavStatus = $"✓ {url}";
+        }
+        catch (Exception ex)
+        {
+            WebDavStatus = Loc.Format(SettingsLangResourceKind.ExportFailed, ex.Message);
+        }
+        finally
+        {
+            WebDavBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task DownloadWebDavAsync()
+    {
+        if (OfflineMode)
+        {
+            WebDavStatus = Loc.Get(SettingsLangResourceKind.OfflineModeBlocked);
+            return;
+        }
+
+        SaveWebDavFields();
+        WebDavBusy = true;
+        WebDavStatus = null;
+        try
+        {
+            var json = await Backend.DownloadWebDavBackupAsync(CancellationToken.None);
+            _importJson = json;
+            _importPreview = Backend.PreviewImport(json, RuleImportMode.Merge);
+            ImportSummary = Loc.Format(
+                SettingsLangResourceKind.ImportPreview,
+                _importPreview.Total, _importPreview.Added, _importPreview.Updated, _importPreview.Removed, _importPreview.Unchanged);
+            ShowWebDavDialog = false;
+            IsImportDialogOpen = true;
+        }
+        catch (Exception ex)
+        {
+            WebDavStatus = Loc.Format(SettingsLangResourceKind.ImportFailed, ex.Message);
+        }
+        finally
+        {
+            WebDavBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CheckUpdatesAsync()
+    {
+        if (OfflineMode)
+        {
+            UpdateStatusText = Loc.Get(SettingsLangResourceKind.OfflineModeBlocked);
+            return;
+        }
+
+        await Backend.UpdateManager.CheckManuallyAsync(CancellationToken.None);
+    }
+
+    private void SaveSocks5Fields()
+    {
+        Backend.Preferences.Socks5Host = Socks5Host.Trim();
+        if (int.TryParse(Socks5PortText.Trim(), out var port) && port is > 0 and <= 65535)
+        {
+            Backend.Preferences.Socks5Port = port;
+        }
+        Backend.Preferences.Socks5Username = Socks5Username;
+        Backend.Preferences.Socks5Password = Socks5Password;
+    }
+
+    private void SaveWebDavFields()
+    {
+        Backend.Preferences.WebDavUrl = WebDavUrl;
+        Backend.Preferences.WebDavUsername = WebDavUsername;
+        Backend.Preferences.WebDavPassword = WebDavPassword;
+        Backend.Preferences.WebDavPassphrase = WebDavPassphrase;
+    }
 }

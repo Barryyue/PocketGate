@@ -3,7 +3,7 @@
   <file id="NetworkControl.Android.Localization.ShellLangResourceKind">
     <unit id="AppTitle">
       <segment>
-        <source>NetworkControl</source>
+        <source>PocketGate (AtomUI)</source>
       </segment>
     </unit>
     <unit id="NavApps">
@@ -19,6 +19,11 @@
     <unit id="NavOverview">
       <segment>
         <source>Overview</source>
+      </segment>
+    </unit>
+    <unit id="NavRules">
+      <segment>
+        <source>Rules</source>
       </segment>
     </unit>
     <unit id="NavSettings">
