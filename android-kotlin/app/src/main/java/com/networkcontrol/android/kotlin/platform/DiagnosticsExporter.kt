@@ -19,12 +19,12 @@ class DiagnosticsExporter(
     fun export(): File {
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
         val directory = File(context.filesDir, "diagnostics").apply { mkdirs() }
-        val target = File(directory, "NetworkControlKT-diagnostics-$stamp.zip")
+        val target = File(directory, "PocketGate-diagnostics-$stamp.zip")
         ZipOutputStream(target.outputStream().buffered()).use { zip ->
             zip.putText(
                 "summary.txt",
                 buildString {
-                    appendLine("NetworkControl KT")
+                    appendLine("PocketGate")
                     appendLine("version=${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
                     appendLine("device=${Build.MANUFACTURER} ${Build.MODEL}")
                     appendLine("android=${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")

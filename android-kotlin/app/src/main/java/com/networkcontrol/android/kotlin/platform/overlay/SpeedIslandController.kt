@@ -222,7 +222,7 @@ class SpeedIslandController(
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                     x = overlayX()
                     y = overlayY(statusBarMode)
-                    title = "NetworkControl speed"
+                    title = "PocketGate speed"
                     packageName = context.packageName
                     if (Build.VERSION.SDK_INT >= 28) {
                         layoutInDisplayCutoutMode = if (statusBarMode) {

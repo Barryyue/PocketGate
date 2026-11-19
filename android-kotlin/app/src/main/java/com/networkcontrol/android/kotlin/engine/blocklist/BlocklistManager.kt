@@ -476,7 +476,7 @@ class BlocklistManager(
     }
 
     companion object {
-        private const val USER_AGENT = "NetworkControl-Android"
+        private const val USER_AGENT = "PocketGate-Android"
         private const val TRACKER_FILE = "disconnect.json"
         private const val MAX_DOWNLOAD_BYTES = 64L * 1024 * 1024
         private const val DAY_MS = 24L * 60 * 60 * 1000

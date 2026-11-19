@@ -519,6 +519,6 @@ class NcVpnService : VpnService() {
 
     companion object {
         const val ACTION_START = "com.networkcontrol.android.kotlin.action.START_VPN"
-        const val SESSION_NAME = "NetworkControl KT"
+        const val SESSION_NAME = "PocketGate"
     }
 }

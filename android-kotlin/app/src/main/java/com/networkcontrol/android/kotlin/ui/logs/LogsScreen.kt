@@ -246,7 +246,7 @@ private val exportNameTime = DateTimeFormatter.ofPattern("HHmm")
 private fun exportFileName(): String {
     val date = LocalDate.now()
     val time = LocalTime.now().format(exportNameTime)
-    return "networkcontrol-logs-$date-$time.csv"
+    return "pocketgate-logs-$date-$time.csv"
 }
 
 @Composable
