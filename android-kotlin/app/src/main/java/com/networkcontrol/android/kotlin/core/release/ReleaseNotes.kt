@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.4",
+            date = "2026-11-20",
+            improvements = listOf(
+                t(
+                    "Status bar speed icon: refined typography, vertical centering, and single-decimal precision below 100 KB/s or MB/s for a crisper native look",
+                    "原生状态栏网速图标：优化数字字体与垂直居中排版，100 KB/s 与 100 MB/s 以下保留一位小数显示，视觉更接近系统原生风格",
+                    "原生狀態列網速圖示：最佳化數字字體與垂直置中排版，100 KB/s 與 100 MB/s 以下保留一位小數顯示，視覺更貼近系統原生風格",
+                ),
+            ),
+            features = emptyList(),
+        ),
+        ReleaseNote(
             version = "0.16.3",
             date = "2026-11-20",
             features = listOf(

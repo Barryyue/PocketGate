@@ -506,7 +506,7 @@
 |---|---|---|---|---|
 | K-171 | 總覽 Bento 快捷入口（逐連線轉發／直連／SOCKS5 切換與廣告屏蔽直達，2026-11-20）：在 `OverviewScreen` 新增第 4 行雙列 Bento 磁貼，支援一鍵彈窗切換黑洞模式、逐連線內建直連、逐連線外部 SOCKS5 並直達「逐連線轉發」設定頁；右側「廣告屏蔽」磁貼即時顯示攔截規則數與啟用狀態，支援快速開關及直達「攔截清單」管理頁 | `OverviewScreen.kt`、`AppRoot.kt`、`UiStrings.kt` | `.\scripts\android-kotlin.ps1 test`（`:app:testDebugUnitTest` `BUILD SUCCESSFUL`） | 真機點擊交互與版面呈現待用戶確認 |
 
-### 未發版（2026-11-20）
+### v0.16.4（2026-11-20）
 
 | ID | 功能 | 實作位置 | 驗證 | 備註 |
 |---|---|---|---|---|
