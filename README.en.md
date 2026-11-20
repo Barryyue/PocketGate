@@ -64,7 +64,7 @@ System firewalls only block **inbound** connections and never ask where apps are
 |---|---|---|
 | How it works | Denied apps are routed into the VPN and dropped | All traffic is forwarded on the device through `hev-socks5-tunnel`, and each connection gets its own verdict |
 | Granularity | Per app | App + domain + address + port + protocol |
-| Exit | — | Built-in direct exit, or your own SOCKS5 proxy (FlClash, Clash Meta, v2rayNG and others) |
+| Exit | — | Built-in direct exit, or a standard local SOCKS5 port (for debugging or upstream chaining) |
 | Highlights | Lightest on battery; allowed apps never pass through PocketGate | Live connection view, one-tap two-way RST disconnect, DNS bypass protection, QUIC judged by domain too |
 
 ### Features at a glance
@@ -93,7 +93,7 @@ Obsidian Cyber · Classic · Frost Minimal · Aurora Glass · AMOLED Black · Dy
    - Tags `v*` are the Kotlin app described here; `atomui-v*` is a separate .NET + Avalonia implementation (see below).
 2. Allow your browser or file manager to "install unknown apps", then follow the first-run guide to grant VPN and notification access.
 3. **Upgrading from 0.14 or earlier**: 0.15.0 switched to the official signing key, so it can't install over older builds. Export your rules in Settings, uninstall the old version, install the new one and import them again.
-4. Android allows only one VPN at a time. To use a proxy app alongside PocketGate, turn off the proxy app's VPN mode and set its SOCKS5 endpoint as the exit in PocketGate's per-connection mode.
+4. Android allows only one local VPN interface at a time. To chain a local debugging or network tool alongside PocketGate, disable its VPN mode and point PocketGate's per-connection exit to its local SOCKS5 port.
 
 After that, the app tells you when updates are available. Build instructions are in [android-kotlin/README.md](android-kotlin/README.md).
 
