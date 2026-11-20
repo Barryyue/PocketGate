@@ -172,6 +172,8 @@ public interface IBackend
 
     UiPreferences Preferences { get; }
 
+    NetworkControl.Engine.Vpn.Blocklists.BlocklistManager Blocklists { get; }
+
     AppUpdateManager UpdateManager { get; }
 
     PermissionHealthSnapshot CheckPermissionHealth();
@@ -251,6 +253,7 @@ internal sealed class Backend : IBackend
     private readonly ITrafficRepository _traffic;
     private readonly IAppRepository _apps;
     private readonly UiPreferences _preferences;
+    private readonly NetworkControl.Engine.Vpn.Blocklists.BlocklistManager _blocklists;
     private readonly AppUpdateManager _updateManager;
     private readonly SpeedIslandService _speedIsland;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<long, string?> _packagesByAppId = new();
@@ -284,6 +287,7 @@ internal sealed class Backend : IBackend
         ITrafficRepository traffic,
         IAppRepository apps,
         UiPreferences preferences,
+        NetworkControl.Engine.Vpn.Blocklists.BlocklistManager blocklists,
         AppUpdateManager updateManager,
         SpeedIslandService speedIsland)
     {
@@ -294,6 +298,7 @@ internal sealed class Backend : IBackend
         _traffic = traffic;
         _apps = apps;
         _preferences = preferences;
+        _blocklists = blocklists;
         _updateManager = updateManager;
         _speedIsland = speedIsland;
         _engine = engine;
@@ -305,7 +310,11 @@ internal sealed class Backend : IBackend
             _preferences.Socks5Port,
             string.IsNullOrWhiteSpace(_preferences.Socks5Username) ? null : _preferences.Socks5Username,
             string.IsNullOrEmpty(_preferences.Socks5Password) ? null : _preferences.Socks5Password,
-            Path.Combine(_context.FilesDir!.AbsolutePath, "hev"));
+            Path.Combine(_context.FilesDir!.AbsolutePath, "hev"),
+            () => _blocklists.ActiveList,
+            _preferences.BlocklistsEnabled,
+            _preferences.DnsBypassProtection,
+            _preferences.Socks5Udp);
         _protection = protection;
         _network = network;
         _catalog = catalog;
@@ -617,6 +626,8 @@ internal sealed class Backend : IBackend
         _settings.UpdateAsync(update, cancellationToken);
 
     public UiPreferences Preferences => _preferences;
+
+    public NetworkControl.Engine.Vpn.Blocklists.BlocklistManager Blocklists => _blocklists;
 
     public AppUpdateManager UpdateManager => _updateManager;
 

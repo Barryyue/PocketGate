@@ -131,6 +131,25 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     [ObservableProperty]
     public partial bool ShowReleaseNotesDialog { get; set; }
 
+    [ObservableProperty]
+    public partial bool ShowBlocklistsDialog { get; set; }
+
+    [ObservableProperty]
+    public partial bool BlocklistsUpdating { get; set; }
+
+    [ObservableProperty]
+    public partial string? BlocklistsStatus { get; set; }
+
+    [ObservableProperty]
+    public partial string CustomBlocklistName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string CustomBlocklistUrl { get; set; } = string.Empty;
+
+    public ObservableCollection<BlocklistSourceRow> BlocklistSources { get; } = [];
+
+    public string BlocklistsSummary => $"{Backend.Blocklists.TotalEntries:N0} · {Backend.Blocklists.EnabledCount}";
+
     public int TrustedPublishersCount => Backend.Preferences.TrustedPublishers.Count;
 
     public string ReleaseNotesText =>
@@ -787,6 +806,75 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     [RelayCommand]
     private void CloseReleaseNotes() => ShowReleaseNotesDialog = false;
 
+    [RelayCommand]
+    private void OpenBlocklistsDialog()
+    {
+        RefreshBlocklistSources();
+        ShowBlocklistsDialog = true;
+    }
+
+    [RelayCommand]
+    private void CloseBlocklistsDialog() => ShowBlocklistsDialog = false;
+
+    [RelayCommand]
+    private async Task UpdateBlocklistsAsync()
+    {
+        if (Backend.Preferences.OfflineMode)
+        {
+            BlocklistsStatus = Loc.Get(SettingsLangResourceKind.OfflineModeBlocked);
+            return;
+        }
+
+        BlocklistsUpdating = true;
+        BlocklistsStatus = null;
+        try
+        {
+            var (updated, failed) = await Backend.Blocklists.UpdateAllAsync(false, CancellationToken.None);
+            RefreshBlocklistSources();
+            BlocklistsStatus = $"✓ {updated} / ✗ {failed} · {Backend.Blocklists.TotalEntries:N0}";
+        }
+        catch (Exception ex)
+        {
+            BlocklistsStatus = ex.Message;
+        }
+        finally
+        {
+            BlocklistsUpdating = false;
+            OnPropertyChanged(nameof(BlocklistsSummary));
+        }
+    }
+
+    [RelayCommand]
+    private void AddCustomBlocklist()
+    {
+        try
+        {
+            Backend.Blocklists.AddCustomSource(CustomBlocklistName, CustomBlocklistUrl);
+            CustomBlocklistName = string.Empty;
+            CustomBlocklistUrl = string.Empty;
+            RefreshBlocklistSources();
+        }
+        catch (Exception ex)
+        {
+            BlocklistsStatus = ex.Message;
+        }
+    }
+
+    private void RefreshBlocklistSources()
+    {
+        BlocklistSources.Clear();
+        foreach (var src in Backend.Blocklists.GetSources())
+        {
+            BlocklistSources.Add(new BlocklistSourceRow(src, Backend.Blocklists, () =>
+            {
+                OnPropertyChanged(nameof(BlocklistsSummary));
+                RefreshBlocklistSources();
+            }));
+        }
+
+        OnPropertyChanged(nameof(BlocklistsSummary));
+    }
+
     partial void OnAppLockEnabledChanged(bool value)
     {
         if (!_syncing) Backend.Preferences.AppLockEnabled = value;
@@ -1072,5 +1160,56 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         Backend.Preferences.WebDavUsername = WebDavUsername;
         Backend.Preferences.WebDavPassword = WebDavPassword;
         Backend.Preferences.WebDavPassphrase = WebDavPassphrase;
+    }
+}
+
+public sealed partial class BlocklistSourceRow : ObservableObject
+{
+    private readonly NetworkControl.Engine.Vpn.Blocklists.BlocklistManager _manager;
+    private readonly Action _refresh;
+    private bool _syncing;
+
+    public BlocklistSourceRow(
+        NetworkControl.Engine.Vpn.Blocklists.BlocklistSourceState state,
+        NetworkControl.Engine.Vpn.Blocklists.BlocklistManager manager,
+        Action refresh)
+    {
+        _manager = manager;
+        _refresh = refresh;
+        Id = state.Id;
+        Name = state.Name;
+        IsCustom = !state.IsBuiltin;
+        Subtitle = state.LastError is { Length: > 0 } err
+            ? err
+            : state.EntryCount > 0
+                ? $"{state.EntryCount:N0}"
+                : "—";
+        _syncing = true;
+        Enabled = state.Enabled;
+        _syncing = false;
+    }
+
+    public string Id { get; }
+    public string Name { get; }
+    public bool IsCustom { get; }
+    public string Subtitle { get; }
+
+    [ObservableProperty]
+    public partial bool Enabled { get; set; }
+
+    partial void OnEnabledChanged(bool value)
+    {
+        if (!_syncing)
+        {
+            _manager.SetSourceEnabled(Id, value);
+            _refresh();
+        }
+    }
+
+    [RelayCommand]
+    private void Remove()
+    {
+        _manager.RemoveCustomSource(Id);
+        _refresh();
     }
 }

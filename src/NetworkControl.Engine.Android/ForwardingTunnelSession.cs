@@ -3,6 +3,8 @@ using global::Android.OS;
 using global::Android.Systems;
 using Java.IO;
 using Microsoft.Extensions.Logging;
+using NetworkControl.Engine.Vpn.Blocklists;
+using NetworkControl.Engine.Vpn.Dns;
 using NetworkControl.Engine.Vpn.Forwarding;
 
 namespace NetworkControl.Engine.Android;
@@ -14,7 +16,11 @@ public sealed record ForwardingTunnelOptions(
     int Socks5Port,
     string? Socks5Username,
     string? Socks5Password,
-    string ConfigDir);
+    string ConfigDir,
+    Func<DomainBlocklist?>? BlocklistProvider = null,
+    bool BlocklistsEnabled = false,
+    bool DnsBypassProtection = true,
+    bool Socks5Udp = true);
 
 /// <summary>
 /// 逐連線轉發隧道會話（對齊 Kotlin 版 hev-socks5-tunnel + AF_UNIX SOCK_SEQPACKET 雙向封包轉送）：
@@ -26,6 +32,7 @@ public sealed partial class ForwardingTunnelSession : IDisposable
     private readonly ParcelFileDescriptor _relayFd;
     private readonly ParcelFileDescriptor _hevFd;
     private readonly DirectSocksServer? _directServer;
+    private readonly ForwardingTunnelOptions _options;
     private readonly ForwardingConnectionTracker _tracker;
     private readonly ILogger _logger;
     private readonly CancellationTokenSource _cts = new();
@@ -40,6 +47,7 @@ public sealed partial class ForwardingTunnelSession : IDisposable
         ILogger logger)
     {
         _tunFd = tunFd;
+        _options = options;
         _tracker = tracker;
         _logger = logger;
 
@@ -111,14 +119,9 @@ public sealed partial class ForwardingTunnelSession : IDisposable
                 var len = srcStream.Read(buf);
                 if (len <= 0) break;
 
-                if (clientToHev && TryExtractTcpKey(buf, len, out var key, out var dstIp, out var dstPort))
+                if (clientToHev && ShouldFilterOrTrack(buf.AsSpan(0, len)))
                 {
-                    if (_tracker.ConsumeCutIfRequested(key))
-                    {
-                        continue;
-                    }
-
-                    _tracker.Record(key, null, string.Empty, dstIp, dstPort, "TCP", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                    continue;
                 }
 
                 dstStream.Write(buf, 0, len);
@@ -139,19 +142,78 @@ public sealed partial class ForwardingTunnelSession : IDisposable
     [LoggerMessage(Level = LogLevel.Debug, Message = "Relay loop ended ({Direction})")]
     private static partial void LogRelayEnded(ILogger logger, Exception exception, string direction);
 
-    private static bool TryExtractTcpKey(byte[] buf, int len, out string key, out string dstIp, out int dstPort)
+    private bool ShouldFilterOrTrack(ReadOnlySpan<byte> packet)
     {
-        key = string.Empty;
-        dstIp = string.Empty;
-        dstPort = 0;
-        if (len < 40 || (buf[0] >> 4) != 4) return false;
-        var ihl = (buf[0] & 0x0F) * 4;
-        if (buf[9] != 6 || len < ihl + 20) return false;
-        var srcPort = (buf[ihl] << 8) | buf[ihl + 1];
-        dstPort = (buf[ihl + 2] << 8) | buf[ihl + 3];
-        dstIp = new IPAddress(buf.AsSpan(16, 4)).ToString();
-        key = $"{srcPort}->{dstIp}:{dstPort}";
-        return true;
+        if (packet.Length < 20 || (packet[0] >> 4) != 4) return false;
+        var ihl = (packet[0] & 0x0F) * 4;
+        if (ihl < 20 || packet.Length < ihl) return false;
+        var proto = packet[9];
+        var activeList = _options.BlocklistsEnabled ? _options.BlocklistProvider?.Invoke() : null;
+
+        if (proto == 17 && packet.Length >= ihl + 8)
+        {
+            var dstPort = (packet[ihl + 2] << 8) | packet[ihl + 3];
+            if (!_options.Socks5Udp && dstPort != 53)
+            {
+                return true;
+            }
+
+            if (dstPort == 53 && DnsWire.TryParseQuery(packet[(ihl + 8)..], out var query))
+            {
+                if (_options.DnsBypassProtection && BlocklistCatalog.IsEncryptedDnsDomain(query.Name))
+                {
+                    return true;
+                }
+
+                if (activeList?.Matches(query.Name) == true)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (proto == 6 && packet.Length >= ihl + 20)
+        {
+            var srcPort = (packet[ihl] << 8) | packet[ihl + 1];
+            var dstPort = (packet[ihl + 2] << 8) | packet[ihl + 3];
+            var dataOffset = ((packet[ihl + 12] >> 4) & 0x0F) * 4;
+            var dstIp = new IPAddress(packet.Slice(16, 4)).ToString();
+            var key = $"{srcPort}->{dstIp}:{dstPort}";
+            if (_tracker.ConsumeCutIfRequested(key))
+            {
+                return true;
+            }
+
+            if (_options.DnsBypassProtection && dstPort == 853)
+            {
+                return true;
+            }
+
+            var displayDst = dstIp;
+            if (dataOffset >= 20 && packet.Length > ihl + dataOffset)
+            {
+                var payload = packet[(ihl + dataOffset)..];
+                if (DomainSniffer.TryExtractDomain(payload, out var host))
+                {
+                    displayDst = host;
+                    if (_options.DnsBypassProtection && BlocklistCatalog.IsEncryptedDnsDomain(host))
+                    {
+                        return true;
+                    }
+
+                    if (activeList?.Matches(host) == true)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            _tracker.Record(key, null, string.Empty, displayDst, dstPort, "TCP", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        }
+
+        return false;
     }
 
     public void Dispose()
