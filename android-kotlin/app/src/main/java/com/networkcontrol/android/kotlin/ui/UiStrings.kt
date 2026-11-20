@@ -591,6 +591,9 @@ enum class S {
     RoutingSelf,
     RoutingSystemUid,
     LocalEndpoint,
+    SystemCoreUidHint,
+    DenyDomain,
+    DenyDomainDone,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1204,6 +1207,9 @@ private val EN = mapOf(
     S.RoutingSelf to "Self",
     S.RoutingSystemUid to "System UID",
     S.LocalEndpoint to "Local",
+    S.SystemCoreUidHint to "Shares system core UID %1\$d with system services and cannot be blocked per app. Use per-connection mode to block specific domains from Logs.",
+    S.DenyDomain to "Block domain",
+    S.DenyDomainDone to "Blocked %1\$s",
 )
 
 private val CN = mapOf(
@@ -1793,6 +1799,9 @@ private val CN = mapOf(
     S.RoutingSelf to "本应用",
     S.RoutingSystemUid to "系统核心",
     S.LocalEndpoint to "本机端点",
+    S.SystemCoreUidHint to "与系统核心共用 UID %1\$d，无法按应用单独阻断。可在逐连接模式下从记录中按域名精准拦截。",
+    S.DenyDomain to "拦截此域名",
+    S.DenyDomainDone to "已添加域名拦截规则：%1\$s",
 )
 
 private val TW = mapOf(
@@ -2382,4 +2391,7 @@ private val TW = mapOf(
     S.RoutingSelf to "本應用程式",
     S.RoutingSystemUid to "系統核心",
     S.LocalEndpoint to "本機端點",
+    S.SystemCoreUidHint to "與系統核心共用 UID %1\$d，無法依應用程式單獨阻斷。可在逐連線模式下從記錄中依網域精準攔截。",
+    S.DenyDomain to "攔截此網域",
+    S.DenyDomainDone to "已新增網域攔截規則：%1\$s",
 )

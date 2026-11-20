@@ -763,6 +763,28 @@ class AppBackend(val container: AppContainer) {
         )
     }
 
+    /** 從記錄一鍵攔截指定域名：建立「所有應用、拒絕、該域名」的規則（含系統核心 UID 的逐連線精準攔截）。 */
+    suspend fun denyDomain(hostname: String) {
+        val now = com.networkcontrol.android.kotlin.core.Time.now()
+        container.rules.add(
+            com.networkcontrol.android.kotlin.core.model.Rule(
+                id = java.util.UUID.randomUUID().toString(),
+                profileId = container.profiles.active.id,
+                app = null,
+                conditions = com.networkcontrol.android.kotlin.core.model.RuleConditions(
+                    direction = com.networkcontrol.android.kotlin.core.model.Direction.Outbound,
+                    remote = com.networkcontrol.android.kotlin.core.model.RemoteTarget.Domain(hostname.lowercase()),
+                ),
+                action = com.networkcontrol.android.kotlin.core.model.VerdictAction.Deny,
+                lifetime = com.networkcontrol.android.kotlin.core.model.RuleLifetime.Permanent,
+                source = com.networkcontrol.android.kotlin.core.model.RuleSource.User,
+                note = "domain deny from logs",
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
+    }
+
     fun setTrackerDatabaseEnabled(enabled: Boolean) {
         container.scope.launch {
             container.blocklists.setSourceEnabled(com.networkcontrol.android.kotlin.engine.blocklist.BlocklistCatalog.TRACKER_SOURCE_ID, enabled)

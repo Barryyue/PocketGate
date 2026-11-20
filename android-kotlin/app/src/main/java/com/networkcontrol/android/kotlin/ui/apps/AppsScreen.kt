@@ -308,54 +308,65 @@ private fun AppRow(
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DecisionChip(
-                    label = s[S.Allow],
-                    selected = entry.decision == AppDecision.Allow,
-                    onClick = {
-                        guard.run { scope.launch {
-                            backend.setAppDecision(
-                                entry.app.packageName,
-                                AppDecision.Allow,
-                                replaceAllScopes = false,
-                            )
-                            onChanged()
-                        } }
-                    },
+            val isSystemCoreUid = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.isSystemUid(entry.app.uid)
+            if (isSystemCoreUid) {
+                Text(
+                    s.format(S.SystemCoreUidHint, entry.app.uid),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
                 )
-                DecisionChip(
-                    label = s[S.Deny],
-                    selected = entry.decision == AppDecision.Deny,
-                    onClick = {
-                        guard.run { scope.launch {
-                            backend.setAppDecision(
-                                entry.app.packageName,
-                                AppDecision.Deny,
-                                replaceAllScopes = false,
-                            )
-                            onChanged()
-                        } }
-                    },
-                )
-                DecisionChip(
-                    label = s[S.Unset],
-                    selected = entry.decision == AppDecision.Unset,
-                    onClick = {
-                        guard.run { scope.launch {
-                            backend.setAppDecision(
-                                entry.app.packageName,
-                                AppDecision.Unset,
-                                replaceAllScopes = false,
-                            )
-                            onChanged()
-                        } }
-                    },
-                )
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DecisionChip(
+                        label = s[S.Allow],
+                        selected = entry.decision == AppDecision.Allow,
+                        onClick = {
+                            guard.run { scope.launch {
+                                backend.setAppDecision(
+                                    entry.app.packageName,
+                                    AppDecision.Allow,
+                                    replaceAllScopes = false,
+                                )
+                                onChanged()
+                            } }
+                        },
+                    )
+                    DecisionChip(
+                        label = s[S.Deny],
+                        selected = entry.decision == AppDecision.Deny,
+                        onClick = {
+                            guard.run { scope.launch {
+                                backend.setAppDecision(
+                                    entry.app.packageName,
+                                    AppDecision.Deny,
+                                    replaceAllScopes = false,
+                                )
+                                onChanged()
+                            } }
+                        },
+                    )
+                    DecisionChip(
+                        label = s[S.Unset],
+                        selected = entry.decision == AppDecision.Unset,
+                        onClick = {
+                            guard.run { scope.launch {
+                                backend.setAppDecision(
+                                    entry.app.packageName,
+                                    AppDecision.Unset,
+                                    replaceAllScopes = false,
+                                )
+                                onChanged()
+                            } }
+                        },
+                    )
+                }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { showNetworkDialog = true }) {
-                    Text(s[S.NetworkConditions])
+                if (!isSystemCoreUid) {
+                    TextButton(onClick = { showNetworkDialog = true }) {
+                        Text(s[S.NetworkConditions])
+                    }
                 }
                 TextButton(onClick = { showDetail = true }) {
                     Text(s[S.Details])

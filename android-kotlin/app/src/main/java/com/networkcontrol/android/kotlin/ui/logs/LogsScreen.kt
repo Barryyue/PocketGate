@@ -330,6 +330,16 @@ fun LogsScreen(backend: AppBackend) {
                 }
                 selected = null
             },
+            onDenyDomain = { host ->
+                guard.run {
+                    scope.launch {
+                        runCatching { backend.denyDomain(host) }
+                            .onSuccess { Toast.makeText(context, s.format(S.DenyDomainDone, host), Toast.LENGTH_SHORT).show() }
+                            .onFailure { Toast.makeText(context, it.message.orEmpty(), Toast.LENGTH_SHORT).show() }
+                    }
+                }
+                selected = null
+            },
             onDismiss = { selected = null },
         )
     }
@@ -560,6 +570,7 @@ private fun LogDetailDialog(
     tracker: com.networkcontrol.android.kotlin.engine.blocklist.TrackerInfo?,
     listName: (String) -> String?,
     onAllowDomain: (String) -> Unit,
+    onDenyDomain: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val s = rememberUiStrings()
@@ -607,8 +618,14 @@ private fun LogDetailDialog(
         },
         dismissButton = {
             val host = entry.hostname
-            if (entry.verdict.reason == VerdictReason.Blocklist && host != null) {
-                TextButton(onClick = { onAllowDomain(host) }) { Text(s[S.AllowDomain]) }
+            if (host != null) {
+                if (entry.verdict.reason == VerdictReason.Blocklist) {
+                    TextButton(onClick = { onAllowDomain(host) }) { Text(s[S.AllowDomain]) }
+                } else if (entry.verdict.action == com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow) {
+                    TextButton(onClick = { onDenyDomain(host) }) {
+                        Text(s[S.DenyDomain], color = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
         },
     )

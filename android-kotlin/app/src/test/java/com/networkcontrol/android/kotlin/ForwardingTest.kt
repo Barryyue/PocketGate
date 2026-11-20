@@ -342,6 +342,26 @@ class ForwardingTest {
         assertEquals("2.5" to "MB/s", com.networkcontrol.android.kotlin.platform.StatusBarSpeedIcon.splitSpeed((2.5 * 1024 * 1024).toLong()))
     }
 
+    @Test
+    fun systemUidHonorsManualDomainDenyRuleButSkipsAutoBlocklist() {
+        val plan = VpnRoutingPlan(
+            mode = FilterMode.Ask,
+            bypassPackages = emptySet(),
+            byUid = emptyMap(),
+            skippedRules = emptyList(),
+        )
+        // 自動廣告名單不得攔截系統核心 UID 1000
+        assertEquals(
+            ForwardingDecision.Forward,
+            ForwardingPolicy.decide(plan, uid = 1000, blocklisted = { true }) { null },
+        )
+        // 但使用者手動建立的域名拒絕規則可精準攔截系統核心 UID 1000（如日誌上報域名）
+        assertEquals(
+            ForwardingDecision.Block,
+            ForwardingPolicy.decide(plan, uid = 1000, blocklisted = { false }) { com.networkcontrol.android.kotlin.core.model.VerdictAction.Deny },
+        )
+    }
+
     private fun routing(uid: Int, decision: AppRoutingDecision) =
         AppRouting(uid, "pkg.$uid", listOf("pkg.$uid"), decision, AppRoutingReason.Rule)
 

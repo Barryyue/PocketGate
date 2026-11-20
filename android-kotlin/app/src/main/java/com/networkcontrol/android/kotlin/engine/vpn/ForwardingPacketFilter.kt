@@ -743,8 +743,9 @@ object ForwardingPolicy {
         flowRule: () -> com.networkcontrol.android.kotlin.core.model.VerdictAction?,
     ): ForwardingDecision {
         val base = decide(plan, uid)
-        // 系統核心 UID 不套用名單：誤攔會影響整機（例如 DNS、時間同步）。
-        if (uid != null && VpnRoutingPlanner.isSystemUid(uid)) return base
+        // DNS 解析核心服務（AID_DNS = 1051）一律放行，避免規則誤攔影響整機解析。
+        if (uid != null && uid % 100_000 == 1051) return base
+        val isSystemCore = uid != null && VpnRoutingPlanner.isSystemUid(uid)
         when (plan.mode) {
             com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll,
             com.networkcontrol.android.kotlin.core.model.FilterMode.Disabled,
@@ -753,7 +754,7 @@ object ForwardingPolicy {
         }
         val reason = uid?.let { plan.find(it)?.reason }
         if (reason == com.networkcontrol.android.kotlin.core.model.AppRoutingReason.Self) return base
-        // 1. 使用者的條件規則（域名 / 端口…）優先；專注模式的放行應用不受規則影響。
+        // 1. 使用者的條件規則（域名 / 端口…）優先（含系統核心 UID 的手動域名攔截）；專注模式的放行應用不受規則影響。
         if (uid != null && reason != com.networkcontrol.android.kotlin.core.model.AppRoutingReason.Focus) {
             when (flowRule()) {
                 com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow -> return ForwardingDecision.Forward
@@ -761,6 +762,8 @@ object ForwardingPolicy {
                 null -> Unit
             }
         }
+        // 系統核心 UID 不套用自動攔截名單，避免誤攔影響整機（例如 DNS、時間同步）。
+        if (isSystemCore) return base
         // 2. 攔截列表：對本來會放行或詢問的連線生效（廣告域名不必詢問）。
         if (base != ForwardingDecision.Block && blocklisted()) return ForwardingDecision.Blocklisted
         // 3. 路由計畫。

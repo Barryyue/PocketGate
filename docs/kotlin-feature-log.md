@@ -518,6 +518,12 @@
 |---|---|---|---|---|
 | K-173 | 全頁面 UI/UX 細節批量修復（2026-11-21）：修復 `AppLockGate` 鎖屏底色、轉屏重鎖與無憑證鎖死並補齊各頁 `guard.run` 敏感操作校驗；`RulesScreen` 顯示域名／遠端目標與搜尋及刪除確認；修復總覽轉發磁貼、切換設定檔、主題語言下拉、退出偵測等狀態同步；修正 `PromptOverlay` 懸浮底欄重疊與按鈕區分；強化 SOCKS5／DoH／WebDAV／彈窗捲動與輸入校驗；釋放狀態列網速圖示入口、清除重複卡片並對內建引導文案脫敏；最佳化 `SpeedChartCard` 重繪分配與亮色主題對比度 | `AppLockGate.kt`、`AppRoot.kt`、`Theme.kt`、`ThemeColorDialog.kt`、`UiStrings.kt`、`OverviewScreen.kt`、`SpeedChartCard.kt`、`AppsScreen.kt`、`RulesScreen.kt`、`LogsScreen.kt`、`PromptOverlay.kt`、`SettingsScreen.kt`、`ForwardingSettingsScreen.kt`、`BlocklistSettingsScreen.kt`、`PromptSettingsScreen.kt`、`SpeedIslandSettingsScreen.kt`、`ProfileScheduleSettingsScreen.kt` | `.\scripts\android-kotlin.ps1 test`（`:app:testDebugUnitTest` `BUILD SUCCESSFUL`） | 真機各頁互動、鎖屏與小螢幕捲動待用戶確認 |
 
+### 未發版（2026-11-21）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-174 | 系統核心 UID 卡片提示與逐連線手動網域攔截（2026-11-21）：`AppsScreen` 對 `UID < 10000`（如 `com.android.bbklog` 共用 UID 1000）顯示無法依應用單獨阻斷的說明並隱藏無效按鈕；`ForwardingPolicy.decide` 放行使用者手動條件規則（如網域拒絕規則）套用於系統核心 UID（仍跳過自動廣告名單防誤殺）；`LogsScreen` 已放行記錄詳情新增一鍵「攔截此網域」（`AppBackend.denyDomain`） | `ForwardingPacketFilter.kt`、`AppBackend.kt`、`AppsScreen.kt`、`LogsScreen.kt`、`UiStrings.kt`、`ForwardingTest.kt` | `.\scripts\android-kotlin.ps1 test`（含 `systemUidHonorsManualDomainDenyRuleButSkipsAutoBlocklist`） | 真機針對系統日誌採集網域一鍵攔截待用戶確認 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
