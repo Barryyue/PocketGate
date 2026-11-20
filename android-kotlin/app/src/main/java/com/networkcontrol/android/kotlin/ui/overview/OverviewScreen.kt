@@ -112,7 +112,11 @@ private const val SPEED_HISTORY_POINTS = 36
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OverviewScreen(backend: AppBackend) {
+fun OverviewScreen(
+    backend: AppBackend,
+    onOpenForwardingSettings: () -> Unit = {},
+    onOpenBlocklists: () -> Unit = {},
+) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     val context = LocalContext.current
@@ -129,7 +133,13 @@ fun OverviewScreen(backend: AppBackend) {
     val focus by backend.focus.collectAsStateWithLifecycle()
     val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
     val updateState by backend.updateState.collectAsStateWithLifecycle()
+    val blocklistState by backend.blocklistState.collectAsStateWithLifecycle()
+    val blocklistMatcher by backend.blocklistMatcher.collectAsStateWithLifecycle()
     var pendingInstallApk by remember { mutableStateOf<java.io.File?>(null) }
+    var forwardingEnabled by remember { mutableStateOf(backend.forwardingEnabled()) }
+    var forwardingUpstream by remember { mutableStateOf(backend.forwardingUpstream()) }
+    var showForwardingQuick by remember { mutableStateOf(false) }
+    var showBlocklistQuick by remember { mutableStateOf(false) }
 
     var blockedToday by remember { mutableLongStateOf(0L) }
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
@@ -646,6 +656,62 @@ fun OverviewScreen(backend: AppBackend) {
                 }
             }
 
+            // 7.5 Bento 雙列網格 Row 4：逐連線轉發切換 + 廣告屏蔽直達
+            item {
+                LaunchedEffect(forwardingActive, refreshKey) {
+                    forwardingEnabled = backend.forwardingEnabled()
+                    forwardingUpstream = backend.forwardingUpstream()
+                }
+                val viaProxy = forwardingEnabled && forwardingUpstream == ForwardingUpstream.SOCKS5
+                val socks5Endpoint = "${backend.socks5Host()}:${backend.socks5Port()}"
+                val activeLists = blocklistState.lists.count { it.enabled && it.entries > 0 }
+                val numberFormat = remember { java.text.NumberFormat.getIntegerInstance() }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    BentoTile(
+                        label = s[S.ForwardingShortcut],
+                        value = when {
+                            !forwardingEnabled -> s[S.BlackholeMode]
+                            viaProxy -> "SOCKS5"
+                            else -> s[S.UpstreamDirect]
+                        },
+                        icon = Icons.Rounded.Refresh,
+                        accent = if (forwardingEnabled) scheme.primary else scheme.onSurfaceVariant,
+                        highlighted = forwardingEnabled,
+                        subtitle = when {
+                            viaProxy -> socks5Endpoint
+                            else -> s[S.BlocklistsTapHint]
+                        },
+                        onClick = { showForwardingQuick = true },
+                        modifier = Modifier.weight(1f),
+                    )
+                    BentoTile(
+                        label = s[S.BlocklistShortcut],
+                        value = if (blocklistState.enabled) {
+                            if (blocklistMatcher.totalEntries > 0) numberFormat.format(blocklistMatcher.totalEntries) else s[S.QuickOn]
+                        } else {
+                            s[S.Off]
+                        },
+                        icon = Icons.Rounded.Lock,
+                        accent = if (blocklistState.enabled && forwardingEnabled) scheme.primary else scheme.onSurfaceVariant,
+                        highlighted = blocklistState.enabled && forwardingEnabled,
+                        subtitle = if (blocklistState.enabled) {
+                            s.format(
+                                S.BlocklistsActive,
+                                numberFormat.format(blocklistMatcher.totalEntries),
+                                activeLists,
+                            )
+                        } else {
+                            s[S.BlocklistsTapHint]
+                        },
+                        onClick = { showBlocklistQuick = true },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
             // 專注進行中時展開快捷操作條（延長 15 分鐘 / 停止 / 存為配置）
             focus?.let { active ->
                 item {
@@ -949,6 +1015,148 @@ fun OverviewScreen(backend: AppBackend) {
             },
             dismissButton = {
                 TextButton(onClick = { confirmEndFocus = false }) { Text(s[S.Cancel]) }
+            },
+        )
+    }
+
+    if (showForwardingQuick) {
+        val socks5Endpoint = "${backend.socks5Host()}:${backend.socks5Port()}"
+        val forwardingAvailable = remember { backend.forwardingAvailable() }
+        AlertDialog(
+            onDismissRequest = { showForwardingQuick = false },
+            title = { Text(s[S.ForwardingShortcut]) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    @Composable
+                    fun modeOption(title: String, subtitle: String?, selected: Boolean, onSelect: () -> Unit) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = onSelect)
+                                .padding(vertical = 8.dp),
+                        ) {
+                            androidx.compose.material3.RadioButton(selected = selected, onClick = onSelect)
+                            Spacer(Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(title, style = MaterialTheme.typography.bodyLarge)
+                                if (!subtitle.isNullOrBlank()) {
+                                    Text(
+                                        subtitle,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    modeOption(
+                        title = s[S.BlackholeMode],
+                        subtitle = null,
+                        selected = !forwardingEnabled,
+                        onSelect = {
+                            guard.run {
+                                forwardingEnabled = false
+                                backend.setForwardingEnabled(false)
+                            }
+                            showForwardingQuick = false
+                        },
+                    )
+                    modeOption(
+                        title = "${s[S.ForwardingMode]} · ${s[S.UpstreamDirect]}",
+                        subtitle = null,
+                        selected = forwardingEnabled && forwardingUpstream != ForwardingUpstream.SOCKS5,
+                        onSelect = {
+                            if (!forwardingAvailable) {
+                                android.widget.Toast.makeText(context, s[S.ForwardingUnavailable], android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                guard.run {
+                                    forwardingEnabled = true
+                                    forwardingUpstream = ForwardingUpstream.DIRECT
+                                    backend.setForwardingEnabled(true)
+                                    backend.setForwardingUpstream(ForwardingUpstream.DIRECT)
+                                }
+                            }
+                            showForwardingQuick = false
+                        },
+                    )
+                    modeOption(
+                        title = "${s[S.ForwardingMode]} · ${s[S.UpstreamSocks5]}",
+                        subtitle = socks5Endpoint,
+                        selected = forwardingEnabled && forwardingUpstream == ForwardingUpstream.SOCKS5,
+                        onSelect = {
+                            if (!forwardingAvailable) {
+                                android.widget.Toast.makeText(context, s[S.ForwardingUnavailable], android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                guard.run {
+                                    forwardingEnabled = true
+                                    forwardingUpstream = ForwardingUpstream.SOCKS5
+                                    backend.setForwardingEnabled(true)
+                                    backend.setForwardingUpstream(ForwardingUpstream.SOCKS5)
+                                }
+                            }
+                            showForwardingQuick = false
+                        },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showForwardingQuick = false
+                    onOpenForwardingSettings()
+                }) { Text(s[S.MoreSettings]) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForwardingQuick = false }) { Text(s[S.Close]) }
+            },
+        )
+    }
+
+    if (showBlocklistQuick) {
+        AlertDialog(
+            onDismissRequest = { showBlocklistQuick = false },
+            title = { Text(s[S.BlocklistShortcut]) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                guard.run { backend.setBlocklistsEnabled(!blocklistState.enabled) }
+                            }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        Text(
+                            s[S.BlocklistsEnable],
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = blocklistState.enabled,
+                            onCheckedChange = { enabled ->
+                                guard.run { backend.setBlocklistsEnabled(enabled) }
+                            },
+                        )
+                    }
+                    if (blocklistState.enabled && !forwardingEnabled) {
+                        Text(
+                            s[S.BlocklistsModeWarning],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBlocklistQuick = false
+                    onOpenBlocklists()
+                }) { Text(s[S.MoreSettings]) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlocklistQuick = false }) { Text(s[S.Close]) }
             },
         )
     }

@@ -563,6 +563,11 @@ enum class S {
     WebDavRestore,
     WebDavUploadOk,
     WebDavLastSync,
+    BlackholeMode,
+    ForwardingShortcut,
+    BlocklistShortcut,
+    MoreSettings,
+    BlocklistsTapHint,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1148,6 +1153,11 @@ private val EN = mapOf(
     S.WebDavRestore to "Download & restore",
     S.WebDavUploadOk to "Encrypted backup uploaded",
     S.WebDavLastSync to "Last synced: %1\$s",
+    S.BlackholeMode to "Blackhole",
+    S.ForwardingShortcut to "Forwarding",
+    S.BlocklistShortcut to "Ad blocking",
+    S.MoreSettings to "More settings",
+    S.BlocklistsTapHint to "Tap to switch or manage",
 )
 
 private val CN = mapOf(
@@ -1709,6 +1719,11 @@ private val CN = mapOf(
     S.WebDavRestore to "下载恢复",
     S.WebDavUploadOk to "加密备份已上传到 WebDAV",
     S.WebDavLastSync to "上次同步：%1\$s",
+    S.BlackholeMode to "黑洞模式",
+    S.ForwardingShortcut to "逐连接转发",
+    S.BlocklistShortcut to "广告屏蔽",
+    S.MoreSettings to "详细设置",
+    S.BlocklistsTapHint to "点击切换或管理",
 )
 
 private val TW = mapOf(
@@ -2270,4 +2285,9 @@ private val TW = mapOf(
     S.WebDavRestore to "下載還原",
     S.WebDavUploadOk to "加密備份已上傳至 WebDAV",
     S.WebDavLastSync to "上次同步：%1\$s",
+    S.BlackholeMode to "黑洞模式",
+    S.ForwardingShortcut to "逐連線轉發",
+    S.BlocklistShortcut to "廣告屏蔽",
+    S.MoreSettings to "詳細設定",
+    S.BlocklistsTapHint to "點擊切換或管理",
 )

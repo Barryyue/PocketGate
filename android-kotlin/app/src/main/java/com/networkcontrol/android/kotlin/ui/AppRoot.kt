@@ -342,7 +342,11 @@ fun AppRoot(container: AppContainer) {
                                 label = "tab-transition",
                             ) { tab ->
                                 when (tab) {
-                                    0 -> OverviewScreen(backend)
+                                    0 -> OverviewScreen(
+                                        backend = backend,
+                                        onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
+                                        onOpenBlocklists = { settingsSubScreen = "blocklists" },
+                                    )
                                     1 -> AppsScreen(backend)
                                     2 -> RulesScreen(backend)
                                     3 -> LogsScreen(backend)
