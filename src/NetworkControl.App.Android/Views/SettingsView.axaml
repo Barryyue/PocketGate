@@ -82,6 +82,29 @@
             <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource SpeedIsland}" />
             <atom:ToggleSwitch Grid.Column="1" IsChecked="{Binding SpeedIslandEnabled}" />
           </Grid>
+          <StackPanel Spacing="8" IsVisible="{Binding SpeedIslandEnabled}">
+            <atom:Segmented SelectedIndex="{Binding SpeedIslandModeIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+              <atom:SegmentedItem Content="Full" />
+              <atom:SegmentedItem Content="Cycle" />
+              <atom:SegmentedItem Content="Mini" />
+            </atom:Segmented>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+              <TextBlock Classes="caption" VerticalAlignment="Center" Text="Opacity" />
+              <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding SpeedIslandOpacity}" />
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+              <TextBlock Classes="caption" VerticalAlignment="Center" Text="Font %" />
+              <Slider Grid.Column="1" Minimum="80" Maximum="160" Value="{Binding SpeedIslandFontScale}" />
+            </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBlock VerticalAlignment="Center" Text="StatusBar Overlay" />
+              <atom:ToggleSwitch Grid.Column="1" IsChecked="{Binding SpeedIslandStatusBarOverlay}" />
+            </Grid>
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock VerticalAlignment="Center" Text="StatusBar Speed Icon" />
+            <atom:ToggleSwitch Grid.Column="1" IsChecked="{Binding StatusBarSpeedIcon}" />
+          </Grid>
         </StackPanel>
       </atom:Card>
 
@@ -157,6 +180,14 @@
               <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:SettingsLangResource AppLockHint}" />
             </StackPanel>
             <atom:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding AppLockEnabled}" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBlock VerticalAlignment="Center" Text="{loc:OverviewLangResource FocusMode} (Auto)" />
+            <atom:ToggleSwitch Grid.Column="1" IsChecked="{Binding FocusScheduleEnabled}" />
+          </Grid>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding FocusScheduleEnabled}">
+            <atom:LineEdit Text="{Binding FocusScheduleStart}" PlaceholderText="09:00" />
+            <atom:LineEdit Grid.Column="1" Text="{Binding FocusScheduleEnd}" PlaceholderText="18:00" />
           </Grid>
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource AllowSystemApps}" />

@@ -78,10 +78,11 @@ public static partial class BackendHost
         builder.Services.AddHostedService(sp => sp.GetRequiredService<PromptNotifier>());
         builder.Services.AddHostedService<ProfileSwitchNotifier>();
         builder.Services.AddHostedService<QuietPeriodNotifier>();
+        builder.Services.AddHostedService<FocusAndLockMonitor>();
         builder.Services.AddSingleton(_ => new UiPreferences(context));
         builder.Services.AddSingleton(_ => new NetworkControl.Engine.Vpn.Blocklists.BlocklistManager(context.FilesDir!.AbsolutePath));
         builder.Services.AddSingleton<PromptOverlayService>();
-        builder.Services.AddSingleton(_ => new SpeedIslandService(context));
+        builder.Services.AddSingleton<SpeedIslandService>();
         builder.Services.AddSingleton(sp =>
         {
             var prefs = sp.GetRequiredService<UiPreferences>();

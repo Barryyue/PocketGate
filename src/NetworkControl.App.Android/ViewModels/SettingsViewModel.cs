@@ -101,6 +101,31 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     public partial bool SpeedIslandEnabled { get; set; }
 
     [ObservableProperty]
+    public partial bool StatusBarSpeedIcon { get; set; }
+
+    /// <summary>0 Full、1 Cycle、2 Mini。</summary>
+    [ObservableProperty]
+    public partial int SpeedIslandModeIndex { get; set; }
+
+    [ObservableProperty]
+    public partial double SpeedIslandOpacity { get; set; } = 0.88;
+
+    [ObservableProperty]
+    public partial double SpeedIslandFontScale { get; set; } = 100;
+
+    [ObservableProperty]
+    public partial bool SpeedIslandStatusBarOverlay { get; set; }
+
+    [ObservableProperty]
+    public partial bool FocusScheduleEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial string FocusScheduleStart { get; set; } = "09:00";
+
+    [ObservableProperty]
+    public partial string FocusScheduleEnd { get; set; } = "18:00";
+
+    [ObservableProperty]
     public partial bool PromptOverlayEnabled { get; set; } = true;
 
     /// <summary>0 底部、1 頂部。</summary>
@@ -303,6 +328,14 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
             SelectedThemeColorHex = prefs.ThemeColorArgb.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
             AutoHideBottomBar = prefs.AutoHideBottomBar;
             SpeedIslandEnabled = prefs.SpeedIslandEnabled;
+            StatusBarSpeedIcon = prefs.StatusBarSpeedIcon;
+            SpeedIslandModeIndex = prefs.SpeedIslandMode switch { "cycle" => 1, "mini" => 2, _ => 0 };
+            SpeedIslandOpacity = prefs.SpeedIslandOpacity;
+            SpeedIslandFontScale = prefs.SpeedIslandFontScale;
+            SpeedIslandStatusBarOverlay = prefs.SpeedIslandStatusBarOverlay;
+            FocusScheduleEnabled = prefs.FocusScheduleEnabled;
+            FocusScheduleStart = prefs.FocusScheduleStart;
+            FocusScheduleEnd = prefs.FocusScheduleEnd;
             PromptOverlayEnabled = prefs.PromptOverlayEnabled;
             PromptOverlayPositionIndex = prefs.PromptOverlayPosition == "top" ? 1 : 0;
             PromptShowDetails = prefs.PromptShowDetails;
@@ -911,6 +944,62 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
             Backend.Preferences.SpeedIslandEnabled = value;
             Backend.UpdateSpeedIsland("↓ 0 B/s · ↑ 0 B/s");
         }
+    }
+
+    partial void OnStatusBarSpeedIconChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.StatusBarSpeedIcon = value;
+    }
+
+    partial void OnSpeedIslandModeIndexChanged(int value)
+    {
+        if (!_syncing)
+        {
+            Backend.Preferences.SpeedIslandMode = value switch { 1 => "cycle", 2 => "mini", _ => "full" };
+            Backend.UpdateSpeedIsland("↓ 0 B/s · ↑ 0 B/s");
+        }
+    }
+
+    partial void OnSpeedIslandOpacityChanged(double value)
+    {
+        if (!_syncing)
+        {
+            Backend.Preferences.SpeedIslandOpacity = (float)value;
+            Backend.UpdateSpeedIsland("↓ 0 B/s · ↑ 0 B/s");
+        }
+    }
+
+    partial void OnSpeedIslandFontScaleChanged(double value)
+    {
+        if (!_syncing)
+        {
+            Backend.Preferences.SpeedIslandFontScale = (int)Math.Round(value);
+            Backend.UpdateSpeedIsland("↓ 0 B/s · ↑ 0 B/s");
+        }
+    }
+
+    partial void OnSpeedIslandStatusBarOverlayChanged(bool value)
+    {
+        if (!_syncing)
+        {
+            Backend.Preferences.SpeedIslandStatusBarOverlay = value;
+            Backend.UpdateSpeedIsland("↓ 0 B/s · ↑ 0 B/s");
+        }
+    }
+
+    partial void OnFocusScheduleEnabledChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.FocusScheduleEnabled = value;
+    }
+
+    partial void OnFocusScheduleStartChanged(string value)
+    {
+        if (!_syncing) Backend.Preferences.FocusScheduleStart = value.Trim();
+    }
+
+    partial void OnFocusScheduleEndChanged(string value)
+    {
+        if (!_syncing) Backend.Preferences.FocusScheduleEnd = value.Trim();
     }
 
     partial void OnPromptOverlayEnabledChanged(bool value)

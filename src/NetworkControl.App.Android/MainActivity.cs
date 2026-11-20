@@ -124,17 +124,49 @@ public sealed class MainActivity : AvaloniaMainActivity
         HandleIntent(intent);
     }
 
+    private const int AppLockRequest = 1005;
+    private long _lastStopTicks;
+    private bool _unlockedSession;
+
     protected override void OnResume()
     {
         base.OnResume();
         Current = this;
         ForegroundChanged?.Invoke(this, true);
+        EnsureAppLockIfNeeded();
     }
 
     protected override void OnStop()
     {
+        _lastStopTicks = Environment.TickCount64;
         ForegroundChanged?.Invoke(this, false);
         base.OnStop();
+    }
+
+    private void EnsureAppLockIfNeeded()
+    {
+        var prefs = new Infrastructure.UiPreferences(this);
+        if (!prefs.AppLockEnabled)
+        {
+            _unlockedSession = true;
+            return;
+        }
+
+        if (_unlockedSession && (_lastStopTicks == 0 || Environment.TickCount64 - _lastStopTicks < 60_000))
+        {
+            return;
+        }
+
+        var km = GetSystemService(KeyguardService) as KeyguardManager;
+        if (km?.IsDeviceSecure != true) return;
+#pragma warning disable CA1422
+        var intent = km.CreateConfirmDeviceCredentialIntent("PocketGate", null);
+#pragma warning restore CA1422
+        if (intent is not null)
+        {
+            _unlockedSession = false;
+            StartActivityForResult(intent, AppLockRequest);
+        }
     }
 
     protected override void OnDestroy()
@@ -159,6 +191,18 @@ public sealed class MainActivity : AvaloniaMainActivity
         {
             _documentRequest?.TrySetResult(resultCode == Result.Ok ? data?.Data : null);
             _documentRequest = null;
+        }
+        else if (requestCode == AppLockRequest)
+        {
+            if (resultCode == Result.Ok)
+            {
+                _unlockedSession = true;
+                _lastStopTicks = 0;
+            }
+            else
+            {
+                MoveTaskToBack(true);
+            }
         }
     }
 

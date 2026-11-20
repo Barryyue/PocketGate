@@ -16,15 +16,19 @@ internal sealed class VpnForegroundNotifier : IVpnForegroundNotifier
     private Bitmap? _largeIcon;
     private static volatile string? _shortSpeedText;
     private static volatile string? _detailSpeedText;
+    private static long _lastDlBytesPerSec;
+    private static volatile bool _useSpeedIcon;
 
     public int NotificationId => ForegroundNotificationId;
 
-    public static void UpdateLiveSpeed(Context context, long downloadBytesPerSec, long uploadBytesPerSec)
+    public static void UpdateLiveSpeed(Context context, long downloadBytesPerSec, long uploadBytesPerSec, bool useSpeedIcon)
     {
+        Interlocked.Exchange(ref _lastDlBytesPerSec, downloadBytesPerSec);
+        _useSpeedIcon = useSpeedIcon;
         _shortSpeedText = $"↓{FormatCompact(downloadBytesPerSec)}";
         _detailSpeedText = $"↓ {ByteSize.Format(downloadBytesPerSec)}/s · ↑ {ByteSize.Format(uploadBytesPerSec)}/s";
 
-        if (!OperatingSystem.IsAndroidVersionAtLeast(36))
+        if (!OperatingSystem.IsAndroidVersionAtLeast(36) && !useSpeedIcon)
         {
             return;
         }
@@ -48,12 +52,19 @@ internal sealed class VpnForegroundNotifier : IVpnForegroundNotifier
         var text = NotificationText.Current;
         var body = _detailSpeedText ?? text.Get(context, OverviewLangResourceKind.HintOn);
         var builder = new Notification.Builder(context, NotificationChannels.Service)
-            .SetSmallIcon(Resource.Drawable.ic_stat_shield)
             .SetContentTitle(text.Get(context, OverviewLangResourceKind.StatusOn))
             .SetContentText(body)
             .SetContentIntent(NotificationChannels.OpenApp(context))
             .SetOngoing(true)
             .SetShowWhen(false);
+        if (_useSpeedIcon)
+        {
+            builder.SetSmallIcon(StatusBarSpeedIcon.Render(Interlocked.Read(ref _lastDlBytesPerSec)));
+        }
+        else
+        {
+            builder.SetSmallIcon(Resource.Drawable.ic_stat_shield);
+        }
 
         if (GetLargeIcon(context) is { } large)
         {

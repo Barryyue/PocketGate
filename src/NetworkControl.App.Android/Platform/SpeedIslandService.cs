@@ -1,36 +1,53 @@
+using global::Android.App;
 using global::Android.Content;
 using global::Android.Graphics;
 using global::Android.Graphics.Drawables;
+using global::Android.OS;
 using global::Android.Provider;
 using global::Android.Runtime;
 using global::Android.Views;
 using global::Android.Widget;
+using NetworkControl.Android.Infrastructure;
 
 namespace NetworkControl.Android.Platform;
 
 /// <summary>
-/// 懸浮即時網速靈動島（原生 WindowManager 膠囊，支援拖曳與自動隱藏）。
+/// 懸浮即時網速靈動島（原生 WindowManager 膠囊，支援透明度、字號縮放、XY 偏移、狀態欄疊加、鎖屏自動隱藏與全透明點擊穿透）。
 /// </summary>
-public sealed class SpeedIslandService(Context context) : IDisposable
+public sealed class SpeedIslandService : IDisposable
 {
-    private readonly Context _context = context.ApplicationContext ?? context;
-    private readonly IWindowManager? _wm = (context.ApplicationContext ?? context).GetSystemService(Context.WindowService).JavaCast<IWindowManager>();
+    private readonly Context _context;
+    private readonly UiPreferences _preferences;
+    private readonly IWindowManager? _wm;
+    private readonly KeyguardManager? _keyguard;
     private TextView? _label;
     private WindowManagerLayoutParams? _layoutParams;
     private bool _attached;
 
+    public SpeedIslandService(Context context, UiPreferences preferences)
+    {
+        _context = context.ApplicationContext ?? context;
+        _preferences = preferences;
+        _wm = _context.GetSystemService(Context.WindowService).JavaCast<IWindowManager>();
+        _keyguard = _context.GetSystemService(Context.KeyguardService) as KeyguardManager;
+    }
+
     public void Update(bool enabled, string text)
     {
-        if (!enabled || !Settings.CanDrawOverlays(_context))
+        var locked = _keyguard?.IsKeyguardLocked == true;
+        if (!enabled || locked || !Settings.CanDrawOverlays(_context))
         {
             Hide();
             return;
         }
 
         EnsureShown();
+        ApplyAppearance();
         if (_label is not null)
         {
-            _label.Text = text;
+            _label.Text = _preferences.SpeedIslandMode == "mini"
+                ? text.Split('·')[0].Trim()
+                : text;
         }
     }
 
@@ -59,63 +76,108 @@ public sealed class SpeedIslandService(Context context) : IDisposable
             {
                 var tv = new TextView(_context)
                 {
-                    TextSize = 11f,
                     Text = "↓ 0 B/s · ↑ 0 B/s",
                 };
-                tv.SetTextColor(Color.White);
                 tv.SetPadding(24, 10, 24, 10);
-                var bg = new GradientDrawable();
-                bg.SetColor(Color.Argb(220, 14, 24, 18));
-                bg.SetCornerRadius(40f);
-                bg.SetStroke(2, Color.Argb(120, 52, 211, 153));
-                tv.Background = bg;
-
-                var lp = new WindowManagerLayoutParams(
-                    ViewGroup.LayoutParams.WrapContent,
-                    ViewGroup.LayoutParams.WrapContent,
-                    WindowManagerTypes.ApplicationOverlay,
-                    WindowManagerFlags.NotFocusable | WindowManagerFlags.LayoutInScreen,
-                    Format.Translucent)
+                var startX = 0;
+                var startY = 0;
+                float touchX = 0;
+                float touchY = 0;
+                var moved = false;
+                tv.Touch += (_, e) =>
                 {
-                    Gravity = GravityFlags.Top | GravityFlags.CenterHorizontal,
-                    Y = 48,
+                    if (_layoutParams is null || e.Event is null) return;
+                    switch (e.Event.Action)
+                    {
+                        case MotionEventActions.Down:
+                            startX = _layoutParams.X;
+                            startY = _layoutParams.Y;
+                            touchX = e.Event.RawX;
+                            touchY = e.Event.RawY;
+                            moved = false;
+                            break;
+                        case MotionEventActions.Move:
+                            var dx = (int)(e.Event.RawX - touchX);
+                            var dy = (int)(e.Event.RawY - touchY);
+                            if (Math.Abs(dx) > 6 || Math.Abs(dy) > 6) moved = true;
+                            _layoutParams.X = startX + dx;
+                            _layoutParams.Y = startY + dy;
+                            try { _wm.UpdateViewLayout(_label, _layoutParams); } catch { }
+                            break;
+                        case MotionEventActions.Up:
+                            if (!moved)
+                            {
+                                var launch = new Intent(_context, typeof(MainActivity)).AddFlags(ActivityFlags.NewTask | ActivityFlags.SingleTop);
+                                try { _context.StartActivity(launch); } catch { }
+                            }
+
+                            break;
+                    }
                 };
-                tv.Touch += OnTouch;
                 _label = tv;
-                _layoutParams = lp;
             }
 
+            _layoutParams = BuildLayoutParams();
             _wm.AddView(_label, _layoutParams);
             _attached = true;
         }
         catch
         {
-            _attached = false;
         }
     }
 
-    private float _downRawX, _downRawY;
-    private int _startX, _startY;
-
-    private void OnTouch(object? sender, View.TouchEventArgs e)
+    private void ApplyAppearance()
     {
-        if (e.Event is null || _layoutParams is null || _label is null) return;
-        switch (e.Event.Action)
+        if (_label is null) return;
+        var opacity = _preferences.SpeedIslandOpacity;
+        var scale = _preferences.SpeedIslandFontScale / 100f;
+        var baseSize = _preferences.SpeedIslandMode == "mini" ? 10f : 12f;
+        _label.TextSize = baseSize * scale;
+
+        var accent = new Color(unchecked((int)_preferences.ThemeColorArgb));
+        _label.SetTextColor(accent);
+
+        var alpha = (int)(opacity * 255);
+        var bg = new GradientDrawable();
+        bg.SetColor(Color.Argb(alpha, 16, 16, 18));
+        bg.SetCornerRadius(40f);
+        bg.SetStroke(opacity <= 0.01f ? 0 : 2, opacity <= 0.01f ? Color.Transparent : Color.Argb(96, accent.R, accent.G, accent.B));
+        _label.Background = bg;
+
+        if (_attached && _layoutParams is not null && _wm is not null)
         {
-            case MotionEventActions.Down:
-                _downRawX = e.Event.RawX;
-                _downRawY = e.Event.RawY;
-                _startX = _layoutParams.X;
-                _startY = _layoutParams.Y;
-                e.Handled = true;
-                break;
-            case MotionEventActions.Move:
-                _layoutParams.X = _startX + (int)(e.Event.RawX - _downRawX);
-                _layoutParams.Y = _startY + (int)(e.Event.RawY - _downRawY);
-                try { _wm?.UpdateViewLayout(_label, _layoutParams); } catch { }
-                e.Handled = true;
-                break;
+            var flags = WindowManagerFlags.NotFocusable | WindowManagerFlags.NotTouchModal;
+            if (opacity <= 0.01f) flags |= WindowManagerFlags.NotTouchable;
+            if (_preferences.SpeedIslandStatusBarOverlay) flags |= WindowManagerFlags.LayoutInScreen | WindowManagerFlags.LayoutNoLimits;
+            _layoutParams.Flags = flags;
+            try { _wm.UpdateViewLayout(_label, _layoutParams); } catch { }
         }
+    }
+
+    private WindowManagerLayoutParams BuildLayoutParams()
+    {
+        var flags = WindowManagerFlags.NotFocusable | WindowManagerFlags.NotTouchModal;
+        if (_preferences.SpeedIslandOpacity <= 0.01f) flags |= WindowManagerFlags.NotTouchable;
+        if (_preferences.SpeedIslandStatusBarOverlay) flags |= WindowManagerFlags.LayoutInScreen | WindowManagerFlags.LayoutNoLimits;
+
+        var density = _context.Resources?.DisplayMetrics?.Density ?? 1f;
+        var lp = new WindowManagerLayoutParams(
+            ViewGroup.LayoutParams.WrapContent,
+            ViewGroup.LayoutParams.WrapContent,
+            WindowManagerTypes.ApplicationOverlay,
+            flags,
+            Format.Translucent)
+        {
+            Gravity = GravityFlags.Top | GravityFlags.CenterHorizontal,
+            X = (int)(_preferences.SpeedIslandOffsetX * density),
+            Y = Math.Max(0, (int)(((_preferences.SpeedIslandStatusBarOverlay ? 0 : 48) + _preferences.SpeedIslandOffsetY) * density)),
+        };
+        if (OperatingSystem.IsAndroidVersionAtLeast(30) && _preferences.SpeedIslandStatusBarOverlay)
+        {
+            lp.LayoutInDisplayCutoutMode = LayoutInDisplayCutoutMode.Always;
+        }
+
+        return lp;
     }
 
     public void Dispose() => Hide();

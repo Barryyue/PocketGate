@@ -61,6 +61,16 @@ public sealed class UiPreferences
     private const string DnsBypassProtectionKey = "dns_bypass_protection";
     private const string Socks5UdpKey = "socks5_udp";
     private const string TrustedPublishersKey = "trusted_publishers";
+    private const string SpeedIslandModeKey = "speed_island_mode";
+    private const string SpeedIslandOpacityKey = "speed_island_opacity";
+    private const string SpeedIslandFontScaleKey = "speed_island_font_scale";
+    private const string SpeedIslandOffsetXKey = "speed_island_offset_x";
+    private const string SpeedIslandOffsetYKey = "speed_island_offset_y";
+    private const string SpeedIslandStatusBarKey = "speed_island_statusbar";
+    private const string FocusScheduleEnabledKey = "focus_schedule_enabled";
+    private const string FocusScheduleStartKey = "focus_schedule_start";
+    private const string FocusScheduleEndKey = "focus_schedule_end";
+    private const string FocusScheduleDaysKey = "focus_schedule_days";
 
     private readonly ISharedPreferences _preferences;
 
@@ -284,6 +294,66 @@ public sealed class UiPreferences
     {
         get => (_preferences.GetStringSet(TrustedPublishersKey, null) ?? []).ToList();
         set => Edit(e => e.PutStringSet(TrustedPublishersKey, value.ToHashSet(StringComparer.OrdinalIgnoreCase)));
+    }
+
+    public string SpeedIslandMode
+    {
+        get => _preferences.GetString(SpeedIslandModeKey, "full") ?? "full";
+        set => Edit(e => e.PutString(SpeedIslandModeKey, value is "cycle" or "mini" ? value : "full"));
+    }
+
+    public float SpeedIslandOpacity
+    {
+        get => Math.Clamp(_preferences.GetFloat(SpeedIslandOpacityKey, 0.88f), 0f, 1f);
+        set => Edit(e => e.PutFloat(SpeedIslandOpacityKey, Math.Clamp(value, 0f, 1f)));
+    }
+
+    public int SpeedIslandFontScale
+    {
+        get => Math.Clamp(_preferences.GetInt(SpeedIslandFontScaleKey, 100), 80, 160);
+        set => Edit(e => e.PutInt(SpeedIslandFontScaleKey, Math.Clamp(value, 80, 160)));
+    }
+
+    public int SpeedIslandOffsetX
+    {
+        get => Math.Clamp(_preferences.GetInt(SpeedIslandOffsetXKey, 0), -60, 60);
+        set => Edit(e => e.PutInt(SpeedIslandOffsetXKey, Math.Clamp(value, -60, 60)));
+    }
+
+    public int SpeedIslandOffsetY
+    {
+        get => Math.Clamp(_preferences.GetInt(SpeedIslandOffsetYKey, 0), -60, 60);
+        set => Edit(e => e.PutInt(SpeedIslandOffsetYKey, Math.Clamp(value, -60, 60)));
+    }
+
+    public bool SpeedIslandStatusBarOverlay
+    {
+        get => _preferences.GetBoolean(SpeedIslandStatusBarKey, false);
+        set => Edit(e => e.PutBoolean(SpeedIslandStatusBarKey, value));
+    }
+
+    public bool FocusScheduleEnabled
+    {
+        get => _preferences.GetBoolean(FocusScheduleEnabledKey, false);
+        set => Edit(e => e.PutBoolean(FocusScheduleEnabledKey, value));
+    }
+
+    public string FocusScheduleStart
+    {
+        get => _preferences.GetString(FocusScheduleStartKey, "09:00") ?? "09:00";
+        set => Edit(e => e.PutString(FocusScheduleStartKey, value));
+    }
+
+    public string FocusScheduleEnd
+    {
+        get => _preferences.GetString(FocusScheduleEndKey, "18:00") ?? "18:00";
+        set => Edit(e => e.PutString(FocusScheduleEndKey, value));
+    }
+
+    public string FocusScheduleDays
+    {
+        get => _preferences.GetString(FocusScheduleDaysKey, "1,2,3,4,5") ?? "1,2,3,4,5";
+        set => Edit(e => e.PutString(FocusScheduleDaysKey, value));
     }
 
     private void Edit(Action<ISharedPreferencesEditor> change)

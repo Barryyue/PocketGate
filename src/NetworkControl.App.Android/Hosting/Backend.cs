@@ -713,7 +713,7 @@ internal sealed class Backend : IBackend
     {
         if (_protection.IsEnabled)
         {
-            VpnForegroundNotifier.UpdateLiveSpeed(_context, downloadBytesPerSec, uploadBytesPerSec);
+            VpnForegroundNotifier.UpdateLiveSpeed(_context, downloadBytesPerSec, uploadBytesPerSec, _preferences.StatusBarSpeedIcon);
         }
     }
 
