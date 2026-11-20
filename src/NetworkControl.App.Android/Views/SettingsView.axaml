@@ -205,13 +205,22 @@
       </atom:Card>
 
       <atom:Card Header="{loc:SettingsLangResource Blocklists}">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <StackPanel>
-            <TextBlock Text="{loc:SettingsLangResource Blocklists}" />
-            <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:SettingsLangResource BlocklistsHint}" />
-          </StackPanel>
-          <atom:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding BlocklistsEnabled}" />
-        </Grid>
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <StackPanel>
+              <TextBlock Text="{loc:SettingsLangResource Blocklists}" />
+              <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:SettingsLangResource BlocklistsHint}" />
+            </StackPanel>
+            <atom:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding BlocklistsEnabled}" />
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <atom:Tag HorizontalAlignment="Left" Text="{Binding BlocklistsSummary}" />
+            <atom:Button Grid.Column="1" SizeType="Small" Command="{Binding UpdateBlocklistsCommand}" IsLoading="{Binding BlocklistsUpdating}"
+                         Content="{loc:SettingsLangResource BlocklistUpdate}" />
+            <atom:Button Grid.Column="2" SizeType="Small" Command="{Binding OpenBlocklistsDialogCommand}" Content="{loc:SettingsLangResource Open}" />
+          </Grid>
+          <TextBlock Classes="caption" Text="{Binding BlocklistsStatus}" IsVisible="{Binding BlocklistsStatus, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
+        </StackPanel>
       </atom:Card>
 
       <atom:Card Header="{loc:SettingsLangResource Traffic}">
@@ -398,6 +407,42 @@
             <TextBlock Classes="secondary" TextWrapping="Wrap" Text="{Binding ReleaseNotesText}" />
           </ScrollViewer>
           <atom:Button ButtonType="Primary" HorizontalAlignment="Stretch" Command="{Binding CloseReleaseNotesCommand}" Content="{loc:OverviewLangResource Dismiss}" />
+        </StackPanel>
+      </atom:Card>
+    </Border>
+
+    <!-- 網域攔截清單管理彈窗 -->
+    <Border Classes="scrim" IsVisible="{Binding ShowBlocklistsDialog}">
+      <atom:Card VerticalAlignment="Center" Margin="16" Header="{loc:SettingsLangResource Blocklists}">
+        <StackPanel Spacing="10">
+          <ScrollViewer MaxHeight="280">
+            <ItemsControl ItemsSource="{Binding BlocklistSources}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BlocklistSourceRow">
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,4">
+                    <StackPanel>
+                      <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="caption" Text="{Binding Subtitle}" />
+                    </StackPanel>
+                    <atom:Button Grid.Column="1" SizeType="Small" IsDanger="True" IsVisible="{Binding IsCustom}"
+                                 Command="{Binding RemoveCommand}" Content="{loc:SettingsLangResource ProfileDelete}" />
+                    <atom:ToggleSwitch Grid.Column="2" VerticalAlignment="Center" IsChecked="{Binding Enabled}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <atom:LineEdit Text="{Binding CustomBlocklistName}" PlaceholderText="{loc:SettingsLangResource ProfileName}" />
+            <atom:LineEdit Grid.Column="1" Text="{Binding CustomBlocklistUrl}" PlaceholderText="https://..." />
+          </Grid>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <atom:Button HorizontalAlignment="Stretch" Command="{Binding AddCustomBlocklistCommand}" Content="{loc:SettingsLangResource ProfileAdd}" />
+            <atom:Button Grid.Column="1" ButtonType="Primary" HorizontalAlignment="Stretch"
+                         Command="{Binding UpdateBlocklistsCommand}" IsLoading="{Binding BlocklistsUpdating}"
+                         Content="{loc:SettingsLangResource BlocklistUpdate}" />
+          </Grid>
+          <atom:Button HorizontalAlignment="Stretch" Command="{Binding CloseBlocklistsDialogCommand}" Content="{loc:CommonLangResource Cancel}" />
         </StackPanel>
       </atom:Card>
     </Border>

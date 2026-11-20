@@ -141,12 +141,13 @@ public sealed partial class AppsViewModel : LocalizedViewModel
     {
         var search = SearchText?.Trim();
         var filtered = _items.Values
-            .Where(i => ShowSystem || !i.Entry.App.IsSystem || i.Entry.Decision != AppDecision.Unset)
+            .Where(i => ShowSystem || FilterIndex == 4 || !i.Entry.App.IsSystem || i.Entry.Decision != AppDecision.Unset)
             .Where(i => FilterIndex switch
             {
                 1 => i.Entry.Decision == AppDecision.Allow,
                 2 => i.Entry.Decision == AppDecision.Deny,
                 3 => i.Entry.Decision == AppDecision.Unset,
+                4 => i.Entry.App.IsSystem,
                 _ => true,
             })
             .Where(i => string.IsNullOrEmpty(search)

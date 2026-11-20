@@ -82,6 +82,29 @@ public class ParityFeatureTests
     }
 
     [Fact]
+    public void DomainSnifferExtractsHttpHostAndBlocklistManagerPersistsSources()
+    {
+        var http = System.Text.Encoding.ASCII.GetBytes("GET / HTTP/1.1\r\nHost: ads.example.com:443\r\n\r\n");
+        Assert.True(NetworkControl.Engine.Vpn.Forwarding.DomainSniffer.TryExtractDomain(http, out var host));
+        Assert.Equal("ads.example.com", host);
+
+        var dir = Directory.CreateTempSubdirectory("pg-blocklist-mgr");
+        try
+        {
+            var mgr = new NetworkControl.Engine.Vpn.Blocklists.BlocklistManager(dir.FullName);
+            Assert.Equal(7, mgr.GetSources().Count);
+            var customId = mgr.AddCustomSource("CustomAds", "https://example.com/list.txt");
+            Assert.Equal(8, mgr.GetSources().Count);
+            mgr.RemoveCustomSource(customId);
+            Assert.Equal(7, mgr.GetSources().Count);
+        }
+        finally
+        {
+            dir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task AppUpdateManagerRespectsOfflineModeAndTracksDownload()
     {
         var dir = Directory.CreateTempSubdirectory("pg-atomui-upd");
