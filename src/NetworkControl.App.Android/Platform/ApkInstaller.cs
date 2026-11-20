@@ -1,5 +1,6 @@
 using AndroidX.Core.Content;
 using global::Android.Content;
+using global::Android.OS;
 using global::Android.Provider;
 using global::Android.Widget;
 using Uri = global::Android.Net.Uri;
@@ -13,37 +14,50 @@ public static class ApkInstaller
     {
         if (string.IsNullOrEmpty(apkPath) || !File.Exists(apkPath)) return false;
 
-        if (!context.PackageManager!.CanRequestPackageInstalls())
+        var hostContext = MainActivity.Current ?? context;
+        try
         {
-            try
+            if (!hostContext.PackageManager!.CanRequestPackageInstalls())
             {
                 var perm = new Intent(
                     Settings.ActionManageUnknownAppSources,
-                    Uri.Parse($"package:{context.PackageName}"))
+                    Uri.Parse($"package:{hostContext.PackageName}"))
                     .AddFlags(ActivityFlags.NewTask);
-                context.StartActivity(perm);
+                hostContext.StartActivity(perm);
+                return false;
             }
-            catch
-            {
-            }
-
-            return false;
+        }
+        catch
+        {
+            // 部分機型無需單獨授權或查詢失敗，繼續嘗試拉起系統安裝器
         }
 
         try
         {
             var file = new Java.IO.File(apkPath);
-            var uri = FileProvider.GetUriForFile(context, $"{context.PackageName}.fileprovider", file);
+            var uri = FileProvider.GetUriForFile(hostContext, $"{hostContext.PackageName}.fileprovider", file);
             var install = new Intent(Intent.ActionView)
                 .SetDataAndType(uri, "application/vnd.android.package-archive")
                 .AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.NewTask);
-            context.StartActivity(install);
+            hostContext.StartActivity(install);
             return true;
+        }
+        catch (Java.Lang.Throwable ex)
+        {
+            ShowError(hostContext, ex.Message);
+            return false;
         }
         catch (Exception ex)
         {
-            Toast.MakeText(context, ex.Message, ToastLength.Short)?.Show();
+            ShowError(hostContext, ex.Message);
             return false;
         }
+    }
+
+    private static void ShowError(Context context, string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return;
+        new Handler(Looper.MainLooper!).Post(() =>
+            Toast.MakeText(context, message, ToastLength.Short)?.Show());
     }
 }
