@@ -506,6 +506,12 @@
 |---|---|---|---|---|
 | K-171 | 總覽 Bento 快捷入口（逐連線轉發／直連／SOCKS5 切換與廣告屏蔽直達，2026-11-20）：在 `OverviewScreen` 新增第 4 行雙列 Bento 磁貼，支援一鍵彈窗切換黑洞模式、逐連線內建直連、逐連線外部 SOCKS5 並直達「逐連線轉發」設定頁；右側「廣告屏蔽」磁貼即時顯示攔截規則數與啟用狀態，支援快速開關及直達「攔截清單」管理頁 | `OverviewScreen.kt`、`AppRoot.kt`、`UiStrings.kt` | `.\scripts\android-kotlin.ps1 test`（`:app:testDebugUnitTest` `BUILD SUCCESSFUL`） | 真機點擊交互與版面呈現待用戶確認 |
 
+### 未發版（2026-11-20）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-172 | 原生狀態列網速圖示對齊 vivo 系統風格（2026-11-20）：`StatusBarSpeedIcon` 數字改採 `sans-serif` 粗體、動態量測寬度自適應縮放避免 4 位數裁切，100 KB/s／MB/s 以下保留 1 位小數（如 `64.4 / KB/s`），並調整雙行垂直置中基線（`y=46f / 80f`）與 `27f` 單位字號 | `StatusBarSpeedIcon.kt` | `.\scripts\android-kotlin.ps1 test`（`:app:testDebugUnitTest` `BUILD SUCCESSFUL`） | 真機狀態列顯示效果待用戶確認 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
