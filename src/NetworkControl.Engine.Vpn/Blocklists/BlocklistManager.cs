@@ -1,6 +1,10 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace NetworkControl.Engine.Vpn.Blocklists;
+
+[JsonSerializable(typeof(List<BlocklistSourceState>))]
+internal sealed partial class BlocklistJsonContext : JsonSerializerContext;
 
 public sealed class BlocklistSourceState
 {
@@ -257,7 +261,7 @@ public sealed class BlocklistManager
                 try
                 {
                     var json = File.ReadAllText(_metaPath);
-                    var items = JsonSerializer.Deserialize<List<BlocklistSourceState>>(json) ?? [];
+                    var items = JsonSerializer.Deserialize(json, BlocklistJsonContext.Default.ListBlocklistSourceState) ?? [];
                     foreach (var item in items)
                     {
                         saved[item.Id] = item;
@@ -296,7 +300,7 @@ public sealed class BlocklistManager
     {
         try
         {
-            var json = JsonSerializer.Serialize(_sources);
+            var json = JsonSerializer.Serialize(_sources, BlocklistJsonContext.Default.ListBlocklistSourceState);
             File.WriteAllText(_metaPath, json);
         }
         catch
