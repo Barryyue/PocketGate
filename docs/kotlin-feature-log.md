@@ -370,39 +370,135 @@
 |---|---|---|---|---|
 | K-142 | 玻璃質感重做：模糊層改用 `BlurredEdgeTreatment(30dp)` 自行裁圓角；玻璃底色降到 0.08 / 0.18，加內圈白光、頂部鏡面反光與底部內陰影；透明改為 10dp 輕度模糊 + 44% / 52% 底色，標籤不再壓在清晰內容上；圓角 30dp、外距 16/10dp | `AppRoot.AppBottomBar` | API 35 模擬器淺色 / 深色視覺對比、JVM 測試、Release 構建 | 真機（Android 12）未驗證；Haze 2 Glass 需要 API 33+ 且要升 AGP 9.1 / compileSdk 37，暫不採用，詳見 android-kotlin.md §59.3 |
 
-### v0.13.3-m4p20（2026-11-18）
+### v0.13.3-m4p20（2026-11-18，提交 `08bf04f`）
 
 | ID | 功能 | 實作位置 | 驗證 | 備註 |
 |---|---|---|---|---|
 | K-143 | 鎖屏允許聯網應用選擇框新增「全選 / 清除選擇」與「規則中允許連網」過濾：可只顯示目前已啟用規則中允許聯網的應用列表，並一鍵全選或取消當前篩選結果 | `VpnRoutingPlanner.allowedByRulePackages/filterPickerApps/selectAllVisible/clearVisibleOrAll`、`RuleSet.findAppRule`、`AppBackend.allowedByRulePackages`、`SettingsScreen.DirectAppsDialog`、`UiStrings` | JVM 測試（`RoutingPlannerTest`、`ReleaseNotesTest`）+ API 35 模擬器（`nc35`）端到端驗證（允許 2 個應用 → 彈框顯示 `全部 (60)` / `規則中允許連網 (2)` → 過濾後僅顯示 2 個應用 → 點全選變為 `已選 2 個` 並儲存顯示 `2 個應用`） | 真機待驗證 |
-| K-144 | 項目內置固定共享簽名密鑰（`android-kotlin/keystore/shared-release.jks`，解決跨機器 / CI 打包簽名衝突問題）與 GitHub Actions / Gitee Go 在線 APK 自動打包及 GitHub Releases 發布 | `android-kotlin/keystore/shared-release.jks`、`app/build.gradle.kts`、`.github/workflows/android-kotlin.yml`、`.gitee/workflows/android-kotlin.yml` | `keytool` 證書指紋驗證（SHA-256 `CF:66:52:C5...`）、Release 構建通過 | 待推送至 GitHub / Gitee 觸發雲端流水線 |
+| K-144 | 項目內置固定共享簽名密鑰（`android-kotlin/keystore/shared-release.jks`，解決跨機器 / CI 打包簽名衝突問題）與 GitHub Actions / Gitee Go 在線 APK 自動打包及 GitHub Releases 發布 | `android-kotlin/keystore/shared-release.jks`、`app/build.gradle.kts`、`.github/workflows/android-kotlin.yml`、`.gitee/workflows/android-kotlin.yml` | `keytool` 證書指紋驗證（SHA-256 `CF:66:52:C5...`）、Release 構建通過 | 已推送。共享密鑰與寫死的密碼 `android` 公開在倉庫中，任何人都能簽出可覆蓋安裝的 APK；v0.15.0 起正式版改用倉庫外的正式密鑰（K-046b），共享密鑰只作 debug 簽名與 CI 未配置 Secret 時的後備，見 AGENTS.md 第 6 節「Kotlin 版發版」 |
+
+### v0.13.4（2026-11-19，提交 `2b34c84`、`a03ce7a`、`1cfbd65`、`4720fa6`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-145 | 設定頁面佈局精簡、品牌定名 `PocketGate` 與自動雙源更新（2026-11-19）：應用與打包產物定名為 `PocketGate`（`PocketGate-<version>.apk`）；檢查更新改為 `UpdateChecker.checkAuto`（優先走 GitHub Releases 並探測下載連通性，失敗或不可達時自動回退至 Gitee Releases，移除設定頁手動選擇更新源）；主設定頁由 13 張卡片整合為 6 張高內聚卡片，新增 `PromptSettingsScreen`、`ForwardingSettingsScreen`、`ProfileScheduleSettingsScreen` 三個二級頁，工具列樣式改為下拉選單，通知標題與可信發布者改為點擊彈窗 | `SettingsScreen.kt`、`PromptSettingsScreen.kt`、`ForwardingSettingsScreen.kt`、`ProfileScheduleSettingsScreen.kt`、`AppRoot.kt`、`UpdateChecker.kt`、`UiStrings.kt`、`strings.xml`、`.github/workflows/android-kotlin.yml`、`.gitee/workflows/android-kotlin.yml`、`scripts/android-kotlin.ps1` | JVM 測試（`UpdateCheckerTest` 雙源自動回退、`ReleaseNotesTest` 等全部通過）、Debug APK 構建通過 | 真機與模擬器界面效果待用戶驗證 |
+| K-171 | 自動化發版與檢查更新閉環（2026-11-19）：`main` 分支推送即自動依 `versionName` 發布 GitHub Release（並支援配置 `GITEE_TOKEN` 自動同步 APK 至 Gitee Releases）；`UpdateChecker` 相容 `kt-v` / `v` 標籤前綴並在多 APK 附件時優先選擇 arm64 主安裝包；修正 Gitee Go 流水線 `version: '1.0'`、JDK 17 與騰訊雲 Gradle 鏡像 | `.github/workflows/android-kotlin.yml`、`.gitee/workflows/android-kotlin.yml`、`UpdateChecker.kt`、`UpdateCheckerTest.kt` | JVM 測試（`UpdateCheckerTest` 全部通過） | 推送至 GitHub / Gitee 後的雲端流水線與真機更新下載待驗證；原誤編為 K-146（與懸浮詢問面板重號），2026-11-20 改號（K-158～K-170 已被後續版本使用，故取 K-171） |
 | K-146 | 懸浮詢問面板與應用內詢問卡片美化（2026-11-19）：頂部新增應用識別列（46dp 圓角應用圖示 + 加粗突出應用名稱 + 包名副標題 + 右側網路類型膠囊標籤），詢問正文中將目標應用名稱加粗並以主題色高亮（`SpannableString` / `AnnotatedString`），目標域名與連線數放入圓角底色框中 | `PromptOverlayController.kt`、`PromptOverlay.kt`、`ReleaseNotes.kt` | JVM 測試（`ReleaseNotesTest`、`PromptDenyPolicyTest` 等全部通過）、Debug APK 構建通過 | 真機與模擬器界面效果待用戶驗證 |
 | K-147 | 應用內直接下載更新並拉起原地覆蓋安裝（2026-11-19）：`UpdateChecker.downloadApk` 支援應用內下載 APK、即時回報 0–100% 進度、校驗 ZIP/APK 魔數（`PK\x03\x04`）並在主連結失敗時自動回退至 Gitee 備用連結；下載完成後透過 `FileProvider`（`cache/updates/`）與 `REQUEST_INSTALL_PACKAGES` 自動拉起系統安裝器原地覆蓋升級（未授予安裝未知應用權限時引導至設定並在返回時自動繼續安裝） | `UpdateChecker.kt`、`SettingsScreen.kt`、`AndroidManifest.xml`、`res/xml/file_paths.xml`、`UpdateCheckerTest.kt` | JVM 測試（`UpdateCheckerTest.downloadsApkInAppAndFallsBackToMirrorOnFailure`、`ReleaseNotesTest` 通過）、Release APK 構建通過 | 真機下載與覆蓋安裝流程待用戶驗證 |
+
+### v0.13.5（2026-11-19，提交 `87da285`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-148 | 修正靈動島文字發虛模糊問題（2026-11-19，v0.13.5）：原本 `SpeedIslandController` 無條件開啟 `setShadowLayer(4f, 0f, 1f, contrastShadow)`，且預設主題綠的亮度 `luma=92.8 <= 140` 觸發了 `Color.WHITE` 的 4px 純白高斯模糊光暈，導致深色膠囊上的小字嚴重發虛重影；改為有底色（`opacity > 0.15f`）時完全關閉陰影並啟用 `SUBPIXEL_TEXT_FLAG`，僅在全透明背景時保留 1.5px 半透明微陰影 | `SpeedIslandController.kt`、`ReleaseNotes.kt` | JVM 測試（`ReleaseNotesTest` 等全部通過）、Release APK 構建通過 | 真機視覺待用戶驗證 |
+
+### v0.13.6（2026-11-19，提交 `9d428b2`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-149 | 應用內更新下載加入 GitHub 國內加速鏡像（`ghfast.top`）與 302 重定向解析兜底（2026-11-19，v0.13.6）：`isUrlReachable` 追蹤重定向確認 `release-assets.githubusercontent.com` 可達性；當 GitHub 直連與 Gitee 均不可用時自動透過 `https://ghfast.top/` 在應用內高速下載 APK，並移除失敗時自動跳轉瀏覽器的行為 | `UpdateChecker.kt`、`SettingsScreen.kt`、`ReleaseNotes.kt` | JVM 測試（`UpdateCheckerTest`、`ReleaseNotesTest` 通過）、Release APK 構建通過 | 真機免代理應用內下載待用戶驗證 |
+
+### v0.13.7（2026-11-19，提交 `4628c08`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-150 | 全新 PocketGate「滑動暗門護盾」自適應矢量 Logo 上線（2026-11-19，v0.13.7）：採用方案 A 設計，黑曜石綠漸層底色 + 護盾外框內左右錯位滑動暗門葉片 + 垂直數據流與 `#C9F45A` 判決核心；同步新增 Android 13+ `<monochrome>` 單色主題圖示並更新 `ic_shield` 通知欄/磁貼圖示 | `ic_launcher.xml`、`ic_launcher_background.xml`、`ic_launcher_foreground.xml`、`ic_launcher_monochrome.xml`、`ic_shield.xml`、`colors.xml`、`ReleaseNotes.kt` | JVM 測試（`ReleaseNotesTest` 通過）、Release APK 構建與 aapt2 資源編譯通過 | 真機桌面圖示與單色主題效果待用戶驗證 |
+
+### v0.13.8（2026-11-19，提交 `af3560a`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-151 | 現代視覺主題引擎、總覽旗艦狀態卡片與主題預覽選擇器（2026-11-19，v0.13.8）：新增 `AppThemeStyle` 與 `AppVisualTokens`（`LocalAppVisualTokens`），提供經典 / 黑曜石極客 / 極簡霜白 / 極光流光 / 純黑省電 / 系統取色（Android 12+ Material You）6 套風格與全域環境極光光暈；`MainActivity` 自動依畫布明暗同步狀態欄與導覽列圖示對比度；升級總覽頁頂部防護卡片為帶 `ic_shield` 護盾與狀態漸層的旗艦卡片；指標與即時網速啟用等寬數字（`tnum`）；設定頁新增橫向縮略圖卡片選擇器 | `Enums.kt`、`AppPreferences.kt`、`ThemeController.kt`、`AppBackend.kt`、`Theme.kt`、`MainActivity.kt`、`AppRoot.kt`、`Components.kt`、`OverviewScreen.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`ReleaseNotes.kt` | JVM 測試、Release APK 構建通過 | 真機各主題風格與 Haze 玻璃折射視覺效果待用戶驗證 |
+
+### v0.13.9（2026-11-19，提交 `e0598df`；Gitee CI 後續修正 `0411d4e`、`510ce3d`、`b07344c`、`69ad082`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-152 | 逐連線轉發與外部 SOCKS5 代理深度優化、深色主題文字對比修復及 Gitee 流水線修復（2026-11-19，v0.13.9）：修復 `Scaffold(Color.Transparent)` 與自訂卡片底色在深色主題下因 `contentColorFor` 退回 `Color.Black` 導致文字看不清的問題；`DnsPacer` / `ForwardingRelay` 改為事件驅動休眠喚醒（空閒零 CPU 喚醒）；修正 `startForwarding` 中 `filter.reset()` 時序並同步清空 `DnsPacer`；`VpnTunnelConfig.equivalentTo` 忽略 `upstreamUdp` 使 UDP 開關無感即時生效；UDP 快速路徑擴充為 8 槽位扁平陣列並改用單調時鐘；外部代理切入立即探活、息屏暫停、本機代理漏選代理應用時防回環預警、代理選擇器置頂常見代理、總覽頁新增異常時一鍵切回直連；修復 `.gitee/workflows/android-kotlin.yml` 的 `SIGPIPE` 與 4Gi 容器 OOM 問題 | `Theme.kt`、`AppRoot.kt`、`Components.kt`、`OverviewScreen.kt`、`DnsPacer.kt`、`ForwardingRelay.kt`、`ForwardingPacketFilter.kt`、`VpnTunnel.kt`、`VpnEngine.kt`、`VpnForwardingTransport.kt`、`AppBackend.kt`、`ForwardingSettingsScreen.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`DnsPacerTest.kt`、`ForwardingTest.kt`、`.gitee/workflows/android-kotlin.yml` | JVM 測試（含新增多槽位 UDP、事件喚醒、回環偵測測試）、Release APK 構建通過 | 真機深色主題文字可讀性、外部代理穩定性與 Gitee 雲端流水線待驗證 |
+
+### v0.14.0（2026-11-19，提交 `fa20c04`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-153 | FlClash 級現代 Bento 雙列儀表盤、即時網速平滑波形圖、懸浮主控按鈕與平滑頁面切換（2026-11-19，v0.14.0）：新增 `SpeedChartCard`（36 點滾動上下行貝茲曲線 + 漸層填充 + 峰值標註）與 `BentoTile`（圓角圖示徽章 + 等寬大數字 + 互動高亮）；重構總覽頁為雙列 Bento 儀表盤 + 右下角形變懸浮主控 FAB + 配置文件 `ModalBottomSheet` 底部抽屜 + Top 3 流量進度條；底部導覽列換用 `Icons.Rounded` 並為 5 個主 Tab 加入 `Crossfade` 切換動效，完整相容 6 套視覺主題 | `SpeedChartCard.kt`、`Components.kt`、`OverviewScreen.kt`、`AppRoot.kt`、`ReleaseNotes.kt` | JVM 測試、Release APK 構建通過 | 真機 6 套主題下的波形圖、Bento 卡片與 FAB 視覺手感待用戶驗證 |
+
+### v0.14.1（2026-11-19，提交 `91f8e55`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-154 | 底部導覽列主題高亮與物理彈簧動效升級（2026-11-19，v0.14.1）：選中圖示與標籤以主題 `primary` 高亮；以自訂滑動膠囊取代僵硬 `NavigationBar` 指示器（`spring(dampingRatio = 0.62f, stiffness = 420f)` 彈性滑動）、圖示 Q 彈縮放上浮（`dampingRatio = 0.45f`）與輕微觸覺回饋；5 個主頁切換改為帶方向的彈性 `AnimatedContent` 滑入縮放過渡 | `AppRoot.kt`、`ReleaseNotes.kt` | JVM 測試、Release APK 構建通過 | 真機滑動膠囊與彈簧手感待用戶驗證 |
+
+### v0.14.2（2026-11-19，提交 `25a4fbe`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-155 | 深度待機省電優化與通知欄護盾圖示鏤空修復（2026-11-19，v0.14.2）：將 `TargetAppSessionTracker`（2s）、`FocusController`（5s）、`QuietPeriodTracker`（5s）與 `FocusScheduler`（30s）4 處常駐輪詢全部改為事件驅動掛起（空閒零喚醒、息屏降頻），待機喚醒從 ~3,360 次/小時降至接近 0；為 `ic_shield.xml` 補上 `android:fillType="evenOdd"` 修復狀態欄與通知欄圖示被填成實心白盾而看不見內部滑動暗門的問題 | `TargetAppSessionTracker.kt`、`FocusController.kt`、`QuietPeriodTracker.kt`、`FocusScheduler.kt`、`ic_shield.xml`、`ReleaseNotes.kt` | JVM 測試、Release APK 構建通過 | 真機待機耗電與狀態欄/通知欄新圖示顯示待用戶驗證 |
+
+### v0.14.3（2026-11-19，提交 `cc0ae40`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-156 | 修復應用分身（vivo / MIUI user 999）規則繼承與識別、移除易誤觸 FAB 並修復靈動島狀態欄取色（2026-11-19，v0.14.3）：`VpnRoutingPlan.find(uid)` 與 `AppCatalog.packagesForUid(uid)` 對多使用者 UID（`>= 100000`）自動回退 `uid % 100000` 匹配主應用 `appId`；總覽頁移除右下角懸浮開關、恢復頂部旗艦防護卡片右側獨立 `Switch` 防誤觸；`SpeedIslandController` 改用系統真實深色模式與 `WallpaperColors.primaryColor.luminance()` 兜底判斷暗/亮桌布文字顏色 | `Models.kt`、`AppCatalog.kt`、`OverviewScreen.kt`、`SpeedIslandController.kt`、`ForwardingTest.kt`、`ReleaseNotes.kt` | JVM 測試（含 `cloneAppUidInheritsPrimaryUserRoutingDecision`）、Release APK 構建通過 | 真機 vivo 微信分身放行與靈動島黑/白桌布變色待用戶驗證 |
+
+### v0.14.4（2026-11-19，提交 `c9459fd`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-157 | 修復懸浮玻璃底部導覽列兩端方形尾巴（2026-11-19，v0.14.4）：在 `shadow(..., clip = false)` 之後對懸浮導覽列加上 `Modifier.clip(shape)` 並將玻璃 `HazeStyle.backgroundColor` 設為 `Color.Transparent`，消除 Haze 著色與模糊層在圓角外露邊，並將滑動指示器改為同心 `24dp` 圓角 | `AppRoot.kt`、`ReleaseNotes.kt` | JVM 測試、Release APK 構建通過 | 真機懸浮玻璃圓角效果待用戶驗證 |
+
+### v0.15.0（2026-11-19，提交 `5baa043`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-158 | 極簡新版 PocketGate Logo + 通知欄彩色大圖示 + 應用/規則/記錄三頁全面對齊 6 套現代主題（2026-11-19，v0.15.0）：4 套矢量 Logo 精簡為極簡 3 元素護盾雙膠囊閘門；`VpnForegroundNotifier` 新增 `setLargeIcon`；`AppsScreen` / `RulesScreen` / `LogsScreen` 全面接入 `LocalAppVisualTokens`、圓角搜尋列、狀態圓點/色條與等寬膠囊標籤 | `ic_launcher_*.xml`、`ic_shield.xml`、`VpnTunnel.kt`、`AppsScreen.kt`、`RulesScreen.kt`、`LogsScreen.kt` | JVM 測試、Release APK 構建通過 | 待真機視覺驗證 |
 | K-159 | 原生狀態欄即時網速小圖示模式（2026-11-19，v0.15.0）：新增 `StatusBarSpeedIcon` 以 `IconCompat.createWithBitmap` 繪製 24×24dp 雙行單色網速位圖交由 SystemUI 原生自動隨前景 App 變黑/變白；於靈動島設定頁提供獨立開關 | `StatusBarSpeedIcon.kt`、`VpnTunnel.kt`、`AppPreferences.kt`、`AppBackend.kt`、`SpeedIslandSettingsScreen.kt`、`UiStrings.kt`、`ForwardingTest.kt` | JVM 測試（含 `splitSpeed` 格式測試）、Release APK 構建通過 | 待真機狀態欄自動變色驗證 |
 | K-160 | 「測試代理」三段式精準診斷（2026-11-19，v0.15.0）：`Socks5Probe.diagnose` 拆分 ① 本機埠連通 → ② SOCKS5 握手認證 → ③ 經代理存取外網與延遲，並在連上埠但出網逾時時顯示針對性排障提示 | `Socks5Probe.kt`、`ForwardingSettingsScreen.kt`、`UiStrings.kt` | JVM 測試、Release APK 構建通過 | 待真機 FlClash 診斷驗證 |
 | K-161 | 6 項權限與保活紅綠燈體檢卡（2026-11-19，v0.15.0）：於設定頁整合 VPN 授權、通知、使用情況、應用列表、懸浮窗、忽略電池最佳化 6 項即時狀態與一鍵跳轉，頂部顯示 `X / 6` 就緒數 | `SettingsScreen.kt`、`AppBackend.kt`、`UiStrings.kt` | JVM 測試、Release APK 構建通過 | 待真機驗證 |
 | K-162 | 「即時活躍連線」檢視與單條連線一鍵雙向 RST 斷開（2026-11-19，v0.15.0）：`ForwardingPacketFilter` 暴露 `activeConnections()` 與 `cutConnection()`，記錄頁新增「即時連線」分頁（每 2 秒自動刷新、支援關鍵字篩選與單條一鍵下發雙向 RST） | `ForwardingPacketFilter.kt`、`AppBackend.kt`、`LogsScreen.kt`、`UiStrings.kt`、`ForwardingTest.kt` | JVM 測試（含 `activeConnectionsCanBeListedAndManuallyCut`）、Release APK 構建通過 | 待真機逐連線模式實測 |
 | K-046b | 正式 Release Keystore 簽章與 GitHub Actions 自動解碼簽章接入（2026-11-19，v0.15.0）：本機於倉庫外產生 25 年 2048-bit RSA PKCS12 金鑰，CI 自動解碼 `NC_ANDROID_KEYSTORE_BASE64` Secret 進行正式簽章 | `.github/workflows/android-kotlin.yml`、`build.gradle.kts` | CI 腳本與 Release 構建驗證 | 首次正式簽章安裝需先匯出規則、卸載舊版再安裝匯入 |
+
+### v0.15.1（2026-11-19，提交 `bb803a1`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-165 | 純離線模式（禁止本應用主動聯網，2026-11-19，v0.15.1）：設定頁安全權限卡片新增獨立可選開關（預設關閉），開啟後攔截 `UpdateChecker` 檢查更新與 APK 下載，並在 `BlocklistManager.update` 入口直接短路所有定時/手動線上名單訂閱下載，保留本機檔案匯入與既有 VPN 防火牆/逐連線轉發行為不受影響 | `AppPreferences.kt`、`AppBackend.kt`、`AppContainer.kt`、`BlocklistManager.kt`、`SettingsScreen.kt`、`BlocklistSettingsScreen.kt`、`UiStrings.kt`、`BlocklistTest.kt`、`ReleaseNotes.kt` | JVM 測試（含 `BlocklistTest.offlineModeBlocksOnlineDownloadsButAllowsLocalImport`、`ReleaseNotesTest`）、正式簽章 Release APK 構建通過 | 真機開關交互與提示待用戶確認 |
+
+### v0.15.2（2026-11-19，提交 `9699a5e`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-166 | 首次啟動分級權限初始化引導 + 總覽輕量待辦橫幅（2026-11-19，v0.15.2）：首次啟動或重裝檢測到核心/進階權限缺失時彈出一站式分組引導彈窗（核心保活：通知/電池最佳化/應用列表；進階體驗：懸浮窗/使用情況），切回頁面自動刷新狀態打勾；略過後在總覽頁頂部保留可手動關閉的精簡橫幅，開啟靈動島缺少懸浮窗權限時同步自動跳轉授權頁 | `PermissionGuide.kt`、`OverviewScreen.kt`、`SpeedIslandSettingsScreen.kt`、`AppPreferences.kt`、`AppBackend.kt`、`UiStrings.kt`、`ReleaseNotes.kt` | JVM 測試、正式簽章 Release APK 構建通過 | 真機首次啟動彈窗與授權返回自動刷新待用戶確認 |
+
+### v0.15.3（2026-11-19，提交 `72e89f0`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-167 | 修復設定頁「顯示通知」開關點擊無即時重繪（2026-11-19，v0.15.3）：原本直接將 `SwitchRow.checked` 綁定至非可觀察的 `SharedPreferences` 屬性 `preferences.notificationsEnabled`，改用 `remember(resumeKey) { mutableStateOf(...) }` 同步狀態後點擊立即回饋 | `SettingsScreen.kt`、`ReleaseNotes.kt` | JVM 測試、Release APK 構建通過 | 真機秒響應待用戶確認 |
+
+### v0.15.4～v0.15.6（2026-11-19，提交 `06f7229`、`4b04c35`、`9042c9a`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-168 | 底部導覽列全域下滑自動隱藏與上滑恢復（2026-11-19，v0.15.4；v0.15.5/v0.15.6 修正最佳化）：於 `AppRoot` 以 `NestedScrollConnection.onPostScroll(consumed.y)` 監聽 5 個主頁實際滾動量（28dp 下滑死區 / 14dp 上滑喚回，短列表不誤隱、切頁自動復位）；v0.15.5 統一移除 `Scaffold(bottomBar)` 改為全高邊到邊畫布 + 浮層疊加消除空白佔位；v0.15.6 調校非對稱彈簧（出現 `dampingRatio=0.62, stiffness=240` 輕微過衝回彈、隱藏 `dampingRatio=0.86, stiffness=220` 從容下沉）與底部錨點縮放（`0.92..1.0`）；於設定 → 外觀新增開關（預設開啟） | `AppRoot.kt`、`ThemeController.kt`、`AppPreferences.kt`、`AppBackend.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`ReleaseNotes.kt` | JVM 測試、正式簽章 Release APK 構建通過 | 真機滑動手感與 6 套主題視覺待用戶確認 |
+
+### v0.15.7（2026-11-19，提交 `9ee067a`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-169 | 應用級自動檢查更新、總覽頂部下載進度條與跨頁不中斷下載安裝提醒（2026-11-19，v0.15.7）：新增 `AppUpdateManager`（掛載於 `AppContainer.scope`，切頁不中斷）與共用 `ApkInstaller`；進入應用時自動檢查新版本並彈窗提示更新（嚴格遵守純離線模式並帶 10 分鐘冷卻防重複打擾）；下載期間於總覽頂部顯示進度卡片，下載完成後全域彈窗提醒一鍵安裝並在總覽頂部保留「立即安裝」入口；設定頁同步共享同一狀態 | `AppUpdateManager.kt`、`ApkInstaller.kt`、`AppContainer.kt`、`AppBackend.kt`、`AppRoot.kt`、`OverviewScreen.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`UpdateCheckerTest.kt`、`ReleaseNotes.kt` | JVM 測試（含 `UpdateCheckerTest.appUpdateManagerChecksOnEnterRespectsOfflineAndTracksDownloadToReadyPrompt`、`ReleaseNotesTest`）、正式簽章 Release APK 構建通過 | 真機自動檢測彈窗與跨分頁背景下載安裝待用戶確認 |
+
+### v0.16.0（2026-11-19，提交 `4ae6324`）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
 | K-164 | WebDAV 端到端加密備份同步、本機 `Download/PocketGate/` 留檔還原與應用分身獨立管控（2026-11-19，v0.16.0）：新增 `WebDavBackupClient`（PBKDF2WithHmacSHA256 + AES-256-GCM 密文上傳與還原，遵守純離線模式）；新增 `LocalRulesBackup` 透過 `MediaStore.Downloads` 一鍵備份與重裝就近還原；於 `VpnRoutingPlan` 新增 `cloneAppsInheritPrimary` 開關支援逐連線模式分身獨立觸發詢問或攔截 | `WebDavBackupClient.kt`、`LocalRulesBackup.kt`、`Models.kt`、`RoutingPlanner.kt`、`VpnEngine.kt`、`AppPreferences.kt`、`AppBackend.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`ForwardingTest.kt`、`UpdateCheckerTest.kt`、`ReleaseNotes.kt` | JVM 測試（含 WebDAV 加解密往返、分身獨立規則測試）、正式簽章 Release APK 構建通過 | 真機 WebDAV 伺服器同步、Download 留檔還原與分身獨立詢問待用戶確認 |
 | K-170 | 更新彈窗直顯更新日誌與桌面小元件視覺對齊（2026-11-19，v0.16.0）：`UpdateChecker.parse` 解析 GitHub/Gitee/GitLab/Custom 版本說明並在 `AppRoot` 發現新版本彈窗內捲動呈現；`NcWidgets` 對齊極簡護盾圓角徽章與 `22dp` 卡片圓角排版 | `UpdateChecker.kt`、`AppRoot.kt`、`NcWidgets.kt`、`UpdateCheckerTest.kt`、`ReleaseNotes.kt` | JVM 測試（含 `UpdateCheckerTest.parsesReleaseNotesAndEncryptsWebDavBackupRoundTrip`）、正式簽章 Release APK 構建通過 | 真機更新日誌彈窗與桌面小元件外觀待用戶確認 |
-| K-146 | 自動化發版與檢查更新閉環（2026-11-19）：`main` 分支推送即自動依 `versionName` 發布 GitHub Release（並支援配置 `GITEE_TOKEN` 自動同步 APK 至 Gitee Releases）；`UpdateChecker` 相容 `kt-v` / `v` 標籤前綴並在多 APK 附件時優先選擇 arm64 主安裝包；修正 Gitee Go 流水線 `version: '1.0'`、JDK 17 與騰訊雲 Gradle 鏡像 | `.github/workflows/android-kotlin.yml`、`.gitee/workflows/android-kotlin.yml`、`UpdateChecker.kt`、`UpdateCheckerTest.kt` | JVM 測試（`UpdateCheckerTest` 全部通過） | 推送至 GitHub / Gitee 後的雲端流水線與真機更新下載待驗證 |
+
+### v0.16.1（2026-11-20，提交 `b7b9627`、`1bd6d09`、`4a2229f`）
+
+沒有新增 K 項：檢查更新改為讀取最近 20 個 Release 並跳過 `atomui-v*` 標籤（AtomUI 版與 Kotlin 版發布到同一個倉庫，避免 Kotlin 版被提示安裝 AtomUI 包）；靈動島移除不受支持的「跟隨狀態欄自適應顏色」選項。驗證以提交為準，未另做記錄。
+
+> 2026-11-20 整理（claude）：v0.13.4～v0.16.0 原本都寫在 v0.13.3-m4p20 標題下，現按版本拆分並補上提交號；這批版本由 CI 打包發布，沒有本機 APK 的大小與 SHA-256 記錄。
 
 ### 尚未完成（待辦，不屬於完成項）
 
@@ -411,7 +507,7 @@
 | K-026 | 主執行緒 PackageManager、`establish()` 失敗顯示等 P2 | 已完成（K-122） |
 | K-043b | 應用鎖在修改規則 / 模式前的即時驗證 | 已完成（K-121）；之後應用鎖相關功能降低優先級，暫不再做 |
 | K-045b | Baseline Profiles、arm64-only、CI 大小 / 啟動基線 | 已完成（K-124）；啟動時間未進 CI（模擬器在 CI 上耗時且雜訊大），改為本機 `scripts/android-kotlin.ps1 startup` |
-| K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 待用戶提供 keystore |
+| K-046b | 正式 keystore 簽名與側載更新流程實際演練 | 大部分完成：v0.15.0 接入倉庫外的正式密鑰（CI 從 `NC_ANDROID_KEYSTORE_BASE64` 等 Secret 解碼），K-147 / K-171 / K-169 打通應用內下載與覆蓋安裝；從共享簽名換到正式簽名選擇「匯出規則 → 卸載 → 安裝 → 匯入」，沒有做 v3 密鑰輪換。待辦：CI 未配置 Secret 時會靜默退回共享密鑰簽 Release；真機覆蓋安裝流程待驗證 |
 | K-048b | 純 IPv6 / 私人 DNS / OEM ROM 真機回歸 | 待真機 |
 | K-051 | 轉發 / 逐連線模式總覽：v0.9.0 按應用判決與 mapdns；v0.9.1 條件規則；v0.9.4 內建直連出口；v0.9.5 攔截列表；v0.9.6 DNS 防繞過與 DoH；v0.9.7 切斷連線、追蹤器、NIO 出口 | M4，見 [android-forwarding-research.md](android-forwarding-research.md)；剩餘見 K-051b、K-051f |
 | K-051a | mapdns 只支援 IPv4；IPv6 AAAA 回空 | 不做：應用會改用 IPv4，純 IPv6 網路一般有 464XLAT，內建出口也會在 IPv4 失敗後改用 IPv6（見 android-kotlin.md §39） |

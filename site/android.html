@@ -1,0 +1,1066 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PocketGate for Android — 装在手机里的出站防火墙</title>
+<meta name="description" content="PocketGate Android 版：免 Root 的按应用联网控制。应用联网时悬浮询问，实时查看每一条连接，拦截清单、专注模式与加密同步，全部在本机运行，不收集任何数据。">
+<meta name="theme-color" content="#08090B">
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("nc.theme") || "auto";
+    var light = window.matchMedia("(prefers-color-scheme: light)").matches;
+    document.documentElement.setAttribute("data-theme", t === "auto" ? (light ? "light" : "dark") : t);
+    var l = localStorage.getItem("nc.lang") || "zh-Hans";
+    document.documentElement.lang = l === "en" ? "en" : (l === "zh-Hant" ? "zh-Hant" : "zh-Hans");
+    if (l !== "zh-Hans") document.documentElement.classList.add("i18n-pending");
+  } catch (e) { }
+})();
+</script>
+<meta property="og:type" content="website">
+<meta property="og:title" content="PocketGate for Android — 每个应用第一次联网，都先问你">
+<meta property="og:description" content="免 Root 的 Android 出站防火墙：悬浮询问、实时连接、拦截清单、专注模式、加密同步，本地运行，无遥测。">
+<meta property="og:image" content="assets/android/overview-dark.webp">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B1A12'/%3E%3Cpath d='M16 7.4l7.1 2.5v5.8c0 4.3-3 7.5-7.1 9-4.1-1.5-7.1-4.7-7.1-9V9.9z' fill='none' stroke='%23F4F8F5' stroke-width='1.4' stroke-linejoin='round'/%3E%3Crect x='10.5' y='13.5' width='5' height='2.1' rx='1.05' fill='%2334D399'/%3E%3Crect x='16.6' y='16.5' width='5' height='2.1' rx='1.05' fill='%23C9F45A'/%3E%3Ccircle cx='16' cy='16' r='1' fill='%23C9F45A'/%3E%3C/svg%3E">
+<style>
+/* ── tokens ───────────────────────────────────────────────────── */
+:root{
+  color-scheme:dark;
+  --ink-rgb:255 255 255;
+  --bg:#08090B;
+  --bg-2:#0C0E11;
+  --bg-3:#11141A;
+  --fg:#F2F3F4;
+  --fg-2:#9AA1AB;
+  --fg-3:#666D77;
+  --brand-dim:#8B9199;
+  --fg-mono:#7E858F;
+  --fg-mono-strong:#C8CDD4;
+  --icon-bg:#1D222B;
+  --icon-fg:#B9C4D2;
+  --info-rgb:143 180 232;
+  --line:rgb(var(--ink-rgb) / .085);
+  --line-2:rgb(var(--ink-rgb) / .16);
+  --acc-rgb:201 244 90;
+  --acc-solid:#C9F45A;
+  --acc-on:#0A0B0D;
+  --acc:rgb(var(--acc-rgb));
+  --glow-rgb:201 244 90;
+  --shadow-cta:0 10px 26px -12px rgb(201 244 90 / .8);
+  --deny-rgb:255 106 85;
+  --deny:rgb(var(--deny-rgb));
+  --allow:var(--acc-solid);
+  --bar-bg:rgba(8,9,11,.72);
+  --bar-bg-solid:rgba(8,9,11,.9);
+  --overlay:rgba(0,0,0,.24);
+  --prompt-bg:linear-gradient(180deg,#14171D 0%,#0B0D10 62%,#0A0C0E 100%);
+  --prompt-shadow:0 40px 80px -40px rgba(0,0,0,.95),0 0 0 1px rgba(0,0,0,.4),0 1px 0 rgb(var(--ink-rgb) / .05) inset;
+  --r:14px;
+  --wrap:1180px;
+  --pad:clamp(20px,5vw,56px);
+  --font:"Inter","Segoe UI Variable Text","Segoe UI",-apple-system,BlinkMacSystemFont,"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:"JetBrains Mono","SFMono-Regular","Cascadia Mono",ui-monospace,"Consolas",monospace;
+}
+
+[data-theme="light"]{
+  color-scheme:light;
+  --ink-rgb:16 18 22;
+  --bg:#FAFAF8;
+  --bg-2:#FFFFFF;
+  --bg-3:#F1F2F0;
+  --fg:#101214;
+  --fg-2:#565C64;
+  --fg-3:#878D96;
+  --brand-dim:#6E747C;
+  --fg-mono:#5B616A;
+  --fg-mono-strong:#23262B;
+  --icon-bg:#ECEEF0;
+  --icon-fg:#4B5158;
+  --info-rgb:47 107 214;
+  --acc-rgb:74 102 0;
+  --acc-solid:#C9F45A;
+  --acc-on:#12160A;
+  --glow-rgb:150 182 34;
+  --shadow-cta:0 10px 24px -14px rgb(96 124 0 / .5);
+  --deny-rgb:197 45 30;
+  --bar-bg:rgba(250,250,248,.78);
+  --bar-bg-solid:rgba(250,250,248,.94);
+  --overlay:rgba(16,18,22,.035);
+  --prompt-bg:linear-gradient(180deg,#FFFFFF 0%,#F9FAFA 62%,#F5F6F6 100%);
+  --prompt-shadow:0 30px 60px -34px rgba(16,18,22,.28),0 0 0 1px rgba(16,18,22,.08),0 1px 0 rgba(255,255,255,.9) inset;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+html.i18n-pending body{opacity:0}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:var(--font);font-size:16px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+h1,h2,h3,h4,p,ul,ol,dl,dd{margin:0}
+ul,ol{padding:0;list-style:none}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+::selection{background:var(--acc-solid);color:var(--acc-on)}
+:focus-visible{outline:2px solid var(--allow);outline-offset:3px;border-radius:4px}
+
+.wrap{width:min(var(--wrap),100% - 2*var(--pad));margin-inline:auto}
+.mono{font-family:var(--mono);font-variant-ligatures:none}
+.dim{color:var(--fg-2)}
+/* ── topbar ───────────────────────────────────────────────────── */
+.topbar{
+  position:fixed;inset:0 0 auto;z-index:60;height:60px;
+  display:flex;align-items:center;
+  background:var(--bar-bg);backdrop-filter:blur(14px) saturate(140%);
+  border-bottom:1px solid transparent;transition:border-color .3s,background .3s;
+}
+.topbar.scrolled{border-bottom-color:var(--line);background:var(--bar-bg-solid)}
+.topbar .wrap{display:flex;align-items:center;gap:28px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.02em;font-size:15px}
+.logo svg{display:block}
+.logo b{font-weight:600}
+.logo span{color:var(--fg-3);font-weight:400}
+.nav{display:flex;gap:26px;margin-left:auto}
+.nav a{font-size:13.5px;color:var(--fg-2);letter-spacing:.01em;transition:color .2s;position:relative;padding:4px 0}
+.nav a:hover,.nav a.on{color:var(--fg)}
+.nav a.on::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:var(--acc)}
+
+/* 顶部工具：语言 + 主题 */
+.top-actions{display:flex;align-items:center;gap:9px}
+.lang{display:flex;align-items:center;gap:1px;padding:2px;border:1px solid var(--line);border-radius:8px}
+.lang button{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.02em;color:var(--fg-3);
+  padding:3px 7px;border-radius:6px;line-height:1.5;transition:color .18s,background .18s;
+}
+.lang button:hover{color:var(--fg)}
+.lang button[aria-pressed="true"]{background:rgb(var(--ink-rgb) / .09);color:var(--fg)}
+.icon-btn{
+  width:31px;height:31px;display:grid;place-items:center;border-radius:8px;
+  border:1px solid var(--line);color:var(--fg-2);transition:.2s;
+}
+.icon-btn:hover{color:var(--fg);border-color:var(--line-2)}
+.icon-btn svg{width:15px;height:15px;display:none}
+.icon-btn[data-mode="auto"] .i-auto,
+.icon-btn[data-mode="light"] .i-light,
+.icon-btn[data-mode="dark"] .i-dark{display:block}
+.top-cta{
+  display:inline-flex;align-items:center;gap:7px;height:33px;padding:0 15px;border-radius:99px;
+  background:var(--acc-solid);color:var(--acc-on);font-size:13px;font-weight:600;letter-spacing:.01em;
+  transition:transform .2s,box-shadow .2s;
+}
+.top-cta:hover{transform:translateY(-1px);box-shadow:var(--shadow-cta)}
+@media(max-width:880px){
+  .nav{display:none}
+  .top-actions{margin-left:auto}
+  .topbar .wrap{gap:14px}
+}
+@media(max-width:430px){
+  .top-cta{display:none}
+  .lang button{padding:3px 6px}
+}
+/* ── hero ─────────────────────────────────────────────────────── */
+.hero{
+  position:relative;overflow:hidden;display:flex;align-items:center;
+  min-height:min(100svh,940px);
+  padding:clamp(96px,13vh,150px) 0 clamp(44px,6vw,80px);
+}
+.hero::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(58% 46% at 80% 12%,rgb(var(--glow-rgb) / .11),transparent 68%),
+    radial-gradient(50% 42% at 6% 88%,rgb(var(--ink-rgb) / .055),transparent 72%);
+}
+.hero::after{
+  content:"";position:absolute;inset:-1px;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(to right,rgb(var(--ink-rgb) / .04) 1px,transparent 1px),
+    linear-gradient(to bottom,rgb(var(--ink-rgb) / .04) 1px,transparent 1px);
+  background-size:92px 92px;
+  -webkit-mask-image:radial-gradient(74% 58% at 52% 34%,#000 12%,transparent 76%);
+  mask-image:radial-gradient(74% 58% at 52% 34%,#000 12%,transparent 76%);
+}
+.hero .wrap{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,1fr);gap:clamp(32px,5vw,72px);align-items:center;min-width:0}
+.hero-l,.hero-r{min-width:0}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);
+  font-size:11px;letter-spacing:.14em;color:var(--fg-3);
+}
+.eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--allow);box-shadow:0 0 12px rgb(var(--acc-rgb) / .9)}
+.brand{
+  font-size:clamp(2.9rem,6.6vw,5.4rem);line-height:.94;letter-spacing:-.045em;font-weight:600;
+  margin:20px 0 0;
+}
+.brand em{font-style:normal;color:var(--brand-dim)}
+.hero .promise{
+  font-size:clamp(1.12rem,1.85vw,1.5rem);line-height:1.45;font-weight:500;
+  letter-spacing:-.01em;margin-top:22px;max-width:13em;
+}
+.hero .promise span{color:var(--fg-2)}
+.hero .lede{margin-top:18px;color:var(--fg-2);font-size:14.5px;line-height:1.72;max-width:44ch}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.btn{
+  display:inline-flex;align-items:center;gap:9px;height:44px;padding:0 20px;border-radius:10px;
+  font-size:14px;font-weight:600;letter-spacing:.01em;transition:.22s;
+}
+.btn-primary{background:var(--acc-solid);color:var(--acc-on)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:var(--shadow-cta)}
+.btn-ghost{border:1px solid var(--line-2);color:var(--fg)}
+.btn-ghost:hover{border-color:rgb(var(--ink-rgb) / .34);background:rgb(var(--ink-rgb) / .03)}
+.btn svg{opacity:.75}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:26px;font-family:var(--mono);font-size:11.5px;color:var(--fg-3)}
+.meta span{display:inline-flex;align-items:center;gap:7px}
+.meta span::before{content:"";width:3px;height:3px;border-radius:50%;background:var(--fg-3)}
+.meta span:first-child::before{display:none}
+/* ── section scaffolding ─────────────────────────────────────── */
+.sect{padding:clamp(64px,9vw,118px) 0;position:relative}
+.sect + .sect{border-top:1px solid var(--line)}
+.s-head{display:grid;grid-template-columns:minmax(0,228px) minmax(0,1fr);gap:clamp(16px,4vw,56px);align-items:start}
+.s-num{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--acc);padding-top:12px}
+.s-head h2{
+  font-size:clamp(1.5rem,2.7vw,2.15rem);line-height:1.24;letter-spacing:-.03em;font-weight:600;
+  max-width:15em;
+}
+.s-head .s-lede{color:var(--fg-2);font-size:14.5px;line-height:1.75;max-width:34em;margin-top:16px}
+.s-head .s-lede + .s-lede{margin-top:10px}
+@media(max-width:820px){
+  .s-head{grid-template-columns:1fr;gap:10px}
+  .s-num{padding-top:0}
+  .s-head h2{max-width:none}
+}
+/* ── tri ─────────────────────────────────────────────────────── */
+.tri{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:clamp(34px,5vw,58px);border-top:1px solid var(--line)}
+.tri > div{padding:26px clamp(16px,2.4vw,32px) 8px;border-left:1px solid var(--line)}
+.tri > div:first-child{border-left:0;padding-left:0}
+.tri h3{font-size:13px;letter-spacing:.02em;color:var(--fg);font-weight:600;display:flex;align-items:baseline;gap:9px}
+.tri h3 i{font-family:var(--mono);font-style:normal;font-size:10.5px;color:var(--fg-3)}
+.tri p{color:var(--fg-2);font-size:13px;line-height:1.72;margin-top:9px}
+.tri .val{font-family:var(--mono);font-size:11.5px;color:var(--allow);margin-top:12px;line-height:1.9;word-break:break-word}
+@media(max-width:780px){
+  .tri{grid-template-columns:1fr}
+  .tri > div{border-left:0;border-top:1px solid var(--line);padding:20px 0 4px}
+  .tri > div:first-child{border-top:0}
+}
+.note-line{
+  display:flex;gap:10px;align-items:flex-start;margin-top:26px;padding:14px 16px;border-radius:10px;
+  border:1px solid var(--line);background:rgb(var(--ink-rgb) / .018);color:var(--fg-2);font-size:12.5px;line-height:1.7;
+}
+.note-line b{color:var(--fg);font-weight:600}
+.note-line .tick{color:var(--allow);font-family:var(--mono);font-size:11px;flex:0 0 auto;padding-top:2px}
+/* ── feature table ───────────────────────────────────────────── */
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;font-family:var(--mono);font-size:10.5px;color:var(--fg-3);letter-spacing:.02em}
+.mod{display:grid;grid-template-columns:minmax(0,208px) minmax(0,1fr);gap:clamp(12px,3vw,40px);padding:20px 0;border-top:1px solid var(--line)}
+.mod:last-child{border-bottom:1px solid var(--line)}
+.mod-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.mod-h h3{font-size:14px;font-weight:600;letter-spacing:-.005em}
+.mod-h .code{font-family:var(--mono);font-size:10px;color:var(--fg-3);letter-spacing:.04em}
+.caps{display:flex;flex-wrap:wrap;gap:2px 22px;align-items:center;font-size:13px;color:var(--fg-2);line-height:1.95}
+.caps li{display:inline-flex;align-items:center;gap:7px}
+.tag{
+  font-family:var(--mono);font-style:normal;font-size:9.5px;letter-spacing:.04em;
+  border-radius:4px;padding:0 4px;line-height:1.55;transform:translateY(-1px);
+}
+.tag.p1{color:rgb(var(--info-rgb));border:1px solid rgb(var(--info-rgb) / .32)}
+.tag.p2{color:var(--fg-3);border:1px solid var(--line-2)}
+@media(max-width:720px){.mod{grid-template-columns:1fr;gap:8px}}
+/* ── table ───────────────────────────────────────────────────── */
+.tablewrap{margin-top:clamp(30px,4vw,46px);overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px}
+th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--fg-3);font-weight:400;background:rgb(var(--ink-rgb) / .02);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+tbody th{font-weight:500;color:var(--fg);white-space:nowrap;font-size:12.5px}
+td{color:var(--fg-2)}
+td .y{color:var(--allow)}
+td .n{color:var(--fg-3)}
+td .p{color:rgb(var(--info-rgb))}
+.hint{font-family:var(--mono);font-size:10.5px;color:var(--fg-3);margin-top:12px;display:block}
+/* ── two col list ────────────────────────────────────────────── */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,64px);margin-top:clamp(30px,4vw,48px)}
+.col-h{display:flex;align-items:baseline;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--line-2)}
+.col-h h3{font-size:14px;font-weight:600}
+.col-h span{font-family:var(--mono);font-size:10px;color:var(--fg-3);letter-spacing:.08em;margin-left:auto}
+.items li{display:grid;grid-template-columns:minmax(0,132px) minmax(0,1fr);gap:14px;padding:11px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.items li b{font-weight:500;color:var(--fg)}
+.items li span{color:var(--fg-2);line-height:1.65}
+@media(max-width:720px){.cols{grid-template-columns:1fr}.items li{grid-template-columns:1fr;gap:3px}}
+/* ── stack ───────────────────────────────────────────────────── */
+.feat{display:grid;grid-template-columns:1fr 1fr;margin-top:clamp(30px,4vw,48px);border-top:1px solid var(--line)}
+.feat > div{padding:22px clamp(16px,3vw,40px) 22px 0;border-bottom:1px solid var(--line)}
+.feat > div:nth-child(even){padding-right:0;padding-left:clamp(16px,3vw,40px);border-left:1px solid var(--line)}
+.feat h3{font-size:14px;font-weight:600;letter-spacing:-.005em}
+.feat p{color:var(--fg-2);font-size:13px;line-height:1.75;margin-top:9px;max-width:46ch}
+.feat .meta{font-family:var(--mono);font-size:10.5px;color:var(--fg-3);margin-top:12px;letter-spacing:.02em;line-height:1.7}
+@media(max-width:780px){
+  .feat{grid-template-columns:1fr}
+  .feat > div{padding-right:0;padding-left:0;border-left:0}
+}
+.stack{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:clamp(30px,4vw,46px);border-top:1px solid var(--line)}
+.stack > div{padding:20px clamp(12px,2vw,24px);border-left:1px solid var(--line)}
+.stack > div:first-child{border-left:0;padding-left:0}
+.stack .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-3)}
+.stack .v{margin-top:9px;font-size:13px;line-height:1.75}
+.stack .v code{font-family:var(--mono);font-size:11.5px;color:var(--allow)}
+.stack .v code + code::before{content:"·";color:var(--fg-3);margin:0 6px 0 1px}
+.stack .v span{color:var(--fg-2);display:block;font-size:12px;margin-top:5px}
+@media(max-width:820px){.stack{grid-template-columns:1fr 1fr}.stack > div:nth-child(3){border-left:0;padding-left:0}.stack > div:nth-child(n+3){border-top:1px solid var(--line)}}
+@media(max-width:520px){.stack{grid-template-columns:1fr}.stack > div{border-left:0;padding-left:0;border-top:1px solid var(--line)}.stack > div:first-child{border-top:0}}
+/* ── faq ─────────────────────────────────────────────────────── */
+.faq{margin-top:clamp(30px,4vw,46px);border-top:1px solid var(--line)}
+details{border-bottom:1px solid var(--line)}
+summary{
+  list-style:none;cursor:pointer;padding:17px 34px 17px 0;position:relative;
+  font-size:14px;font-weight:500;color:var(--fg);transition:color .2s;
+}
+summary::-webkit-details-marker{display:none}
+summary::after{
+  content:"+";position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:15px;color:var(--fg-3);transition:.25s;
+}
+details[open] summary::after{transform:translateY(-50%) rotate(45deg);color:var(--allow)}
+summary:hover{color:var(--allow)}
+details .a{padding:0 40px 20px 0;color:var(--fg-2);font-size:13px;line-height:1.8;max-width:76ch}
+details .a code{font-family:var(--mono);font-size:11.5px;color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+/* ── final cta ───────────────────────────────────────────────── */
+.final{position:relative;padding:clamp(72px,10vw,132px) 0;border-top:1px solid var(--line);overflow:hidden}
+.final::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(50% 70% at 50% 110%,rgb(var(--glow-rgb) / .13),transparent 70%);
+}
+.final .wrap{position:relative;text-align:center}
+.final h2{font-size:clamp(1.7rem,3.6vw,2.7rem);line-height:1.2;letter-spacing:-.035em;font-weight:600;max-width:16em;margin-inline:auto;text-wrap:balance}
+.final p{color:var(--fg-2);font-size:14px;margin-top:16px;max-width:44em;margin-inline:auto}
+.final .actions{justify-content:center}
+/* ── footer ──────────────────────────────────────────────────── */
+footer{border-top:1px solid var(--line);padding:34px 0 46px;font-size:12px;color:var(--fg-3)}
+.f-top{display:flex;flex-wrap:wrap;gap:18px 40px;align-items:center}
+.f-brand{display:flex;align-items:center;gap:9px;color:var(--fg-2);font-weight:500}
+.f-links{display:flex;flex-wrap:wrap;gap:22px;margin-left:auto}
+.f-links a{transition:color .2s}
+.f-links a:hover{color:var(--fg)}
+.f-bottom{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:26px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10.5px;letter-spacing:.02em}
+.f-bottom span:last-child{margin-left:auto}
+@media(max-width:640px){.f-links{margin-left:0;gap:16px}.f-bottom span:last-child{margin-left:0}}
+/* ── motion ──────────────────────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .75s cubic-bezier(.22,.61,.36,1),transform .75s cubic-bezier(.22,.61,.36,1)}
+.reveal.in{opacity:1;transform:none}
+.hero-l > *{opacity:0;animation:rise .85s cubic-bezier(.22,.61,.36,1) forwards}
+.hero-l > *:nth-child(1){animation-delay:.04s}
+.hero-l > *:nth-child(2){animation-delay:.10s}
+.hero-l > *:nth-child(3){animation-delay:.17s}
+.hero-l > *:nth-child(4){animation-delay:.24s}
+.hero-l > *:nth-child(5){animation-delay:.31s}
+.hero-l > *:nth-child(6){animation-delay:.38s}
+.hero-r{opacity:0;animation:rise .95s cubic-bezier(.22,.61,.36,1) .30s forwards}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reveal,.hero-l > *,.hero-r{opacity:1!important;transform:none!important;animation:none!important;transition:none!important}
+  .timer .bar i{transition:none}
+}
+
+/* ══ Android 子页面专属 ══════════════════════════════════════════ */
+.logo-mark{display:block;border-radius:7px}
+.nav a.home{color:var(--fg-3)}
+.s-head h2,.spot h2,.final h2{text-wrap:balance}
+
+/* ── 手机外框（真机截图，状态栏由网页绘制） ── */
+.device{
+  --sb:#121E17;--sbf:#E9EFEA;
+  position:relative;width:min(100%,290px);border-radius:44px;padding:9px;margin:0;
+  background:linear-gradient(155deg,#3A4049 0%,#14171B 40%,#0B0D10 70%,#2A3038 100%);
+  box-shadow:0 60px 90px -50px rgba(0,0,0,.85),0 0 0 1px rgb(var(--ink-rgb) / .1),inset 0 0 0 1px rgba(255,255,255,.06);
+}
+[data-theme="light"] .device{box-shadow:0 50px 80px -46px rgba(16,18,22,.5),0 0 0 1px rgba(16,18,22,.12)}
+.device.light{--sb:#F4F6F9;--sbf:#1A1D22}
+.scr{border-radius:36px;overflow:hidden;background:var(--sb);position:relative}
+.sbar{
+  aspect-ratio:1080/105;display:flex;align-items:center;justify-content:space-between;padding:0 9% 0 10%;
+  font-family:var(--font);font-weight:600;font-size:11px;letter-spacing:.01em;color:var(--sbf);
+}
+.sbar svg{display:block;height:9px;width:auto}
+.scr::before{
+  content:"";position:absolute;top:1.15%;left:50%;width:22%;aspect-ratio:4/1;transform:translateX(-50%);
+  border-radius:99px;background:#050607;z-index:2;
+}
+.scr img{display:block;width:100%;height:auto}
+
+/* ── hero ── */
+.hero .wrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.brand small{
+  display:block;margin-top:14px;font-size:clamp(.9rem,1.4vw,1.05rem);letter-spacing:.16em;
+  font-family:var(--mono);font-weight:400;color:var(--fg-3);text-transform:uppercase;
+}
+.hero .promise{max-width:none}
+.hero .promise span{display:block}
+.duo{position:relative;display:flex;justify-content:center;align-items:flex-end;min-height:560px}
+.duo .device{width:min(56%,280px)}
+.duo .back{position:absolute;left:4%;bottom:42px;transform:rotate(-7deg);opacity:.92}
+.duo .front{position:relative;left:12%;z-index:2}
+@media(max-width:980px){
+  .hero .wrap{grid-template-columns:1fr;gap:40px}
+  .duo{min-height:0}
+}
+@media(max-width:560px){
+  .duo .device{width:58%}
+  .duo .back{left:0}
+  .duo .front{left:16%}
+}
+
+/* ── 截图聚焦区 ── */
+.spot{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(32px,6vw,96px);align-items:center}
+.spot.rev .spot-txt{order:2}
+.spot-media{display:flex;justify-content:center}
+.kick{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--acc)}
+.spot h2{font-size:clamp(1.6rem,3vw,2.4rem);line-height:1.2;letter-spacing:-.03em;font-weight:600;margin-top:14px;max-width:13em}
+.spot p{color:var(--fg-2);font-size:15px;line-height:1.75;margin-top:16px;max-width:30em}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.chips li{font-size:12px;padding:5px 11px;border-radius:99px;border:1px solid var(--line-2);color:var(--fg-2)}
+.spot .fine{margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--fg-3);line-height:1.7}
+@media(max-width:820px){
+  .spot{grid-template-columns:1fr}
+  .spot.rev .spot-txt{order:0}
+}
+
+.card-shot{
+  position:relative;margin:0;width:min(100%,480px);padding:clamp(28px,5vw,56px) clamp(18px,4vw,40px);border-radius:28px;
+  background:radial-gradient(80% 90% at 50% 0%,rgb(var(--glow-rgb) / .14),transparent 70%),rgb(var(--ink-rgb) / .03);
+  border:1px solid var(--line);
+}
+.card-shot img{display:block;width:100%;height:auto;border-radius:22px;transform:rotate(-2deg);
+  box-shadow:0 40px 60px -30px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.06)}
+.card-shot figcaption{margin-top:26px;text-align:center;font-family:var(--mono);font-size:10.5px;color:var(--fg-3);letter-spacing:.02em}
+
+/* ── 引擎卡片 ── */
+.engines{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:clamp(28px,4vw,44px)}
+.eng{border:1px solid var(--line);border-radius:var(--r);padding:24px;background:linear-gradient(180deg,rgb(var(--ink-rgb) / .025),transparent 70%)}
+.eng .tagl{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--allow)}
+.eng h3{font-size:18px;font-weight:600;letter-spacing:-.01em;margin-top:8px}
+.eng p{color:var(--fg-2);font-size:13.5px;line-height:1.75;margin-top:10px}
+@media(max-width:720px){.engines{grid-template-columns:1fr}}
+
+/* ── 功能小卡 ── */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:clamp(28px,4vw,44px)}
+.tile{border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;transition:border-color .2s,transform .2s}
+.tile:hover{border-color:var(--line-2);transform:translateY(-2px)}
+.tile svg{width:22px;height:22px;color:var(--allow)}
+.tile b{display:block;font-size:14px;font-weight:600;margin-top:14px}
+.tile span{display:block;font-size:12.5px;color:var(--fg-2);margin-top:5px;line-height:1.6}
+@media(max-width:980px){.tiles{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:720px){.tiles{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:420px){.tiles{grid-template-columns:1fr}}
+
+/* ── 主题 ── */
+.pair{display:flex;justify-content:center;gap:clamp(18px,4vw,48px);margin-top:clamp(30px,4vw,50px)}
+.pair .device{width:min(46%,280px)}
+.pair .device:last-child{transform:translateY(36px)}
+.themes{justify-content:center;margin-top:64px}
+.themes li i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:-1px;border:1px solid rgb(var(--ink-rgb) / .18)}
+
+/* ── 隐私 ── */
+.privacy{display:grid;grid-template-columns:repeat(3,1fr);margin-top:clamp(28px,4vw,44px);border-top:1px solid var(--line)}
+.privacy > div{padding:24px clamp(14px,2.4vw,28px) 6px;border-left:1px solid var(--line)}
+.privacy > div:first-child{border-left:0;padding-left:0}
+.privacy .n{font-family:var(--mono);font-size:clamp(2rem,4vw,3rem);letter-spacing:-.04em;line-height:1;color:var(--allow)}
+.privacy b{display:block;font-size:14px;margin-top:12px}
+.privacy span{display:block;font-size:12.5px;color:var(--fg-2);margin-top:5px;line-height:1.65}
+@media(max-width:720px){.privacy{grid-template-columns:1fr}.privacy > div{border-left:0;padding-left:0;border-top:1px solid var(--line)}.privacy > div:first-child{border-top:0}}
+.perm-details{margin-top:26px;border-top:1px solid var(--line)}
+.perm-details .tablewrap{margin-top:4px;margin-bottom:20px}
+
+/* ── 下载卡片 ── */
+.dl{
+  margin-top:clamp(28px,4vw,44px);border:1px solid var(--line-2);border-radius:20px;padding:clamp(22px,4vw,40px);
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(24px,4vw,56px);
+  background:radial-gradient(70% 90% at 0% 0%,rgb(var(--glow-rgb) / .08),transparent 70%);
+}
+.dl .ver{font-family:var(--mono);font-size:clamp(2.2rem,5vw,3.4rem);letter-spacing:-.04em;line-height:1}
+.dl .sub{margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--fg-3)}
+.dl .actions{margin-top:26px}
+.dl ul li{padding:12px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--fg-2);line-height:1.7}
+.dl ul li:first-child{padding-top:0}
+.dl ul li b{color:var(--fg);font-weight:600;margin-right:6px}
+@media(max-width:820px){.dl{grid-template-columns:1fr}}
+
+/* ── 版本 ── */
+.ver-list{margin-top:clamp(26px,4vw,40px)}
+.ver-list .mod-h .code{color:var(--allow)}
+.ver-list .caps li::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--fg-3);flex:0 0 auto}
+.ver-list .latest .mod-h h3::after{
+  content:"LATEST";margin-left:8px;font-family:var(--mono);font-size:9px;letter-spacing:.08em;
+  color:var(--acc-on);background:var(--acc-solid);border-radius:4px;padding:1px 5px;vertical-align:2px;
+}
+</style>
+</head>
+<body>
+
+<header class="topbar" id="topbar">
+  <div class="wrap">
+    <a class="logo" href="index.html" aria-label="PocketGate 首页">
+      <svg class="logo-mark" width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="#0B1A12"/>
+        <path d="M16 7.4l7.1 2.5v5.8c0 4.3-3 7.5-7.1 9-4.1-1.5-7.1-4.7-7.1-9V9.9z" fill="none" stroke="#F4F8F5" stroke-width="1.4" stroke-linejoin="round"/>
+        <rect x="10.5" y="13.5" width="5" height="2.1" rx="1.05" fill="#34D399"/>
+        <rect x="16.6" y="16.5" width="5" height="2.1" rx="1.05" fill="#C9F45A"/>
+        <circle cx="16" cy="16" r="1" fill="#C9F45A"/>
+      </svg>
+      <b>PocketGate</b><span>/ Android</span>
+    </a>
+    <nav class="nav" aria-label="主导航">
+      <a class="home" href="index.html">首页</a>
+      <a href="#ask">询问</a>
+      <a href="#live">连接</a>
+      <a href="#engines">引擎</a>
+      <a href="#features">功能</a>
+      <a href="#privacy">隐私</a>
+      <a href="#download">下载</a>
+    </nav>
+    <div class="top-actions">
+      <div class="lang" role="group" aria-label="语言 / Language">
+        <button type="button" data-lang="zh-Hans" aria-pressed="true">简</button>
+        <button type="button" data-lang="zh-Hant" aria-pressed="false">繁</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="icon-btn" id="theme-btn" data-mode="auto" aria-label="切换主题" title="跟随系统">
+        <svg class="i-auto" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M8 2a6 6 0 0 0 0 12z" fill="currentColor"/></svg>
+        <svg class="i-light" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="3.1" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.8M8 13.2V15M15 8h-1.8M2.8 8H1M12.9 3.1l-1.3 1.3M4.4 11.6l-1.3 1.3M12.9 12.9l-1.3-1.3M4.4 4.4L3.1 3.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <svg class="i-dark" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      </button>
+      <a class="top-cta" href="#download">下载 APK</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ── hero ───────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-l">
+        <div class="eyebrow">Android 10+ · 免 Root · 本地运行</div>
+        <h1 class="brand">Pocket<em>Gate</em><small>for Android</small></h1>
+        <p class="promise">装在手机里的出站防火墙。<span>每个应用第一次联网，都先问你。</span></p>
+        <p class="lede">不需要 Root，不需要账号。允许、拒绝或仅此一次，由你决定。</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#download">
+            下载 v0.16.1
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 4.5L12 8l-3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="#ask">看看它怎么工作</a>
+        </div>
+        <div class="meta">
+          <span>约 5.6 MB</span>
+          <span>arm64-v8a</span>
+          <span>简体 · 繁體 · English</span>
+          <span>GPL-2.0</span>
+        </div>
+      </div>
+
+      <div class="hero-r duo">
+        <figure class="device light back">
+          <div class="scr">
+            <div class="sbar"><span>9:41</span><svg viewBox="0 0 46 10" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2" height="3" rx=".5"/><rect x="3" y="5" width="2" height="5" rx=".5"/><rect x="6" y="3" width="2" height="7" rx=".5"/><rect x="9" y="1" width="2" height="9" rx=".5"/><path d="M19.5 9.6l-1.6-1.9a2.5 2.5 0 0 1 3.2 0zM16.6 6.2a4.6 4.6 0 0 1 5.8 0l-.9 1.1a3.2 3.2 0 0 0-4 0zM15.2 4.5a6.8 6.8 0 0 1 8.6 0l-.9 1.1a5.4 5.4 0 0 0-6.8 0z"/><rect x="28.5" y="1.5" width="14" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1" opacity=".55"/><rect x="30" y="3" width="11" height="4" rx="1"/><rect x="43.3" y="3.6" width="1.4" height="2.8" rx=".6" opacity=".55"/></svg></div>
+            <img src="assets/android/prompt-light.webp" width="720" height="1493" alt="PocketGate 询问卡片：是否允许蓝心小V 使用 WLAN 网络">
+          </div>
+        </figure>
+        <figure class="device front">
+          <div class="scr">
+            <div class="sbar"><span>9:41</span><svg viewBox="0 0 46 10" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2" height="3" rx=".5"/><rect x="3" y="5" width="2" height="5" rx=".5"/><rect x="6" y="3" width="2" height="7" rx=".5"/><rect x="9" y="1" width="2" height="9" rx=".5"/><path d="M19.5 9.6l-1.6-1.9a2.5 2.5 0 0 1 3.2 0zM16.6 6.2a4.6 4.6 0 0 1 5.8 0l-.9 1.1a3.2 3.2 0 0 0-4 0zM15.2 4.5a6.8 6.8 0 0 1 8.6 0l-.9 1.1a5.4 5.4 0 0 0-6.8 0z"/><rect x="28.5" y="1.5" width="14" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1" opacity=".55"/><rect x="30" y="3" width="11" height="4" rx="1"/><rect x="43.3" y="3.6" width="1.4" height="2.8" rx=".6" opacity=".55"/></svg></div>
+            <img src="assets/android/overview-dark.webp" width="720" height="1493" alt="PocketGate 总览页：保护已开启、实时网速与今日统计">
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 询问 ────────────────────────────────────────────────── -->
+  <section class="sect" id="ask">
+    <div class="wrap spot">
+      <div class="spot-txt reveal">
+        <div class="kick">01 — 询问</div>
+        <h2>联网的那一刻，问你一次</h2>
+        <p>新应用第一次联网时，询问直接出现在眼前。回答一次，就生成一条规则，以后不再打扰。</p>
+        <ul class="chips"><li>禁止 · 允许 · 仅一次</li><li>限时规则</li><li>多条连接合并询问</li><li>通知里直接回答</li></ul>
+        <p class="fine">悬浮询问需要「悬浮窗」与「使用情况访问」两项权限，缺一项会改用通知询问。</p>
+      </div>
+      <div class="spot-media reveal">
+        <figure class="card-shot">
+          <img src="assets/android/prompt-card.webp" width="762" height="367" loading="lazy" alt="询问卡片：PocketGate 已禁止蓝心小V 使用 WLAN 网络，可选禁止、允许或仅一次">
+          <figcaption>真机截图 · 应用联网时出现的询问卡片</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 实时连接 ────────────────────────────────────────────── -->
+  <section class="sect" id="live">
+    <div class="wrap spot rev">
+      <div class="spot-txt reveal">
+        <div class="kick">02 — 实时连接</div>
+        <h2>每一条连接，都看得见</h2>
+        <p>此刻谁在联网、连去哪里、持续多久，一目了然。系统自带的「日志信息采集」也无处藏身，点「断开」立即切断。</p>
+        <ul class="chips"><li>实时连接</li><li>一键断开</li><li>拦截记录</li><li>CSV 导出</li></ul>
+      </div>
+      <div class="spot-media reveal">
+        <figure class="device light">
+          <div class="scr">
+            <div class="sbar"><span>9:41</span><svg viewBox="0 0 46 10" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2" height="3" rx=".5"/><rect x="3" y="5" width="2" height="5" rx=".5"/><rect x="6" y="3" width="2" height="7" rx=".5"/><rect x="9" y="1" width="2" height="9" rx=".5"/><path d="M19.5 9.6l-1.6-1.9a2.5 2.5 0 0 1 3.2 0zM16.6 6.2a4.6 4.6 0 0 1 5.8 0l-.9 1.1a3.2 3.2 0 0 0-4 0zM15.2 4.5a6.8 6.8 0 0 1 8.6 0l-.9 1.1a5.4 5.4 0 0 0-6.8 0z"/><rect x="28.5" y="1.5" width="14" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1" opacity=".55"/><rect x="30" y="3" width="11" height="4" rx="1"/><rect x="43.3" y="3.6" width="1.4" height="2.8" rx=".6" opacity=".55"/></svg></div>
+            <img src="assets/android/live-light.webp" width="720" height="1493" loading="lazy" alt="记录页的实时连接列表，显示系统日志采集服务的连接与断开按钮">
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 规则 ────────────────────────────────────────────────── -->
+  <section class="sect" id="rules">
+    <div class="wrap spot">
+      <div class="spot-txt reveal">
+        <div class="kick">03 — 规则</div>
+        <h2>规则按应用归类，一眼看清</h2>
+        <p>允许还是拒绝、对哪些网络生效、命中了多少次，都在一张卡片上。换个 Wi-Fi 或 SIM 卡，配置文件自动跟着切换。</p>
+        <ul class="chips"><li>域名 · IP · 端口条件</li><li>配置文件</li><li>按网络自动切换</li><li>导入导出</li></ul>
+      </div>
+      <div class="spot-media reveal">
+        <figure class="device">
+          <div class="scr">
+            <div class="sbar"><span>9:41</span><svg viewBox="0 0 46 10" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2" height="3" rx=".5"/><rect x="3" y="5" width="2" height="5" rx=".5"/><rect x="6" y="3" width="2" height="7" rx=".5"/><rect x="9" y="1" width="2" height="9" rx=".5"/><path d="M19.5 9.6l-1.6-1.9a2.5 2.5 0 0 1 3.2 0zM16.6 6.2a4.6 4.6 0 0 1 5.8 0l-.9 1.1a3.2 3.2 0 0 0-4 0zM15.2 4.5a6.8 6.8 0 0 1 8.6 0l-.9 1.1a5.4 5.4 0 0 0-6.8 0z"/><rect x="28.5" y="1.5" width="14" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1" opacity=".55"/><rect x="30" y="3" width="11" height="4" rx="1"/><rect x="43.3" y="3.6" width="1.4" height="2.8" rx=".6" opacity=".55"/></svg></div>
+            <img src="assets/android/rules-dark.webp" width="720" height="1493" loading="lazy" alt="规则页：按应用分组的允许与拒绝规则">
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 总览 ────────────────────────────────────────────────── -->
+  <section class="sect" id="dashboard">
+    <div class="wrap spot rev">
+      <div class="spot-txt reveal">
+        <div class="kick">04 — 总览</div>
+        <h2>流量去了哪里，一页看完</h2>
+        <p>今日拦截、今日流量和各应用的流量排行；需要专心时，一键进入专注模式，只留下你选的几个应用。</p>
+        <ul class="chips"><li>实时网速波形</li><li>流量排行</li><li>专注模式与时间表</li><li>勿扰</li></ul>
+      </div>
+      <div class="spot-media reveal">
+        <figure class="device" style="--sb:#13161C">
+          <div class="scr">
+            <div class="sbar"><span>9:41</span><svg viewBox="0 0 46 10" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2" height="3" rx=".5"/><rect x="3" y="5" width="2" height="5" rx=".5"/><rect x="6" y="3" width="2" height="7" rx=".5"/><rect x="9" y="1" width="2" height="9" rx=".5"/><path d="M19.5 9.6l-1.6-1.9a2.5 2.5 0 0 1 3.2 0zM16.6 6.2a4.6 4.6 0 0 1 5.8 0l-.9 1.1a3.2 3.2 0 0 0-4 0zM15.2 4.5a6.8 6.8 0 0 1 8.6 0l-.9 1.1a5.4 5.4 0 0 0-6.8 0z"/><rect x="28.5" y="1.5" width="14" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1" opacity=".55"/><rect x="30" y="3" width="11" height="4" rx="1"/><rect x="43.3" y="3.6" width="1.4" height="2.8" rx=".6" opacity=".55"/></svg></div>
+            <img src="assets/android/dashboard-dark.webp" width="720" height="1493" loading="lazy" alt="总览页下半部分：今日拦截、今日流量、专注模式与流量排行">
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 引擎 ────────────────────────────────────────────────── -->
+  <section class="sect" id="engines">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">05 — 两种引擎</div>
+        <div>
+          <h2>一个 VPN 名额，两种用法</h2>
+          <p class="s-lede">VPN 建在你的手机上，流量不会被送到任何服务器。</p>
+        </div>
+      </div>
+      <div class="engines reveal">
+        <div class="eng">
+          <div class="tagl">默认 · 最省电</div>
+          <h3>黑洞模式</h3>
+          <p>被拒绝的应用进入 VPN 后直接丢弃，被允许的应用完全不经过 PocketGate。</p>
+        </div>
+        <div class="eng">
+          <div class="tagl">转发 · 更精细</div>
+          <h3>逐连线模式</h3>
+          <p>每条连接按应用、域名、端口单独判决；出口可以是内置直连，也可以是你自己的 SOCKS5 代理。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 功能 ────────────────────────────────────────────────── -->
+  <section class="sect" id="features">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">06 — 更多功能</div>
+        <div><h2>防火墙之外，还有这些</h2></div>
+      </div>
+      <div class="tiles reveal">
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l4 4M21 15l-4 4"/></svg><b>拦截清单</b><span>7 份公开名单，外加追踪器识别</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><b>专注模式</b><span>只留几个应用联网，可按时间表</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><b>锁屏断网</b><span>锁屏后只放行白名单应用</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="5" rx="2.5"/><path d="M9 6.5h2M13 6.5h2"/><rect x="6" y="11" width="12" height="9" rx="2" opacity=".5"/></svg><b>灵动岛</b><span>屏幕顶部的实时网速</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg><b>小部件与磁贴</b><span>不打开应用也能开关保护</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a5 5 0 0 0-5 5v2"/><path d="M17 10V8a5 5 0 0 0-2-4"/><path d="M8 14c0 3 1.5 5 4 6.5M12 11v4c0 2 1 3.5 3 4.5M16 13v2"/></svg><b>应用锁</b><span>改规则之前先验证指纹或密码</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="11" height="11" rx="3"/><rect x="10" y="4" width="11" height="11" rx="3" opacity=".55"/></svg><b>应用分身</b><span>沿用主应用规则，或单独管控</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M7 12h3M14 12h3"/></svg><b>代理诊断</b><span>三步找出 SOCKS5 代理的问题</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9a10 10 0 0 1 14 0M8 12.5a6 6 0 0 1 8 0"/><circle cx="12" cy="16.5" r="1.3"/><path d="M4 4l16 16"/></svg><b>纯离线模式</b><span>应用自己绝不发起联网</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18a4 4 0 0 1-.5-8 6 6 0 0 1 11.4 1.5A3.5 3.5 0 0 1 17.5 18z"/><path d="M10 14h4v-2.5a2 2 0 0 0-4 0z"/></svg><b>加密同步</b><span>WebDAV 端到端加密备份</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M5 19h14"/></svg><b>自动更新</b><span>后台下载，一键覆盖安装</span></div>
+        <div class="tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.4 3.6 5.3 3.6 8.5s-1.1 6.1-3.6 8.5c-2.5-2.4-3.6-5.3-3.6-8.5S9.5 5.9 12 3.5z"/></svg><b>三语界面</b><span>简体 · 繁體 · English</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 外观 ────────────────────────────────────────────────── -->
+  <section class="sect" id="looks">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">07 — 外观</div>
+        <div>
+          <h2>六套主题，深浅都好看</h2>
+          <p class="s-lede">跟随系统深浅色，也可以随时换一种风格。</p>
+        </div>
+      </div>
+      <div class="pair reveal">
+        <figure class="device light">
+          <div class="scr">
+            <div class="sbar"><span>9:41</span><svg viewBox="0 0 46 10" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2" height="3" rx=".5"/><rect x="3" y="5" width="2" height="5" rx=".5"/><rect x="6" y="3" width="2" height="7" rx=".5"/><rect x="9" y="1" width="2" height="9" rx=".5"/><path d="M19.5 9.6l-1.6-1.9a2.5 2.5 0 0 1 3.2 0zM16.6 6.2a4.6 4.6 0 0 1 5.8 0l-.9 1.1a3.2 3.2 0 0 0-4 0zM15.2 4.5a6.8 6.8 0 0 1 8.6 0l-.9 1.1a5.4 5.4 0 0 0-6.8 0z"/><rect x="28.5" y="1.5" width="14" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1" opacity=".55"/><rect x="30" y="3" width="11" height="4" rx="1"/><rect x="43.3" y="3.6" width="1.4" height="2.8" rx=".6" opacity=".55"/></svg></div>
+            <img src="assets/android/overview-light.webp" width="720" height="1493" loading="lazy" alt="极简霜白主题下的总览页">
+          </div>
+        </figure>
+        <figure class="device">
+          <div class="scr">
+            <div class="sbar"><span>9:41</span><svg viewBox="0 0 46 10" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="2" height="3" rx=".5"/><rect x="3" y="5" width="2" height="5" rx=".5"/><rect x="6" y="3" width="2" height="7" rx=".5"/><rect x="9" y="1" width="2" height="9" rx=".5"/><path d="M19.5 9.6l-1.6-1.9a2.5 2.5 0 0 1 3.2 0zM16.6 6.2a4.6 4.6 0 0 1 5.8 0l-.9 1.1a3.2 3.2 0 0 0-4 0zM15.2 4.5a6.8 6.8 0 0 1 8.6 0l-.9 1.1a5.4 5.4 0 0 0-6.8 0z"/><rect x="28.5" y="1.5" width="14" height="7" rx="2" fill="none" stroke="currentColor" stroke-width="1" opacity=".55"/><rect x="30" y="3" width="11" height="4" rx="1"/><rect x="43.3" y="3.6" width="1.4" height="2.8" rx=".6" opacity=".55"/></svg></div>
+            <img src="assets/android/settings-dark.webp" width="720" height="1493" loading="lazy" alt="黑曜石主题下的设置页与视觉风格选择">
+          </div>
+        </figure>
+      </div>
+      <ul class="chips themes reveal">
+        <li><i style="background:#C9F45A"></i>黑曜石极客</li>
+        <li><i style="background:#2E7D5B"></i>经典</li>
+        <li><i style="background:#F4F6F9"></i>极简霜白</li>
+        <li><i style="background:#7DE3D0"></i>极光流光</li>
+        <li><i style="background:#000000"></i>纯黑省电</li>
+        <li><i style="background:#6750A4"></i>系统取色</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── 隐私 ────────────────────────────────────────────────── -->
+  <section class="sect" id="privacy">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">08 — 隐私</div>
+        <div><h2>你的网络，只留在你的手机上</h2></div>
+      </div>
+      <div class="privacy reveal">
+        <div><div class="n">0</div><b>遥测</b><span>不统计、不上报，没有任何分析 SDK</span></div>
+        <div><div class="n">0</div><b>账号与服务器</b><span>规则和日志只存在本机；同步时先加密再上传</span></div>
+        <div><div class="n">1</div><b>必需权限</b><span>只有 VPN 授权是必需的，其余都可选</span></div>
+      </div>
+      <details class="perm-details reveal">
+        <summary>查看每项权限的用途</summary>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>权限</th><th>用来做什么</th><th>没有它会怎样</th></tr></thead>
+            <tbody>
+              <tr><th>VPN 授权</th><td>在本机接管出站流量</td><td>无法拦截</td></tr>
+              <tr><th>通知</th><td>保护状态、通知询问</td><td>看不到通知询问</td></tr>
+              <tr><th>使用情况访问</th><td>判断前台应用、流量排行</td><td>悬浮询问改为通知</td></tr>
+              <tr><th>悬浮窗</th><td>悬浮询问、灵动岛</td><td>悬浮询问改为通知</td></tr>
+              <tr><th>读取应用列表</th><td>逐个应用设置规则</td><td>部分系统只能看到少数应用</td></tr>
+              <tr><th>忽略电池优化</th><td>防止后台被清理</td><td>保护可能被系统中断</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ── 下载 ────────────────────────────────────────────────── -->
+  <section class="sect" id="download">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">09 — 下载</div>
+        <div><h2>现在就装上</h2></div>
+      </div>
+      <div class="dl reveal">
+        <div>
+          <div class="ver">v0.16.1</div>
+          <div class="sub">PocketGate-0.16.1.apk · 约 5.6 MB · Android 10+</div>
+          <div class="actions">
+            <a class="btn btn-primary" href="https://github.com/Barryyue/PocketGate/releases" target="_blank" rel="noopener">
+              GitHub 下载
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 4.5L12 8l-3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </a>
+            <a class="btn btn-ghost" href="https://gitee.com/yuexiaobai/PocketGate/releases" target="_blank" rel="noopener">Gitee 下载</a>
+          </div>
+        </div>
+        <ul>
+          <li><b>认准版本号</b>Releases 中 v 开头的是本应用，atomui-v 开头的是另一个实现。</li>
+          <li><b>从 0.14 或更早升级</b>0.15.0 起换了正式签名：先导出规则，卸载旧版，装好后再导入。</li>
+          <li><b>和代理一起用</b>系统只允许一个 VPN：请用逐连线模式，把出口设为代理工具的 SOCKS5。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 版本 ────────────────────────────────────────────────── -->
+  <section class="sect" id="versions">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">10 — 更新</div>
+        <div><h2>最近更新</h2></div>
+      </div>
+      <div class="ver-list reveal">
+        <div class="mod latest">
+          <div class="mod-h"><h3>0.16</h3><span class="code">2026-11-20</span></div>
+          <ul class="caps"><li>WebDAV 加密同步</li><li>本地备份与还原</li><li>应用分身单独管控</li><li>更新弹窗显示更新日志</li></ul>
+        </div>
+        <div class="mod">
+          <div class="mod-h"><h3>0.15</h3><span class="code">2026-11-19</span></div>
+          <ul class="caps"><li>实时连接一键断开</li><li>状态栏网速图标</li><li>代理诊断</li><li>纯离线模式</li><li>首次权限引导</li></ul>
+        </div>
+        <div class="mod">
+          <div class="mod-h"><h3>0.14</h3><span class="code">2026-11-19</span></div>
+          <ul class="caps"><li>全新总览仪表盘</li><li>网速波形</li><li>空闲时更省电</li></ul>
+        </div>
+        <div class="mod">
+          <div class="mod-h"><h3>0.13</h3><span class="code">2026-11-18</span></div>
+          <ul class="caps"><li>正式定名 PocketGate</li><li>应用内更新</li><li>六套主题</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FAQ ─────────────────────────────────────────────────── -->
+  <section class="sect" id="faq">
+    <div class="wrap">
+      <div class="s-head reveal">
+        <div class="s-num">11 — 常见问题</div>
+        <div><h2>常见问题</h2></div>
+      </div>
+      <div class="faq reveal">
+        <details>
+          <summary>需要 Root 吗？</summary>
+          <div class="a">不需要。PocketGate 使用 Android 提供给所有应用的本地 VPN 接口，流量只在手机上处理。</div>
+        </details>
+        <details>
+          <summary>耗电吗？</summary>
+          <div class="a">黑洞模式下被允许的应用不经过 PocketGate，耗电很低；逐连线模式要转发所有流量，会高一些。</div>
+        </details>
+        <details>
+          <summary>为什么悬浮询问没有出现？</summary>
+          <div class="a">请在「设置 → 权限体检」里确认「悬浮窗」和「使用情况访问」都已授权；屏幕关闭或锁屏时，询问会改为通知。</div>
+        </details>
+        <details>
+          <summary>能和 Clash、FlClash 一起用吗？</summary>
+          <div class="a">可以。让代理工具只提供 SOCKS5（关掉它的 VPN 模式），再在 PocketGate 的逐连线模式里把出口设为它。</div>
+        </details>
+        <details>
+          <summary>开源吗？</summary>
+          <div class="a">开源，GPL-2.0 协议，源代码在 GitHub 与 Gitee 上。</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final" id="get">
+    <div class="wrap">
+      <h2>让每个应用的第一次联网，<br>都先经过你。</h2>
+      <div class="actions">
+        <a class="btn btn-primary" href="#download">
+          下载 PocketGate
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h9M8.5 4.5L12 8l-3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+        <a class="btn btn-ghost" href="index.html">了解 Windows 版</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="f-top">
+      <div class="f-brand">
+        <svg class="logo-mark" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="#0B1A12"/>
+          <path d="M16 7.4l7.1 2.5v5.8c0 4.3-3 7.5-7.1 9-4.1-1.5-7.1-4.7-7.1-9V9.9z" fill="none" stroke="#F4F8F5" stroke-width="1.4" stroke-linejoin="round"/>
+          <rect x="10.5" y="13.5" width="5" height="2.1" rx="1.05" fill="#34D399"/>
+          <rect x="16.6" y="16.5" width="5" height="2.1" rx="1.05" fill="#C9F45A"/>
+          <circle cx="16" cy="16" r="1" fill="#C9F45A"/>
+        </svg>
+        PocketGate for Android
+      </div>
+      <nav class="f-links" aria-label="页脚导航">
+        <a href="index.html">首页</a>
+        <a href="#features">功能</a>
+        <a href="#privacy">隐私</a>
+        <a href="#download">下载</a>
+        <a href="https://github.com/Barryyue/PocketGate" target="_blank" rel="noopener">GitHub 仓库</a>
+        <a href="https://gitee.com/yuexiaobai/PocketGate" target="_blank" rel="noopener">Gitee 仓库</a>
+      </nav>
+    </div>
+    <div class="f-bottom">
+      <span>Android 0.16.1</span>
+      <span>本地运行 · 不收集遥测</span>
+      <span>截图来自真机</span>
+      <span>© 2026 PocketGate</span>
+    </div>
+  </div>
+</footer>
+
+<script type="application/json" id="i18n-data">{"zh-Hant":{"首页":"首頁","询问":"詢問","连接":"連線","隐私":"隱私","下载":"下載","下载 APK":"下載 APK","Android 10+ · 免 Root · 本地运行":"Android 10+ · 免 Root · 本機執行","装在手机里的出站防火墙。":"裝在手機裡的對外防火牆。","每个应用第一次联网，都先问你。":"每個應用程式第一次連線，都先問你。","不需要 Root，不需要账号。允许、拒绝或仅此一次，由你决定。":"不需要 Root，不需要帳號。允許、拒絕或僅此一次，由你決定。","下载 v0.16.1":"下載 v0.16.1","看看它怎么工作":"看看它怎麼運作","约 5.6 MB":"約 5.6 MB","01 — 询问":"01 — 詢問","联网的那一刻，问你一次":"連線的那一刻，問你一次","新应用第一次联网时，询问直接出现在眼前。回答一次，就生成一条规则，以后不再打扰。":"新應用程式第一次連線時，詢問直接出現在眼前。回答一次，就產生一條規則，之後不再打擾。","禁止 · 允许 · 仅一次":"禁止 · 允許 · 僅一次","限时规则":"限時規則","多条连接合并询问":"多條連線合併詢問","通知里直接回答":"在通知裡直接回答","悬浮询问需要「悬浮窗」与「使用情况访问」两项权限，缺一项会改用通知询问。":"懸浮詢問需要「顯示在其他應用程式上層」與「使用情況存取權」兩項權限，缺一項會改用通知詢問。","真机截图 · 应用联网时出现的询问卡片":"實機截圖 · 應用程式連線時出現的詢問卡片","02 — 实时连接":"02 — 即時連線","每一条连接，都看得见":"每一條連線，都看得見","此刻谁在联网、连去哪里、持续多久，一目了然。系统自带的「日志信息采集」也无处藏身，点「断开」立即切断。":"此刻誰在連線、連到哪裡、持續多久，一目了然。系統內建的「日誌資訊收集」也無所遁形，點「中斷」立即切斷。","实时连接":"即時連線","一键断开":"一鍵中斷","拦截记录":"攔截紀錄","CSV 导出":"CSV 匯出","03 — 规则":"03 — 規則","规则按应用归类，一眼看清":"規則依應用程式歸類，一眼看清","允许还是拒绝、对哪些网络生效、命中了多少次，都在一张卡片上。换个 Wi-Fi 或 SIM 卡，配置文件自动跟着切换。":"允許還是拒絕、對哪些網路生效、命中了多少次，都在一張卡片上。換個 Wi-Fi 或 SIM 卡，設定檔自動跟著切換。","域名 · IP · 端口条件":"網域 · IP · 埠條件","配置文件":"設定檔","按网络自动切换":"依網路自動切換","导入导出":"匯入匯出","04 — 总览":"04 — 總覽","流量去了哪里，一页看完":"流量去了哪裡，一頁看完","今日拦截、今日流量和各应用的流量排行；需要专心时，一键进入专注模式，只留下你选的几个应用。":"今日攔截、今日流量和各應用程式的流量排行；需要專心時，一鍵進入專注模式，只留下你選的幾個應用程式。","实时网速波形":"即時網速波形","专注模式与时间表":"專注模式與時間表","勿扰":"勿擾","05 — 两种引擎":"05 — 兩種引擎","一个 VPN 名额，两种用法":"一個 VPN 名額，兩種用法","VPN 建在你的手机上，流量不会被送到任何服务器。":"VPN 建在你的手機上，流量不會被送到任何伺服器。","默认 · 最省电":"預設 · 最省電","被拒绝的应用进入 VPN 后直接丢弃，被允许的应用完全不经过 PocketGate。":"被拒絕的應用程式進入 VPN 後直接丟棄，被允許的應用程式完全不經過 PocketGate。","转发 · 更精细":"轉送 · 更精細","逐连线模式":"逐連線模式","每条连接按应用、域名、端口单独判决；出口可以是内置直连，也可以是你自己的 SOCKS5 代理。":"每條連線依應用程式、網域、埠單獨判決；出口可以是內建直連，也可以是你自己的 SOCKS5 代理。","防火墙之外，还有这些":"防火牆之外，還有這些","拦截清单":"攔截清單","7 份公开名单，外加追踪器识别":"7 份公開名單，外加追蹤器識別","专注模式":"專注模式","只留几个应用联网，可按时间表":"只留幾個應用程式連線，可依時間表","锁屏断网":"鎖定時斷網","锁屏后只放行白名单应用":"螢幕鎖定後只放行白名單應用程式","灵动岛":"靈動島","屏幕顶部的实时网速":"螢幕頂端的即時網速","小部件与磁贴":"小工具與快速設定","不打开应用也能开关保护":"不開啟應用程式也能開關保護","应用锁":"應用程式鎖","改规则之前先验证指纹或密码":"修改規則前先驗證指紋或密碼","应用分身":"應用程式分身","沿用主应用规则，或单独管控":"沿用主應用程式規則，或獨立管控","代理诊断":"代理診斷","三步找出 SOCKS5 代理的问题":"三步找出 SOCKS5 代理的問題","纯离线模式":"純離線模式","应用自己绝不发起联网":"應用程式自己絕不發起連線","WebDAV 端到端加密备份":"WebDAV 端對端加密備份","自动更新":"自動更新","后台下载，一键覆盖安装":"背景下載，一鍵覆蓋安裝","三语界面":"三語介面","07 — 外观":"07 — 外觀","六套主题，深浅都好看":"六套主題，深淺都好看","跟随系统深浅色，也可以随时换一种风格。":"跟隨系統深淺色，也可以隨時換一種風格。","黑曜石极客":"黑曜石極客","经典":"經典","极简霜白":"極簡霜白","极光流光":"極光流光","纯黑省电":"純黑省電","系统取色":"系統取色","08 — 隐私":"08 — 隱私","你的网络，只留在你的手机上":"你的網路，只留在你的手機上","遥测":"遙測","不统计、不上报，没有任何分析 SDK":"不統計、不回報，沒有任何分析 SDK","账号与服务器":"帳號與伺服器","规则和日志只存在本机；同步时先加密再上传":"規則和日誌只存在本機；同步時先加密再上傳","必需权限":"必要權限","只有 VPN 授权是必需的，其余都可选":"只有 VPN 授權是必要的，其餘都可選","查看每项权限的用途":"查看每項權限的用途","权限":"權限","用来做什么":"用來做什麼","没有它会怎样":"沒有它會怎樣","VPN 授权":"VPN 授權","在本机接管出站流量":"在本機接管對外流量","无法拦截":"無法攔截","保护状态、通知询问":"保護狀態、通知詢問","看不到通知询问":"看不到通知詢問","使用情况访问":"使用情況存取權","判断前台应用、流量排行":"判斷前景應用程式、流量排行","悬浮询问改为通知":"懸浮詢問改為通知","悬浮窗":"顯示在其他應用程式上層","悬浮询问、灵动岛":"懸浮詢問、靈動島","读取应用列表":"讀取應用程式清單","逐个应用设置规则":"逐一為應用程式設定規則","部分系统只能看到少数应用":"部分系統只能看到少數應用程式","忽略电池优化":"忽略電池最佳化","防止后台被清理":"避免在背景被清除","保护可能被系统中断":"保護可能被系統中斷","09 — 下载":"09 — 下載","现在就装上":"現在就裝上","PocketGate-0.16.1.apk · 约 5.6 MB · Android 10+":"PocketGate-0.16.1.apk · 約 5.6 MB · Android 10+","GitHub 下载":"GitHub 下載","Gitee 下载":"Gitee 下載","认准版本号":"認明版本號","Releases 中 v 开头的是本应用，atomui-v 开头的是另一个实现。":"Releases 中 v 開頭的是本應用程式，atomui-v 開頭的是另一個實作。","从 0.14 或更早升级":"從 0.14 或更早版本升級","0.15.0 起换了正式签名：先导出规则，卸载旧版，装好后再导入。":"0.15.0 起換了正式簽章：先匯出規則，解除安裝舊版，裝好後再匯入。","系统只允许一个 VPN：请用逐连线模式，把出口设为代理工具的 SOCKS5。":"系統只允許一個 VPN：請用逐連線模式，把出口設為代理工具的 SOCKS5。","本地备份与还原":"本機備份與還原","应用分身单独管控":"應用程式分身獨立管控","更新弹窗显示更新日志":"更新視窗顯示更新日誌","实时连接一键断开":"即時連線一鍵中斷","状态栏网速图标":"狀態列網速圖示","首次权限引导":"首次權限引導","全新总览仪表盘":"全新總覽儀表板","网速波形":"網速波形","空闲时更省电":"閒置時更省電","应用内更新":"應用程式內更新","六套主题":"六套主題","11 — 常见问题":"11 — 常見問題","常见问题":"常見問題","需要 Root 吗？":"需要 Root 嗎？","不需要。PocketGate 使用 Android 提供给所有应用的本地 VPN 接口，流量只在手机上处理。":"不需要。PocketGate 使用 Android 提供給所有應用程式的本機 VPN 介面，流量只在手機上處理。","耗电吗？":"耗電嗎？","黑洞模式下被允许的应用不经过 PocketGate，耗电很低；逐连线模式要转发所有流量，会高一些。":"黑洞模式下被允許的應用程式不經過 PocketGate，耗電很低；逐連線模式要轉送所有流量，會高一些。","为什么悬浮询问没有出现？":"為什麼懸浮詢問沒有出現？","请在「设置 → 权限体检」里确认「悬浮窗」和「使用情况访问」都已授权；屏幕关闭或锁屏时，询问会改为通知。":"請在「設定 → 權限檢查」裡確認「顯示在其他應用程式上層」和「使用情況存取權」都已授權；螢幕關閉或鎖定時，詢問會改為通知。","能和 Clash、FlClash 一起用吗？":"能和 Clash、FlClash 一起用嗎？","可以。让代理工具只提供 SOCKS5（关掉它的 VPN 模式），再在 PocketGate 的逐连线模式里把出口设为它。":"可以。讓代理工具只提供 SOCKS5（關掉它的 VPN 模式），再在 PocketGate 的逐連線模式裡把出口設為它。","开源吗？":"開源嗎？","开源，GPL-2.0 协议，源代码在 GitHub 与 Gitee 上。":"開源，採用 GPL-2.0 授權，原始碼在 GitHub 與 Gitee 上。","让每个应用的第一次联网，":"讓每個應用程式的第一次連線，","都先经过你。":"都先經過你。","下载 PocketGate":"下載 PocketGate","GitHub 仓库":"GitHub 儲存庫","Gitee 仓库":"Gitee 儲存庫","本地运行 · 不收集遥测":"本機執行 · 不收集遙測","截图来自真机":"截圖來自實機","PocketGate 首页":"PocketGate 首頁","主导航":"主導覽","语言 / Language":"語言 / Language","切换主题":"切換主題","跟随系统":"跟隨系統","PocketGate 询问卡片：是否允许蓝心小V 使用 WLAN 网络":"PocketGate 詢問卡片：是否允許藍心小V 使用 WLAN 網路","PocketGate 总览页：保护已开启、实时网速与今日统计":"PocketGate 總覽頁：保護已開啟、即時網速與今日統計","询问卡片：PocketGate 已禁止蓝心小V 使用 WLAN 网络，可选禁止、允许或仅一次":"詢問卡片：PocketGate 已禁止藍心小V 使用 WLAN 網路，可選禁止、允許或僅一次","记录页的实时连接列表，显示系统日志采集服务的连接与断开按钮":"紀錄頁的即時連線清單，顯示系統日誌收集服務的連線與中斷按鈕","规则页：按应用分组的允许与拒绝规则":"規則頁：依應用程式分組的允許與拒絕規則","总览页下半部分：今日拦截、今日流量、专注模式与流量排行":"總覽頁下半部：今日攔截、今日流量、專注模式與流量排行","极简霜白主题下的总览页":"極簡霜白主題下的總覽頁","黑曜石主题下的设置页与视觉风格选择":"黑曜石主題下的設定頁與視覺風格選擇","页脚导航":"頁尾導覽"},"en":{"首页":"Home","询问":"Prompts","连接":"Connections","引擎":"Engines","功能":"Features","隐私":"Privacy","下载":"Download","下载 APK":"Get the APK","Android 10+ · 免 Root · 本地运行":"Android 10+ · no root · runs locally","装在手机里的出站防火墙。":"An outbound firewall in your pocket.","每个应用第一次联网，都先问你。":"Every app asks you before it first goes online.","不需要 Root，不需要账号。允许、拒绝或仅此一次，由你决定。":"No root, no account. Allow, deny or just this once: your call.","下载 v0.16.1":"Download v0.16.1","看看它怎么工作":"See how it works","约 5.6 MB":"About 5.6 MB","01 — 询问":"01 — Prompts","联网的那一刻，问你一次":"Asked once, the moment it connects","新应用第一次联网时，询问直接出现在眼前。回答一次，就生成一条规则，以后不再打扰。":"When a new app first goes online, the question appears right in front of you. Answer once and it becomes a rule, so you won't be asked again.","禁止 · 允许 · 仅一次":"Deny · Allow · Once","限时规则":"Timed rules","多条连接合并询问":"Merged prompts","通知里直接回答":"Answer from notifications","悬浮询问需要「悬浮窗」与「使用情况访问」两项权限，缺一项会改用通知询问。":"Floating prompts need both \"Display over other apps\" and \"Usage access\"; without either, prompts arrive as notifications.","真机截图 · 应用联网时出现的询问卡片":"Real-device screenshot · the prompt that appears when an app connects","02 — 实时连接":"02 — Live connections","每一条连接，都看得见":"See every single connection","此刻谁在联网、连去哪里、持续多久，一目了然。系统自带的「日志信息采集」也无处藏身，点「断开」立即切断。":"Who's online right now, where they connect and for how long, at a glance. Even the system's built-in log collection has nowhere to hide, and one tap on Disconnect cuts it off.","实时连接":"Live connections","一键断开":"One-tap disconnect","拦截记录":"Block history","CSV 导出":"CSV export","03 — 规则":"03 — Rules","规则按应用归类，一眼看清":"Rules grouped by app, clear at a glance","允许还是拒绝、对哪些网络生效、命中了多少次，都在一张卡片上。换个 Wi-Fi 或 SIM 卡，配置文件自动跟着切换。":"Allow or deny, which networks it covers, how many times it matched: all on one card. Change Wi-Fi or SIM and your profile switches with you.","域名 · IP · 端口条件":"Domain · IP · port conditions","配置文件":"Profiles","按网络自动切换":"Auto-switch by network","导入导出":"Import & export","04 — 总览":"04 — Overview","流量去了哪里，一页看完":"Where your data goes, on one page","今日拦截、今日流量和各应用的流量排行；需要专心时，一键进入专注模式，只留下你选的几个应用。":"Today's blocks, today's traffic and a per-app ranking. When you need to focus, one tap leaves only the apps you choose online.","实时网速波形":"Live speed graph","流量排行":"Traffic ranking","专注模式与时间表":"Focus mode & schedules","勿扰":"Do not disturb","05 — 两种引擎":"05 — Two engines","一个 VPN 名额，两种用法":"One VPN slot, two ways to use it","VPN 建在你的手机上，流量不会被送到任何服务器。":"The VPN lives on your phone; your traffic is never sent to any server.","默认 · 最省电":"Default · lightest on battery","黑洞模式":"Blackhole mode","被拒绝的应用进入 VPN 后直接丢弃，被允许的应用完全不经过 PocketGate。":"Denied apps are routed into the VPN and dropped; allowed apps never pass through PocketGate at all.","转发 · 更精细":"Forwarding · finer control","逐连线模式":"Per-connection mode","每条连接按应用、域名、端口单独判决；出口可以是内置直连，也可以是你自己的 SOCKS5 代理。":"Every connection is judged by app, domain and port; traffic exits directly or through your own SOCKS5 proxy.","06 — 更多功能":"06 — More features","防火墙之外，还有这些":"Beyond the firewall","拦截清单":"Blocklists","7 份公开名单，外加追踪器识别":"7 public lists plus tracker detection","专注模式":"Focus mode","只留几个应用联网，可按时间表":"Only a few apps online, on a schedule if you like","锁屏断网":"Offline when locked","锁屏后只放行白名单应用":"Only allowlisted apps once the screen locks","灵动岛":"Speed Island","屏幕顶部的实时网速":"Live speed at the top of the screen","小部件与磁贴":"Widgets & tiles","不打开应用也能开关保护":"Toggle protection without opening the app","应用锁":"App Lock","改规则之前先验证指纹或密码":"Fingerprint or PIN before rules change","应用分身":"Cloned apps","沿用主应用规则，或单独管控":"Inherit the main app's rules, or control separately","代理诊断":"Proxy diagnosis","三步找出 SOCKS5 代理的问题":"Find SOCKS5 problems in three steps","纯离线模式":"Offline mode","应用自己绝不发起联网":"PocketGate itself never goes online","加密同步":"Encrypted sync","WebDAV 端到端加密备份":"End-to-end encrypted WebDAV backup","自动更新":"Auto updates","后台下载，一键覆盖安装":"Background download, one-tap install","三语界面":"Three languages","07 — 外观":"07 — Looks","六套主题，深浅都好看":"Six themes, light or dark","跟随系统深浅色，也可以随时换一种风格。":"Follows your system's light and dark mode, or switch styles any time.","黑曜石极客":"Obsidian Cyber","经典":"Classic","极简霜白":"Frost Minimal","极光流光":"Aurora Glass","纯黑省电":"AMOLED Black","系统取色":"Dynamic Color","08 — 隐私":"08 — Privacy","你的网络，只留在你的手机上":"Your network stays on your phone","遥测":"Telemetry","不统计、不上报，没有任何分析 SDK":"No analytics, no reporting, no tracking SDKs","账号与服务器":"Accounts & servers","规则和日志只存在本机；同步时先加密再上传":"Rules and logs stay on the device; sync encrypts before upload","必需权限":"Required permission","只有 VPN 授权是必需的，其余都可选":"Only VPN access is required; everything else is optional","查看每项权限的用途":"What each permission is for","权限":"Permission","用来做什么":"Used for","没有它会怎样":"Without it","VPN 授权":"VPN access","在本机接管出站流量":"Handling outbound traffic on the device","无法拦截":"Nothing can be blocked","通知":"Notifications","保护状态、通知询问":"Protection status, notification prompts","看不到通知询问":"No notification prompts","使用情况访问":"Usage access","判断前台应用、流量排行":"Detecting the foreground app, traffic ranking","悬浮询问改为通知":"Prompts arrive as notifications","悬浮窗":"Display over other apps","悬浮询问、灵动岛":"Floating prompts, Speed Island","读取应用列表":"Installed apps list","逐个应用设置规则":"Setting rules app by app","部分系统只能看到少数应用":"Some systems show only a few apps","忽略电池优化":"Ignore battery optimization","防止后台被清理":"Staying alive in the background","保护可能被系统中断":"The system may interrupt protection","09 — 下载":"09 — Download","现在就装上":"Get it now","PocketGate-0.16.1.apk · 约 5.6 MB · Android 10+":"PocketGate-0.16.1.apk · about 5.6 MB · Android 10+","GitHub 下载":"Download on GitHub","Gitee 下载":"Download on Gitee","认准版本号":"Check the tag","Releases 中 v 开头的是本应用，atomui-v 开头的是另一个实现。":"Releases tagged v… are this app; atomui-v… is a different implementation.","从 0.14 或更早升级":"Upgrading from 0.14 or earlier","0.15.0 起换了正式签名：先导出规则，卸载旧版，装好后再导入。":"0.15.0 switched to the official signing key: export your rules, uninstall the old version, install, then import.","和代理一起用":"With a proxy app","系统只允许一个 VPN：请用逐连线模式，把出口设为代理工具的 SOCKS5。":"Android allows one VPN: use per-connection mode and set the proxy app's SOCKS5 as the exit.","10 — 更新":"10 — Updates","最近更新":"Recent updates","WebDAV 加密同步":"Encrypted WebDAV sync","本地备份与还原":"Local backup & restore","应用分身单独管控":"Separate control for cloned apps","更新弹窗显示更新日志":"Changelog in the update dialog","实时连接一键断开":"One-tap disconnect for live connections","状态栏网速图标":"Status-bar speed icon","首次权限引导":"First-run permission guide","全新总览仪表盘":"New Overview dashboard","网速波形":"Speed graph","空闲时更省电":"Lower idle battery use","正式定名 PocketGate":"Officially named PocketGate","应用内更新":"In-app updates","六套主题":"Six themes","11 — 常见问题":"11 — FAQ","常见问题":"FAQ","需要 Root 吗？":"Does it need root?","不需要。PocketGate 使用 Android 提供给所有应用的本地 VPN 接口，流量只在手机上处理。":"No. PocketGate uses the local VPN interface Android offers every app; traffic is handled only on the phone.","耗电吗？":"Is it hard on the battery?","黑洞模式下被允许的应用不经过 PocketGate，耗电很低；逐连线模式要转发所有流量，会高一些。":"In blackhole mode allowed apps bypass PocketGate, so the cost is low; per-connection mode forwards all traffic and uses more.","为什么悬浮询问没有出现？":"Why don't floating prompts appear?","请在「设置 → 权限体检」里确认「悬浮窗」和「使用情况访问」都已授权；屏幕关闭或锁屏时，询问会改为通知。":"Check under Settings → Permission check that both \"Display over other apps\" and \"Usage access\" are granted; with the screen off or locked, prompts arrive as notifications.","能和 Clash、FlClash 一起用吗？":"Does it work with Clash or FlClash?","可以。让代理工具只提供 SOCKS5（关掉它的 VPN 模式），再在 PocketGate 的逐连线模式里把出口设为它。":"Yes. Have the proxy app provide just a SOCKS5 endpoint (turn off its VPN mode), then set it as the exit in PocketGate's per-connection mode.","开源吗？":"Is it open source?","开源，GPL-2.0 协议，源代码在 GitHub 与 Gitee 上。":"Yes, under GPL-2.0, with source on GitHub and Gitee.","让每个应用的第一次联网，":"Let every app's first connection","都先经过你。":"go through you first.","下载 PocketGate":"Download PocketGate","了解 Windows 版":"See the Windows app","GitHub 仓库":"GitHub repo","Gitee 仓库":"Gitee repo","本地运行 · 不收集遥测":"Runs locally · no telemetry","截图来自真机":"Screenshots from a real device","PocketGate 首页":"PocketGate home","主导航":"Main navigation","切换主题":"Toggle theme","跟随系统":"Follow system","PocketGate 询问卡片：是否允许蓝心小V 使用 WLAN 网络":"PocketGate prompt card: allow Lanxin Xiao V to use Wi-Fi?","PocketGate 总览页：保护已开启、实时网速与今日统计":"PocketGate Overview: protection on, live speed and today's stats","询问卡片：PocketGate 已禁止蓝心小V 使用 WLAN 网络，可选禁止、允许或仅一次":"Prompt card: PocketGate blocked Lanxin Xiao V from Wi-Fi, with Deny, Allow and Once","记录页的实时连接列表，显示系统日志采集服务的连接与断开按钮":"The live connections list showing a system log-collection service and its Disconnect buttons","规则页：按应用分组的允许与拒绝规则":"Rules page: allow and deny rules grouped by app","总览页下半部分：今日拦截、今日流量、专注模式与流量排行":"Lower half of the Overview: blocks, traffic, focus mode and traffic ranking","极简霜白主题下的总览页":"Overview in the Frost Minimal theme","黑曜石主题下的设置页与视觉风格选择":"Settings and the style picker in the Obsidian theme","页脚导航":"Footer navigation"}}</script>
+
+<script>
+(function () {
+  "use strict";
+  var root = document.documentElement;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var DYN = {
+    "zh-Hans": { "theme.auto": "跟随系统", "theme.light": "浅色", "theme.dark": "深色" },
+    "zh-Hant": { "theme.auto": "跟隨系統", "theme.light": "淺色", "theme.dark": "深色" },
+    "en": { "theme.auto": "Follow system", "theme.light": "Light", "theme.dark": "Dark" }
+  };
+  var HEAD = {
+    "zh-Hans": {
+      title: "PocketGate for Android — 装在手机里的出站防火墙",
+      desc: "PocketGate Android 版：免 Root 的按应用联网控制。应用联网时悬浮询问，实时查看每一条连接，拦截清单、专注模式与加密同步，全部在本机运行，不收集任何数据。",
+      ogTitle: "PocketGate for Android — 每个应用第一次联网，都先问你",
+      ogDesc: "免 Root 的 Android 出站防火墙：悬浮询问、实时连接、拦截清单、专注模式、加密同步，本地运行，无遥测。"
+    },
+    "zh-Hant": {
+      title: "PocketGate for Android — 裝在手機裡的對外防火牆",
+      desc: "PocketGate Android 版：免 Root 的依應用程式連線控管。應用程式連線時懸浮詢問，即時查看每一條連線，攔截清單、專注模式與加密同步，全部在本機執行，不收集任何資料。",
+      ogTitle: "PocketGate for Android — 每個應用程式第一次連線，都先問你",
+      ogDesc: "免 Root 的 Android 對外防火牆：懸浮詢問、即時連線、攔截清單、專注模式、加密同步，本機執行，無遙測。"
+    },
+    "en": {
+      title: "PocketGate for Android — an outbound firewall in your pocket",
+      desc: "PocketGate for Android: per-app network control without root. A prompt when an app connects, every live connection in view, blocklists, focus mode and encrypted sync, all on-device with zero data collection.",
+      ogTitle: "PocketGate for Android — every app asks you first",
+      ogDesc: "A rootless outbound firewall for Android: prompts, live connections, blocklists, focus mode, encrypted sync. Local, no telemetry."
+    }
+  };
+
+  var DATA = {};
+  try { DATA = JSON.parse(document.getElementById("i18n-data").textContent || "{}"); } catch (e) { DATA = {}; }
+  var LANG = (function () {
+    try { var l = localStorage.getItem("nc.lang"); if (l === "zh-Hant" || l === "en") return l; } catch (e) { }
+    return "zh-Hans";
+  })();
+  function t(key) { return (DYN[LANG] && DYN[LANG][key]) || DYN["zh-Hans"][key] || key; }
+
+  /* ── 文案：收集原文节点，切换语言时按字典回填 ── */
+  var textPairs = [], attrPairs = [];
+  (function collect() {
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (node) {
+        var p = node.parentNode;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        var tag = p.nodeName;
+        if (tag === "SCRIPT" || tag === "STYLE" || tag === "TEXTAREA") return NodeFilter.FILTER_REJECT;
+        return /\S/.test(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    var n;
+    while ((n = walker.nextNode())) textPairs.push({ n: n, s: n.nodeValue });
+    ["aria-label", "title", "placeholder", "alt"].forEach(function (name) {
+      Array.prototype.forEach.call(document.body.querySelectorAll("[" + name + "]"), function (el) {
+        attrPairs.push({ el: el, name: name, s: el.getAttribute(name) });
+      });
+    });
+  })();
+  function tr(s) {
+    var d = LANG === "zh-Hans" ? null : DATA[LANG];
+    if (!d) return s;
+    var lead = s.match(/^\s*/)[0], trail = s.match(/\s*$/)[0], out = d[s.trim()];
+    return out === undefined ? s : lead + out + trail;
+  }
+  function setMeta(kind, key, val) {
+    var el = document.querySelector("meta[" + kind + '="' + key + '"]');
+    if (el) el.setAttribute("content", val);
+  }
+  var langBtns = Array.prototype.slice.call(document.querySelectorAll(".lang button"));
+  function applyLang() {
+    var d = LANG === "zh-Hans" ? null : DATA[LANG];
+    textPairs.forEach(function (p) { p.n.nodeValue = d ? tr(p.s) : p.s; });
+    attrPairs.forEach(function (a) { a.el.setAttribute(a.name, d ? tr(a.s) : a.s); });
+    var h = HEAD[LANG];
+    document.title = h.title;
+    setMeta("name", "description", h.desc);
+    setMeta("property", "og:title", h.ogTitle);
+    setMeta("property", "og:description", h.ogDesc);
+    root.lang = LANG === "zh-Hant" ? "zh-Hant" : (LANG === "en" ? "en" : "zh-Hans");
+    langBtns.forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === LANG)); });
+    updateThemeLabel();
+  }
+
+  /* ── 主题 ── */
+  var themeBtn = document.getElementById("theme-btn");
+  var mq = window.matchMedia("(prefers-color-scheme: light)");
+  var themeMode = (function () { try { return localStorage.getItem("nc.theme") || "auto"; } catch (e) { return "auto"; } })();
+  function resolved(m) { return m === "auto" ? (mq.matches ? "light" : "dark") : m; }
+  function updateThemeLabel() {
+    if (!themeBtn) return;
+    var lbl = t("theme." + themeMode);
+    themeBtn.title = lbl;
+    themeBtn.setAttribute("aria-label", lbl);
+  }
+  function applyTheme() {
+    var r = resolved(themeMode);
+    root.setAttribute("data-theme", r);
+    if (themeBtn) themeBtn.setAttribute("data-mode", themeMode);
+    var tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) tc.setAttribute("content", r === "light" ? "#FAFAF8" : "#08090B");
+    updateThemeLabel();
+  }
+  if (themeBtn) {
+    themeBtn.addEventListener("click", function () {
+      themeMode = themeMode === "auto" ? "light" : themeMode === "light" ? "dark" : "auto";
+      try { localStorage.setItem("nc.theme", themeMode); } catch (e) { }
+      applyTheme();
+    });
+  }
+  if (mq.addEventListener) mq.addEventListener("change", function () { if (themeMode === "auto") applyTheme(); });
+  applyTheme();
+  langBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      LANG = b.getAttribute("data-lang");
+      try { localStorage.setItem("nc.lang", LANG); } catch (e) { }
+      applyLang();
+    });
+  });
+
+  /* ── 顶栏 / 导航高亮 / 进场动画 ── */
+  var bar = document.getElementById("topbar");
+  var reveals = document.querySelectorAll(".reveal");
+  if ("IntersectionObserver" in window && !reduce) {
+    var rio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); rio.unobserve(e.target); } });
+    }, { rootMargin: "0px 0px -12% 0px", threshold: 0.08 });
+    Array.prototype.forEach.call(reveals, function (el) { rio.observe(el); });
+  } else {
+    Array.prototype.forEach.call(reveals, function (el) { el.classList.add("in"); });
+  }
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav a[href^="#"]'));
+  var sections = navLinks.map(function (a) { return document.querySelector(a.getAttribute("href")); }).filter(Boolean);
+  var ticking = false;
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(function () {
+      if (bar) bar.classList.toggle("scrolled", window.scrollY > 12);
+      var y = window.scrollY + 120, current = null;
+      sections.forEach(function (s) { if (s.offsetTop <= y) current = s.id; });
+      navLinks.forEach(function (a) { a.classList.toggle("on", a.getAttribute("href") === "#" + current); });
+      ticking = false;
+    });
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll);
+  onScroll();
+
+  applyLang();
+  root.classList.remove("i18n-pending");
+  window.setTimeout(function () { root.classList.remove("i18n-pending"); }, 1200);
+})();
+</script>
+</body>
+</html>

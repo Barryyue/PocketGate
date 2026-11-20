@@ -52,9 +52,11 @@
 | `src/NetworkControl.Engine.Fake` | 模擬引擎（開發和測試用） |
 | `src/NetworkControl.Engine.Windows` | WFP 引擎：`Interop/`（P/Invoke）、`Compilation/`（RuleCompiler，純函數）、`WfpEngine.cs` |
 | `src/NetworkControl.App` | AtomUI 界面；只依賴 Ipc，不引用 Core |
+| `src/NetworkControl.App.Android`、`src/NetworkControl.Engine.Android`、`src/NetworkControl.Engine.Vpn` | Avalonia + AtomUI 的 Android 版（對外名稱 PocketGate (AtomUI)，產物 `PocketGate-<version>-AtomUI.apk`）；Engine.Vpn 是不依賴 Android SDK 的 VPN 邏輯，可在桌面跑測試。向 Kotlin 版看齊的計劃見 docs/avalonia-android-parity-plan.md |
 | `tests/*` | Core（含場景測試 ScenarioHost）、Storage、Ipc（診斷包）、Engine.Windows |
 | `scripts/` | `publish-release.ps1`（AOT 發布包 + 安裝程序）、安裝 / 卸載腳本（需要管理員權限）、`package/`（發布包中的 cmd 和 README） |
 | `installer/` | Inno Setup 腳本（`AppId` 不能修改） |
+| `android-kotlin/` | Kotlin + Compose 重寫的 Android 版（對外名稱 **PocketGate**，applicationId `com.networkcontrol.android.kotlin`），獨立 Gradle 構建，不在任何 `.slnx` 中；狀態看 docs/android-kotlin.md，完成項記錄在 docs/kotlin-feature-log.md |
 
 ## 5. 常用命令
 
@@ -108,6 +110,7 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
 - **PowerShell 中的 `[IO.File]` 相對路徑**按進程當前目錄解析，不是 `Set-Location` 的位置：一律用絕對路徑。
 - **proto 生成類型避開常見類型名**：已有 `VerdictAction`、`IpEndpoint`、`ActivityLog`；C# 中的別名統一用 `Proto`（全局命名空間裡已經有 `Pb`）。
 - **System.Text.Json 源生成會覆蓋 init 屬性的初始值**：`public bool Enabled { get; init; } = true;` 在 JSON 缺少該字段時反序列化為 `false`。需要「缺省為 true」時用可空類型並在映射時 `?? true`。
+- **官網（`site/`）**：`index.html` 與 `android.html`（Kotlin 版介紹頁）都是單檔頁面，三語切換靠頁尾的 `i18n-data` JSON，**鍵是頁面上的簡體原文**（去掉首尾空白）：改了簡體文字就要同時改字典裡的鍵和繁體 / 英文值，否則切換語言時那段文字不會翻譯；文字節點不要跨行。`android.html` 的基礎樣式複製自 `index.html`（token、頂欄、區塊、頁尾），改了首頁的這些樣式要同步。真機截圖放在 `site/assets/android/`（720 寬 WebP，已裁掉真實狀態欄，頁面自己畫一條乾淨的）；vivo 等 ROM 不支援 SystemUI 演示模式。改完用 `node tools/site/check-page.mjs <頁面> <臨時目錄>` 檢查腳本錯誤和橫向溢出。兩個 Android 版發布到同一個倉庫，下載按鈕不要指向 `releases/latest`。
 - **開發機的透明加密（tipray）**：倉庫中已有的文件對部分進程是密文——Claude Code 的 Read / Edit 工具讀到亂碼並報「NUL bytes」，而 git、dotnet、Git Bash、Python 讀到的是明文。遇到這種情況用 Python（`-X utf8`，保留 BOM 和換行）或 Git Bash 修改；新建文件不受影響。
 - **可攜版與安裝版目錄結構相同**：可攜模式只能靠根目錄的 `portable.txt` 判斷，不能靠 `App\` / `Service\` 目錄；安裝程序不得複製這個文件。可攜版使用獨立管道 `NetworkControl.portable.v1` 和 `<根目錄>\data`，不要和安裝版同時運行服務。
 - **Android 版**（設計見 docs/android.md，構建見 docs/development.md §11）：
@@ -130,8 +133,14 @@ dotnet run --project src/NetworkControl.App           # 調試構建會自動拉
   - Kotlin 版的 hev 原生庫是自行編譯的（加了寫入 EAGAIN 時短暫等待的補丁），補丁與編譯方法在 `android-kotlin/native/hev-socks5-tunnel/`；升級 hev 時要重新套用。
   - Kotlin 版 DNS：Java 的 `InetAddress.hostAddress` 對 IPv6 不壓縮零（`2606:4700:4700:0:0:0:0:1111`），比對 IP 要用 `InetAddress` 物件而不是字串。開發機網路對部分境外域名有 DNS 污染（例如 google.com 解析到 104.244.42.197），模擬器上連不上 Google 系服務不代表程式有問題。
   - Kotlin 版：引擎的「觸發信號」不要用無 replay 的 `MutableSharedFlow`（收集端開始前的信號會遺失，曾導致啟動後不建立隧道），用 `Channel(CONFLATED)`。判斷使用者「離開應用」一律按 Activity（`AppForegroundState`），不要用「前台套件是否改變」：回桌面時前台為空，無法和應用內換頁區分。`uiautomator dump` 看不到懸浮窗，要加 `--windows`。本機 Gradle 第一次構建偶爾失敗、重跑即過（檔案鎖），不是程式問題。
-  - Kotlin 版 Gradle 的設備測試（例如 `:app:generateReleaseBaselineProfile`）會在所有已連接的裝置上執行，開發機可能連著用戶的實機，一律設 `ANDROID_SERIAL=emulator-5554`（`scripts/android-kotlin.ps1 baseline` 已預設）。Release 已按 ABI 拆分，輸出為 `app-arm64-v8a-release.apk` / `app-x86_64-release.apk`。
+  - Kotlin 版 Gradle 的設備測試（例如 `:app:generateReleaseBaselineProfile`）會在所有已連接的裝置上執行，開發機可能連著用戶的實機，一律設 `ANDROID_SERIAL=emulator-5554`（`scripts/android-kotlin.ps1 baseline` 已預設）。Release 已按 ABI 拆分，輸出為 `app-arm64-v8a-release.apk` / `app-x86_64-release.apk`；CI 發布時把 arm64 包改名為 `PocketGate-<versionName>.apk`。
   - Kotlin 版「直到應用關閉」：一般應用拿不到其他應用的關閉事件（UsageStats 把 ACTIVITY_DESTROYED 轉成 STOPPED，從最近任務劃掉也只有 STOPPED）。要真正的關閉信號得由使用者 `adb shell pm grant <套件> android.permission.DUMP`，再用 `getHistoricalProcessExitReasons` 查目標主進程（只看 `processName == packageName`，渲染等子進程會自行重啟）。
   - Kotlin 版桌面掛件（Glance）：R8 會把同父類的 `GlanceAppWidget` 子類水平合併，結果所有掛件畫成同一款，只在 release 出現；`proguard-rules.pro` 已保留 `widget.**`，新增掛件放在這個套件下。快捷入口（掛件、磁貼、捷徑）一律經 `QuickActions`，不要直接呼叫 `setProtection` 等，否則會繞過應用鎖驗證。`res/values/strings.xml` 的英文字串不要寫裸撇號（`today's`），aapt 會報錯。
+  - Kotlin 版發版：**推送 `main`（或 `v*` 標籤）會由 GitHub Actions 自動發布公開 Release**（標籤 `v<versionName>`），用戶的應用會檢查到並提示更新。推送前確認 `versionName` / `versionCode` 已遞增、`ReleaseNotes.kt` 已寫三語說明；只想跑 CI 時推到 `agent/**` 分支。簽名：v0.15.0 起 Release 用倉庫外的正式密鑰，CI 從 Secret `NC_ANDROID_KEYSTORE_BASE64`（及密碼 / 別名 Secret）解碼；正式密鑰不能進倉庫，弄丟就再也發不了更新。倉庫內的 `android-kotlin/keystore/shared-release.jks`（密碼 `android`，公開）只用於 debug；但 Secret 缺失時 CI 會**靜默**用它簽 Release，簽出的包既不安全，也無法覆蓋正式簽名版，發版前要確認構建日誌是 `Using official release keystore`。以後再換密鑰時用 APK 簽名方案 v3 輪換（`apksigner rotate`，minSdk 29 支持），否則用戶要卸載重裝。
+  - **兩個 Android 版共用同一個 Release 倉庫**：Kotlin 版標籤 `v<versionName>`，AtomUI 版標籤 `atomui-v<version>`（`.github/workflows/android-atomui.yml`）。檢查更新的代碼必須按標籤前綴過濾，不能讀 `releases/latest`（最新的一個可能是另一個版本的包）；AtomUI 版的版本號與 `Directory.Build.props` 的 `VersionPrefix` 是分開的。
+  - Kotlin 版 Gitee Go 流水線有兩份（`.gitee/workflows/android-kotlin.yml` 與 `.workflow/流水線-*.yml`），改一份要同步另一份。容器只有 4 GiB：Release 構建要 `-x lintVitalRelease`、`--max-workers=1`，否則 R8 + lintVital 會 OOM；`settings.gradle.kts` 設了 `FAIL_ON_PROJECT_REPOS`，國內鏡像只能用 init script 的 `beforeSettings` 注入，不能加在項目裡；`yes | sdkmanager` 在 `set -o pipefail` 下會因 SIGPIPE 失敗，要臨時 `set +o pipefail`。
+  - Kotlin 版 Compose：`Scaffold(containerColor = Color.Transparent)` 或自訂底色的卡片，`contentColorFor` 找不到對應顏色會退回 `Color.Black`，深色主題下文字看不見；要顯式提供 `LocalContentColor` / `CardDefaults.cardColors(contentColor = ...)`。
+  - Kotlin 版圖示：外框加內框的單色向量圖（例如 `ic_shield.xml`）要 `android:fillType="evenOdd"`，否則狀態欄和通知欄把它填成實心，看不到內部圖案。
+  - Kotlin 版應用分身（vivo / MIUI 的 user 999 等）：UID = userId × 100000 + appId，按 UID 查規則或包名時要回退到 `uid % 100000`（`VpnRoutingPlan.find`、`AppCatalog.packagesForUid` 已處理），新增按 UID 的查找也要這樣做。
   - 通知文本在 `Resources/values*/strings.xml`（沒有界面時也要可用），界面文本由 `tools/android-strings.py` 生成 XLIFF；兩處都要維護三種語言。
   - Kotlin 版工具欄玻璃（Haze）：Haze 2 的 haze-glass 需要 Compose Multiplatform 1.12（Jetpack Compose 1.12.1）+ Kotlin 2.4.20，連帶要求 AGP 9.1 / compileSdk 37 / Gradle 9；而且折射用 RuntimeShader，只有 Android 13（API 33）以上才有，低版本會退回純模糊。目前用 Haze 1.6（Compose 1.8）並自行加高光/內陰影；要升級先確認目標機的 Android 版本。
