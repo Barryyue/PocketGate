@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.2",
+            date = "2026-11-20",
+            features = listOf(
+                t(
+                    "Android 16 native Live Updates: protection foreground notification now supports Promoted Ongoing status chips with live speed on Android 16+",
+                    "Android 16 原生实况胶囊：保护常驻通知现已适配 Android 16+ 原生 Live Updates（Promoted Ongoing），支持直接在状态栏实况胶囊显示实时网速",
+                    "Android 16 原生實況膠囊：保護常駐通知現已適配 Android 16+ 原生 Live Updates（Promoted Ongoing），支援直接在狀態列實況膠囊顯示即時網速",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.1",
             date = "2026-11-20",
             features = listOf(

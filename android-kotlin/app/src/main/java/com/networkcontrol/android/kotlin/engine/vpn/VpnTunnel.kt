@@ -179,7 +179,37 @@ class VpnForegroundNotifier(
             .setContentIntent(intent)
             .setOngoing(true)
             .setSilent(true)
-        return builder.build()
+        val notification = builder.build()
+        if (android.os.Build.VERSION.SDK_INT >= 36) {
+            runCatching {
+                val shortText = if (!starting && speed != null) {
+                    "↓${formatCompactRate(speed!!.downloadBytesPerSecond)}"
+                } else {
+                    "PocketGate"
+                }
+                val nativeBuilder = Notification.Builder(context, NotificationChannels.PROTECTION)
+                    .setSmallIcon(notification.smallIcon)
+                    .setContentTitle(title)
+                    .setContentText(body)
+                    .setContentIntent(intent)
+                    .setOngoing(true)
+                val cls = nativeBuilder.javaClass
+                cls.getMethod("setRequestPromotedOngoing", Boolean::class.javaPrimitiveType)
+                    .invoke(nativeBuilder, true)
+                cls.getMethod("setShortCriticalText", String::class.java)
+                    .invoke(nativeBuilder, shortText)
+                largeIcon?.let { nativeBuilder.setLargeIcon(it) }
+                return nativeBuilder.build()
+            }
+        }
+        return notification
+    }
+
+    private fun formatCompactRate(bytes: Long): String = when {
+        bytes < 1024 -> "${bytes}B"
+        bytes < 1024 * 1024 -> "${(bytes / 1024.0).toInt()}K"
+        bytes < 1024L * 1024 * 1024 -> String.format(java.util.Locale.US, "%.1fM", bytes / (1024.0 * 1024))
+        else -> String.format(java.util.Locale.US, "%.1fG", bytes / (1024.0 * 1024 * 1024))
     }
 
     private fun formatRate(bytes: Long): String {

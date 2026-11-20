@@ -638,6 +638,7 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
             CurrentDownloadSpeed = $"{Infrastructure.ByteSize.Format(dl)}/s";
             CurrentUploadSpeed = $"{Infrastructure.ByteSize.Format(ul)}/s";
             Backend.UpdateSpeedIsland($"↓ {CurrentDownloadSpeed} · ↑ {CurrentUploadSpeed}");
+            Backend.UpdateLiveSpeedNotification(dl, ul);
             OnPropertyChanged(nameof(FocusStatusText));
             OnPropertyChanged(nameof(TrafficTileSummary));
             OnPropertyChanged(nameof(ActiveRuleCount));

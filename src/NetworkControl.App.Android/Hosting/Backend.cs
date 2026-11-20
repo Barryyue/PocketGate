@@ -198,6 +198,8 @@ public interface IBackend
 
     void UpdateSpeedIsland(string text);
 
+    void UpdateLiveSpeedNotification(long downloadBytesPerSec, long uploadBytesPerSec);
+
     void RestartTunnelIfActive();
 
     void SwitchToDirectForwarding();
@@ -695,6 +697,14 @@ internal sealed class Backend : IBackend
 
     public void UpdateSpeedIsland(string text) =>
         _speedIsland.Update(_preferences.SpeedIslandEnabled, text);
+
+    public void UpdateLiveSpeedNotification(long downloadBytesPerSec, long uploadBytesPerSec)
+    {
+        if (_protection.IsEnabled)
+        {
+            VpnForegroundNotifier.UpdateLiveSpeed(_context, downloadBytesPerSec, uploadBytesPerSec);
+        }
+    }
 
     public void RestartTunnelIfActive()
     {
