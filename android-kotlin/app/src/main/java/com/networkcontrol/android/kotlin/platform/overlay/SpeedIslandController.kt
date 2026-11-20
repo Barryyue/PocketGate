@@ -108,15 +108,9 @@ class SpeedIslandController(
     @Volatile
     private var networkName: String? = null
 
-    @Volatile
-    private var statusBarTextColor = Color.BLACK
-    private var statusBarColorAt = 0L
-
     fun start() {
-        refreshStatusBarColor(force = true)
         context.registerComponentCallbacks(object : ComponentCallbacks {
             override fun onConfigurationChanged(newConfig: Configuration) {
-                refreshStatusBarColor(force = true)
                 refresh()
             }
 
@@ -124,18 +118,6 @@ class SpeedIslandController(
             @Suppress("OVERRIDE_DEPRECATION")
             override fun onLowMemory() = Unit
         })
-        // 桌布改變（顏色不同）時重新取色：用 API 27+ 的 OnColorsChangedListener，取代已棄用的 ACTION_WALLPAPER_CHANGED 廣播。
-        runCatching {
-            context.getSystemService(android.app.WallpaperManager::class.java)?.addOnColorsChangedListener(
-                { colors, which ->
-                    if ((which and WallpaperManager.FLAG_SYSTEM) != 0) {
-                        refreshStatusBarColor(force = true, colorsOverride = colors)
-                        refresh()
-                    }
-                },
-                android.os.Handler(android.os.Looper.getMainLooper()),
-            )
-        }
         scope.launch {
             combine(
                 protection.enabled,
@@ -177,17 +159,9 @@ class SpeedIslandController(
     }
 
     fun refresh() {
-        refreshStatusBarColor()
         val visible = protection.enabled.value && !screenState.locked.value &&
             preferences.speedIslandEnabled && Settings.canDrawOverlays(context)
         if (visible) show(speedMonitor.speed.value) else hide()
-    }
-
-    private fun refreshStatusBarColor(force: Boolean = false, colorsOverride: WallpaperColors? = null) {
-        val now = android.os.SystemClock.elapsedRealtime()
-        if (!force && now - statusBarColorAt < 60_000) return
-        statusBarColorAt = now
-        statusBarTextColor = computeStatusBarTextColor(colorsOverride)
     }
 
     private suspend fun refreshStats() {
@@ -398,34 +372,8 @@ class SpeedIslandController(
 
     private fun textColor(): Int = when (preferences.speedIslandTextColorMode) {
         "custom" -> preferences.speedIslandTextColor
-        "statusbar" -> statusBarTextColor
         else -> themeColor.value.toArgb()
     }
-
-    /**
-     * Android 不提供查詢前景應用狀態欄圖示顏色的公開 API；綜合系統深色模式 + 桌布色調與主色亮度判斷：
-     * - 系統深色模式一律白字；
-     * - 桌布標記 HINT_SUPPORTS_DARK_TEXT 時黑字、HINT_SUPPORTS_DARK_THEME 時白字；
-     * - 部分 OEM / 動態桌布不回傳 colorHints（為 0）時，改用 primaryColor 實際亮度判斷（暗桌布白字、亮桌布黑字）。
-     */
-    private fun computeStatusBarTextColor(colorsOverride: WallpaperColors? = null): Int {
-        if (isSystemNightMode()) return Color.WHITE
-        val colors = colorsOverride ?: runCatching {
-            context.getSystemService(WallpaperManager::class.java)
-                ?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
-        }.getOrNull() ?: return Color.WHITE
-        val hints = colors.colorHints
-        return when {
-            (hints and WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0 -> Color.BLACK
-            (hints and WallpaperColors.HINT_SUPPORTS_DARK_THEME) != 0 -> Color.WHITE
-            else -> if (colors.primaryColor.luminance() < 0.5f) Color.WHITE else Color.BLACK
-        }
-    }
-
-    private fun isSystemNightMode(): Boolean =
-        (android.content.res.Resources.getSystem().configuration.uiMode and
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     private fun islandBackgroundColor(): Int {
         val alpha = (preferences.speedIslandOpacity.coerceIn(0f, 1f) * 255).toInt()

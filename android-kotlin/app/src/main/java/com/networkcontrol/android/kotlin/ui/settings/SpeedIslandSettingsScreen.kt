@@ -267,14 +267,6 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             { Text(s[S.FollowTheme]) },
                         )
                         FilterChip(
-                            textMode == "statusbar",
-                            {
-                                textMode = "statusbar"
-                                backend.setSpeedIslandTextColorMode("statusbar")
-                            },
-                            { Text(s[S.FollowStatusBar]) },
-                        )
-                        FilterChip(
                             textMode == "custom",
                             {
                                 textMode = "custom"
@@ -462,7 +454,6 @@ private fun IslandPreview(
     )
     val color = when (textMode) {
         "custom" -> Color(customTextColor)
-        "statusbar" -> if (nightMode) Color.White else Color.Black
         else -> themeColor
     }
     val compact = mode == SpeedIslandMode.Mini

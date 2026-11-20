@@ -574,15 +574,14 @@ class AppBackend(val container: AppContainer) {
 
     fun setSpeedIslandStatusBarMode(enabled: Boolean) {
         container.preferences.speedIslandStatusBarMode = enabled
-        if (enabled && container.preferences.speedIslandTextColorMode == "theme") {
-            container.preferences.speedIslandTextColorMode = "statusbar"
-        } else if (!enabled && container.preferences.speedIslandTextColorMode == "statusbar") {
+        if (container.preferences.speedIslandTextColorMode == "statusbar") {
             container.preferences.speedIslandTextColorMode = "theme"
         }
         container.speedIsland.refresh()
     }
 
-    fun speedIslandTextColorMode(): String = container.preferences.speedIslandTextColorMode
+    fun speedIslandTextColorMode(): String =
+        container.preferences.speedIslandTextColorMode.let { if (it == "statusbar") "theme" else it }
 
     fun setSpeedIslandTextColorMode(mode: String) {
         container.preferences.speedIslandTextColorMode = mode
