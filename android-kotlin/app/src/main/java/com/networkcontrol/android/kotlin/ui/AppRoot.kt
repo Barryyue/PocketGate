@@ -17,6 +17,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -141,8 +142,13 @@ fun AppRoot(container: AppContainer) {
 
     LaunchedEffect(Unit) {
         container.awaitStarted()
-        showAppListPermission = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            container.appCatalog.visibility().restricted
+        // 首次啟動交由總覽頁的 PermissionGuideDialog 統一引導，避免同時疊彈兩個權限視窗。
+        showAppListPermission = if (container.backend.permissionGuideShown()) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                container.appCatalog.visibility().restricted
+            }
+        } else {
+            false
         }
         ready = true
     }
@@ -739,21 +745,24 @@ private fun AppBottomBar(
                                 .weight(1f)
                                 .fillMaxHeight()
                                 .clip(RoundedCornerShape(22.dp))
-                                .clickable(
+                                .selectable(
+                                    selected = isSelected,
                                     interactionSource = interaction,
                                     indication = null,
-                                ) {
-                                    if (!isSelected) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onSelect(index)
-                                    }
-                                },
+                                    role = androidx.compose.ui.semantics.Role.Tab,
+                                    onClick = {
+                                        if (!isSelected) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            onSelect(index)
+                                        }
+                                    },
+                                ),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
                             Icon(
                                 imageVector = tab.icon,
-                                contentDescription = s[tab.label],
+                                contentDescription = null,
                                 tint = tint,
                                 modifier = Modifier
                                     .size(22.dp)

@@ -40,6 +40,29 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.5",
+            date = "2026-11-21",
+            features = listOf(
+                t(
+                    "Rules screen search & domain visibility: domain, IP, and port conditions now display clearly on each rule card, with instant search and delete confirmation",
+                    "规则页展示域名与搜索：每条规则清晰显示域名、IP 与端口条件，新增规则搜索框与删除二次确认",
+                    "規則頁顯示網域與搜尋：每條規則清楚顯示網域、IP 與連接埠條件，新增規則搜尋框與刪除二次確認",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "App Lock reliability & guards: fixed lock-screen background contrast, rotation relock, and missing-credential lockout; unified App Lock protection across overview, apps, logs, and settings actions",
+                    "应用锁与安全护栏加固：修复锁屏底色、转屏重锁与无系统凭证锁死问题，并补齐总览、应用、记录及设置页敏感操作的验证保护",
+                    "應用程式鎖與安全護欄加固：修復鎖定畫面底色、旋轉重鎖與無系統憑證鎖死問題，並補齊總覽、應用程式、記錄及設定頁敏感操作的驗證保護",
+                ),
+                t(
+                    "UI & UX polish across all screens: isolated live speed chart recomposition, exposed status-bar speed settings directly, added Private DNS quick switch, input validation, scrollable dialogs, and cleaner prompt overlay layout",
+                    "全页面细节打磨：隔离实时网速波形重组更省电，常驻状态栏网速设置入口，补全私人 DNS 引导、输入校验、长弹窗滚动、搜索清空按钮与询问卡片防遮挡排版",
+                    "全頁面細節打磨：隔離即時網速波形重組更省電，常駐狀態列網速設定入口，補全私人 DNS 引導、輸入校驗、長視窗捲動、搜尋清空按鈕與詢問卡片防遮擋排版",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.4",
             date = "2026-11-20",
             improvements = listOf(

@@ -585,7 +585,7 @@ private fun LogDetailDialog(
                     DetailRow(s[S.TrackerLabel], "${it.company} · ${com.networkcontrol.android.kotlin.ui.common.trackerCategoryLabel(s, it.category)}")
                 }
                 DetailRow(s[S.Count], entry.count.toString())
-                entry.local?.let { DetailRow("Local", "${it.address.hostAddress}:${it.port}") }
+                entry.local?.let { DetailRow(s[S.LocalEndpoint], "${it.address.hostAddress}:${it.port}") }
                 entry.verdict.ruleId?.let { id ->
                     if (id.startsWith("blocklist:")) {
                         val listId = id.removePrefix("blocklist:")

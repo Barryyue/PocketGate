@@ -228,11 +228,18 @@ private fun SaturationValueBox(
         drawRect(hsvColor(hue, 1f, 1f))
         drawRect(Brush.horizontalGradient(listOf(Color.White, Color.Transparent)))
         drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black)))
+        val center = Offset(saturation * size.width, (1f - value) * size.height)
+        drawCircle(
+            Color.Black.copy(alpha = 0.55f),
+            radius = 8.5.dp.toPx(),
+            center = center,
+            style = Stroke(2.dp.toPx()),
+        )
         drawCircle(
             Color.White,
             radius = 7.dp.toPx(),
-            center = Offset(saturation * size.width, (1f - value) * size.height),
-            style = Stroke(3.dp.toPx()),
+            center = center,
+            style = Stroke(2.5.dp.toPx()),
         )
     }
 }

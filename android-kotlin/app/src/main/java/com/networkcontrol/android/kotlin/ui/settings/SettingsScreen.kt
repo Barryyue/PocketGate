@@ -556,7 +556,7 @@ fun SettingsScreen(
             SectionCard("${s[S.ProfileSettings]} · ${s[S.FocusSchedule]}") {
                 val activeProfile = profiles.firstOrNull { it.id == runtime.activeProfileId } ?: profiles.firstOrNull()
                 val profileSummary = if (activeProfile != null) {
-                    "${activeProfile.name} (${activeProfile.mode.name}) · ${profiles.size}"
+                    "${activeProfile.name} (${modeLabel(activeProfile.mode, s)}) · ${profiles.size}"
                 } else {
                     "${profiles.size}"
                 }
@@ -760,8 +760,8 @@ fun SettingsScreen(
                     }
                 }
                 SettingsNavRow(
-                    title = "${s[S.Version]}：${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                    subtitle = "AndroidVpn · ${runtime.mode.name} / ${backend.protectionStatus().name} · " +
+                    title = "${s[S.Version]} ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    subtitle = "AndroidVpn · ${modeLabel(runtime.mode, s)} · " +
                         "${s[S.AppsCount]} ${if (installedCount < 0) "…" else installedCount} · " +
                         "${s[S.SkippedRules]} ${plan.skippedRules.size}",
                     actionText = s[S.ViewDetails],
@@ -1262,6 +1262,14 @@ private fun TrustedPublishersDialog(
             },
         )
     }
+}
+
+private fun modeLabel(mode: FilterMode, s: com.networkcontrol.android.kotlin.ui.UiStrings): String = when (mode) {
+    FilterMode.Ask -> s[S.ModeAsk]
+    FilterMode.Whitelist -> s[S.ModeWhitelist]
+    FilterMode.Blacklist -> s[S.ModeBlacklist]
+    FilterMode.BlockAll -> s[S.ModeBlockAll]
+    FilterMode.Disabled -> s[S.ModeDisabled]
 }
 
 @Composable

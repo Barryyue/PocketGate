@@ -588,6 +588,9 @@ enum class S {
     RuleLifetimeUntilExit,
     RuleLifetimeTimed,
     SwitchToForwarding,
+    RoutingSelf,
+    RoutingSystemUid,
+    LocalEndpoint,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1198,6 +1201,9 @@ private val EN = mapOf(
     S.RuleLifetimeUntilExit to "Until app exit",
     S.RuleLifetimeTimed to "Timed",
     S.SwitchToForwarding to "Switch to per-connection",
+    S.RoutingSelf to "Self",
+    S.RoutingSystemUid to "System UID",
+    S.LocalEndpoint to "Local",
 )
 
 private val CN = mapOf(
@@ -1464,8 +1470,8 @@ private val CN = mapOf(
     S.AppLockedTitle to "PocketGate 已锁定",
     S.Unlock to "解锁",
     S.AppLockNoCredential to "请先设置锁屏密码、图案或 PIN。",
-    S.WorkProfile to "工作资料夹",
-    S.WorkProfileHint to "VPN 只作用于当前用户；其他用户或工作资料夹中的应用不受本应用控制。",
+    S.WorkProfile to "工作资料",
+    S.WorkProfileHint to "VPN 只作用于当前用户；其他用户或工作资料中的应用不受本应用控制。",
     S.CheckUpdates to "检查更新",
     S.UpdateAvailable to "发现新版本 %1\$s",
     S.UpToDate to "已是最新版本",
@@ -1784,6 +1790,9 @@ private val CN = mapOf(
     S.RuleLifetimeUntilExit to "离开应用后收回",
     S.RuleLifetimeTimed to "限时",
     S.SwitchToForwarding to "切到逐连接模式",
+    S.RoutingSelf to "本应用",
+    S.RoutingSystemUid to "系统核心",
+    S.LocalEndpoint to "本机端点",
 )
 
 private val TW = mapOf(
@@ -2334,7 +2343,7 @@ private val TW = mapOf(
     S.CloneIndependent to "應用分身獨立管控",
     S.CloneIndependentHint to "開啟後，逐連線模式下分身應用不繼承主應用放行規則，改為獨立觸發詢問或按預設模式攔截。",
     S.LocalBackupSave to "備份到下載目錄",
-    S.LocalBackupRestore to "還原機身備份",
+    S.LocalBackupRestore to "還原本機備份",
     S.LocalBackupSaved to "已留檔至 %1\$s",
     S.WebDavSync to "WebDAV 加密同步",
     S.WebDavUrl to "WebDAV 位址（目錄或 .pgb 檔案）",
@@ -2370,4 +2379,7 @@ private val TW = mapOf(
     S.RuleLifetimeUntilExit to "離開應用程式後收回",
     S.RuleLifetimeTimed to "限時",
     S.SwitchToForwarding to "切到逐連線模式",
+    S.RoutingSelf to "本應用程式",
+    S.RoutingSystemUid to "系統核心",
+    S.LocalEndpoint to "本機端點",
 )

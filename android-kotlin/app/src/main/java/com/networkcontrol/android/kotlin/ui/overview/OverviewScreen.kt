@@ -133,7 +133,6 @@ fun OverviewScreen(
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val settings by backend.settings.collectAsStateWithLifecycle()
     val quiet by backend.quietPeriod.collectAsStateWithLifecycle()
-    val speed by backend.speed.collectAsStateWithLifecycle()
     val focus by backend.focus.collectAsStateWithLifecycle()
     val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
     val updateState by backend.updateState.collectAsStateWithLifecycle()
@@ -171,26 +170,6 @@ fun OverviewScreen(
         if (permHealth.loaded && !backend.permissionGuideShown() && permHealth.missingCount > 0) {
             backend.setPermissionGuideShown(true)
             showPermissionGuide = true
-        }
-    }
-
-    // 滾動記錄最近 36 個取樣點的上下行速率，供平滑波形圖繪製。
-    val downHistory = remember {
-        mutableStateListOf<Long>().apply { repeat(SPEED_HISTORY_POINTS) { add(0L) } }
-    }
-    val upHistory = remember {
-        mutableStateListOf<Long>().apply { repeat(SPEED_HISTORY_POINTS) { add(0L) } }
-    }
-
-    // 每秒持續滾動取樣上下行速率，即使速度為 0 波形也平穩流動。
-    val latestSpeed by androidx.compose.runtime.rememberUpdatedState(speed)
-    LaunchedEffect(Unit) {
-        while (true) {
-            if (downHistory.size >= SPEED_HISTORY_POINTS) downHistory.removeAt(0)
-            downHistory.add(latestSpeed.downloadBytesPerSecond.coerceAtLeast(0L))
-            if (upHistory.size >= SPEED_HISTORY_POINTS) upHistory.removeAt(0)
-            upHistory.add(latestSpeed.uploadBytesPerSecond.coerceAtLeast(0L))
-            kotlinx.coroutines.delay(1_000)
         }
     }
 
@@ -495,15 +474,9 @@ fun OverviewScreen(
                 }
             }
 
-            // 3. 旗艦即時網速平滑波形圖（佔滿整行，FlClash 標誌性視覺焦點）
+            // 3. 即時網速平滑波形圖（獨立子組件隔離每秒重組）
             item {
-                SpeedChartCard(
-                    title = s[S.CurrentSpeed],
-                    downloadBytesPerSec = speed.downloadBytesPerSecond,
-                    uploadBytesPerSec = speed.uploadBytesPerSecond,
-                    downloadHistory = downHistory,
-                    uploadHistory = upHistory,
-                )
+                LiveSpeedSection(backend = backend, title = s[S.CurrentSpeed])
             }
 
             // 4. 緊湊模式與配置文件控制條
@@ -1192,6 +1165,34 @@ private fun ForwardingModeOption(
             }
         }
     }
+}
+
+@Composable
+private fun LiveSpeedSection(backend: AppBackend, title: String) {
+    val speed by backend.speed.collectAsStateWithLifecycle()
+    val downHistory = remember {
+        mutableStateListOf<Long>().apply { repeat(SPEED_HISTORY_POINTS) { add(0L) } }
+    }
+    val upHistory = remember {
+        mutableStateListOf<Long>().apply { repeat(SPEED_HISTORY_POINTS) { add(0L) } }
+    }
+    val latestSpeed by androidx.compose.runtime.rememberUpdatedState(speed)
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (downHistory.size >= SPEED_HISTORY_POINTS) downHistory.removeAt(0)
+            downHistory.add(latestSpeed.downloadBytesPerSecond.coerceAtLeast(0L))
+            if (upHistory.size >= SPEED_HISTORY_POINTS) upHistory.removeAt(0)
+            upHistory.add(latestSpeed.uploadBytesPerSecond.coerceAtLeast(0L))
+            kotlinx.coroutines.delay(1_000)
+        }
+    }
+    SpeedChartCard(
+        title = title,
+        downloadBytesPerSec = speed.downloadBytesPerSecond,
+        uploadBytesPerSec = speed.uploadBytesPerSecond,
+        downloadHistory = downHistory,
+        uploadHistory = upHistory,
+    )
 }
 
 @Composable

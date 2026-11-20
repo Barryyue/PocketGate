@@ -512,7 +512,7 @@
 |---|---|---|---|---|
 | K-172 | 原生狀態列網速圖示對齊 vivo 系統風格（2026-11-20）：`StatusBarSpeedIcon` 數字改採 `sans-serif` 粗體、動態量測寬度自適應縮放避免 4 位數裁切，100 KB/s／MB/s 以下保留 1 位小數（如 `64.4 / KB/s`），並調整雙行垂直置中基線（`y=46f / 80f`）與 `27f` 單位字號 | `StatusBarSpeedIcon.kt` | `.\scripts\android-kotlin.ps1 test`（`:app:testDebugUnitTest` `BUILD SUCCESSFUL`） | 真機狀態列顯示效果待用戶確認 |
 
-### 未發版（2026-11-21）
+### v0.16.5（2026-11-21）
 
 | ID | 功能 | 實作位置 | 驗證 | 備註 |
 |---|---|---|---|---|

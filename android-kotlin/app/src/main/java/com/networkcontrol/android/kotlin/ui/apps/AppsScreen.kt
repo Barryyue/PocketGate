@@ -755,8 +755,8 @@ private fun routingReasonLabel(
 ): String = when (reason) {
     AppRoutingReason.Rule -> s[S.ReasonRule]
     AppRoutingReason.Mode -> s[S.ReasonMode]
-    AppRoutingReason.Self -> "Self"
-    AppRoutingReason.SystemUid -> "System UID"
+    AppRoutingReason.Self -> s[S.RoutingSelf]
+    AppRoutingReason.SystemUid -> s[S.RoutingSystemUid]
     AppRoutingReason.Trusted -> s[S.Trusted]
     AppRoutingReason.Focus -> s[S.FocusMode]
     AppRoutingReason.LockScreen -> s[S.BlockOnLock]
