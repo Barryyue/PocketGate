@@ -148,10 +148,11 @@ object UpdateChecker {
             }
             val gitee = fetchGitee()
             if (gitee.error == null && !gitee.downloadUrl.isNullOrBlank()) {
-                return if (gitee.hasUpdate) {
-                    gitee.copy(fallbackDownloadUrl = mirrorUrl ?: ghUrl)
-                } else {
-                    github.copy(downloadUrl = gitee.downloadUrl, fallbackDownloadUrl = mirrorUrl ?: ghUrl)
+                if (gitee.latestVersion == github.latestVersion) {
+                    return github.copy(downloadUrl = gitee.downloadUrl, fallbackDownloadUrl = mirrorUrl ?: ghUrl)
+                }
+                if (gitee.hasUpdate) {
+                    return gitee.copy(fallbackDownloadUrl = mirrorUrl ?: ghUrl)
                 }
             }
             if (mirrorUrl != null) {

@@ -61,9 +61,15 @@ public static class AppUpdateChecker
             var gitee = await CheckSourceAsync(client, UpdateSource.Gitee, giteeRepo, "", currentVersion, ct).ConfigureAwait(false);
             if (gitee.Error is null && !string.IsNullOrEmpty(gitee.DownloadUrl))
             {
-                return gitee.HasUpdate
-                    ? gitee with { FallbackDownloadUrl = mirror ?? gh.DownloadUrl }
-                    : gh with { DownloadUrl = gitee.DownloadUrl, FallbackDownloadUrl = mirror ?? gh.DownloadUrl };
+                if (string.Equals(gitee.LatestVersion, gh.LatestVersion, StringComparison.Ordinal))
+                {
+                    return gh with { DownloadUrl = gitee.DownloadUrl, FallbackDownloadUrl = mirror ?? gh.DownloadUrl };
+                }
+
+                if (gitee.HasUpdate)
+                {
+                    return gitee with { FallbackDownloadUrl = mirror ?? gh.DownloadUrl };
+                }
             }
 
             return mirror is not null
