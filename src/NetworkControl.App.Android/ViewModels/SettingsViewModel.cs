@@ -92,6 +92,9 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     public partial int ThemeStyleIndex { get; set; }
 
     [ObservableProperty]
+    public partial string SelectedThemeColorHex { get; set; } = "FF2E7D32";
+
+    [ObservableProperty]
     public partial bool AutoHideBottomBar { get; set; } = true;
 
     [ObservableProperty]
@@ -278,6 +281,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
 
             var prefs = Backend.Preferences;
             ThemeStyleIndex = (int)prefs.ThemeStyle;
+            SelectedThemeColorHex = prefs.ThemeColorArgb.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
             AutoHideBottomBar = prefs.AutoHideBottomBar;
             SpeedIslandEnabled = prefs.SpeedIslandEnabled;
             PromptOverlayEnabled = prefs.PromptOverlayEnabled;
@@ -765,6 +769,7 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     {
         if (uint.TryParse(hex.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var argb))
         {
+            SelectedThemeColorHex = argb.ToString("X8", System.Globalization.CultureInfo.InvariantCulture);
             _ = Context.Appearance.SetThemeColorAsync(argb);
         }
     }

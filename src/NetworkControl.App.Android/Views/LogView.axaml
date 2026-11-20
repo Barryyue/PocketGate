@@ -37,19 +37,22 @@
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:LogItemViewModel">
             <Border Classes="row">
-              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
-                <TextBlock Classes="title" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="1" Classes="caption" VerticalAlignment="Center" Text="{Binding Time}" />
-                <TextBlock Grid.Row="1" Classes="secondary" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
-                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                  <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding CountText}" />
-                  <atom:Tag Text="{Binding ReasonText}" />
-                </StackPanel>
-                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12">
-                  <atom:Button ButtonType="Link" Padding="0" Command="{Binding InspectCommand}" Content="{loc:AppsLangResource Details}" />
-                  <atom:Button ButtonType="Link" Padding="0" IsVisible="{Binding CanAllow}"
-                               Command="{Binding AllowAppCommand}" Content="{loc:LogLangResource AllowApp}" />
-                </StackPanel>
+              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                <Border Classes="accent-bar" Classes.allow="{Binding IsAllow}" />
+                <Grid Grid.Column="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+                  <TextBlock Classes="title" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Classes="caption" VerticalAlignment="Center" Text="{Binding Time}" />
+                  <TextBlock Grid.Row="1" Classes="secondary" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
+                  <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                    <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding CountText}" />
+                    <atom:Tag Text="{Binding ReasonText}" />
+                  </StackPanel>
+                  <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12">
+                    <atom:Button ButtonType="Link" Padding="0" Command="{Binding InspectCommand}" Content="{loc:AppsLangResource Details}" />
+                    <atom:Button ButtonType="Link" Padding="0" IsVisible="{Binding CanAllow}"
+                                 Command="{Binding AllowAppCommand}" Content="{loc:LogLangResource AllowApp}" />
+                  </StackPanel>
+                </Grid>
               </Grid>
             </Border>
           </DataTemplate>

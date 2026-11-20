@@ -486,6 +486,9 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
     }
 
     [RelayCommand]
+    private void RefreshOverview() => Refresh();
+
+    [RelayCommand]
     private void SwitchToDirect() => Backend.SwitchToDirectForwarding();
 
     [RelayCommand]

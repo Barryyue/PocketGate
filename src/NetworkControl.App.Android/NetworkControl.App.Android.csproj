@@ -10,7 +10,7 @@
     <ApplicationId>com.networkcontrol.android</ApplicationId>
     <ApplicationTitle>PocketGate (AtomUI)</ApplicationTitle>
     <!-- AtomUI 安卓版獨立版本號（與桌面版 Directory.Build.props 解耦）；整數版本碼 = major*10000 + minor*100 + patch -->
-    <AtomUiVersion>0.3.3</AtomUiVersion>
+    <AtomUiVersion>0.3.4</AtomUiVersion>
     <ApplicationDisplayVersion>$(AtomUiVersion)</ApplicationDisplayVersion>
     <ApplicationVersion>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($(AtomUiVersion.Split('.')[0]), 10000)), $([MSBuild]::Multiply($(AtomUiVersion.Split('.')[1]), 100)))), $(AtomUiVersion.Split('.')[2])))</ApplicationVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>

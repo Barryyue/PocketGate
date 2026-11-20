@@ -30,11 +30,17 @@
         <DataTemplate x:DataType="vm:AppItemViewModel">
           <Border Classes="row">
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
-              <Image Grid.RowSpan="2" Width="40" Height="40" VerticalAlignment="Top" Source="{Binding Icon}" />
+              <Border Grid.RowSpan="2" Width="44" Height="44" CornerRadius="12" ClipToBounds="True" VerticalAlignment="Top"
+                      Background="{atom:SharedTokenResource ColorFillTertiary}">
+                <Image Width="44" Height="44" Source="{Binding Icon}" Stretch="UniformToFill" />
+              </Border>
               <StackPanel Grid.Column="1" Spacing="2">
                 <TextBlock Classes="title" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
                 <TextBlock Classes="caption" Text="{Binding PackageName}" TextTrimming="CharacterEllipsis" />
                 <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Border Classes="status-dot"
+                          Classes.success="{Binding StatusKind, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=success}"
+                          Classes.warning="{Binding StatusKind, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=warning}" />
                   <TextBlock FontSize="12" Classes.success="{Binding StatusKind, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=success}"
                              Classes.warning="{Binding StatusKind, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=warning}"
                              Classes.error="{Binding StatusKind, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=error}"

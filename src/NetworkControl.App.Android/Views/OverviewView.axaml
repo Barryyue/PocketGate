@@ -10,7 +10,15 @@
   <Panel>
     <ScrollViewer>
       <StackPanel Margin="16,16,16,96" Spacing="14">
-      <TextBlock Classes="page-title" Text="{loc:ShellLangResource AppTitle}" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+        <StackPanel Spacing="2">
+          <TextBlock Classes="page-title" Text="{loc:ShellLangResource AppTitle}" />
+          <TextBlock Classes="caption" Text="{Binding ActiveProfileName}" />
+        </StackPanel>
+        <atom:Button Grid.Column="1" ButtonType="Text" VerticalAlignment="Center"
+                     Icon="{antdicons:AntDesignIconProvider Kind=ReloadOutlined}"
+                     Command="{Binding RefreshOverviewCommand}" Content="{loc:CommonLangResource Refresh}" />
+      </Grid>
 
       <!-- 總覽頂部背景更新下載進度條 / 安裝就緒橫幅 -->
       <atom:Card IsVisible="{Binding ShowUpdateBanner}">
@@ -64,6 +72,7 @@
             <TextBlock Grid.Column="1" Classes="secondary" HorizontalAlignment="Right" Text="{Binding CurrentUploadSpeed}" />
           </Grid>
           <controls:SpeedChartControl Height="76"
+                                      DownloadColor="{atom:SharedTokenResource ColorPrimary}"
                                       DownloadHistory="{Binding DownloadHistory}"
                                       UploadHistory="{Binding UploadHistory}" />
         </StackPanel>

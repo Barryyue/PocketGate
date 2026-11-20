@@ -28,29 +28,51 @@
           </atom:Segmented>
           <TextBlock Classes="secondary" Text="{loc:SettingsLangResource ThemeStyle}" />
           <UniformGrid Columns="3" RowSpacing="8" ColumnSpacing="8">
-            <atom:Button HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="0"
+            <atom:Button Classes="style-chip" Classes.active="{Binding ThemeStyleIndex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=0}"
+                         HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="0"
                          Content="{loc:SettingsLangResource ThemeStyleClassic}" />
-            <atom:Button HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="1"
+            <atom:Button Classes="style-chip" Classes.active="{Binding ThemeStyleIndex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=1}"
+                         HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="1"
                          Content="{loc:SettingsLangResource ThemeStyleObsidian}" />
-            <atom:Button HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="2"
+            <atom:Button Classes="style-chip" Classes.active="{Binding ThemeStyleIndex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=2}"
+                         HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="2"
                          Content="{loc:SettingsLangResource ThemeStyleFrost}" />
-            <atom:Button HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="3"
+            <atom:Button Classes="style-chip" Classes.active="{Binding ThemeStyleIndex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=3}"
+                         HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="3"
                          Content="{loc:SettingsLangResource ThemeStyleAurora}" />
-            <atom:Button HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="4"
+            <atom:Button Classes="style-chip" Classes.active="{Binding ThemeStyleIndex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=4}"
+                         HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="4"
                          Content="{loc:SettingsLangResource ThemeStyleAmoled}" />
-            <atom:Button HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="5"
+            <atom:Button Classes="style-chip" Classes.active="{Binding ThemeStyleIndex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=5}"
+                         HorizontalAlignment="Stretch" Command="{Binding SelectThemeStyleCommand}" CommandParameter="5"
                          Content="{loc:SettingsLangResource ThemeStyleDynamic}" />
           </UniformGrid>
           <TextBlock Classes="secondary" Text="{loc:SettingsLangResource ThemeColor}" />
           <UniformGrid Columns="8" ColumnSpacing="6">
-            <Button Height="28" Padding="0" CornerRadius="14" Background="#2E7D32" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF2E7D32" />
-            <Button Height="28" Padding="0" CornerRadius="14" Background="#C9F45A" Command="{Binding SelectThemeColorCommand}" CommandParameter="FFC9F45A" />
-            <Button Height="28" Padding="0" CornerRadius="14" Background="#0284C7" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF0284C7" />
-            <Button Height="28" Padding="0" CornerRadius="14" Background="#4F46E5" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF4F46E5" />
-            <Button Height="28" Padding="0" CornerRadius="14" Background="#7C3AED" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF7C3AED" />
-            <Button Height="28" Padding="0" CornerRadius="14" Background="#E11D48" Command="{Binding SelectThemeColorCommand}" CommandParameter="FFE11D48" />
-            <Button Height="28" Padding="0" CornerRadius="14" Background="#D97706" Command="{Binding SelectThemeColorCommand}" CommandParameter="FFD97706" />
-            <Button Height="28" Padding="0" CornerRadius="14" Background="#0D9488" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF0D9488" />
+            <Border Classes="swatch" Classes.active="{Binding SelectedThemeColorHex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=FF2E7D32}">
+              <Button Height="26" Padding="0" CornerRadius="13" Background="#2E7D32" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF2E7D32" />
+            </Border>
+            <Border Classes="swatch" Classes.active="{Binding SelectedThemeColorHex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=FFC9F45A}">
+              <Button Height="26" Padding="0" CornerRadius="13" Background="#C9F45A" Command="{Binding SelectThemeColorCommand}" CommandParameter="FFC9F45A" />
+            </Border>
+            <Border Classes="swatch" Classes.active="{Binding SelectedThemeColorHex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=FF0284C7}">
+              <Button Height="26" Padding="0" CornerRadius="13" Background="#0284C7" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF0284C7" />
+            </Border>
+            <Border Classes="swatch" Classes.active="{Binding SelectedThemeColorHex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=FF4F46E5}">
+              <Button Height="26" Padding="0" CornerRadius="13" Background="#4F46E5" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF4F46E5" />
+            </Border>
+            <Border Classes="swatch" Classes.active="{Binding SelectedThemeColorHex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=FF7C3AED}">
+              <Button Height="26" Padding="0" CornerRadius="13" Background="#7C3AED" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF7C3AED" />
+            </Border>
+            <Border Classes="swatch" Classes.active="{Binding SelectedThemeColorHex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=FFE11D48}">
+              <Button Height="26" Padding="0" CornerRadius="13" Background="#E11D48" Command="{Binding SelectThemeColorCommand}" CommandParameter="FFE11D48" />
+            </Border>
+            <Border Classes="swatch" Classes.active="{Binding SelectedThemeColorHex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=FFD97706}">
+              <Button Height="26" Padding="0" CornerRadius="13" Background="#D97706" Command="{Binding SelectThemeColorCommand}" CommandParameter="FFD97706" />
+            </Border>
+            <Border Classes="swatch" Classes.active="{Binding SelectedThemeColorHex, Converter={x:Static vm:Converters.IsEqual}, ConverterParameter=FF0D9488}">
+              <Button Height="26" Padding="0" CornerRadius="13" Background="#0D9488" Command="{Binding SelectThemeColorCommand}" CommandParameter="FF0D9488" />
+            </Border>
           </UniformGrid>
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource AutoHideBottomBar}" />

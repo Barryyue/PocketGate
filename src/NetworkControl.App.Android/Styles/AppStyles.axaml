@@ -121,4 +121,51 @@
   <Style Selector="Border.scrim">
     <Setter Property="Background" Value="#73000000" />
   </Style>
+
+  <!-- 風格與強調色選中態 -->
+  <Style Selector="atom|Button.style-chip.active">
+    <Setter Property="BorderBrush" Value="{atom:SharedTokenResource ColorPrimary}" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorPrimaryBg}" />
+  </Style>
+
+  <Style Selector="Border.swatch">
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+
+  <Style Selector="Border.swatch.active">
+    <Setter Property="BorderBrush" Value="{atom:SharedTokenResource ColorText}" />
+  </Style>
+
+  <Style Selector="Border.accent-bar">
+    <Setter Property="Width" Value="4" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorError}" />
+  </Style>
+
+  <Style Selector="Border.accent-bar.allow">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorSuccess}" />
+  </Style>
+
+  <Style Selector="Border.accent-bar.disabled">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorBorderSecondary}" />
+  </Style>
+
+  <Style Selector="Border.status-dot">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorError}" />
+  </Style>
+
+  <Style Selector="Border.status-dot.success">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorSuccess}" />
+  </Style>
+
+  <Style Selector="Border.status-dot.warning">
+    <Setter Property="Background" Value="{atom:SharedTokenResource ColorWarning}" />
+  </Style>
 </Styles>

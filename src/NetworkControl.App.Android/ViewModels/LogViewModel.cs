@@ -231,6 +231,8 @@ public sealed partial class LogItemViewModel(
         ? Loc.Get(CommonLangResourceKind.Allow)
         : Loc.Get(CommonLangResourceKind.Block);
 
+    public bool IsAllow => entry.Verdict.Action == VerdictAction.Allow;
+
     public string ProtocolText => entry.Protocol == L4Protocol.Udp ? "UDP" : "TCP";
 
     public string? Domain => string.IsNullOrWhiteSpace(entry.Hostname) ? null : entry.Hostname;
