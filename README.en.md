@@ -4,7 +4,7 @@
 
 # PocketGate
 
-[中文](README.md) · **English**
+[简体中文](README.md) · [繁體中文](README.zh-TW.md) · **English**
 
 **Every app asks you before it first goes online.**
 
@@ -155,7 +155,7 @@ dotnet run --project src/NetworkControl.App      # Debug builds start a developm
 
 ## Documentation
 
-The project documentation is written in Traditional Chinese.
+The project documentation under `docs/` is written in Traditional Chinese.
 
 - [Development guide](docs/development.md): running locally, extension points, coding conventions
 - [Requirements](docs/requirements.md) · [Design](docs/design.md) · [Progress board](docs/progress.md)

@@ -4,162 +4,162 @@
 
 # PocketGate
 
-**中文** · [English](README.en.md)
+**简体中文** · [繁體中文](README.zh-TW.md) · [English](README.en.md)
 
-**每個應用第一次聯網，都先問你。**
+**每个应用第一次联网，都先问你。**
 
-跨平台（Android / Windows）的按應用聯網控制工具：應用首次聯網時彈窗詢問，<br>
-規則精確到網域、IP 與埠，全程在本機執行，不收集任何資料。
+跨平台（Android / Windows）的按应用联网控制工具：应用首次联网时弹窗询问，<br>
+规则精确到域名、IP 与端口，全程在本机运行，不收集任何数据。
 
 [![Android](https://img.shields.io/badge/Android-0.16.2-3DDC84?logo=android&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![Windows](https://img.shields.io/badge/Windows-0.3.0-0078D4?logo=windows&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![License](https://img.shields.io/badge/License-GPL--2.0-blue)](LICENSE)
 [![No root](https://img.shields.io/badge/root-not%20required-C9F45A)](#android-版)
-[![Telemetry](https://img.shields.io/badge/telemetry-none-brightgreen)](#隱私)
+[![Telemetry](https://img.shields.io/badge/telemetry-none-brightgreen)](#隐私)
 
-[下載](https://github.com/Barryyue/PocketGate/releases) ·
-[Gitee 鏡像](https://gitee.com/yuexiaobai/PocketGate) ·
-[Android 版介紹](site/android.html) ·
-[產品首頁](site/index.html) ·
-[文檔](#文檔)
+[下载](https://github.com/Barryyue/PocketGate/releases) ·
+[Gitee 镜像](https://gitee.com/yuexiaobai/PocketGate) ·
+[Android 版介绍](site/android.html) ·
+[产品首页](site/index.html) ·
+[文档](#文档)
 
 <br>
 
-<img src="site/assets/android/overview-dark.webp" width="200" alt="總覽頁（黑曜石主題）">&nbsp;
-<img src="site/assets/android/prompt-light.webp" width="200" alt="聯網詢問卡片">&nbsp;
-<img src="site/assets/android/live-light.webp" width="200" alt="即時連線">&nbsp;
-<img src="site/assets/android/rules-dark.webp" width="200" alt="規則頁">
+<img src="site/assets/android/overview-dark.webp" width="200" alt="总览页（黑曜石主题）">&nbsp;
+<img src="site/assets/android/prompt-light.webp" width="200" alt="联网询问卡片">&nbsp;
+<img src="site/assets/android/live-light.webp" width="200" alt="实时连接">&nbsp;
+<img src="site/assets/android/rules-dark.webp" width="200" alt="规则页">
 
-<sub>以上為 Android 版真機截圖（vivo，Android 17）</sub>
+<sub>以上为 Android 版真机截图（vivo，Android 17）</sub>
 
 </div>
 
 ---
 
-## 為什麼需要它
+## 为什么需要它
 
-系統防火牆只擋**入站**連線，從不過問應用要往外連到哪裡。PocketGate 補上這一層：
+系统防火墙只挡**入站**连接，从不过问应用要往外连到哪里。PocketGate 补上这一层：
 
-- **先問再放行**：新應用第一次聯網時先被攔下，由你決定允許、拒絕還是僅此一次。
-- **看得見**：每一條連線來自哪個應用、連到哪裡、持續多久，都列得清清楚楚；系統自帶的資料收集也無所遁形。
-- **只在本機**：沒有帳號、沒有伺服器、沒有分析 SDK；Android 版連自己的檢查更新都可以關掉。
+- **先问再放行**：新应用第一次联网时先被拦下，由你决定允许、拒绝还是仅此一次。
+- **看得见**：每一条连接来自哪个应用、连到哪里、持续多久，都列得清清楚楚；系统自带的数据收集也无所遁形。
+- **只在本机**：没有账号、没有服务器、没有分析 SDK；Android 版连自己的检查更新都可以关掉。
 
 ---
 
 ## Android 版
 
-> Kotlin + Jetpack Compose 原生開發 · Android 10+ · `arm64-v8a` · 安裝檔約 5.6 MB · 免 Root
+> Kotlin + Jetpack Compose 原生开发 · Android 10+ · `arm64-v8a` · 安装包约 5.6 MB · 免 Root
 
-### 聯網的那一刻，問你一次
+### 联网的那一刻，问你一次
 
-<img src="site/assets/android/prompt-card.webp" width="420" alt="詢問卡片：是否允許藍心小V 使用 WLAN 網路">
+<img src="site/assets/android/prompt-card.webp" width="420" alt="询问卡片：是否允许蓝心小V 使用 WLAN 网络">
 
-- 正在使用的應用聯網時，詢問直接浮在它上面；在 PocketGate 裡顯示為頁內卡片；鎖屏時改發通知，通知按鈕可以直接回答。
-- 允許或拒絕都能選時效：**僅一次**（離開應用後自動收回）、限時、永久；同一應用的多條連線合併成一則詢問。
-- 懸浮詢問需要「懸浮窗」與「使用情況訪問」兩項權限，缺一項會改用通知詢問。
+- 正在使用的应用联网时，询问直接浮在它上面；在 PocketGate 里显示为页内卡片；锁屏时改发通知，通知按钮可以直接回答。
+- 允许或拒绝都能选时效：**仅一次**（离开应用后自动收回）、限时、永久；同一应用的多条连接合并成一条询问。
+- 悬浮询问需要「悬浮窗」与「使用情况访问」两项权限，缺一项会改用通知询问。
 
-### 兩種攔截引擎
+### 两种拦截引擎
 
-| | 黑洞模式（預設） | 逐連線模式 |
+| | 黑洞模式（默认） | 逐连接模式 |
 |---|---|---|
-| 原理 | 被拒絕的應用進入 VPN 後直接丟棄 | 所有流量經本機 `hev-socks5-tunnel` 轉送，每條連線單獨判決 |
-| 粒度 | 依應用 | 依應用 + 網域 + 位址 + 埠 + 協定 |
-| 出口 | — | 內建直連出口，或你自己的 SOCKS5 代理（FlClash、Clash Meta、v2rayNG 等） |
-| 特點 | 最省電，被允許的應用完全不經過 PocketGate | 即時連線檢視、一鍵雙向 RST 中斷、DNS 防繞過、QUIC 也能依網域判決 |
+| 原理 | 被拒绝的应用进入 VPN 后直接丢弃 | 所有流量经本机 `hev-socks5-tunnel` 转发，每条连接单独判决 |
+| 粒度 | 按应用 | 按应用 + 域名 + 地址 + 端口 + 协议 |
+| 出口 | — | 内置直连出口，或你自己的 SOCKS5 代理（FlClash、Clash Meta、v2rayNG 等） |
+| 特点 | 最省电，被允许的应用完全不经过 PocketGate | 实时连接列表、一键双向 RST 中断、DNS 防绕过、QUIC 也能按域名判决 |
 
-### 功能一覽
+### 功能一览
 
-| 防護 | 情境 | 體驗 |
+| 防护 | 场景 | 体验 |
 |---|---|---|
-| 5 種全域模式：詢問 / 白名單 / 黑名單 / 全部封鎖 / 停用 | 專注模式與時間表：只留幾個應用連線 | 6 套視覺主題，含 Android 12+ 系統取色 |
-| 7 份公開攔截清單 + 追蹤器識別，支援自訂訂閱 | 依網路類型、Wi-Fi SSID、SIM 卡自動切換設定檔 | Bento 總覽儀表板、即時網速波形、流量排行 |
-| 即時活躍連線，一鍵中斷 | 鎖定時斷網，只放行白名單應用 | 靈動島與狀態列原生網速圖示 |
-| 外部代理三段診斷（埠 / 交握驗證 / 外網） | 應用程式分身沿用主應用規則，或獨立管控 | 4 款桌面小工具、快速設定方塊、應用捷徑 |
-| 應用程式鎖：修改規則前驗證系統螢幕鎖 | 勿擾與每日摘要 | Android 16 實時活動通知（Live Updates） |
-| 純離線模式：PocketGate 自己絕不聯網 | WebDAV 端對端加密同步（PBKDF2 + AES-256-GCM） | 應用程式內自動更新，GitHub / Gitee / 鏡像自動擇優 |
+| 5 种全局模式：询问 / 白名单 / 黑名单 / 全部阻断 / 停用 | 专注模式与时间表：只留几个应用连接 | 6 套视觉主题，含 Android 12+ 系统取色 |
+| 7 份公开拦截清单 + 追踪器识别，支持自定义订阅 | 按网络类型、Wi-Fi SSID、SIM 卡自动切换配置文件 | Bento 总览仪表盘、实时网速波形、流量排行 |
+| 实时活跃连接，一键中断 | 锁屏断网，只放行白名单应用 | 灵动岛与状态栏原生网速图标 |
+| 外部代理三段诊断（端口 / 握手验证 / 外网） | 应用分身沿用主应用规则，或独立管控 | 4 款桌面小部件、快速设置磁贴、应用快捷方式 |
+| 应用锁：修改规则前验证系统锁屏 | 勿扰与每日摘要 | Android 16 实时活动通知（Live Updates） |
+| 纯离线模式：PocketGate 自己绝不联网 | WebDAV 端到端加密同步（PBKDF2 + AES-256-GCM） | 应用内自动更新，GitHub / Gitee / 镜像自动择优 |
 
-### 六套主題
+### 六套主题
 
-<img src="site/assets/android/overview-light.webp" width="200" alt="極簡霜白主題的總覽頁">&nbsp;
-<img src="site/assets/android/dashboard-dark.webp" width="200" alt="黑曜石主題的總覽頁下半部">&nbsp;
-<img src="site/assets/android/settings-dark.webp" width="200" alt="設定頁與視覺風格選擇">&nbsp;
-<img src="site/assets/android/apps-dark.webp" width="200" alt="應用程式清單">
+<img src="site/assets/android/overview-light.webp" width="200" alt="极简霜白主题的总览页">&nbsp;
+<img src="site/assets/android/dashboard-dark.webp" width="200" alt="黑曜石主题的总览页下半部分">&nbsp;
+<img src="site/assets/android/settings-dark.webp" width="200" alt="设置页与视觉风格选择">&nbsp;
+<img src="site/assets/android/apps-dark.webp" width="200" alt="应用列表">
 
-黑曜石極客 · 經典 · 極簡霜白 · 極光流光 · 純黑省電 · 系統取色，跟隨系統深淺色自動切換。
+黑曜石极客 · 经典 · 极简霜白 · 极光流光 · 纯黑省电 · 系统取色，跟随系统深浅色自动切换。
 
-### 下載與安裝
+### 下载与安装
 
-1. 到 [GitHub Releases](https://github.com/Barryyue/PocketGate/releases) 或 [Gitee Releases](https://gitee.com/yuexiaobai/PocketGate/releases) 下載 `PocketGate-<版本>.apk`。
-   - 標籤 `v*` 是本頁介紹的 Kotlin 版；`atomui-v*` 是另一套 .NET + Avalonia 實作（見下文）。
-2. 允許瀏覽器或檔案管理員「安裝不明應用程式」，安裝後依首次引導授權 VPN 與通知即可開始。
-3. **從 0.14 或更早版本升級**：0.15.0 起改用正式簽章，無法直接覆蓋安裝。請先在「設定」匯出規則，解除安裝舊版，裝好新版後再匯入。
-4. 系統同一時間只允許一個 VPN。要和代理工具一起用，請關掉代理工具的 VPN 模式，改在 PocketGate 的逐連線模式裡把出口設為它的 SOCKS5。
+1. 到 [GitHub Releases](https://github.com/Barryyue/PocketGate/releases) 或 [Gitee Releases](https://gitee.com/yuexiaobai/PocketGate/releases) 下载 `PocketGate-<版本>.apk`。
+   - 标签 `v*` 是本页介绍的 Kotlin 版；`atomui-v*` 是另一套 .NET + Avalonia 实现（见下文）。
+2. 允许浏览器或文件管理器「安装未知应用」，安装后按首次引导授权 VPN 与通知即可开始。
+3. **从 0.14 或更早版本升级**：0.15.0 起改用正式签名，无法直接覆盖安装。请先在「设置」导出规则，卸载旧版，装好新版后再导入。
+4. 系统同一时间只允许一个 VPN。要和代理工具一起用，请关掉代理工具的 VPN 模式，改在 PocketGate 的逐连接模式里把出口设为它的 SOCKS5。
 
-之後的版本，應用程式會自己提示更新。構建方法見 [android-kotlin/README.md](android-kotlin/README.md)。
+之后的版本，应用会自己提示更新。构建方法见 [android-kotlin/README.md](android-kotlin/README.md)。
 
 ---
 
 ## Windows 版
 
-> .NET 10 · Avalonia 12 + AtomUI · 使用者態 WFP · Windows 10 1809+ / 11 · x64、ARM64
+> .NET 10 · Avalonia 12 + AtomUI · 用户态 WFP · Windows 10 1809+ / 11 · x64、ARM64
 
-目前是 **0.3.0 試用版**：先阻斷再詢問，規則模型、詢問時效與日誌和 Android 版一致；提供安裝程式與可攜版，可以從托盤一鍵斷網。
+目前是 **0.3.0 试用版**：先阻断再询问，规则模型、询问时效与日志和 Android 版一致；提供安装程序与便携版，可以从托盘一键断网。
 
 ```mermaid
 flowchart LR
-  App["NetworkControl.App（Avalonia）<br/>托盤 · 彈窗 · 規則 · 日誌"]
-  Svc["NetworkControl.Service（特權服務）<br/>判決管線 · 規則引擎 · 詢問代理<br/>SQLite 存儲 · 平台引擎（可替換）"]
-  App <-->|"gRPC：命名管道 / Unix socket<br/>本機對端憑據認證 + 授權策略"| Svc
+  App["NetworkControl.App（Avalonia）<br/>托盘 · 弹窗 · 规则 · 日志"]
+  Svc["NetworkControl.Service（特权服务）<br/>判决管线 · 规则引擎 · 询问代理<br/>SQLite 存储 · 平台引擎（可替换）"]
+  App <-->|"gRPC：命名管道 / Unix socket<br/>本机对端凭据认证 + 授权策略"| Svc
 ```
 
 ---
 
-## 隱私
+## 隐私
 
-- 不收集任何遙測，沒有分析或統計 SDK。
-- 規則、日誌都存在本機 SQLite；WebDAV 同步時先在本機加密，伺服器只看得到密文。
-- 只有 VPN 授權（Android）或服務權限（Windows）是必要的，其餘權限都可選，用途在應用內的權限檢查裡逐項說明。
-- PocketGate 自己主動聯網的只有檢查更新與下載攔截清單；Android 版開啟「純離線模式」後連這兩件事也不做。
+- 不收集任何遥测，没有分析或统计 SDK。
+- 规则、日志都存在本机 SQLite；WebDAV 同步时先在本机加密，服务器只看得到密文。
+- 只有 VPN 授权（Android）或服务权限（Windows）是必要的，其余权限都可选，用途在应用内的权限检查里逐项说明。
+- PocketGate 自己主动联网的只有检查更新与下载拦截清单；Android 版打开「纯离线模式」后连这两件事也不做。
 
 ---
 
-## 專案結構
+## 项目结构
 
-| 目錄 | 說明 |
+| 目录 | 说明 |
 |---|---|
-| `android-kotlin/` | **Android 版**（Kotlin + Jetpack Compose + hev-socks5-tunnel），獨立 Gradle 專案 |
-| `src/NetworkControl.Core` | 平台無關核心：領域模型、規則引擎、判決管線、詢問代理 |
-| `src/NetworkControl.Storage` | SQLite 存儲（`config.db` / `activity.db`）與遷移 |
-| `src/NetworkControl.Ipc` | `.proto` 契約、IPC 端點、診斷包工具 |
-| `src/NetworkControl.Service` | Windows 服務宿主：本機 IPC、gRPC 服務、引擎裝配 |
-| `src/NetworkControl.Engine.Windows` | Windows 使用者態 WFP 引擎 |
-| `src/NetworkControl.App` | 桌面介面：Avalonia 12 + AtomUI，三語與托盤彈窗 |
-| `src/NetworkControl.App.Android` 等 | Android 的 .NET + Avalonia 實作（AtomUI 版），與桌面共用核心，用於技術選型對照 |
-| `site/` | 產品介紹頁：[首頁](site/index.html)、[Android 版](site/android.html)（三語、深淺主題） |
+| `android-kotlin/` | **Android 版**（Kotlin + Jetpack Compose + hev-socks5-tunnel），独立 Gradle 项目 |
+| `src/NetworkControl.Core` | 平台无关核心：领域模型、规则引擎、判决管线、询问代理 |
+| `src/NetworkControl.Storage` | SQLite 存储（`config.db` / `activity.db`）与迁移 |
+| `src/NetworkControl.Ipc` | `.proto` 契约、IPC 端点、诊断包工具 |
+| `src/NetworkControl.Service` | Windows 服务宿主：本机 IPC、gRPC 服务、引擎装配 |
+| `src/NetworkControl.Engine.Windows` | Windows 用户态 WFP 引擎 |
+| `src/NetworkControl.App` | 桌面界面：Avalonia 12 + AtomUI，三语与托盘弹窗 |
+| `src/NetworkControl.App.Android` 等 | Android 的 .NET + Avalonia 实现（AtomUI 版），与桌面共用核心，用于技术选型对照 |
+| `site/` | 产品介绍页：[首页](site/index.html)、[Android 版](site/android.html)（三语、深浅主题） |
 
-## 開發
+## 开发
 
 ```bash
 # 桌面版（需要 .NET SDK 10.0.400+）
 dotnet build NetworkControl.slnx
 dotnet test --solution NetworkControl.slnx
-dotnet run --project src/NetworkControl.App      # 調試構建會自動拉起使用模擬引擎的開發服務
+dotnet run --project src/NetworkControl.App      # 调试构建会自动拉起使用模拟引擎的开发服务
 ```
 
 ```powershell
 # Android 版（Kotlin）
-.\scripts\android-kotlin.ps1 test      # 單元測試
+.\scripts\android-kotlin.ps1 test      # 单元测试
 .\scripts\android-kotlin.ps1 build     # Debug APK
-.\scripts\android-kotlin.ps1 publish   # Release APK，輸出到 artifacts\kotlin-android\
+.\scripts\android-kotlin.ps1 publish   # Release APK，输出到 artifacts\kotlin-android\
 ```
 
-## 文檔
+## 文档
 
-- [開發指南](docs/development.md)：本地執行、擴展點、編碼約定
-- [需求規格](docs/requirements.md) · [設計實現](docs/design.md) · [進度看板](docs/progress.md)
-- [Android Kotlin 版計劃與狀態](docs/android-kotlin.md) · [功能完成記錄](docs/kotlin-feature-log.md)
-- [AGENTS.md](AGENTS.md)：AI 編碼助手共用的工作指南
+- [开发指南](docs/development.md)：本地运行、扩展点、编码约定
+- [需求规格](docs/requirements.md) · [设计实现](docs/design.md) · [进度看板](docs/progress.md)
+- [Android Kotlin 版计划与状态](docs/android-kotlin.md) · [功能完成记录](docs/kotlin-feature-log.md)
+- [AGENTS.md](AGENTS.md)：AI 编码助手共用的工作指南
 
-## 開源協議
+## 开源协议
 
-本專案以 [GNU General Public License v2.0](LICENSE) 授權發布。
+本项目以 [GNU General Public License v2.0](LICENSE) 协议发布。
