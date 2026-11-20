@@ -5,7 +5,7 @@ PocketGate 是基於 **Kotlin + Jetpack Compose** 開發的 Android 按應用聯
 - **應用名稱**：PocketGate（`applicationId` 保持 `com.networkcontrol.android.kotlin` 以確保舊版無縫覆蓋升級；Debug 版帶 `.debug` 後綴）
 - **最低版本**：Android 10（API 29）；compile / target SDK 36
 - **當前版本**：`v0.16.2`（Release `arm64-v8a` APK 約 5.6 MB）
-- **開源協議**：[GPL-2.0](../LICENSE)
+- **開源協議**：[GPL-3.0](../LICENSE)
 - **獨立 Gradle 專案**：不屬於 `.NET` 解決方案；規則語義、SQLite schema 與導入導出格式與桌面端對齊
 
 ## 構建與測試

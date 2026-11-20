@@ -13,7 +13,7 @@ rules down to domain, IP and port, running entirely on your device with zero dat
 
 [![Android](https://img.shields.io/badge/Android-0.16.2-3DDC84?logo=android&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![Windows](https://img.shields.io/badge/Windows-0.3.0-0078D4?logo=windows&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
-[![License](https://img.shields.io/badge/License-GPL--2.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE)
 [![No root](https://img.shields.io/badge/root-not%20required-C9F45A)](#android)
 [![Telemetry](https://img.shields.io/badge/telemetry-none-brightgreen)](#privacy)
 
@@ -164,4 +164,4 @@ The project documentation under `docs/` is written in Traditional Chinese.
 
 ## License
 
-PocketGate is released under the [GNU General Public License v2.0](LICENSE).
+PocketGate is released under the [GNU General Public License v3.0](LICENSE).

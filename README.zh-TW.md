@@ -13,7 +13,7 @@
 
 [![Android](https://img.shields.io/badge/Android-0.16.2-3DDC84?logo=android&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![Windows](https://img.shields.io/badge/Windows-0.3.0-0078D4?logo=windows&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
-[![License](https://img.shields.io/badge/License-GPL--2.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE)
 [![No root](https://img.shields.io/badge/root-not%20required-C9F45A)](#android-版)
 [![Telemetry](https://img.shields.io/badge/telemetry-none-brightgreen)](#隱私)
 
@@ -162,4 +162,4 @@ dotnet run --project src/NetworkControl.App      # 調試構建會自動拉起�
 
 ## 開源協議
 
-本專案以 [GNU General Public License v2.0](LICENSE) 授權發布。
+本專案以 [GNU General Public License v3.0](LICENSE) 授權發布。
