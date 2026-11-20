@@ -138,7 +138,7 @@ public sealed class MainActivity : AvaloniaMainActivity
 
     protected override void OnStop()
     {
-        _lastStopTicks = Environment.TickCount64;
+        _lastStopTicks = System.Environment.TickCount64;
         ForegroundChanged?.Invoke(this, false);
         base.OnStop();
     }
@@ -152,7 +152,7 @@ public sealed class MainActivity : AvaloniaMainActivity
             return;
         }
 
-        if (_unlockedSession && (_lastStopTicks == 0 || Environment.TickCount64 - _lastStopTicks < 60_000))
+        if (_unlockedSession && (_lastStopTicks == 0 || System.Environment.TickCount64 - _lastStopTicks < 60_000))
         {
             return;
         }
