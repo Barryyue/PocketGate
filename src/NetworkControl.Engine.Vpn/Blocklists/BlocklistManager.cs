@@ -180,7 +180,8 @@ public sealed class BlocklistManager
 
             if (content is not null)
             {
-                var parsed = DomainBlocklist.Parse(ReadLines(content));
+                using var reader = new StringReader(content);
+                var parsed = BlocklistParser.Parse(reader);
                 await File.WriteAllTextAsync(CacheFileFor(src.Id), content, cancellationToken).ConfigureAwait(false);
                 lock (_gate)
                 {
@@ -248,7 +249,14 @@ public sealed class BlocklistManager
             }
         }
 
-        _activeList = lines.Count > 0 ? DomainBlocklist.Parse(lines).List : null;
+        if (lines.Count == 0)
+        {
+            _activeList = null;
+            return;
+        }
+
+        using var reader = new StringReader(string.Join('\n', lines));
+        _activeList = BlocklistParser.Parse(reader).List;
     }
 
     private void LoadState()
@@ -309,13 +317,4 @@ public sealed class BlocklistManager
     }
 
     private string CacheFileFor(string id) => Path.Combine(_dir, $"{id}.txt");
-
-    private static IEnumerable<string> ReadLines(string content)
-    {
-        using var reader = new StringReader(content);
-        while (reader.ReadLine() is { } line)
-        {
-            yield return line;
-        }
-    }
 }
