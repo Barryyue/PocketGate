@@ -6,6 +6,11 @@
         <source>About</source>
       </segment>
     </unit>
+    <unit id="AllowSystemApps">
+      <segment>
+        <source>Allow system apps by default</source>
+      </segment>
+    </unit>
     <unit id="AlwaysOn">
       <segment>
         <source>Always-on VPN</source>
@@ -14,6 +19,16 @@
     <unit id="AlwaysOnHint">
       <segment>
         <source>To keep apps blocked even if NetworkControl stops, turn on "Always-on VPN" and "Block connections without VPN" for NetworkControl in system settings.</source>
+      </segment>
+    </unit>
+    <unit id="AppLock">
+      <segment>
+        <source>App lock</source>
+      </segment>
+    </unit>
+    <unit id="AppLockHint">
+      <segment>
+        <source>Require device PIN / biometric unlock on launch.</source>
       </segment>
     </unit>
     <unit id="AutoHideBottomBar">
@@ -61,6 +76,11 @@
         <source>Some phones stop background apps aggressively. Exclude NetworkControl from battery optimization if protection turns off by itself.</source>
       </segment>
     </unit>
+    <unit id="BlocklistUpdate">
+      <segment>
+        <source>Update lists now</source>
+      </segment>
+    </unit>
     <unit id="Blocklists">
       <segment>
         <source>Domain blocklists</source>
@@ -74,6 +94,11 @@
     <unit id="CheckUpdates">
       <segment>
         <source>Check for updates</source>
+      </segment>
+    </unit>
+    <unit id="ClearTrusted">
+      <segment>
+        <source>Clear all</source>
       </segment>
     </unit>
     <unit id="CloneIndependent">
@@ -109,6 +134,11 @@
     <unit id="DiagnosticsHint">
       <segment>
         <source>Export a zip with the app version, device model, engine counters, recent logs and rule statistics. Connection addresses are redacted.</source>
+      </segment>
+    </unit>
+    <unit id="DnsBypassProtection">
+      <segment>
+        <source>DNS bypass protection</source>
       </segment>
     </unit>
     <unit id="ExportCanceled">
@@ -441,6 +471,11 @@
         <source>Do not disturb ended</source>
       </segment>
     </unit>
+    <unit id="ReleaseNotesTitle">
+      <segment>
+        <source>Release notes</source>
+      </segment>
+    </unit>
     <unit id="RuleTransferHint">
       <segment>
         <source>Rules use the netcontrol-rules format and can be moved between Android and desktop. Temporary rules are not exported; desktop app paths and connection conditions do not take effect on Android.</source>
@@ -454,6 +489,16 @@
     <unit id="Seconds">
       <segment>
         <source>{0} s</source>
+      </segment>
+    </unit>
+    <unit id="Socks5Pass">
+      <segment>
+        <source>Password (optional)</source>
+      </segment>
+    </unit>
+    <unit id="Socks5User">
+      <segment>
+        <source>Username (optional)</source>
       </segment>
     </unit>
     <unit id="SpeedIsland">
@@ -489,6 +534,11 @@
     <unit id="Theme">
       <segment>
         <source>Appearance</source>
+      </segment>
+    </unit>
+    <unit id="ThemeColor">
+      <segment>
+        <source>Accent color</source>
       </segment>
     </unit>
     <unit id="ThemeDark">
@@ -554,6 +604,11 @@
     <unit id="TrafficNotGranted">
       <segment>
         <source>Usage access not granted</source>
+      </segment>
+    </unit>
+    <unit id="TrustedPublishers">
+      <segment>
+        <source>Trusted publishers</source>
       </segment>
     </unit>
     <unit id="UpToDate">

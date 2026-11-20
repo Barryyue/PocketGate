@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
   <file id="NetworkControl.Android.Localization.OverviewLangResourceKind">
+    <unit id="BatchClear">
+      <segment>
+        <source>Clear</source>
+      </segment>
+    </unit>
+    <unit id="BatchPromptTitle">
+      <segment>
+        <source>Batch review ({0})</source>
+      </segment>
+    </unit>
+    <unit id="BatchSelectAll">
+      <segment>
+        <source>Select all</source>
+      </segment>
+    </unit>
     <unit id="BlockAll">
       <segment>
         <source>Block all apps</source>
@@ -26,6 +41,11 @@
         <source>Dismiss</source>
       </segment>
     </unit>
+    <unit id="DoNotDisturb">
+      <segment>
+        <source>Do Not Disturb</source>
+      </segment>
+    </unit>
     <unit id="Download">
       <segment>
         <source>Download</source>
@@ -34,6 +54,51 @@
     <unit id="EnableNotifications">
       <segment>
         <source>Turn on</source>
+      </segment>
+    </unit>
+    <unit id="FocusAppsHint">
+      <segment>
+        <source>Selected apps stay allowed during Focus; others are blocked.</source>
+      </segment>
+    </unit>
+    <unit id="FocusDuration">
+      <segment>
+        <source>Duration (minutes)</source>
+      </segment>
+    </unit>
+    <unit id="FocusExtend">
+      <segment>
+        <source>+15m</source>
+      </segment>
+    </unit>
+    <unit id="FocusMode">
+      <segment>
+        <source>Focus mode</source>
+      </segment>
+    </unit>
+    <unit id="FocusOff">
+      <segment>
+        <source>Off</source>
+      </segment>
+    </unit>
+    <unit id="FocusRemaining">
+      <segment>
+        <source>{0}m left</source>
+      </segment>
+    </unit>
+    <unit id="FocusSaveProfile">
+      <segment>
+        <source>Save as profile</source>
+      </segment>
+    </unit>
+    <unit id="FocusStartTitle">
+      <segment>
+        <source>Start Focus mode</source>
+      </segment>
+    </unit>
+    <unit id="FocusStop">
+      <segment>
+        <source>End focus</source>
       </segment>
     </unit>
     <unit id="GrantUsageAccess">
@@ -91,6 +156,11 @@
         <source>{0} recommended permissions missing</source>
       </segment>
     </unit>
+    <unit id="PrivateDnsWarning">
+      <segment>
+        <source>Private DNS ({0}) is active on the system; domain rules may not match.</source>
+      </segment>
+    </unit>
     <unit id="Profiles">
       <segment>
         <source>Profile</source>
@@ -109,6 +179,11 @@
     <unit id="Restore">
       <segment>
         <source>Restore</source>
+      </segment>
+    </unit>
+    <unit id="RulesTile">
+      <segment>
+        <source>Active rules</source>
       </segment>
     </unit>
     <unit id="ShowPrompt">
@@ -149,6 +224,11 @@
     <unit id="StatusStarting">
       <segment>
         <source>Starting protection…</source>
+      </segment>
+    </unit>
+    <unit id="SwitchToDirect">
+      <segment>
+        <source>Switch to direct exit</source>
       </segment>
     </unit>
     <unit id="UpdateAvailableBody">

@@ -6,7 +6,8 @@
              xmlns:loc="using:NetworkControl.Android.Localization"
              x:Class="NetworkControl.Android.Views.AppsView"
              x:DataType="vm:AppsViewModel">
-  <Grid RowDefinitions="Auto,*">
+  <Panel>
+    <Grid RowDefinitions="Auto,*">
     <StackPanel Margin="16,16,16,8" Spacing="10">
       <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavApps}" />
       <atom:LineEdit PlaceholderText="{loc:AppsLangResource Search}" Text="{Binding SearchText}"
@@ -43,12 +44,15 @@
                   <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding UsageText}" IsVisible="{Binding HasUsage}" />
                 </StackPanel>
               </StackPanel>
-              <atom:Segmented Grid.Row="1" Grid.Column="1" HorizontalAlignment="Left" SizeType="Small"
-                              SelectedIndex="{Binding DecisionIndex}" IsEnabled="{Binding !IsBusy}">
-                <atom:SegmentedItem Content="{loc:CommonLangResource Allow}" />
-                <atom:SegmentedItem Content="{loc:CommonLangResource Unset}" />
-                <atom:SegmentedItem Content="{loc:CommonLangResource Block}" />
-              </atom:Segmented>
+              <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <atom:Segmented HorizontalAlignment="Left" SizeType="Small"
+                                SelectedIndex="{Binding DecisionIndex}" IsEnabled="{Binding !IsBusy}">
+                  <atom:SegmentedItem Content="{loc:CommonLangResource Allow}" />
+                  <atom:SegmentedItem Content="{loc:CommonLangResource Unset}" />
+                  <atom:SegmentedItem Content="{loc:CommonLangResource Block}" />
+                </atom:Segmented>
+                <atom:Button Grid.Column="1" ButtonType="Link" Padding="4,0" Command="{Binding InspectCommand}" Content="{loc:AppsLangResource Details}" />
+              </Grid>
             </Grid>
           </Border>
         </DataTemplate>
@@ -57,5 +61,36 @@
 
     <TextBlock Grid.Row="1" Classes="secondary" HorizontalAlignment="Center" VerticalAlignment="Center"
                Text="{loc:AppsLangResource Empty}" IsVisible="{Binding IsEmpty}" />
-  </Grid>
+    </Grid>
+
+    <!-- 應用詳情彈窗（簽章指紋、信任發布者、今日用量與最近目標） -->
+    <Border Classes="scrim" IsVisible="{Binding HasDetailApp}">
+      <atom:Card VerticalAlignment="Center" Margin="18" Header="{Binding DetailApp.Label, FallbackValue=''}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="caption" Text="{Binding DetailApp.PackageName, FallbackValue=''}" TextWrapping="Wrap" />
+          <TextBlock Classes="secondary" Text="{Binding DetailApp.UsageText, FallbackValue=''}" IsVisible="{Binding DetailApp.HasUsage, FallbackValue=False}" />
+          <StackPanel Spacing="4" IsVisible="{Binding DetailSignerSha256, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <TextBlock Classes="caption" Text="{loc:AppsLangResource PublisherHash}" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBlock VerticalAlignment="Center" Text="{Binding DetailSignerSha256}" />
+              <atom:Button Grid.Column="1" SizeType="Small" IsVisible="{Binding !IsDetailPublisherTrusted}"
+                           Command="{Binding TrustDetailPublisherCommand}" Content="{loc:AppsLangResource TrustPublisher}" />
+              <atom:Tag Grid.Column="1" TagColor="green" IsVisible="{Binding IsDetailPublisherTrusted}" Text="{loc:AppsLangResource Trusted}" />
+            </Grid>
+          </StackPanel>
+          <TextBlock Classes="secondary" Text="{loc:AppsLangResource RecentTargets}" />
+          <ScrollViewer MaxHeight="160">
+            <ItemsControl ItemsSource="{Binding DetailRecentTargets}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Classes="caption" Text="{Binding}" Margin="0,2" TextTrimming="CharacterEllipsis" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <atom:Button HorizontalAlignment="Stretch" Command="{Binding CloseDetailCommand}" Content="{loc:CommonLangResource Cancel}" />
+        </StackPanel>
+      </atom:Card>
+    </Border>
+  </Panel>
 </UserControl>

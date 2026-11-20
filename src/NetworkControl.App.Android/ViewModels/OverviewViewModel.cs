@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -178,6 +179,55 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
 
     [ObservableProperty]
     public partial string UpdateReadyText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool ShowFocusDialog { get; set; }
+
+    [ObservableProperty]
+    public partial int FocusDurationIndex { get; set; } = 1;
+
+    [ObservableProperty]
+    public partial string FocusAppSearch { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool ShowBatchDialog { get; set; }
+
+    [ObservableProperty]
+    public partial int BatchLifetimeIndex { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDoNotDisturb { get; set; }
+
+    public ObservableCollection<FocusAppOption> FocusApps { get; } = [];
+
+    public ObservableCollection<BatchPromptOption> BatchPrompts { get; } = [];
+
+    public bool IsFocusActive => Backend.IsFocusActive;
+
+    public string FocusStatusText => Backend.FocusEndsAt is { } end
+        ? Loc.Format(OverviewLangResourceKind.FocusRemaining, Math.Max(1, (int)Math.Ceiling((end - DateTimeOffset.UtcNow).TotalMinutes)))
+        : Loc.Get(OverviewLangResourceKind.FocusOff);
+
+    public int ActiveRuleCount => Backend.Rules.Count(r => r.Enabled);
+
+    public string ActiveProfileName => Backend.ActiveProfile.Name;
+
+    public string? PrivateDnsHost => Backend.GetPrivateDnsHost();
+
+    public bool HasPrivateDns => !string.IsNullOrEmpty(PrivateDnsHost);
+
+    public string PrivateDnsWarningText => PrivateDnsHost is { } h
+        ? Loc.Format(OverviewLangResourceKind.PrivateDnsWarning, h)
+        : string.Empty;
+
+    public bool ShowSwitchToDirect =>
+        Backend.Preferences.ForwardingEnabled &&
+        Backend.Preferences.ForwardingUpstream == "socks5" &&
+        Status == ProtectionStatus.Failed;
+
+    public string TrafficTileSummary => HasTrafficAccess
+        ? $"↓ {DownloadToday} · ↑ {UploadToday}"
+        : Loc.Get(OverviewLangResourceKind.GrantUsageAccess);
 
     public bool ShowUpdateBanner => UpdateDownloading || UpdateReady;
 
@@ -435,6 +485,136 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
         ShowPermissionBanner = false;
     }
 
+    [RelayCommand]
+    private void SwitchToDirect() => Backend.SwitchToDirectForwarding();
+
+    [RelayCommand]
+    private void OpenFocusDialog()
+    {
+        FocusApps.Clear();
+        var apps = Backend.GetApps().Where(a => !a.App.IsSystem).OrderBy(a => a.App.Label, StringComparer.CurrentCultureIgnoreCase);
+        foreach (var app in apps)
+        {
+            FocusApps.Add(new FocusAppOption(app.App.PackageName, app.App.Label));
+        }
+
+        FocusAppSearch = string.Empty;
+        ShowFocusDialog = true;
+    }
+
+    [RelayCommand]
+    private void CloseFocusDialog() => ShowFocusDialog = false;
+
+    [RelayCommand]
+    private async Task StartFocusAsync()
+    {
+        var minutes = FocusDurationIndex switch
+        {
+            0 => 15,
+            1 => 30,
+            2 => 60,
+            _ => 120,
+        };
+        var selected = FocusApps.Where(a => a.IsSelected).Select(a => a.PackageName).ToList();
+        ShowFocusDialog = false;
+        await Backend.StartFocusAsync(minutes, selected, CancellationToken.None);
+        OnPropertyChanged(nameof(IsFocusActive));
+        OnPropertyChanged(nameof(FocusStatusText));
+    }
+
+    [RelayCommand]
+    private void ExtendFocus()
+    {
+        Backend.ExtendFocus(15);
+        OnPropertyChanged(nameof(FocusStatusText));
+    }
+
+    [RelayCommand]
+    private async Task StopFocusAsync()
+    {
+        await Backend.StopFocusAsync(CancellationToken.None);
+        OnPropertyChanged(nameof(IsFocusActive));
+        OnPropertyChanged(nameof(FocusStatusText));
+    }
+
+    [RelayCommand]
+    private Task SaveFocusAsProfileAsync() => Backend.SaveFocusAsProfileAsync(CancellationToken.None);
+
+    partial void OnIsDoNotDisturbChanged(bool value)
+    {
+        if (value && !IsProtectionOn)
+        {
+            IsProtectionOn = true;
+        }
+
+        _ = Backend.SetModeAsync(value ? FilterMode.Blacklist : FilterMode.Ask, CancellationToken.None);
+    }
+
+    [RelayCommand]
+    private void OpenBatchDialog()
+    {
+        BatchPrompts.Clear();
+        foreach (var p in Backend.GetPendingPrompts())
+        {
+            var pkg = Engine.Vpn.Platform.PackageAppPath.TryGetPackage(p.App?.Path ?? p.ExecutablePath, out var id) ? id : p.Id.ToString();
+            var label = p.App?.Name ?? p.ExecutablePath ?? pkg;
+            BatchPrompts.Add(new BatchPromptOption(p.Id, label, pkg));
+        }
+
+        ShowBatchDialog = BatchPrompts.Count > 0;
+    }
+
+    [RelayCommand]
+    private void CloseBatchDialog() => ShowBatchDialog = false;
+
+    [RelayCommand]
+    private void BatchSelectAll()
+    {
+        foreach (var item in BatchPrompts) item.IsSelected = true;
+    }
+
+    [RelayCommand]
+    private void BatchClearAll()
+    {
+        foreach (var item in BatchPrompts) item.IsSelected = false;
+    }
+
+    [RelayCommand]
+    private Task BatchAllowAsync() => ApplyBatchAsync(VerdictAction.Allow);
+
+    [RelayCommand]
+    private Task BatchDenyAsync() => ApplyBatchAsync(VerdictAction.Deny);
+
+    private async Task ApplyBatchAsync(VerdictAction action)
+    {
+        var (lifetime, duration) = BatchLifetimeIndex switch
+        {
+            1 => (RuleLifetime.Permanent, (TimeSpan?)null),
+            2 => (RuleLifetime.Timed, TimeSpan.FromHours(1)),
+            _ => (RuleLifetime.UntilRestart, null),
+        };
+        var selected = BatchPrompts.Where(b => b.IsSelected).ToList();
+        foreach (var item in selected)
+        {
+            await Backend.AnswerPromptAsync(item.PromptId, action, lifetime, duration, CancellationToken.None);
+            Platform.PromptNotifier.Cancel(global::Android.App.Application.Context, item.PromptId);
+        }
+
+        ShowBatchDialog = false;
+        Refresh();
+    }
+
+    partial void OnFocusAppSearchChanged(string value)
+    {
+        var q = value.Trim();
+        foreach (var item in FocusApps)
+        {
+            item.IsVisible = q.Length == 0
+                || item.Label.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || item.PackageName.Contains(q, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     private async void SampleSpeed()
     {
         if (!HasTrafficAccess) return;
@@ -455,9 +635,34 @@ public sealed partial class OverviewViewModel : LocalizedViewModel
             CurrentDownloadSpeed = $"{Infrastructure.ByteSize.Format(dl)}/s";
             CurrentUploadSpeed = $"{Infrastructure.ByteSize.Format(ul)}/s";
             Backend.UpdateSpeedIsland($"↓ {CurrentDownloadSpeed} · ↑ {CurrentUploadSpeed}");
+            OnPropertyChanged(nameof(FocusStatusText));
+            OnPropertyChanged(nameof(TrafficTileSummary));
+            OnPropertyChanged(nameof(ActiveRuleCount));
         }
         catch
         {
         }
     }
+}
+
+public sealed partial class FocusAppOption(string packageName, string label) : ObservableObject
+{
+    public string PackageName { get; } = packageName;
+    public string Label { get; } = label;
+
+    [ObservableProperty]
+    public partial bool IsSelected { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsVisible { get; set; } = true;
+}
+
+public sealed partial class BatchPromptOption(Guid promptId, string label, string packageName) : ObservableObject
+{
+    public Guid PromptId { get; } = promptId;
+    public string Label { get; } = label;
+    public string PackageName { get; } = packageName;
+
+    [ObservableProperty]
+    public partial bool IsSelected { get; set; } = true;
 }

@@ -7,6 +7,12 @@
         <target state="translated">關於</target>
       </segment>
     </unit>
+    <unit id="AllowSystemApps">
+      <segment>
+        <source>Allow system apps by default</source>
+        <target state="translated">預設放行系統應用</target>
+      </segment>
+    </unit>
     <unit id="AlwaysOn">
       <segment>
         <source>Always-on VPN</source>
@@ -17,6 +23,18 @@
       <segment>
         <source>To keep apps blocked even if NetworkControl stops, turn on "Always-on VPN" and "Block connections without VPN" for NetworkControl in system settings.</source>
         <target state="translated">若要在 NetworkControl 停止時仍阻擋應用程式，請在系統設定中為 NetworkControl 開啟「永久連線的 VPN」和「封鎖未使用 VPN 的連線」。</target>
+      </segment>
+    </unit>
+    <unit id="AppLock">
+      <segment>
+        <source>App lock</source>
+        <target state="translated">應用鎖</target>
+      </segment>
+    </unit>
+    <unit id="AppLockHint">
+      <segment>
+        <source>Require device PIN / biometric unlock on launch.</source>
+        <target state="translated">啟動時需要透過系統密碼或生物辨識解鎖。</target>
       </segment>
     </unit>
     <unit id="AutoHideBottomBar">
@@ -73,6 +91,12 @@
         <target state="translated">部分手機會積極停止背景應用程式。若保護會自行關閉，請將 NetworkControl 排除在電池最佳化之外。</target>
       </segment>
     </unit>
+    <unit id="BlocklistUpdate">
+      <segment>
+        <source>Update lists now</source>
+        <target state="translated">立即更新清單</target>
+      </segment>
+    </unit>
     <unit id="Blocklists">
       <segment>
         <source>Domain blocklists</source>
@@ -89,6 +113,12 @@
       <segment>
         <source>Check for updates</source>
         <target state="translated">檢查更新</target>
+      </segment>
+    </unit>
+    <unit id="ClearTrusted">
+      <segment>
+        <source>Clear all</source>
+        <target state="translated">全部清除</target>
       </segment>
     </unit>
     <unit id="CloneIndependent">
@@ -131,6 +161,12 @@
       <segment>
         <source>Export a zip with the app version, device model, engine counters, recent logs and rule statistics. Connection addresses are redacted.</source>
         <target state="translated">導出包含版本、裝置型號、引擎計數器、最近日誌和規則統計的 zip。連線位址會先脫敏。</target>
+      </segment>
+    </unit>
+    <unit id="DnsBypassProtection">
+      <segment>
+        <source>DNS bypass protection</source>
+        <target state="translated">防 DNS 繞過保護</target>
       </segment>
     </unit>
     <unit id="ExportCanceled">
@@ -529,6 +565,12 @@
         <target state="translated">勿擾已結束</target>
       </segment>
     </unit>
+    <unit id="ReleaseNotesTitle">
+      <segment>
+        <source>Release notes</source>
+        <target state="translated">版本更新日誌</target>
+      </segment>
+    </unit>
     <unit id="RuleTransferHint">
       <segment>
         <source>Rules use the netcontrol-rules format and can be moved between Android and desktop. Temporary rules are not exported; desktop app paths and connection conditions do not take effect on Android.</source>
@@ -545,6 +587,18 @@
       <segment>
         <source>{0} s</source>
         <target state="translated">{0} 秒</target>
+      </segment>
+    </unit>
+    <unit id="Socks5Pass">
+      <segment>
+        <source>Password (optional)</source>
+        <target state="translated">密碼（選填）</target>
+      </segment>
+    </unit>
+    <unit id="Socks5User">
+      <segment>
+        <source>Username (optional)</source>
+        <target state="translated">使用者名稱（選填）</target>
       </segment>
     </unit>
     <unit id="SpeedIsland">
@@ -587,6 +641,12 @@
       <segment>
         <source>Appearance</source>
         <target state="translated">外觀</target>
+      </segment>
+    </unit>
+    <unit id="ThemeColor">
+      <segment>
+        <source>Accent color</source>
+        <target state="translated">主題強調色</target>
       </segment>
     </unit>
     <unit id="ThemeDark">
@@ -665,6 +725,12 @@
       <segment>
         <source>Usage access not granted</source>
         <target state="translated">尚未允許使用情況存取權</target>
+      </segment>
+    </unit>
+    <unit id="TrustedPublishers">
+      <segment>
+        <source>Trusted publishers</source>
+        <target state="translated">信任的發布者</target>
       </segment>
     </unit>
     <unit id="UpToDate">

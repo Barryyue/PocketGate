@@ -1,9 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xliff version="2.1" srcLang="en-US" xmlns="urn:oasis:names:tc:xliff:document:2.0">
   <file id="NetworkControl.Android.Localization.AppsLangResourceKind">
+    <unit id="AnyNetwork">
+      <segment>
+        <source>Any network</source>
+      </segment>
+    </unit>
+    <unit id="Cellular">
+      <segment>
+        <source>Cellular</source>
+      </segment>
+    </unit>
     <unit id="Count">
       <segment>
         <source>{0} apps</source>
+      </segment>
+    </unit>
+    <unit id="Details">
+      <segment>
+        <source>Details</source>
       </segment>
     </unit>
     <unit id="Empty">
@@ -36,6 +51,11 @@
         <source>Not set · {0}</source>
       </segment>
     </unit>
+    <unit id="NetworkConditions">
+      <segment>
+        <source>Network rules</source>
+      </segment>
+    </unit>
     <unit id="NowAllowed">
       <segment>
         <source>can connect</source>
@@ -49,6 +69,16 @@
     <unit id="NowBlocked">
       <segment>
         <source>blocked</source>
+      </segment>
+    </unit>
+    <unit id="PublisherHash">
+      <segment>
+        <source>Signer SHA-256</source>
+      </segment>
+    </unit>
+    <unit id="RecentTargets">
+      <segment>
+        <source>Recent targets</source>
       </segment>
     </unit>
     <unit id="Search">
@@ -71,6 +101,16 @@
         <source>Signature changed</source>
       </segment>
     </unit>
+    <unit id="TrustPublisher">
+      <segment>
+        <source>Trust publisher</source>
+      </segment>
+    </unit>
+    <unit id="Trusted">
+      <segment>
+        <source>Trusted</source>
+      </segment>
+    </unit>
     <unit id="Until">
       <segment>
         <source>until {0}</source>
@@ -84,6 +124,16 @@
     <unit id="UsageToday">
       <segment>
         <source>Today {0}</source>
+      </segment>
+    </unit>
+    <unit id="Wifi">
+      <segment>
+        <source>Wi-Fi</source>
+      </segment>
+    </unit>
+    <unit id="Wired">
+      <segment>
+        <source>Wired</source>
       </segment>
     </unit>
   </file>

@@ -1,10 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xliff version="2.1" srcLang="en-US" trgLang="zh-CN" xmlns="urn:oasis:names:tc:xliff:document:2.0">
   <file id="NetworkControl.Android.Localization.AppsLangResourceKind">
+    <unit id="AnyNetwork">
+      <segment>
+        <source>Any network</source>
+        <target state="translated">任意网络</target>
+      </segment>
+    </unit>
+    <unit id="Cellular">
+      <segment>
+        <source>Cellular</source>
+        <target state="translated">移动网络</target>
+      </segment>
+    </unit>
     <unit id="Count">
       <segment>
         <source>{0} apps</source>
         <target state="translated">{0} 个应用</target>
+      </segment>
+    </unit>
+    <unit id="Details">
+      <segment>
+        <source>Details</source>
+        <target state="translated">详情</target>
       </segment>
     </unit>
     <unit id="Empty">
@@ -43,6 +61,12 @@
         <target state="translated">未设置·{0}</target>
       </segment>
     </unit>
+    <unit id="NetworkConditions">
+      <segment>
+        <source>Network rules</source>
+        <target state="translated">网络条件</target>
+      </segment>
+    </unit>
     <unit id="NowAllowed">
       <segment>
         <source>can connect</source>
@@ -59,6 +83,18 @@
       <segment>
         <source>blocked</source>
         <target state="translated">已拦截</target>
+      </segment>
+    </unit>
+    <unit id="PublisherHash">
+      <segment>
+        <source>Signer SHA-256</source>
+        <target state="translated">签名指纹 SHA-256</target>
+      </segment>
+    </unit>
+    <unit id="RecentTargets">
+      <segment>
+        <source>Recent targets</source>
+        <target state="translated">最近连接目标</target>
       </segment>
     </unit>
     <unit id="Search">
@@ -85,6 +121,18 @@
         <target state="translated">签名已更改</target>
       </segment>
     </unit>
+    <unit id="TrustPublisher">
+      <segment>
+        <source>Trust publisher</source>
+        <target state="translated">信任此发布者</target>
+      </segment>
+    </unit>
+    <unit id="Trusted">
+      <segment>
+        <source>Trusted</source>
+        <target state="translated">已信任</target>
+      </segment>
+    </unit>
     <unit id="Until">
       <segment>
         <source>until {0}</source>
@@ -101,6 +149,18 @@
       <segment>
         <source>Today {0}</source>
         <target state="translated">今日 {0}</target>
+      </segment>
+    </unit>
+    <unit id="Wifi">
+      <segment>
+        <source>Wi-Fi</source>
+        <target state="translated">Wi-Fi</target>
+      </segment>
+    </unit>
+    <unit id="Wired">
+      <segment>
+        <source>Wired</source>
+        <target state="translated">有线网络</target>
       </segment>
     </unit>
   </file>

@@ -7,8 +7,9 @@
              xmlns:loc="using:NetworkControl.Android.Localization"
              x:Class="NetworkControl.Android.Views.OverviewView"
              x:DataType="vm:OverviewViewModel">
-  <ScrollViewer>
-    <StackPanel Margin="16,16,16,96" Spacing="14">
+  <Panel>
+    <ScrollViewer>
+      <StackPanel Margin="16,16,16,96" Spacing="14">
       <TextBlock Classes="page-title" Text="{loc:ShellLangResource AppTitle}" />
 
       <!-- 總覽頂部背景更新下載進度條 / 安裝就緒橫幅 -->
@@ -69,7 +70,10 @@
       </atom:Card>
 
       <atom:Alert Type="Warning" IsShowIcon="True" Message="{loc:OverviewLangResource BlockAllActive}" IsVisible="{Binding IsBlockAll}" />
+      <atom:Alert Type="Warning" IsShowIcon="True" Message="{Binding PrivateDnsWarningText}" IsVisible="{Binding HasPrivateDns}" />
       <atom:Alert Type="Error" IsShowIcon="True" Message="{Binding ProfileError}" IsVisible="{Binding HasProfileError}" />
+      <atom:Button IsVisible="{Binding ShowSwitchToDirect}" HorizontalAlignment="Stretch"
+                   Command="{Binding SwitchToDirectCommand}" Content="{loc:OverviewLangResource SwitchToDirect}" />
 
       <atom:Card IsVisible="{Binding HasQuietPeriod}">
         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
@@ -113,18 +117,67 @@
         </StackPanel>
       </atom:Card>
 
-      <!-- Bento 雙列統計 -->
+      <!-- 3×2 Bento 統計與快捷操作網格（對齊 Kotlin 版） -->
       <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
         <atom:Card>
           <atom:Statistic Header="{loc:OverviewLangResource BlockedToday}" Value="{Binding BlockedToday}" />
         </atom:Card>
         <atom:Card Grid.Column="1">
-          <StackPanel Spacing="8">
+          <StackPanel Spacing="6">
             <atom:Statistic Header="{loc:OverviewLangResource PendingPrompts}" Value="{Binding PendingPrompts}" />
-            <atom:Button IsVisible="{Binding HasPendingPrompts}" Command="{Binding ShowPromptCommand}" Content="{loc:OverviewLangResource ShowPrompt}" HorizontalAlignment="Left" />
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPendingPrompts}">
+              <atom:Button SizeType="Small" Command="{Binding ShowPromptCommand}" Content="{loc:OverviewLangResource ShowPrompt}" />
+              <atom:Button SizeType="Small" ButtonType="Primary" Command="{Binding OpenBatchDialogCommand}" Content="{loc:OverviewLangResource BatchSelectAll}" />
+            </StackPanel>
           </StackPanel>
         </atom:Card>
       </Grid>
+
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+        <atom:Card>
+          <StackPanel Spacing="4">
+            <TextBlock Classes="caption" Text="{loc:OverviewLangResource UsageToday}" />
+            <TextBlock FontSize="15" FontWeight="SemiBold" Text="{Binding TrafficTileSummary}" TextWrapping="Wrap" />
+          </StackPanel>
+        </atom:Card>
+        <atom:Card Grid.Column="1">
+          <StackPanel Spacing="4">
+            <atom:Statistic Header="{loc:OverviewLangResource RulesTile}" Value="{Binding ActiveRuleCount}" />
+            <TextBlock Classes="caption" Text="{Binding ActiveProfileName}" TextTrimming="CharacterEllipsis" />
+          </StackPanel>
+        </atom:Card>
+      </Grid>
+
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+        <atom:Card>
+          <StackPanel Spacing="6">
+            <TextBlock Classes="caption" Text="{loc:OverviewLangResource FocusMode}" />
+            <TextBlock Classes="title" Text="{Binding FocusStatusText}" />
+            <atom:Button SizeType="Small" IsVisible="{Binding !IsFocusActive}" Command="{Binding OpenFocusDialogCommand}" Content="{loc:OverviewLangResource FocusMode}" HorizontalAlignment="Left" />
+          </StackPanel>
+        </atom:Card>
+        <atom:Card Grid.Column="1">
+          <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+              <TextBlock Classes="caption" Text="{loc:OverviewLangResource DoNotDisturb}" />
+              <TextBlock Classes="secondary" FontSize="12" Text="1h" />
+            </StackPanel>
+            <atom:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding IsDoNotDisturb}" />
+          </Grid>
+        </atom:Card>
+      </Grid>
+
+      <!-- 專注模式運行中操作卡 -->
+      <atom:Card IsVisible="{Binding IsFocusActive}" Header="{loc:OverviewLangResource FocusMode}">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="title" Text="{Binding FocusStatusText}" />
+          <UniformGrid Columns="3">
+            <atom:Button HorizontalAlignment="Stretch" Margin="0,0,4,0" Command="{Binding ExtendFocusCommand}" Content="{loc:OverviewLangResource FocusExtend}" />
+            <atom:Button HorizontalAlignment="Stretch" Margin="2,0" IsDanger="True" Command="{Binding StopFocusCommand}" Content="{loc:OverviewLangResource FocusStop}" />
+            <atom:Button HorizontalAlignment="Stretch" Margin="4,0,0,0" ButtonType="Primary" Command="{Binding SaveFocusAsProfileCommand}" Content="{loc:OverviewLangResource FocusSaveProfile}" />
+          </UniformGrid>
+        </StackPanel>
+      </atom:Card>
 
       <!-- 今日用量（FR-STA-01） -->
       <atom:Card Header="{loc:OverviewLangResource UsageToday}">
@@ -163,6 +216,68 @@
       </atom:Card>
 
       <atom:Alert Type="Info" IsShowIcon="True" Message="{Binding SkippedRulesText}" IsVisible="{Binding HasSkippedRules}" />
-    </StackPanel>
-  </ScrollViewer>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- 專注模式啟動彈窗 -->
+    <Border Classes="scrim" IsVisible="{Binding ShowFocusDialog}">
+      <atom:Card VerticalAlignment="Center" Margin="18" Header="{loc:OverviewLangResource FocusStartTitle}">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="secondary" Text="{loc:OverviewLangResource FocusDuration}" />
+          <atom:Segmented SelectedIndex="{Binding FocusDurationIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+            <atom:SegmentedItem Content="15m" />
+            <atom:SegmentedItem Content="30m" />
+            <atom:SegmentedItem Content="60m" />
+            <atom:SegmentedItem Content="120m" />
+          </atom:Segmented>
+          <TextBlock Classes="caption" TextWrapping="Wrap" Text="{loc:OverviewLangResource FocusAppsHint}" />
+          <atom:LineEdit Text="{Binding FocusAppSearch}" PlaceholderText="{loc:AppsLangResource Search}" />
+          <ScrollViewer MaxHeight="220">
+            <ItemsControl ItemsSource="{Binding FocusApps}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:FocusAppOption">
+                  <atom:CheckBox IsVisible="{Binding IsVisible}" IsChecked="{Binding IsSelected}" Content="{Binding Label}" Margin="0,4" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+            <atom:Button HorizontalAlignment="Stretch" Command="{Binding CloseFocusDialogCommand}" Content="{loc:CommonLangResource Cancel}" />
+            <atom:Button Grid.Column="1" ButtonType="Primary" HorizontalAlignment="Stretch" Command="{Binding StartFocusCommand}" Content="{loc:OverviewLangResource FocusMode}" />
+          </Grid>
+        </StackPanel>
+      </atom:Card>
+    </Border>
+
+    <!-- 批量詢問處理彈窗 -->
+    <Border Classes="scrim" IsVisible="{Binding ShowBatchDialog}">
+      <atom:Card VerticalAlignment="Center" Margin="18" Header="{loc:OverviewLangResource PendingPrompts}">
+        <StackPanel Spacing="12">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <atom:Button SizeType="Small" Command="{Binding BatchSelectAllCommand}" Content="{loc:OverviewLangResource BatchSelectAll}" />
+            <atom:Button SizeType="Small" Command="{Binding BatchClearAllCommand}" Content="{loc:OverviewLangResource BatchClear}" />
+          </StackPanel>
+          <atom:Segmented SelectedIndex="{Binding BatchLifetimeIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+            <atom:SegmentedItem Content="{loc:PromptLangResource UntilRestart}" />
+            <atom:SegmentedItem Content="{loc:PromptLangResource Forever}" />
+            <atom:SegmentedItem Content="{loc:PromptLangResource OneHour}" />
+          </atom:Segmented>
+          <ScrollViewer MaxHeight="220">
+            <ItemsControl ItemsSource="{Binding BatchPrompts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:BatchPromptOption">
+                  <atom:CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Label}" Margin="0,4" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+            <atom:Button HorizontalAlignment="Stretch" Command="{Binding CloseBatchDialogCommand}" Content="{loc:CommonLangResource Cancel}" />
+            <atom:Button Grid.Column="1" ButtonType="Primary" IsDanger="True" HorizontalAlignment="Stretch" Command="{Binding BatchDenyCommand}" Content="{loc:CommonLangResource Block}" />
+            <atom:Button Grid.Column="2" ButtonType="Primary" HorizontalAlignment="Stretch" Command="{Binding BatchAllowCommand}" Content="{loc:CommonLangResource Allow}" />
+          </Grid>
+        </StackPanel>
+      </atom:Card>
+    </Border>
+  </Panel>
 </UserControl>

@@ -7,10 +7,46 @@
         <target state="translated">允許此應用程式</target>
       </segment>
     </unit>
+    <unit id="AllowDomain">
+      <segment>
+        <source>Allow domain</source>
+        <target state="translated">放行此網域</target>
+      </segment>
+    </unit>
+    <unit id="DetailTitle">
+      <segment>
+        <source>Connection details</source>
+        <target state="translated">連線詳情</target>
+      </segment>
+    </unit>
     <unit id="Empty">
       <segment>
         <source>Nothing has been blocked yet</source>
         <target state="translated">尚未阻擋任何連線</target>
+      </segment>
+    </unit>
+    <unit id="ExportCsv">
+      <segment>
+        <source>Export CSV</source>
+        <target state="translated">匯出 CSV</target>
+      </segment>
+    </unit>
+    <unit id="FilterAllLogs">
+      <segment>
+        <source>All</source>
+        <target state="translated">全部</target>
+      </segment>
+    </unit>
+    <unit id="ReasonBlocklist">
+      <segment>
+        <source>Blocklist</source>
+        <target state="translated">攔截清單</target>
+      </segment>
+    </unit>
+    <unit id="ReasonDnd">
+      <segment>
+        <source>DND</source>
+        <target state="translated">勿擾</target>
       </segment>
     </unit>
     <unit id="ReasonMode">
@@ -41,6 +77,18 @@
       <segment>
         <source>No answer</source>
         <target state="translated">未回應</target>
+      </segment>
+    </unit>
+    <unit id="SearchLogs">
+      <segment>
+        <source>Search app, domain or IP</source>
+        <target state="translated">搜尋應用、網域或 IP</target>
+      </segment>
+    </unit>
+    <unit id="TabAllowed">
+      <segment>
+        <source>Allowed</source>
+        <target state="translated">已放行</target>
       </segment>
     </unit>
     <unit id="Times">

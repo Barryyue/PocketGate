@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <xliff version="2.1" srcLang="en-US" trgLang="zh-CN" xmlns="urn:oasis:names:tc:xliff:document:2.0">
   <file id="NetworkControl.Android.Localization.OverviewLangResourceKind">
+    <unit id="BatchClear">
+      <segment>
+        <source>Clear</source>
+        <target state="translated">清空</target>
+      </segment>
+    </unit>
+    <unit id="BatchPromptTitle">
+      <segment>
+        <source>Batch review ({0})</source>
+        <target state="translated">批量处理询问（{0}）</target>
+      </segment>
+    </unit>
+    <unit id="BatchSelectAll">
+      <segment>
+        <source>Select all</source>
+        <target state="translated">全选</target>
+      </segment>
+    </unit>
     <unit id="BlockAll">
       <segment>
         <source>Block all apps</source>
@@ -31,6 +49,12 @@
         <target state="translated">关闭</target>
       </segment>
     </unit>
+    <unit id="DoNotDisturb">
+      <segment>
+        <source>Do Not Disturb</source>
+        <target state="translated">勿扰模式</target>
+      </segment>
+    </unit>
     <unit id="Download">
       <segment>
         <source>Download</source>
@@ -41,6 +65,60 @@
       <segment>
         <source>Turn on</source>
         <target state="translated">开启</target>
+      </segment>
+    </unit>
+    <unit id="FocusAppsHint">
+      <segment>
+        <source>Selected apps stay allowed during Focus; others are blocked.</source>
+        <target state="translated">专注期间仅放行已选应用，其余应用一律阻断。</target>
+      </segment>
+    </unit>
+    <unit id="FocusDuration">
+      <segment>
+        <source>Duration (minutes)</source>
+        <target state="translated">持续时长（分钟）</target>
+      </segment>
+    </unit>
+    <unit id="FocusExtend">
+      <segment>
+        <source>+15m</source>
+        <target state="translated">+15 分钟</target>
+      </segment>
+    </unit>
+    <unit id="FocusMode">
+      <segment>
+        <source>Focus mode</source>
+        <target state="translated">专注模式</target>
+      </segment>
+    </unit>
+    <unit id="FocusOff">
+      <segment>
+        <source>Off</source>
+        <target state="translated">未开启</target>
+      </segment>
+    </unit>
+    <unit id="FocusRemaining">
+      <segment>
+        <source>{0}m left</source>
+        <target state="translated">剩余 {0} 分钟</target>
+      </segment>
+    </unit>
+    <unit id="FocusSaveProfile">
+      <segment>
+        <source>Save as profile</source>
+        <target state="translated">存为配置文件</target>
+      </segment>
+    </unit>
+    <unit id="FocusStartTitle">
+      <segment>
+        <source>Start Focus mode</source>
+        <target state="translated">开启专注模式</target>
+      </segment>
+    </unit>
+    <unit id="FocusStop">
+      <segment>
+        <source>End focus</source>
+        <target state="translated">结束专注</target>
       </segment>
     </unit>
     <unit id="GrantUsageAccess">
@@ -109,6 +187,12 @@
         <target state="translated">还有 {0} 项推荐权限未开启</target>
       </segment>
     </unit>
+    <unit id="PrivateDnsWarning">
+      <segment>
+        <source>Private DNS ({0}) is active on the system; domain rules may not match.</source>
+        <target state="translated">系统已开启私人 DNS（{0}），部分域名规则可能无法匹配。</target>
+      </segment>
+    </unit>
     <unit id="Profiles">
       <segment>
         <source>Profile</source>
@@ -131,6 +215,12 @@
       <segment>
         <source>Restore</source>
         <target state="translated">恢复</target>
+      </segment>
+    </unit>
+    <unit id="RulesTile">
+      <segment>
+        <source>Active rules</source>
+        <target state="translated">生效规则</target>
       </segment>
     </unit>
     <unit id="ShowPrompt">
@@ -179,6 +269,12 @@
       <segment>
         <source>Starting protection…</source>
         <target state="translated">正在开启保护…</target>
+      </segment>
+    </unit>
+    <unit id="SwitchToDirect">
+      <segment>
+        <source>Switch to direct exit</source>
+        <target state="translated">切换为内置直连出口</target>
       </segment>
     </unit>
     <unit id="UpdateAvailableBody">

@@ -123,6 +123,10 @@
               <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource Traffic}" />
               <atom:Button Grid.Column="1" Command="{Binding OpenPermUsageCommand}" Content="{loc:SettingsLangResource Open}" />
             </Grid>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <TextBlock VerticalAlignment="Center" Text="{loc:SettingsLangResource PromptOverlayEnabled}" />
+              <atom:Button Grid.Column="1" Command="{Binding OpenPermOverlayCommand}" Content="{loc:SettingsLangResource Open}" />
+            </Grid>
             <atom:Button ButtonType="Primary" HorizontalAlignment="Stretch" Command="{Binding DismissPermissionGuideCommand}" Content="{loc:OverviewLangResource Dismiss}" />
           </StackPanel>
         </atom:Card>

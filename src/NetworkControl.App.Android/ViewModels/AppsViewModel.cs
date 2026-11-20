@@ -30,6 +30,21 @@ public sealed partial class AppsViewModel : LocalizedViewModel
     [ObservableProperty]
     public partial bool ShowSystem { get; set; }
 
+    [ObservableProperty]
+    public partial AppItemViewModel? DetailApp { get; set; }
+
+    [ObservableProperty]
+    public partial string? DetailSignerSha256 { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDetailPublisherTrusted { get; set; }
+
+    public ObservableCollection<string> DetailRecentTargets { get; } = [];
+
+    public bool HasDetailApp => DetailApp is not null;
+
+    partial void OnDetailAppChanged(AppItemViewModel? value) => OnPropertyChanged(nameof(HasDetailApp));
+
     public string CountText => Loc.Format(AppsLangResourceKind.Count, Visible.Count);
 
     public bool IsEmpty => Visible.Count == 0;
@@ -76,7 +91,7 @@ public sealed partial class AppsViewModel : LocalizedViewModel
             }
             else
             {
-                _items[entry.App.PackageName] = new AppItemViewModel(Context, entry);
+                _items[entry.App.PackageName] = new AppItemViewModel(Context, entry, item => _ = OpenDetailAsync(item));
             }
         }
 
@@ -93,6 +108,32 @@ public sealed partial class AppsViewModel : LocalizedViewModel
     partial void OnSearchTextChanged(string? value) => ApplyFilter();
 
     partial void OnFilterIndexChanged(int value) => ApplyFilter();
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void CloseDetail() => DetailApp = null;
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void TrustDetailPublisher()
+    {
+        if (string.IsNullOrEmpty(DetailSignerSha256)) return;
+        Backend.TrustPublisher(DetailSignerSha256);
+        IsDetailPublisherTrusted = true;
+    }
+
+    private async Task OpenDetailAsync(AppItemViewModel item)
+    {
+        DetailApp = item;
+        DetailSignerSha256 = Backend.GetAppSignerSha256(item.PackageName);
+        IsDetailPublisherTrusted = DetailSignerSha256 is { Length: > 0 } sha &&
+            Backend.Preferences.TrustedPublishers.Contains(sha, StringComparer.OrdinalIgnoreCase);
+        DetailRecentTargets.Clear();
+        var recent = await Backend.GetRecentTargetsAsync(item.PackageName, 10, CancellationToken.None);
+        foreach (var r in recent)
+        {
+            var host = !string.IsNullOrEmpty(r.Hostname) ? r.Hostname : r.RemoteAddress.ToString();
+            DetailRecentTargets.Add($"{host}:{r.RemotePort} ({r.Protocol}) · ×{r.Count}");
+        }
+    }
 
     partial void OnShowSystemChanged(bool value) => ApplyFilter();
 
@@ -134,15 +175,20 @@ public sealed partial class AppsViewModel : LocalizedViewModel
 /// <summary>應用列表中的一行。</summary>
 public sealed partial class AppItemViewModel : LocalizedViewModel
 {
+    private readonly Action<AppItemViewModel>? _openDetail;
     private bool _syncing;
     private bool _iconRequested;
 
-    public AppItemViewModel(UiContext context, AppEntry entry)
+    public AppItemViewModel(UiContext context, AppEntry entry, Action<AppItemViewModel>? openDetail = null)
         : base(context)
     {
+        _openDetail = openDetail;
         Entry = entry;
         Sync();
     }
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void Inspect() => _openDetail?.Invoke(this);
 
     public AppEntry Entry { get; private set; }
 

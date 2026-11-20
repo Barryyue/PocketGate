@@ -114,6 +114,34 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
     public partial bool PromptShowTimedOption { get; set; }
 
     [ObservableProperty]
+    public partial bool AppLockEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool AllowSystemApps { get; set; }
+
+    [ObservableProperty]
+    public partial bool DnsBypassProtection { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool Socks5Udp { get; set; } = true;
+
+    [ObservableProperty]
+    public partial bool ShowReleaseNotesDialog { get; set; }
+
+    public int TrustedPublishersCount => Backend.Preferences.TrustedPublishers.Count;
+
+    public string ReleaseNotesText =>
+        "v0.3.2 (AtomUI)\n" +
+        "- 系統級紅魔風格懸浮詢問窗與應用內詢問卡片完全對齊\n" +
+        "- 總覽頁補齊 3×2 Bento 網格（專注模式、勿擾模式、批量詢問處理、生效規則與今日流量）\n" +
+        "- 記錄頁新增「已放行」分頁、搜尋篩選、詳情彈窗一鍵放行網域與 CSV 匯出\n" +
+        "- 應用頁新增應用詳情彈窗（簽章指紋、信任發布者、近期連線目標）\n" +
+        "- 設定頁補齊 6 套真實視覺風格調色盤、主題強調色盤、SOCKS5 帳密/UDP/防 DNS 繞過、應用鎖與更新日誌\n\n" +
+        "v0.3.1 (AtomUI)\n" +
+        "- 獨立 AtomUI 版本號與雲端自動發版流水線\n" +
+        "- 檢查更新與 Kotlin 版通道徹底隔離";
+
+    [ObservableProperty]
     public partial bool OfflineMode { get; set; }
 
     [ObservableProperty]
@@ -257,6 +285,10 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
             PromptShowDetails = prefs.PromptShowDetails;
             PromptDenyPermanent = prefs.PromptDenyPermanent;
             PromptShowTimedOption = prefs.PromptShowTimedOption;
+            AppLockEnabled = prefs.AppLockEnabled;
+            AllowSystemApps = prefs.AllowSystemApps;
+            DnsBypassProtection = prefs.DnsBypassProtection;
+            Socks5Udp = prefs.Socks5Udp;
             OfflineMode = prefs.OfflineMode;
             CloneIndependent = !prefs.CloneAppsInheritPrimary;
             ForwardingEnabled = prefs.ForwardingEnabled;
@@ -726,6 +758,48 @@ public sealed partial class SettingsViewModel : LocalizedViewModel
         {
             ThemeStyleIndex = idx;
         }
+    }
+
+    [RelayCommand]
+    private void SelectThemeColor(string hex)
+    {
+        if (uint.TryParse(hex.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var argb))
+        {
+            _ = Context.Appearance.SetThemeColorAsync(argb);
+        }
+    }
+
+    [RelayCommand]
+    private void ClearTrustedPublishers()
+    {
+        Backend.ClearTrustedPublishers();
+        OnPropertyChanged(nameof(TrustedPublishersCount));
+    }
+
+    [RelayCommand]
+    private void OpenReleaseNotes() => ShowReleaseNotesDialog = true;
+
+    [RelayCommand]
+    private void CloseReleaseNotes() => ShowReleaseNotesDialog = false;
+
+    partial void OnAppLockEnabledChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.AppLockEnabled = value;
+    }
+
+    partial void OnAllowSystemAppsChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.AllowSystemApps = value;
+    }
+
+    partial void OnDnsBypassProtectionChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.DnsBypassProtection = value;
+    }
+
+    partial void OnSocks5UdpChanged(bool value)
+    {
+        if (!_syncing) Backend.Preferences.Socks5Udp = value;
     }
 
     partial void OnAutoHideBottomBarChanged(bool value)

@@ -106,6 +106,12 @@ public interface IBackend
 
     Task<IReadOnlyList<LogEntry>> GetBlockedAsync(int limit, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<LogEntry>> GetAllowedAsync(int limit, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<LogEntry>> GetRecentTargetsAsync(string packageName, int limit, CancellationToken cancellationToken);
+
+    Task AllowDomainAsync(string domain, CancellationToken cancellationToken);
+
     Task<long> CountBlockedSinceAsync(DateTimeOffset since, CancellationToken cancellationToken);
 
     IReadOnlyList<PromptSnapshot> GetPendingPrompts();
@@ -193,6 +199,30 @@ public interface IBackend
     void UpdateSpeedIsland(string text);
 
     void RestartTunnelIfActive();
+
+    void SwitchToDirectForwarding();
+
+    string? GetPrivateDnsHost();
+
+    bool IsFocusActive { get; }
+
+    DateTimeOffset? FocusEndsAt { get; }
+
+    Task StartFocusAsync(int minutes, IReadOnlyList<string> allowedPackages, CancellationToken cancellationToken);
+
+    void ExtendFocus(int minutes);
+
+    Task StopFocusAsync(CancellationToken cancellationToken);
+
+    Task SaveFocusAsProfileAsync(CancellationToken cancellationToken);
+
+    string? GetAppSignerSha256(string packageName);
+
+    void TrustPublisher(string sha256);
+
+    void RemoveTrustedPublisher(string sha256);
+
+    void ClearTrustedPublishers();
 }
 
 internal sealed class Backend : IBackend
@@ -223,6 +253,11 @@ internal sealed class Backend : IBackend
     private readonly SpeedIslandService _speedIsland;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<long, string?> _packagesByAppId = new();
     private readonly string _selfPackage;
+    private DateTimeOffset? _focusEndsAt;
+    private FilterMode? _focusPreviousMode;
+    private IReadOnlyList<string> _focusAllowedPackages = [];
+    private readonly List<Guid> _focusRuleIds = [];
+    private Timer? _focusTimer;
 
     public Backend(
         Context context,
@@ -476,6 +511,35 @@ internal sealed class Backend : IBackend
     public Task<IReadOnlyList<LogEntry>> GetBlockedAsync(int limit, CancellationToken cancellationToken) =>
         _activity.QueryAsync(new LogQuery { Action = VerdictAction.Deny, Limit = limit }, cancellationToken);
 
+    public Task<IReadOnlyList<LogEntry>> GetAllowedAsync(int limit, CancellationToken cancellationToken) =>
+        _activity.QueryAsync(new LogQuery { Action = VerdictAction.Allow, Limit = limit }, cancellationToken);
+
+    public async Task<IReadOnlyList<LogEntry>> GetRecentTargetsAsync(string packageName, int limit, CancellationToken cancellationToken)
+    {
+        var all = await _activity.QueryAsync(new LogQuery { Limit = 500 }, cancellationToken);
+        return all.Where(e => PackageAppPath.TryGetPackage(e.AppPath, out var pkg) && string.Equals(pkg, packageName, StringComparison.Ordinal))
+            .Take(limit)
+            .ToList();
+    }
+
+    public async Task AllowDomainAsync(string domain, CancellationToken cancellationToken)
+    {
+        var normalized = NetworkControl.Engine.Vpn.Blocklists.DomainHash.NormalizeDomain(domain);
+        if (normalized is null) return;
+        var now = _time.GetUtcNow();
+        await _ruleService.AddAsync(new Rule
+        {
+            Id = Guid.CreateVersion7(now),
+            App = new AppMatcher { PathPattern = "*" },
+            Conditions = new RuleConditions { Direction = Direction.Outbound, Remote = new DomainTarget(normalized) },
+            Action = VerdictAction.Allow,
+            Lifetime = RuleLifetime.Permanent,
+            Source = RuleSource.User,
+            CreatedAt = now,
+            UpdatedAt = now,
+        }, cancellationToken);
+    }
+
     public async Task<long> CountBlockedSinceAsync(DateTimeOffset since, CancellationToken cancellationToken)
     {
         var entries = await _activity.QueryAsync(new LogQuery { Action = VerdictAction.Deny, From = since, Limit = 5000 }, cancellationToken);
@@ -641,6 +705,168 @@ internal sealed class Backend : IBackend
             await Task.Delay(150).ConfigureAwait(false);
             SetProtection(true);
         });
+    }
+
+    public void SwitchToDirectForwarding()
+    {
+        _preferences.ForwardingUpstream = "direct";
+        RestartTunnelIfActive();
+        Raise(this, EventArgs.Empty);
+    }
+
+    public string? GetPrivateDnsHost()
+    {
+        try
+        {
+            var cm = _context.GetSystemService(Context.ConnectivityService) as global::Android.Net.ConnectivityManager;
+            var lp = cm?.GetLinkProperties(cm.ActiveNetwork);
+            if (lp?.IsPrivateDnsActive == true)
+            {
+                return lp.PrivateDnsServerName ?? "strict";
+            }
+        }
+        catch
+        {
+        }
+
+        return null;
+    }
+
+    public bool IsFocusActive => _focusEndsAt is { } end && end > _time.GetUtcNow();
+
+    public DateTimeOffset? FocusEndsAt => IsFocusActive ? _focusEndsAt : null;
+
+    public async Task StartFocusAsync(int minutes, IReadOnlyList<string> allowedPackages, CancellationToken cancellationToken)
+    {
+        await StopFocusAsync(cancellationToken);
+        var now = _time.GetUtcNow();
+        var end = now.AddMinutes(Math.Clamp(minutes, 5, 1440));
+        _focusPreviousMode = _state.Mode;
+        _focusAllowedPackages = [.. allowedPackages];
+        _focusEndsAt = end;
+        foreach (var pkg in allowedPackages)
+        {
+            if (_catalog.Find(pkg) is not { } app) continue;
+            var ruleId = Guid.CreateVersion7(now);
+            _focusRuleIds.Add(ruleId);
+            await _ruleService.AddAsync(new Rule
+            {
+                Id = ruleId,
+                App = AppMatcherFactory.Create(VpnRoutingPlanner.ToIdentity(app)),
+                Conditions = new RuleConditions { Direction = Direction.Outbound },
+                Action = VerdictAction.Allow,
+                Lifetime = RuleLifetime.Timed,
+                ExpiresAt = end,
+                Source = RuleSource.User,
+                CreatedAt = now,
+                UpdatedAt = now,
+            }, cancellationToken);
+        }
+
+        await _state.SetModeAsync(FilterMode.Blacklist, cancellationToken);
+        _focusTimer?.Dispose();
+        _focusTimer = new Timer(_ => _ = StopFocusAsync(CancellationToken.None), null, TimeSpan.FromMinutes(Math.Clamp(minutes, 5, 1440)), Timeout.InfiniteTimeSpan);
+        Raise(this, EventArgs.Empty);
+    }
+
+    public void ExtendFocus(int minutes)
+    {
+        if (!IsFocusActive || _focusEndsAt is null) return;
+        _focusEndsAt = _focusEndsAt.Value.AddMinutes(minutes);
+        var remaining = _focusEndsAt.Value - _time.GetUtcNow();
+        if (remaining > TimeSpan.Zero)
+        {
+            _focusTimer?.Change(remaining, Timeout.InfiniteTimeSpan);
+        }
+
+        Raise(this, EventArgs.Empty);
+    }
+
+    public async Task StopFocusAsync(CancellationToken cancellationToken)
+    {
+        _focusTimer?.Dispose();
+        _focusTimer = null;
+        if (_focusEndsAt is null) return;
+        _focusEndsAt = null;
+        if (_focusRuleIds.Count > 0)
+        {
+            await _ruleService.RemoveAsync(_focusRuleIds.ToArray(), RuleEndReason.Expired, cancellationToken);
+        }
+
+        _focusRuleIds.Clear();
+        _focusAllowedPackages = [];
+        if (_focusPreviousMode is { } prev)
+        {
+            _focusPreviousMode = null;
+            await _state.SetModeAsync(prev, cancellationToken);
+        }
+
+        Raise(this, EventArgs.Empty);
+    }
+
+    public async Task SaveFocusAsProfileAsync(CancellationToken cancellationToken)
+    {
+        if (_focusAllowedPackages.Count == 0) return;
+        var profile = await _profiles.CreateAsync($"Focus {DateTime.Now:HH:mm}", FilterMode.Blacklist, null, cancellationToken);
+        var now = _time.GetUtcNow();
+        foreach (var pkg in _focusAllowedPackages)
+        {
+            if (_catalog.Find(pkg) is not { } app) continue;
+            await _ruleService.AddAsync(new Rule
+            {
+                Id = Guid.CreateVersion7(now),
+                ProfileId = profile.Id,
+                App = AppMatcherFactory.Create(VpnRoutingPlanner.ToIdentity(app)),
+                Conditions = new RuleConditions { Direction = Direction.Outbound },
+                Action = VerdictAction.Allow,
+                Lifetime = RuleLifetime.Permanent,
+                Source = RuleSource.User,
+                CreatedAt = now,
+                UpdatedAt = now,
+            }, cancellationToken);
+        }
+    }
+
+    public string? GetAppSignerSha256(string packageName)
+    {
+        try
+        {
+            var pm = _context.PackageManager;
+            if (pm is null) return null;
+#pragma warning disable CA1422
+            var info = pm.GetPackageInfo(packageName, global::Android.Content.PM.PackageInfoFlags.SigningCertificates | global::Android.Content.PM.PackageInfoFlags.Signatures);
+            var sig = info?.SigningInfo?.GetApkContentsSigners()?.FirstOrDefault() ?? info?.Signatures?.FirstOrDefault();
+#pragma warning restore CA1422
+            if (sig?.ToByteArray() is not { } sigBytes) return null;
+            var hash = System.Security.Cryptography.SHA256.HashData(sigBytes);
+            return Convert.ToHexString(hash)[..16];
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public void TrustPublisher(string sha256)
+    {
+        if (string.IsNullOrWhiteSpace(sha256)) return;
+        var list = _preferences.TrustedPublishers.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        list.Add(sha256);
+        _preferences.TrustedPublishers = list;
+        Raise(this, EventArgs.Empty);
+    }
+
+    public void RemoveTrustedPublisher(string sha256)
+    {
+        var list = _preferences.TrustedPublishers.Where(x => !string.Equals(x, sha256, StringComparison.OrdinalIgnoreCase)).ToList();
+        _preferences.TrustedPublishers = list;
+        Raise(this, EventArgs.Empty);
+    }
+
+    public void ClearTrustedPublishers()
+    {
+        _preferences.TrustedPublishers = [];
+        Raise(this, EventArgs.Empty);
     }
 
     /// <summary>

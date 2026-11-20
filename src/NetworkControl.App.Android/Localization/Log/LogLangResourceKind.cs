@@ -14,4 +14,12 @@ public enum LogLangResourceKind
     ReasonOther,
     Times,
     AllowApp,
+    TabAllowed,
+    ExportCsv,
+    ReasonBlocklist,
+    ReasonDnd,
+    AllowDomain,
+    SearchLogs,
+    FilterAllLogs,
+    DetailTitle,
 }

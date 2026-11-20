@@ -6,56 +6,100 @@
              xmlns:loc="using:NetworkControl.Android.Localization"
              x:Class="NetworkControl.Android.Views.LogView"
              x:DataType="vm:LogViewModel">
-  <Grid RowDefinitions="Auto,Auto,*">
-    <Grid Margin="16,16,16,8" ColumnDefinitions="*,Auto">
-      <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavLog}" />
-      <atom:Button Grid.Column="1" ButtonType="Text" Icon="{antdicons:AntDesignIconProvider Kind=ReloadOutlined}"
-                   Command="{Binding RefreshCommand}" IsLoading="{Binding IsLoading}" Content="{loc:CommonLangResource Refresh}" />
+  <Panel>
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
+      <Grid Margin="16,16,16,8" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+        <TextBlock Classes="page-title" Text="{loc:ShellLangResource NavLog}" />
+        <atom:Button Grid.Column="1" ButtonType="Text" IsVisible="{Binding IsLogsTab}"
+                     Command="{Binding ExportCsvCommand}" Content="{loc:LogLangResource ExportCsv}" />
+        <atom:Button Grid.Column="2" ButtonType="Text" Icon="{antdicons:AntDesignIconProvider Kind=ReloadOutlined}"
+                     Command="{Binding RefreshCommand}" IsLoading="{Binding IsLoading}" Content="{loc:CommonLangResource Refresh}" />
+      </Grid>
+
+      <atom:Segmented Grid.Row="1" Margin="16,0,16,8" SelectedIndex="{Binding TabIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+        <atom:SegmentedItem Content="{loc:SettingsLangResource TabBlocked}" />
+        <atom:SegmentedItem Content="{loc:LogLangResource TabAllowed}" />
+        <atom:SegmentedItem Content="{loc:SettingsLangResource TabLiveConnections}" />
+      </atom:Segmented>
+
+      <StackPanel Grid.Row="2" Margin="16,0,16,8" Spacing="8" IsVisible="{Binding IsLogsTab}">
+        <atom:LineEdit Text="{Binding SearchQuery}" PlaceholderText="{loc:LogLangResource SearchLogs}" />
+        <atom:Segmented SelectedIndex="{Binding ReasonFilterIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
+          <atom:SegmentedItem Content="{loc:LogLangResource FilterAllLogs}" />
+          <atom:SegmentedItem Content="{loc:LogLangResource ReasonRule}" />
+          <atom:SegmentedItem Content="{loc:LogLangResource ReasonMode}" />
+          <atom:SegmentedItem Content="{loc:LogLangResource ReasonPrompt}" />
+          <atom:SegmentedItem Content="{loc:LogLangResource ReasonTimeout}" />
+        </atom:Segmented>
+      </StackPanel>
+
+      <ListBox Grid.Row="3" Classes="plain" Padding="0,4,0,96" ItemsSource="{Binding Items}" IsVisible="{Binding IsLogsTab}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:LogItemViewModel">
+            <Border Classes="row">
+              <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+                <TextBlock Classes="title" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Classes="caption" VerticalAlignment="Center" Text="{Binding Time}" />
+                <TextBlock Grid.Row="1" Classes="secondary" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                  <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding CountText}" />
+                  <atom:Tag Text="{Binding ReasonText}" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12">
+                  <atom:Button ButtonType="Link" Padding="0" Command="{Binding InspectCommand}" Content="{loc:AppsLangResource Details}" />
+                  <atom:Button ButtonType="Link" Padding="0" IsVisible="{Binding CanAllow}"
+                               Command="{Binding AllowAppCommand}" Content="{loc:LogLangResource AllowApp}" />
+                </StackPanel>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <ListBox Grid.Row="3" Classes="plain" Padding="0,4,0,96" ItemsSource="{Binding LiveItems}" IsVisible="{Binding IsLiveTab}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ActiveConnectionItemViewModel">
+            <Border Classes="row">
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <StackPanel Spacing="2">
+                  <TextBlock Classes="title" Text="{Binding Destination}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <atom:Button Grid.Column="1" ButtonType="Primary" IsDanger="True" VerticalAlignment="Center"
+                             Command="{Binding CutCommand}" Content="{loc:SettingsLangResource CutConnection}" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <TextBlock Grid.Row="3" Classes="secondary" HorizontalAlignment="Center" VerticalAlignment="Center"
+                 Text="{loc:LogLangResource Empty}" IsVisible="{Binding IsEmpty}" />
     </Grid>
 
-    <atom:Segmented Grid.Row="1" Margin="16,0,16,8" SelectedIndex="{Binding TabIndex}" HorizontalAlignment="Stretch" IsExpanding="True">
-      <atom:SegmentedItem Content="{loc:SettingsLangResource TabBlocked}" />
-      <atom:SegmentedItem Content="{loc:SettingsLangResource TabLiveConnections}" />
-    </atom:Segmented>
-
-    <ListBox Grid.Row="2" Classes="plain" Padding="0,4,0,96" ItemsSource="{Binding Items}" IsVisible="{Binding IsBlockedTab}">
-      <ListBox.ItemTemplate>
-        <DataTemplate x:DataType="vm:LogItemViewModel">
-          <Border Classes="row">
-            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
-              <TextBlock Classes="title" Text="{Binding AppName}" TextTrimming="CharacterEllipsis" />
-              <TextBlock Grid.Column="1" Classes="caption" VerticalAlignment="Center" Text="{Binding Time}" />
-              <TextBlock Grid.Row="1" Classes="secondary" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
-              <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding CountText}" />
-                <atom:Tag Text="{Binding ReasonText}" />
-              </StackPanel>
-              <atom:Button Grid.Row="2" ButtonType="Link" HorizontalAlignment="Left" Padding="0" IsVisible="{Binding CanAllow}"
-                           Command="{Binding AllowAppCommand}" Content="{loc:LogLangResource AllowApp}" />
-            </Grid>
-          </Border>
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
-
-    <ListBox Grid.Row="2" Classes="plain" Padding="0,4,0,96" ItemsSource="{Binding LiveItems}" IsVisible="{Binding IsLiveTab}">
-      <ListBox.ItemTemplate>
-        <DataTemplate x:DataType="vm:ActiveConnectionItemViewModel">
-          <Border Classes="row">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-              <StackPanel Spacing="2">
-                <TextBlock Classes="title" Text="{Binding Destination}" TextTrimming="CharacterEllipsis" />
-                <TextBlock Classes="caption" Text="{Binding Subtitle}" TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-              <atom:Button Grid.Column="1" ButtonType="Primary" IsDanger="True" VerticalAlignment="Center"
-                           Command="{Binding CutCommand}" Content="{loc:SettingsLangResource CutConnection}" />
-            </Grid>
-          </Border>
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
-
-    <TextBlock Grid.Row="2" Classes="secondary" HorizontalAlignment="Center" VerticalAlignment="Center"
-               Text="{loc:LogLangResource Empty}" IsVisible="{Binding IsEmpty}" />
-  </Grid>
+    <!-- 連線詳情彈窗 -->
+    <Border Classes="scrim" IsVisible="{Binding HasSelectedLog}">
+      <atom:Card VerticalAlignment="Center" Margin="18" Header="{loc:LogLangResource DetailTitle}">
+        <StackPanel Spacing="10" DataContext="{Binding SelectedLog}">
+          <TextBlock Classes="title" Text="{Binding AppName}" />
+          <TextBlock Classes="caption" Text="{Binding PackageName}" />
+          <TextBlock Classes="secondary" Text="{Binding Target}" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <atom:Tag Text="{Binding ActionBadge}" />
+            <atom:Tag Text="{Binding ReasonText}" />
+            <TextBlock Classes="caption" VerticalAlignment="Center" Text="{Binding FullTime}" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <atom:Button HorizontalAlignment="Stretch" IsVisible="{Binding CanAllow}"
+                         Command="{Binding AllowAppCommand}" Content="{loc:LogLangResource AllowApp}" />
+            <atom:Button Grid.Column="1" ButtonType="Primary" HorizontalAlignment="Stretch" IsVisible="{Binding CanAllowDomain}"
+                         Command="{Binding AllowDomainCommand}" Content="{loc:LogLangResource AllowDomain}" />
+          </Grid>
+          <atom:Button HorizontalAlignment="Stretch"
+                       Command="{Binding $parent[UserControl].((vm:LogViewModel)DataContext).CloseDetailCommand}"
+                       Content="{loc:CommonLangResource Cancel}" />
+        </StackPanel>
+      </atom:Card>
+    </Border>
+  </Panel>
 </UserControl>

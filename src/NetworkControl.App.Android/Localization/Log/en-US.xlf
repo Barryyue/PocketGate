@@ -6,9 +6,39 @@
         <source>Allow this app</source>
       </segment>
     </unit>
+    <unit id="AllowDomain">
+      <segment>
+        <source>Allow domain</source>
+      </segment>
+    </unit>
+    <unit id="DetailTitle">
+      <segment>
+        <source>Connection details</source>
+      </segment>
+    </unit>
     <unit id="Empty">
       <segment>
         <source>Nothing has been blocked yet</source>
+      </segment>
+    </unit>
+    <unit id="ExportCsv">
+      <segment>
+        <source>Export CSV</source>
+      </segment>
+    </unit>
+    <unit id="FilterAllLogs">
+      <segment>
+        <source>All</source>
+      </segment>
+    </unit>
+    <unit id="ReasonBlocklist">
+      <segment>
+        <source>Blocklist</source>
+      </segment>
+    </unit>
+    <unit id="ReasonDnd">
+      <segment>
+        <source>DND</source>
       </segment>
     </unit>
     <unit id="ReasonMode">
@@ -34,6 +64,16 @@
     <unit id="ReasonTimeout">
       <segment>
         <source>No answer</source>
+      </segment>
+    </unit>
+    <unit id="SearchLogs">
+      <segment>
+        <source>Search app, domain or IP</source>
+      </segment>
+    </unit>
+    <unit id="TabAllowed">
+      <segment>
+        <source>Allowed</source>
       </segment>
     </unit>
     <unit id="Times">

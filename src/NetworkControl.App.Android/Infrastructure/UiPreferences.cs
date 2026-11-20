@@ -55,6 +55,12 @@ public sealed class UiPreferences
     private const string PromptDenyPermanentKey = "prompt_deny_permanent";
     private const string PromptShowTimedOptionKey = "prompt_show_timed_option";
     private const string PromptTimedMinutesKey = "prompt_timed_minutes";
+    private const string AppLockKey = "app_lock_enabled";
+    private const string AllowSystemAppsKey = "allow_system_apps";
+    private const string NotificationTitleKey = "notification_title";
+    private const string DnsBypassProtectionKey = "dns_bypass_protection";
+    private const string Socks5UdpKey = "socks5_udp";
+    private const string TrustedPublishersKey = "trusted_publishers";
 
     private readonly ISharedPreferences _preferences;
 
@@ -242,6 +248,42 @@ public sealed class UiPreferences
     {
         get => Math.Clamp(_preferences.GetInt(PromptTimedMinutesKey, 60), 1, 1440);
         set => Edit(e => e.PutInt(PromptTimedMinutesKey, Math.Clamp(value, 1, 1440)));
+    }
+
+    public bool AppLockEnabled
+    {
+        get => _preferences.GetBoolean(AppLockKey, false);
+        set => Edit(e => e.PutBoolean(AppLockKey, value));
+    }
+
+    public bool AllowSystemApps
+    {
+        get => _preferences.GetBoolean(AllowSystemAppsKey, false);
+        set => Edit(e => e.PutBoolean(AllowSystemAppsKey, value));
+    }
+
+    public string NotificationTitle
+    {
+        get => _preferences.GetString(NotificationTitleKey, string.Empty) ?? string.Empty;
+        set => Edit(e => e.PutString(NotificationTitleKey, value.Trim()));
+    }
+
+    public bool DnsBypassProtection
+    {
+        get => _preferences.GetBoolean(DnsBypassProtectionKey, true);
+        set => Edit(e => e.PutBoolean(DnsBypassProtectionKey, value));
+    }
+
+    public bool Socks5Udp
+    {
+        get => _preferences.GetBoolean(Socks5UdpKey, true);
+        set => Edit(e => e.PutBoolean(Socks5UdpKey, value));
+    }
+
+    public IReadOnlyCollection<string> TrustedPublishers
+    {
+        get => (_preferences.GetStringSet(TrustedPublishersKey, null) ?? []).ToList();
+        set => Edit(e => e.PutStringSet(TrustedPublishersKey, value.ToHashSet(StringComparer.OrdinalIgnoreCase)));
     }
 
     private void Edit(Action<ISharedPreferencesEditor> change)
