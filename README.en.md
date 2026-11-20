@@ -90,7 +90,7 @@ Obsidian Cyber · Classic · Frost Minimal · Aurora Glass · AMOLED Black · Dy
 ### Download and install
 
 1. Download `PocketGate-<version>.apk` from [GitHub Releases](https://github.com/Barryyue/PocketGate/releases) or [Gitee Releases](https://gitee.com/yuexiaobai/PocketGate/releases).
-   - Tags `v*` are the Kotlin app described here; `atomui-v*` is a separate .NET + Avalonia implementation (see below).
+   - Tags `v*` are the Kotlin app described here (**recommended download**); `atomui-v*` is an experimental .NET + Avalonia build (**experimental**, see below).
 2. Allow your browser or file manager to "install unknown apps", then follow the first-run guide to grant VPN and notification access.
 3. **Upgrading from 0.14 or earlier**: 0.15.0 switched to the official signing key, so it can't install over older builds. Export your rules in Settings, uninstall the old version, install the new one and import them again.
 4. Android allows only one local VPN interface at a time. To chain a local debugging or network tool alongside PocketGate, disable its VPN mode and point PocketGate's per-connection exit to its local SOCKS5 port.
@@ -127,14 +127,14 @@ flowchart LR
 
 | Path | Description |
 |---|---|
-| `android-kotlin/` | **The Android app** (Kotlin + Jetpack Compose + hev-socks5-tunnel), a standalone Gradle project |
+| `android-kotlin/` | **The Android app (recommended download)** (Kotlin + Jetpack Compose + hev-socks5-tunnel), a standalone Gradle project |
 | `src/NetworkControl.Core` | Platform-independent core: domain model, rule engine, verdict pipeline, prompt broker |
 | `src/NetworkControl.Storage` | SQLite storage (`config.db` / `activity.db`) and migrations |
 | `src/NetworkControl.Ipc` | `.proto` contracts, IPC endpoints, diagnostics bundle tools |
 | `src/NetworkControl.Service` | Windows service host: local IPC, gRPC services, engine wiring |
 | `src/NetworkControl.Engine.Windows` | Windows user-mode WFP engine |
 | `src/NetworkControl.App` | Desktop UI: Avalonia 12 + AtomUI, three languages, tray prompts |
-| `src/NetworkControl.App.Android` etc. | The .NET + Avalonia Android implementation (AtomUI build), sharing the desktop core, kept for technology comparison |
+| `src/NetworkControl.App.Android` etc. | The .NET + Avalonia Android implementation (AtomUI build, **experimental**), sharing the desktop core, kept for technology comparison |
 | `site/` | Product pages: [home](site/index.html) and [Android](site/android.html), in three languages with light and dark themes |
 
 ## Development

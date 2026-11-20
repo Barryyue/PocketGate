@@ -90,7 +90,7 @@
 ### 下載與安裝
 
 1. 到 [GitHub Releases](https://github.com/Barryyue/PocketGate/releases) 或 [Gitee Releases](https://gitee.com/yuexiaobai/PocketGate/releases) 下載 `PocketGate-<版本>.apk`。
-   - 標籤 `v*` 是本頁介紹的 Kotlin 版；`atomui-v*` 是另一套 .NET + Avalonia 實作（見下文）。
+   - 標籤 `v*` 是本頁介紹的 Kotlin 版（**推薦下載版本**）；`atomui-v*` 是實驗性的 .NET + Avalonia 版本（**實驗版本**，見下文）。
 2. 允許瀏覽器或檔案管理員「安裝不明應用程式」，安裝後依首次引導授權 VPN 與通知即可開始。
 3. **從 0.14 或更早版本升級**：0.15.0 起改用正式簽章，無法直接覆蓋安裝。請先在「設定」匯出規則，解除安裝舊版，裝好新版後再匯入。
 4. 系統同一時間只允許一個本機虛擬網卡介面。如需串聯本機抓包或網路除錯工具，請關閉其虛擬網卡模式，並在 PocketGate 的逐連線模式裡將出口設為對應本機 SOCKS5 連接埠。
@@ -127,14 +127,14 @@ flowchart LR
 
 | 目錄 | 說明 |
 |---|---|
-| `android-kotlin/` | **Android 版**（Kotlin + Jetpack Compose + hev-socks5-tunnel），獨立 Gradle 專案 |
+| `android-kotlin/` | **Android 版（推薦下載版本）**（Kotlin + Jetpack Compose + hev-socks5-tunnel），獨立 Gradle 專案 |
 | `src/NetworkControl.Core` | 平台無關核心：領域模型、規則引擎、判決管線、詢問代理 |
 | `src/NetworkControl.Storage` | SQLite 存儲（`config.db` / `activity.db`）與遷移 |
 | `src/NetworkControl.Ipc` | `.proto` 契約、IPC 端點、診斷包工具 |
 | `src/NetworkControl.Service` | Windows 服務宿主：本機 IPC、gRPC 服務、引擎裝配 |
 | `src/NetworkControl.Engine.Windows` | Windows 使用者態 WFP 引擎 |
 | `src/NetworkControl.App` | 桌面介面：Avalonia 12 + AtomUI，三語與托盤彈窗 |
-| `src/NetworkControl.App.Android` 等 | Android 的 .NET + Avalonia 實作（AtomUI 版），與桌面共用核心，用於技術選型對照 |
+| `src/NetworkControl.App.Android` 等 | Android 的 .NET + Avalonia 實作（AtomUI 版，**實驗版本**），與桌面共用核心，用於技術選型對照 |
 | `site/` | 產品介紹頁：[首頁](site/index.html)、[Android 版](site/android.html)（三語、深淺主題） |
 
 ## 開發
