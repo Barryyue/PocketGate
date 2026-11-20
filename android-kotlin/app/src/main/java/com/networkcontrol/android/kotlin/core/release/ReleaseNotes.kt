@@ -40,6 +40,24 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.3",
+            date = "2026-11-20",
+            features = listOf(
+                t(
+                    "Overview quick shortcuts: added a Bento row on the Overview screen to switch between Blackhole, Direct, and SOCKS5 forwarding modes or toggle ad & tracker blocking with direct links to full settings",
+                    "总览快捷入口：在总览 Bento 网格新增「逐连接转发」与「广告屏蔽」快捷磁贴，支持一键切换黑洞 / 内置直连 / 外部 SOCKS5 及快速开关拦截清单，并直达详细设置",
+                    "總覽快捷入口：在總覽 Bento 網格新增「逐連線轉發」與「廣告屏蔽」快捷磁貼，支援一鍵切換黑洞 / 內建直連 / 外部 SOCKS5 及快速開關攔截清單，並直達詳細設定",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Update checker mirror safety: Gitee mirror APK downloads are now only used when Gitee carries the same target version as GitHub, preventing older mirror builds from causing downgrade conflicts",
+                    "更新检查镜像校验：仅当 Gitee 镜像版本与 GitHub 一致时才使用镜像下载链接，避免因镜像未同步完成导致安装包版本低于本机已安装版本",
+                    "更新檢查鏡像校驗：僅當 Gitee 鏡像版本與 GitHub 一致時才使用鏡像下載連結，避免因鏡像未同步完成導致安裝包版本低於本機已安裝版本",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.2",
             date = "2026-11-20",
             features = listOf(
