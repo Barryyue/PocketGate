@@ -139,7 +139,7 @@ public sealed class DndTileService : TileService
         var next = backend.Mode == FilterMode.Blacklist ? FilterMode.Ask : FilterMode.Blacklist;
         _ = Task.Run(async () =>
         {
-            if (next == FilterMode.Blacklist && backend.Protection != Engine.Vpn.ProtectionStatus.On)
+            if (next == FilterMode.Blacklist && backend.Protection != ProtectionStatus.On)
             {
                 backend.SetProtection(true);
             }
