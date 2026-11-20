@@ -6,10 +6,12 @@ on:
     tags: ["kt-v*", "v*"]
     paths:
       - "android-kotlin/**"
+      - "!android-kotlin/*.md"
       - ".github/workflows/android-kotlin.yml"
   pull_request:
     paths:
       - "android-kotlin/**"
+      - "!android-kotlin/*.md"
       - ".github/workflows/android-kotlin.yml"
   workflow_dispatch:
     inputs:
@@ -152,6 +154,13 @@ jobs:
               | python3 -c "import sys, json; print(json.load(sys.stdin).get('id', ''))" || true)
           fi
           if [ -n "$release_id" ]; then
+            apk_name="$(basename "$apk")"
+            existing_ids=$(curl -sS "https://gitee.com/api/v5/repos/${repo}/releases/${release_id}/attach_files?access_token=${GITEE_TOKEN}" \
+              | python3 -c "import sys, json; data = json.load(sys.stdin); print('\n'.join(str(x['id']) for x in data if isinstance(x, dict) and x.get('name') == '${apk_name}'))" || true)
+            for fid in $existing_ids; do
+              echo "Deleting duplicate Gitee attachment ${fid} (${apk_name})..."
+              curl -sS -X DELETE "https://gitee.com/api/v5/repos/${repo}/releases/${release_id}/attach_files/${fid}?access_token=${GITEE_TOKEN}" >/dev/null || true
+            done
             echo "Uploading ${apk} to Gitee release ${release_id} (${repo})..."
             curl -fsSL -X POST "https://gitee.com/api/v5/repos/${repo}/releases/${release_id}/attach_files" \
               -F "access_token=${GITEE_TOKEN}" \
