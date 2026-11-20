@@ -87,7 +87,7 @@ internal sealed class FocusAndLockMonitor(
 
     private async Task CheckScreenLockAsync(CancellationToken ct)
     {
-        if (!preferences.BlockOnLock)
+        if (!preferences.BlockOnLockScreen)
         {
             if (_wasLocked && _preLockMode is { } prev)
             {
