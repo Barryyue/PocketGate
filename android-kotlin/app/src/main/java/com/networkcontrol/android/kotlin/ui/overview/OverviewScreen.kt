@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -51,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -74,6 +77,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -190,7 +194,12 @@ fun OverviewScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(forwardingActive, refreshKey, permResumeKey) {
+        forwardingEnabled = backend.forwardingEnabled()
+        forwardingUpstream = backend.forwardingUpstream()
+    }
+
+    LaunchedEffect(permResumeKey, refreshKey) {
         privateDnsMode = withContext(Dispatchers.IO) {
             runCatching { backend.privateDnsMode() }.getOrDefault("off")
         }
@@ -456,7 +465,12 @@ fun OverviewScreen(
                             Text(tunnelError!!, style = MaterialTheme.typography.bodySmall, color = scheme.error)
                             if (backend.isUsingExternalProxy()) {
                                 OutlinedButton(
-                                    onClick = { backend.setForwardingUpstream(ForwardingUpstream.DIRECT) },
+                                    onClick = {
+                                        guard.run {
+                                            forwardingUpstream = ForwardingUpstream.DIRECT
+                                            backend.setForwardingUpstream(ForwardingUpstream.DIRECT)
+                                        }
+                                    },
                                 ) {
                                     Text(s[S.SwitchToDirect])
                                 }
@@ -525,7 +539,7 @@ fun OverviewScreen(
                             )
                         }
                         if (isBlockAll) {
-                            Button(onClick = { backend.setBlockAll(false) }) {
+                            Button(onClick = { guard.run { backend.setBlockAll(false) } }) {
                                 Text(s[S.Restore], maxLines = 1)
                             }
                         } else {
@@ -658,10 +672,6 @@ fun OverviewScreen(
 
             // 7.5 Bento 雙列網格 Row 4：逐連線轉發切換 + 廣告屏蔽直達
             item {
-                LaunchedEffect(forwardingActive, refreshKey) {
-                    forwardingEnabled = backend.forwardingEnabled()
-                    forwardingUpstream = backend.forwardingUpstream()
-                }
                 val viaProxy = forwardingEnabled && forwardingUpstream == ForwardingUpstream.SOCKS5
                 val socks5Endpoint = "${backend.socks5Host()}:${backend.socks5Port()}"
                 val activeLists = blocklistState.lists.count { it.enabled && it.entries > 0 }
@@ -682,7 +692,7 @@ fun OverviewScreen(
                         highlighted = forwardingEnabled,
                         subtitle = when {
                             viaProxy -> socks5Endpoint
-                            else -> s[S.BlocklistsTapHint]
+                            else -> s[S.TapToSwitch]
                         },
                         onClick = { showForwardingQuick = true },
                         modifier = Modifier.weight(1f),
@@ -697,14 +707,10 @@ fun OverviewScreen(
                         icon = Icons.Rounded.Lock,
                         accent = if (blocklistState.enabled && forwardingEnabled) scheme.primary else scheme.onSurfaceVariant,
                         highlighted = blocklistState.enabled && forwardingEnabled,
-                        subtitle = if (blocklistState.enabled) {
-                            s.format(
-                                S.BlocklistsActive,
-                                numberFormat.format(blocklistMatcher.totalEntries),
-                                activeLists,
-                            )
-                        } else {
-                            s[S.BlocklistsTapHint]
+                        subtitle = when {
+                            blocklistState.enabled && !forwardingEnabled -> s[S.NeedsForwarding]
+                            blocklistState.enabled -> s.format(S.BlocklistsActiveShort, activeLists)
+                            else -> s[S.BlocklistsTapHint]
                         },
                         onClick = { showBlocklistQuick = true },
                         modifier = Modifier.weight(1f),
@@ -769,6 +775,18 @@ fun OverviewScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = scheme.onSurfaceVariant,
                         )
+                        if (!forwardingEnabled && backend.forwardingAvailable()) {
+                            OutlinedButton(
+                                onClick = {
+                                    guard.run {
+                                        forwardingEnabled = true
+                                        backend.setForwardingEnabled(true)
+                                    }
+                                },
+                            ) {
+                                Text(s[S.SwitchToForwarding])
+                            }
+                        }
                     }
                 }
             }
@@ -909,6 +927,7 @@ fun OverviewScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -929,7 +948,7 @@ fun OverviewScreen(
                                 if (isSelected) scheme.primary.copy(alpha = 0.12f) else Color.Transparent,
                             )
                             .clickable {
-                                backend.activateProfile(profile.id)
+                                guard.run { backend.activateProfile(profile.id) }
                                 showProfileSheet = false
                             }
                             .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -975,12 +994,14 @@ fun OverviewScreen(
             timedMinutes = settings.promptTimedMinutes,
             onDismiss = { showBatchPrompts = false },
             onAnswer = { ids, action, lifetime ->
-                backend.answerPrompts(
-                    ids,
-                    action,
-                    lifetime,
-                    if (lifetime == RuleLifetime.Timed) settings.promptTimedMinutes * 60 else null,
-                )
+                guard.run {
+                    backend.answerPrompts(
+                        ids,
+                        action,
+                        lifetime,
+                        if (lifetime == RuleLifetime.Timed) settings.promptTimedMinutes * 60 else null,
+                    )
+                }
                 showBatchPrompts = false
             },
             onLater = { ids ->
@@ -1009,7 +1030,7 @@ fun OverviewScreen(
             text = { Text(s[S.FocusEndConfirm]) },
             confirmButton = {
                 TextButton(onClick = {
-                    backend.stopFocus()
+                    guard.run { backend.stopFocus() }
                     confirmEndFocus = false
                 }) { Text(s[S.FocusStop]) }
             },
@@ -1027,31 +1048,7 @@ fun OverviewScreen(
             title = { Text(s[S.ForwardingShortcut]) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    @Composable
-                    fun modeOption(title: String, subtitle: String?, selected: Boolean, onSelect: () -> Unit) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(onClick = onSelect)
-                                .padding(vertical = 8.dp),
-                        ) {
-                            androidx.compose.material3.RadioButton(selected = selected, onClick = onSelect)
-                            Spacer(Modifier.width(8.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(title, style = MaterialTheme.typography.bodyLarge)
-                                if (!subtitle.isNullOrBlank()) {
-                                    Text(
-                                        subtitle,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    modeOption(
+                    ForwardingModeOption(
                         title = s[S.BlackholeMode],
                         subtitle = null,
                         selected = !forwardingEnabled,
@@ -1063,7 +1060,7 @@ fun OverviewScreen(
                             showForwardingQuick = false
                         },
                     )
-                    modeOption(
+                    ForwardingModeOption(
                         title = "${s[S.ForwardingMode]} · ${s[S.UpstreamDirect]}",
                         subtitle = null,
                         selected = forwardingEnabled && forwardingUpstream != ForwardingUpstream.SOCKS5,
@@ -1081,7 +1078,7 @@ fun OverviewScreen(
                             showForwardingQuick = false
                         },
                     )
-                    modeOption(
+                    ForwardingModeOption(
                         title = "${s[S.ForwardingMode]} · ${s[S.UpstreamSocks5]}",
                         subtitle = socks5Endpoint,
                         selected = forwardingEnabled && forwardingUpstream == ForwardingUpstream.SOCKS5,
@@ -1123,9 +1120,13 @@ fun OverviewScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                guard.run { backend.setBlocklistsEnabled(!blocklistState.enabled) }
-                            }
+                            .toggleable(
+                                value = blocklistState.enabled,
+                                onValueChange = { enabled ->
+                                    guard.run { backend.setBlocklistsEnabled(enabled) }
+                                },
+                                role = Role.Switch,
+                            )
                             .padding(vertical = 4.dp),
                     ) {
                         Text(
@@ -1135,9 +1136,7 @@ fun OverviewScreen(
                         )
                         Switch(
                             checked = blocklistState.enabled,
-                            onCheckedChange = { enabled ->
-                                guard.run { backend.setBlocklistsEnabled(enabled) }
-                            },
+                            onCheckedChange = null,
                         )
                     }
                     if (blocklistState.enabled && !forwardingEnabled) {
@@ -1163,6 +1162,39 @@ fun OverviewScreen(
 }
 
 @Composable
+private fun ForwardingModeOption(
+    title: String,
+    subtitle: String?,
+    selected: Boolean,
+    onSelect: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = selected,
+                onClick = onSelect,
+                role = Role.RadioButton,
+            )
+            .padding(vertical = 8.dp),
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Spacer(Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun FocusStartDialog(
     backend: AppBackend,
     onDismiss: () -> Unit,
@@ -1173,12 +1205,14 @@ private fun FocusStartDialog(
     var minutes by remember { mutableIntStateOf(30) }
     var query by remember { mutableStateOf("") }
     var apps by remember { mutableStateOf<List<com.networkcontrol.android.kotlin.core.model.AppEntry>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     LaunchedEffect(Unit) {
         apps = withContext(Dispatchers.IO) {
             runCatching { backend.appEntries() }.getOrDefault(emptyList())
         }
+        loaded = true
     }
 
     val filtered = apps.filter {
@@ -1215,26 +1249,65 @@ private fun FocusStartDialog(
                     label = { Text(s[S.SearchApps]) },
                     singleLine = true,
                 )
-                LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
-                    items(filtered, key = { it.app.packageName }) { entry ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = entry.app.packageName in selected,
-                                onCheckedChange = { checked ->
-                                    selected = if (checked) {
-                                        selected + entry.app.packageName
-                                    } else {
-                                        selected - entry.app.packageName
+                when {
+                    !loaded -> {
+                        Text(
+                            s[S.Loading],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 12.dp),
+                        )
+                    }
+                    filtered.isEmpty() -> {
+                        Text(
+                            s[S.NoApps],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 12.dp),
+                        )
+                    }
+                    else -> {
+                        LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+                            items(filtered, key = { it.app.packageName }) { entry ->
+                                val isChecked = entry.app.packageName in selected
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .toggleable(
+                                            value = isChecked,
+                                            onValueChange = { checked ->
+                                                selected = if (checked) {
+                                                    selected + entry.app.packageName
+                                                } else {
+                                                    selected - entry.app.packageName
+                                                }
+                                            },
+                                            role = Role.Checkbox,
+                                        )
+                                        .padding(vertical = 4.dp),
+                                ) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = null,
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            entry.app.label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            entry.app.packageName,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
                                     }
-                                },
-                            )
-                            Column(Modifier.weight(1f)) {
-                                Text(entry.app.label, style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    entry.app.packageName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                }
                             }
                         }
                     }

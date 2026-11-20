@@ -38,12 +38,14 @@ import com.networkcontrol.android.kotlin.core.model.Profile
 import com.networkcontrol.android.kotlin.ui.S
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
+import com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction
 
 /**
  * 配置檔案與專注時間表的獨立管理頁。
  */
 @Composable
 fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
+    val guard = LocalSensitiveAction.current
     val s = rememberUiStrings()
     val context = LocalContext.current
     val profiles by backend.profiles.collectAsStateWithLifecycle()
@@ -55,6 +57,7 @@ fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var deletingProfile by remember { mutableStateOf<Profile?>(null) }
     var editingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
     var showScheduleDialog by remember { mutableStateOf(false) }
+    var deletingSchedule by remember { mutableStateOf<FocusSchedule?>(null) }
 
     fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
 
@@ -90,7 +93,7 @@ fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             profile = profile,
                             active = profile.id == runtime.activeProfileId,
                             s = s,
-                            onActivate = { backend.activateProfile(profile.id) },
+                            onActivate = { guard.run { backend.activateProfile(profile.id) } },
                             onEdit = {
                                 editingProfile = profile
                                 showProfileDialog = true
@@ -144,9 +147,11 @@ fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             }
                             Switch(
                                 checked = schedule.enabled,
-                                onCheckedChange = { backend.setFocusScheduleEnabled(schedule.id, it) },
+                                onCheckedChange = { enabled ->
+                                    guard.run { backend.setFocusScheduleEnabled(schedule.id, enabled) }
+                                },
                             )
-                            TextButton(onClick = { backend.deleteFocusSchedule(schedule.id) }) {
+                            TextButton(onClick = { deletingSchedule = schedule }) {
                                 Text(s[S.Delete])
                             }
                         }
@@ -170,8 +175,10 @@ fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
             onDismiss = { showProfileDialog = false },
             onSave = { name, mode, auto ->
                 val current = editingProfile
-                if (current == null) backend.createProfile(name, mode, auto)
-                else backend.updateProfile(current.id, name, mode, auto)
+                guard.run {
+                    if (current == null) backend.createProfile(name, mode, auto)
+                    else backend.updateProfile(current.id, name, mode, auto)
+                }
                 showProfileDialog = false
             },
         )
@@ -184,8 +191,9 @@ fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
             text = { Text(s[S.DeleteProfileConfirm]) },
             confirmButton = {
                 TextButton(onClick = {
-                    backend.deleteProfile(profile.id)
+                    val id = profile.id
                     deletingProfile = null
+                    guard.run { backend.deleteProfile(id) }
                 }) { Text(s[S.Delete]) }
             },
             dismissButton = {
@@ -201,6 +209,24 @@ fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
             onSave = { schedule ->
                 backend.saveFocusSchedule(schedule)
                 showScheduleDialog = false
+            },
+        )
+    }
+
+    deletingSchedule?.let { schedule ->
+        AlertDialog(
+            onDismissRequest = { deletingSchedule = null },
+            title = { Text(s[S.FocusSchedule]) },
+            text = { Text(s[S.DeleteScheduleConfirm]) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val id = schedule.id
+                    deletingSchedule = null
+                    guard.run { backend.deleteFocusSchedule(id) }
+                }) { Text(s[S.Delete]) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingSchedule = null }) { Text(s[S.Cancel]) }
             },
         )
     }

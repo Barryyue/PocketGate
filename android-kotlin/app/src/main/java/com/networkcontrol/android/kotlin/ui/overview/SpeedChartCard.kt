@@ -20,6 +20,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +71,12 @@ fun SpeedChartCard(
         uploadHistory.maxOrNull() ?: 0L,
         1024L,
     )
+
+    val dashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f) }
+    val upStrokePath = remember { Path() }
+    val upFillPath = remember { Path() }
+    val downStrokePath = remember { Path() }
+    val downFillPath = remember { Path() }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -127,7 +134,6 @@ fun SpeedChartCard(
                 if (width <= 0f || height <= 0f) return@Canvas
 
                 // 兩條細虛線參考網格
-                val dash = PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f)
                 listOf(0.25f, 0.65f).forEach { ratio ->
                     val y = height * ratio
                     drawLine(
@@ -135,7 +141,7 @@ fun SpeedChartCard(
                         start = Offset(0f, y),
                         end = Offset(width, y),
                         strokeWidth = 1.dp.toPx(),
-                        pathEffect = dash,
+                        pathEffect = dashEffect,
                     )
                 }
 
@@ -144,37 +150,34 @@ fun SpeedChartCard(
                 val bottomPad = 4.dp.toPx()
                 val usableHeight = (height - topPad - bottomPad).coerceAtLeast(1f)
 
-                fun buildCurves(samples: List<Long>): Pair<Path, Path> {
-                    val strokePath = Path()
-                    val fillPath = Path()
-                    if (samples.size < 2) return strokePath to fillPath
+                fun buildCurves(samples: List<Long>, strokePath: Path, fillPath: Path) {
+                    strokePath.reset()
+                    fillPath.reset()
+                    if (samples.size < 2) return
                     val stepX = width / (samples.size - 1).coerceAtLeast(1)
-                    val points = samples.mapIndexed { idx, value ->
-                        val ratio = (value.toFloat() / maxVal).coerceIn(0f, 1f)
-                        Offset(
-                            x = idx * stepX,
-                            y = height - bottomPad - ratio * usableHeight,
-                        )
+                    var prevX = 0f
+                    var prevY = height - bottomPad - (samples[0].toFloat() / maxVal).coerceIn(0f, 1f) * usableHeight
+                    strokePath.moveTo(prevX, prevY)
+                    fillPath.moveTo(prevX, height)
+                    fillPath.lineTo(prevX, prevY)
+                    for (i in 1 until samples.size) {
+                        val x = i * stepX
+                        val ratio = (samples[i].toFloat() / maxVal).coerceIn(0f, 1f)
+                        val y = height - bottomPad - ratio * usableHeight
+                        val midX = (prevX + x) / 2f
+                        strokePath.cubicTo(midX, prevY, midX, y, x, y)
+                        fillPath.cubicTo(midX, prevY, midX, y, x, y)
+                        prevX = x
+                        prevY = y
                     }
-                    strokePath.moveTo(points.first().x, points.first().y)
-                    fillPath.moveTo(points.first().x, height)
-                    fillPath.lineTo(points.first().x, points.first().y)
-                    for (i in 0 until points.lastIndex) {
-                        val p0 = points[i]
-                        val p1 = points[i + 1]
-                        val midX = (p0.x + p1.x) / 2f
-                        strokePath.cubicTo(midX, p0.y, midX, p1.y, p1.x, p1.y)
-                        fillPath.cubicTo(midX, p0.y, midX, p1.y, p1.x, p1.y)
-                    }
-                    fillPath.lineTo(points.last().x, height)
+                    fillPath.lineTo(prevX, height)
                     fillPath.close()
-                    return strokePath to fillPath
                 }
 
                 // 先畫上行（較輕）再畫下行（主色突出）
-                val (upStroke, upFill) = buildCurves(uploadHistory)
+                buildCurves(uploadHistory, upStrokePath, upFillPath)
                 drawPath(
-                    path = upFill,
+                    path = upFillPath,
                     brush = Brush.verticalGradient(
                         colors = listOf(upColor.copy(alpha = 0.16f), Color.Transparent),
                         startY = topPad,
@@ -182,14 +185,14 @@ fun SpeedChartCard(
                     ),
                 )
                 drawPath(
-                    path = upStroke,
+                    path = upStrokePath,
                     color = upColor.copy(alpha = 0.85f),
                     style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
                 )
 
-                val (downStroke, downFill) = buildCurves(downloadHistory)
+                buildCurves(downloadHistory, downStrokePath, downFillPath)
                 drawPath(
-                    path = downFill,
+                    path = downFillPath,
                     brush = Brush.verticalGradient(
                         colors = listOf(downColor.copy(alpha = 0.28f), Color.Transparent),
                         startY = topPad,
@@ -197,7 +200,7 @@ fun SpeedChartCard(
                     ),
                 )
                 drawPath(
-                    path = downStroke,
+                    path = downStrokePath,
                     color = downColor,
                     style = Stroke(width = 2.4.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
                 )

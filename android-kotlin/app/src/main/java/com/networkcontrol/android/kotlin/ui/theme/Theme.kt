@@ -234,17 +234,20 @@ private fun amoledBlackScheme(seed: Color): ColorScheme = darkScheme(seed).copy(
     outlineVariant = Color(0xFF262626),
 )
 
-private fun lightScheme(seed: Color) = lightColorScheme(
-    primary = seed,
-    onPrimary = onColor(seed),
-    primaryContainer = lerp(seed, Color.White, 0.78f),
-    onPrimaryContainer = lerp(seed, Color.Black, 0.68f),
-    secondary = lerp(seed, Color(0xFF5B5B5B), 0.55f),
-    onSecondary = Color.White,
-    secondaryContainer = lerp(seed, Color.White, 0.86f),
-    onSecondaryContainer = lerp(seed, Color.Black, 0.66f),
-    tertiary = lerp(seed, Color(0xFF3B6FA0), 0.5f),
-    onTertiary = Color.White,
+private fun lightScheme(seed: Color): androidx.compose.material3.ColorScheme {
+    val secondary = lerp(seed, Color(0xFF5B5B5B), 0.55f)
+    val tertiary = lerp(seed, Color(0xFF3B6FA0), 0.5f)
+    return lightColorScheme(
+        primary = seed,
+        onPrimary = onColor(seed),
+        primaryContainer = lerp(seed, Color.White, 0.78f),
+        onPrimaryContainer = lerp(seed, Color.Black, 0.68f),
+        secondary = secondary,
+        onSecondary = onColor(secondary),
+        secondaryContainer = lerp(seed, Color.White, 0.86f),
+        onSecondaryContainer = lerp(seed, Color.Black, 0.66f),
+        tertiary = tertiary,
+        onTertiary = onColor(tertiary),
     tertiaryContainer = lerp(seed, Color.White, 0.86f),
     onTertiaryContainer = lerp(seed, Color.Black, 0.66f),
     background = lerp(seed, Color.White, 0.965f),
@@ -259,7 +262,8 @@ private fun lightScheme(seed: Color) = lightColorScheme(
     onError = Color.White,
     errorContainer = Color(0xFFFFDAD6),
     onErrorContainer = Color(0xFF410002),
-)
+    )
+}
 
 private fun darkScheme(seed: Color) = darkColorScheme(
     primary = lerp(seed, Color.White, 0.62f),
@@ -289,4 +293,4 @@ private fun darkScheme(seed: Color) = darkColorScheme(
 )
 
 private fun onColor(seed: Color): Color =
-    if (seed.luminance() > 0.58f) Color(0xFF1B1B1B) else Color.White
+    if (seed.luminance() > 0.22f) Color(0xFF1B1B1B) else Color.White

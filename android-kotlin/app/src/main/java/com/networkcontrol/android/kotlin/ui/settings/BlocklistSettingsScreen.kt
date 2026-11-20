@@ -57,6 +57,7 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     val matcher by backend.blocklistMatcher.collectAsStateWithLifecycle()
     val perConnection = backend.forwardingEnabled()
     var showAddDialog by remember { mutableStateOf(false) }
+    var removingSource by remember { mutableStateOf<BlocklistSourceState?>(null) }
     val numbers = remember { NumberFormat.getIntegerInstance() }
 
     fun toast(message: String) = Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -137,8 +138,8 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     database = matcher.trackers,
                     s = s,
                     numbers = numbers,
-                    onToggle = { backend.setTrackerDatabaseEnabled(it) },
-                    onCategory = { category, on -> backend.setTrackerCategoryBlocked(category, on) },
+                    onToggle = { enabled -> guard.run { backend.setTrackerDatabaseEnabled(enabled) } },
+                    onCategory = { category, on -> guard.run { backend.setTrackerCategoryBlocked(category, on) } },
                 )
             }
 
@@ -151,8 +152,8 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                         source = source,
                         s = s,
                         numbers = numbers,
-                        onToggle = { backend.setBlocklistSourceEnabled(source.id, it) },
-                        onRemove = { scope.launch { backend.removeBlocklist(source.id) } },
+                        onToggle = { enabled -> guard.run { backend.setBlocklistSourceEnabled(source.id, enabled) } },
+                        onRemove = { removingSource = source },
                     )
                 }
                 item {
@@ -227,6 +228,26 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                         toast(s[S.BlocklistsInvalidUrl])
                     }
                 }
+            },
+        )
+    }
+
+    removingSource?.let { source ->
+        AlertDialog(
+            onDismissRequest = { removingSource = null },
+            title = { Text(s[S.BlocklistsRemove]) },
+            text = { Text(s[S.RemoveBlocklistConfirm]) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val id = source.id
+                        removingSource = null
+                        guard.run { scope.launch { backend.removeBlocklist(id) } }
+                    },
+                ) { Text(s[S.BlocklistsRemove]) }
+            },
+            dismissButton = {
+                TextButton(onClick = { removingSource = null }) { Text(s[S.Cancel]) }
             },
         )
     }

@@ -20,10 +20,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -79,13 +83,15 @@ fun AppsScreen(backend: AppBackend) {
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(AppFilter.All) }
     var entries by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
     var lastSeen by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var refreshKey by remember { mutableIntStateOf(0) }
     val sims = remember { runCatching { backend.subscriptions() }.getOrDefault(emptyList()) }
 
-    LaunchedEffect(plan, rules.version, refreshKey) {
+    LaunchedEffect(plan, rules.version, runtime.activeProfileId, refreshKey) {
         entries = withContext(Dispatchers.IO) { runCatching { backend.appEntries() }.getOrDefault(emptyList()) }
+        loaded = true
         traffic = withContext(Dispatchers.IO) { runCatching { backend.getTrafficToday() }.getOrDefault(TrafficUsage.Empty) }
         lastSeen = withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
@@ -102,22 +108,24 @@ fun AppsScreen(backend: AppBackend) {
         }
     }
 
-    val filtered = entries.asSequence()
-        .filter { app ->
-            query.isBlank() ||
-                app.app.label.contains(query, ignoreCase = true) ||
-                app.app.packageName.contains(query, ignoreCase = true)
-        }
-        .filter { app ->
-            when (filter) {
-                AppFilter.All -> true
-                AppFilter.Allowed -> app.decision == AppDecision.Allow
-                AppFilter.Denied -> app.decision == AppDecision.Deny
-                AppFilter.Unset -> app.decision == AppDecision.Unset
-                AppFilter.System -> app.app.isSystem
+    val filtered = remember(entries, query, filter) {
+        entries.asSequence()
+            .filter { app ->
+                query.isBlank() ||
+                    app.app.label.contains(query, ignoreCase = true) ||
+                    app.app.packageName.contains(query, ignoreCase = true)
             }
-        }
-        .toList()
+            .filter { app ->
+                when (filter) {
+                    AppFilter.All -> true
+                    AppFilter.Allowed -> app.decision == AppDecision.Allow
+                    AppFilter.Denied -> app.decision == AppDecision.Deny
+                    AppFilter.Unset -> app.decision == AppDecision.Unset
+                    AppFilter.System -> app.app.isSystem
+                }
+            }
+            .toList()
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -135,6 +143,15 @@ fun AppsScreen(backend: AppBackend) {
                 value = query,
                 onValueChange = { query = it },
                 label = { Text(s[S.SearchApps]) },
+                trailingIcon = if (query.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Rounded.Close, contentDescription = s[S.Close])
+                        }
+                    }
+                } else {
+                    null
+                },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -154,7 +171,16 @@ fun AppsScreen(backend: AppBackend) {
                 FilterChip(filter == AppFilter.System, { filter = AppFilter.System }, { Text(s[S.FilterSystem]) })
             }
         }
-        if (filtered.isEmpty()) {
+        if (!loaded) {
+            item {
+                Text(
+                    s[S.Loading],
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp),
+                )
+            }
+        } else if (filtered.isEmpty()) {
             item {
                 Text(
                     s[S.NoApps],
@@ -169,6 +195,7 @@ fun AppsScreen(backend: AppBackend) {
                 backend = backend,
                 entry = entry,
                 rulesVersion = rules.version,
+                activeProfileId = runtime.activeProfileId,
                 sims = sims,
                 traffic = traffic.byPackage[entry.app.packageName],
                 lastSeen = lastSeen[entry.app.packageName],
@@ -185,6 +212,7 @@ private fun AppRow(
     backend: AppBackend,
     entry: AppEntry,
     rulesVersion: Long,
+    activeProfileId: String,
     sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     traffic: Pair<Long, Long>?,
     lastSeen: Long?,
@@ -195,7 +223,7 @@ private fun AppRow(
     val s = rememberUiStrings()
     var showNetworkDialog by remember { mutableStateOf(false) }
     var showDetail by remember { mutableStateOf(false) }
-    val appRules = remember(entry.app.packageName, rulesVersion) {
+    val appRules = remember(entry.app.packageName, rulesVersion, activeProfileId) {
         backend.appRules(entry.app.packageName)
     }
     val scopedRules = remember(appRules) { appRules.filter { it.conditions.hasNetworkScope } }
@@ -372,7 +400,7 @@ private fun AppRow(
             if (entry.isTemporary) {
                 entry.expiresAt?.let {
                     Text(
-                        "${s[S.ReasonTimeout]}: ${formatDateTime(it)}",
+                        "${s[S.ExpiresAt]}: ${formatDateTime(it)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
@@ -430,6 +458,7 @@ private fun AppDetailDialog(
     sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     onDismiss: () -> Unit,
 ) {
+    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     var recent by remember { mutableStateOf<List<LogEntry>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
@@ -476,7 +505,7 @@ private fun AppDetailDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (it !in settings.trustedSigners) {
-                        TextButton(onClick = { backend.trustPublisher(it) }) {
+                        TextButton(onClick = { guard.run { backend.trustPublisher(it) } }) {
                             Text(s[S.TrustPublisher])
                         }
                     } else {
@@ -598,7 +627,10 @@ private fun NetworkRuleDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 Text(s[S.NetworkConditions], style = MaterialTheme.typography.titleSmall)
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),

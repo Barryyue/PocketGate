@@ -73,7 +73,9 @@ fun ThemeColorDialog(
     var hue by remember { mutableFloatStateOf(initialHsv[0]) }
     var saturation by remember { mutableFloatStateOf(initialHsv[1]) }
     var value by remember { mutableFloatStateOf(initialHsv[2]) }
-    var selectedPreset by remember { mutableStateOf<Color?>(null) }
+    var selectedPreset by remember(current) {
+        mutableStateOf(presets.firstOrNull { it.color == current }?.color)
+    }
 
     val preview = hsvColor(hue, saturation, value)
 

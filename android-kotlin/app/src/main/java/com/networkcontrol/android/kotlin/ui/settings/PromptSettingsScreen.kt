@@ -64,8 +64,10 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     val settings by backend.settings.collectAsStateWithLifecycle()
 
     var overlayKey by remember { mutableIntStateOf(0) }
+    var exitDetection by remember { mutableStateOf(backend.processExitDetection()) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         overlayKey++
+        exitDetection = backend.processExitDetection()
     }
     val canDrawOverlays = remember(overlayKey) { backend.canDrawOverlays() }
     var promptMode by remember { mutableStateOf(backend.promptPresentationMode()) }
@@ -78,7 +80,6 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var denyPermanent by remember { mutableStateOf(backend.promptDenyPermanent()) }
 
     var onceBackgroundMinutes by remember { mutableIntStateOf(backend.onceBackgroundMinutes()) }
-    var exitDetection by remember { mutableStateOf(backend.processExitDetection()) }
     var grantingExitDetection by remember { mutableStateOf(false) }
     var showExitGrantGuide by remember { mutableStateOf(false) }
 
@@ -375,6 +376,7 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
             title = title,
             initialValue = currentValue,
             presets = presets,
+            minValue = if (target == PromptNumberTarget.OnceBackground) 0 else 1,
             onDismiss = { editingNumberTarget = null },
             onSave = { newValue ->
                 when (target) {
@@ -442,11 +444,14 @@ private fun NumberInputDialog(
     title: String,
     initialValue: Int,
     presets: List<Int>,
+    minValue: Int = 1,
     onDismiss: () -> Unit,
     onSave: (Int) -> Unit,
 ) {
     val s = rememberUiStrings()
     var text by remember(initialValue) { mutableStateOf(initialValue.toString()) }
+    val parsed = text.toIntOrNull()
+    val isValid = parsed != null && parsed >= minValue
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -456,7 +461,7 @@ private fun NumberInputDialog(
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     presets.forEach { preset ->
                         FilterChip(
-                            selected = text.toIntOrNull() == preset,
+                            selected = parsed == preset,
                             onClick = { text = preset.toString() },
                             label = { Text(preset.toString()) },
                         )
@@ -465,6 +470,7 @@ private fun NumberInputDialog(
                 OutlinedTextField(
                     value = text,
                     onValueChange = { value -> text = value.filter { it.isDigit() }.take(4) },
+                    isError = !isValid,
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
@@ -473,7 +479,8 @@ private fun NumberInputDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(text.toIntOrNull() ?: initialValue) },
+                enabled = isValid,
+                onClick = { parsed?.let(onSave) },
             ) { Text(s[S.Save]) }
         },
         dismissButton = {

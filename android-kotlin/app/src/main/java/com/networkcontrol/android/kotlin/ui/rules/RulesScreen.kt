@@ -15,16 +15,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,9 +43,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.core.model.NetworkKind
+import com.networkcontrol.android.kotlin.core.model.RemoteTarget
 import com.networkcontrol.android.kotlin.core.model.Rule
 import com.networkcontrol.android.kotlin.core.model.RuleConditions
 import com.networkcontrol.android.kotlin.core.model.RuleGroup
+import com.networkcontrol.android.kotlin.core.model.RuleLifetime
 import com.networkcontrol.android.kotlin.core.model.RuleSource
 import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.ui.S
@@ -52,8 +62,29 @@ fun RulesScreen(backend: AppBackend) {
     val s = rememberUiStrings()
     val scope = rememberCoroutineScope()
     val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
+    val runtime by backend.runtime.collectAsStateWithLifecycle()
+    val activeProfileId = runtime.activeProfileId
     val sims = remember { runCatching { backend.subscriptions() }.getOrDefault(emptyList()) }
-    val groups = remember(ruleSet.version) { backend.ruleGroups() }
+    var query by remember { mutableStateOf("") }
+    val groups = remember(ruleSet.version, activeProfileId) { backend.ruleGroups() }
+    val filteredGroups = remember(groups, query) {
+        if (query.isBlank()) {
+            groups
+        } else {
+            groups.mapNotNull { group ->
+                val groupMatches = group.label.contains(query, ignoreCase = true) ||
+                    group.packageName?.contains(query, ignoreCase = true) == true
+                if (groupMatches) {
+                    group
+                } else {
+                    val matchedRules = group.rules.filter { rule ->
+                        remoteTargetLabel(rule.conditions)?.contains(query, ignoreCase = true) == true
+                    }
+                    if (matchedRules.isNotEmpty()) group.copy(rules = matchedRules) else null
+                }
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -66,17 +97,36 @@ fun RulesScreen(backend: AppBackend) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item { ScreenHeader(s[S.Rules], s[S.RulesSubtitle]) }
-        if (groups.isEmpty()) {
+        item {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text(s[S.SearchRulesHint]) },
+                trailingIcon = if (query.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Rounded.Close, contentDescription = s[S.Close])
+                        }
+                    }
+                } else {
+                    null
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        if (filteredGroups.isEmpty()) {
             item {
                 Text(
-                    s[S.NoRules],
+                    if (query.isNotBlank()) s[S.NoMatchingLogs] else s[S.NoRules],
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 24.dp),
                 )
             }
         }
-        items(groups, key = { it.key }) { group ->
+        items(filteredGroups, key = { it.key }) { group ->
             RuleGroupCard(
                 backend = backend,
                 group = group,
@@ -99,6 +149,7 @@ private fun RuleGroupCard(
 ) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
+    var pendingDelete by remember { mutableStateOf<Rule?>(null) }
     val tokens = LocalAppVisualTokens.current
     val scheme = MaterialTheme.colorScheme
     val container = if (tokens.cardContainer != Color.Unspecified) {
@@ -169,7 +220,20 @@ private fun RuleGroupCard(
                             }
                         }
                     },
-                    onDelete = {
+                    onDelete = { pendingDelete = rule },
+                )
+            }
+        }
+    }
+    pendingDelete?.let { rule ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(s[S.Delete]) },
+            text = { Text(s[S.DeleteRuleConfirm]) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDelete = null
                         guard.run {
                             scope.launch {
                                 backend.deleteRule(rule.id)
@@ -177,9 +241,12 @@ private fun RuleGroupCard(
                             }
                         }
                     },
-                )
-            }
-        }
+                ) { Text(s[S.Delete], color = scheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text(s[S.Cancel]) }
+            },
+        )
     }
 }
 
@@ -221,9 +288,18 @@ private fun RuleRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            remoteTargetLabel(rule.conditions)?.let { remote ->
+                Text(
+                    remote,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Text(
                 buildString {
-                    append(rule.lifetime.name)
+                    append(lifetimeLabel(rule.lifetime, s))
                     append(" · ")
                     append(if (rule.profileId == null) s[S.GlobalRule] else s[S.ActiveProfile])
                     if (rule.hitCount > 0) {
@@ -245,6 +321,32 @@ private fun actionLabel(
     action: VerdictAction,
     s: com.networkcontrol.android.kotlin.ui.UiStrings,
 ): String = if (action == VerdictAction.Allow) s[S.Allow] else s[S.Deny]
+
+private fun lifetimeLabel(
+    lifetime: RuleLifetime,
+    s: com.networkcontrol.android.kotlin.ui.UiStrings,
+): String = when (lifetime) {
+    RuleLifetime.Permanent -> s[S.RuleLifetimePermanent]
+    RuleLifetime.UntilAppExit, RuleLifetime.UntilProcessExit, RuleLifetime.UntilRestart -> s[S.RuleLifetimeUntilExit]
+    RuleLifetime.Timed -> s[S.RuleLifetimeTimed]
+    RuleLifetime.Once -> s[S.PromptOnce]
+}
+
+private fun remoteTargetLabel(conditions: RuleConditions): String? {
+    val target = when (val remote = conditions.remote) {
+        is RemoteTarget.Domain -> remote.pattern
+        is RemoteTarget.Address -> remote.networks.joinToString(", ") { it.toString() }
+        is RemoteTarget.Zone -> remote.zone.name
+        null -> null
+    }
+    val port = conditions.remotePort?.toString()
+    return when {
+        target != null && port != null -> "$target:$port"
+        target != null -> target
+        port != null -> ":$port"
+        else -> null
+    }
+}
 
 private fun networkScopeLabel(
     conditions: RuleConditions,

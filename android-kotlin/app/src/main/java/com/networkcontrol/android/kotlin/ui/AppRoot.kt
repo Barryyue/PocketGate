@@ -253,32 +253,38 @@ fun AppRoot(container: AppContainer) {
                 }
             },
     ) {
+        androidx.activity.compose.BackHandler(enabled = settingsSubScreen != null) {
+            settingsSubScreen = null
+        }
         if (settingsSubScreen != null) {
             Box(
-                Modifier.fillMaxSize().widthIn(max = 760.dp),
+                Modifier.fillMaxSize(),
                 contentAlignment = Alignment.TopCenter,
             ) {
-                when (settingsSubScreen) {
-                    "blocklists" -> BlocklistSettingsScreen(
-                        backend = backend,
-                        onBack = { settingsSubScreen = null },
-                    )
-                    "island" -> SpeedIslandSettingsScreen(
-                        backend = backend,
-                        onBack = { settingsSubScreen = null },
-                    )
-                    "prompts" -> PromptSettingsScreen(
-                        backend = backend,
-                        onBack = { settingsSubScreen = null },
-                    )
-                    "forwarding" -> ForwardingSettingsScreen(
-                        backend = backend,
-                        onBack = { settingsSubScreen = null },
-                    )
-                    "profiles" -> ProfileScheduleSettingsScreen(
-                        backend = backend,
-                        onBack = { settingsSubScreen = null },
-                    )
+                Box(Modifier.widthIn(max = 760.dp).fillMaxSize()) {
+                    when (settingsSubScreen) {
+                        "blocklists" -> BlocklistSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "island" -> SpeedIslandSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "prompts" -> PromptSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "forwarding" -> ForwardingSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "profiles" -> ProfileScheduleSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        else -> LaunchedEffect(Unit) { settingsSubScreen = null }
+                    }
                 }
             }
         } else {
@@ -374,12 +380,17 @@ fun AppRoot(container: AppContainer) {
                     .then(bottomBarHideModifier),
             )
         }
+        val promptBottomPad = when {
+            settingsSubScreen != null -> 16.dp
+            toolbarStyle.isFloating -> 96.dp
+            else -> 76.dp
+        }
         PromptOverlay(
             backend = backend,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 76.dp),
+                .padding(bottom = promptBottomPad),
         )
     }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -33,8 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.ForwardingUpstream
@@ -83,6 +87,10 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var showProxyAppDialog by remember { mutableStateOf(false) }
     var directPackages by remember { mutableStateOf(backend.forwardingDirectPackages()) }
     var showDirectAppsDialog by remember { mutableStateOf(false) }
+    var privateDnsStrict by remember { mutableStateOf(backend.privateDnsMode() == "hostname") }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        privateDnsStrict = backend.privateDnsMode() == "hostname"
+    }
 
     val pickerApps by produceState<List<InstalledApp>?>(
         initialValue = null,
@@ -217,16 +225,24 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             }
                         }
                         if (exitDns == "custom") {
+                            val customUrlInvalid = exitDnsUrl.isNotEmpty() && !exitDnsUrl.startsWith("https://", ignoreCase = true)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 OutlinedTextField(
                                     value = exitDnsUrl,
                                     onValueChange = { exitDnsUrl = it.trim() },
                                     label = { Text(s[S.ExitDnsCustomUrl]) },
+                                    isError = customUrlInvalid,
                                     singleLine = true,
                                     modifier = Modifier.weight(1f),
                                 )
                                 TextButton(onClick = {
-                                    backend.setExitDnsCustomUrl(exitDnsUrl)
+                                    val url = exitDnsUrl.trim()
+                                    if (!url.startsWith("https://", ignoreCase = true)) {
+                                        toast(s[S.InvalidHttpsUrl])
+                                        return@TextButton
+                                    }
+                                    exitDnsUrl = url
+                                    backend.setExitDnsCustomUrl(url)
                                     toast(s[S.Done])
                                 }) { Text(s[S.Save]) }
                             }
@@ -243,6 +259,9 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             )
                         }
                     } else {
+                        val socks5HostValid = socks5Host.trim().isNotEmpty()
+                        val socks5PortInt = socks5Port.toIntOrNull()
+                        val socks5PortValid = socks5PortInt != null && socks5PortInt in 1..65535
                         Text(
                             s[S.ForwardingGuide],
                             style = MaterialTheme.typography.bodySmall,
@@ -253,6 +272,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                 value = socks5Host,
                                 onValueChange = { socks5Host = it },
                                 label = { Text(s[S.Socks5Host]) },
+                                isError = !socks5HostValid,
                                 singleLine = true,
                                 modifier = Modifier.weight(1.6f),
                             )
@@ -262,7 +282,9 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                     socks5Port = it.filter { char -> char.isDigit() }.take(5)
                                 },
                                 label = { Text(s[S.Socks5Port]) },
+                                isError = !socks5PortValid,
                                 singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -286,9 +308,16 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
                                 onClick = {
+                                    val host = socks5Host.trim()
+                                    val port = socks5Port.toIntOrNull()
+                                    if (host.isEmpty() || port == null || port !in 1..65535) {
+                                        toast(s[S.InvalidHostOrPort])
+                                        return@OutlinedButton
+                                    }
+                                    socks5Host = host
                                     backend.setSocks5Config(
-                                        host = socks5Host,
-                                        port = socks5Port.toIntOrNull() ?: 7890,
+                                        host = host,
+                                        port = port,
                                         username = socks5User,
                                         password = socks5Pass,
                                     )
@@ -297,12 +326,19 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             ) { Text(s[S.Save]) }
                             OutlinedButton(
                                 onClick = {
+                                    val host = socks5Host.trim()
+                                    val port = socks5Port.toIntOrNull()
+                                    if (host.isEmpty() || port == null || port !in 1..65535) {
+                                        toast(s[S.InvalidHostOrPort])
+                                        return@OutlinedButton
+                                    }
+                                    socks5Host = host
                                     proxyTesting = true
                                     probeReport = null
                                     scope.launch {
                                         val report = Socks5Probe.diagnose(
-                                            host = socks5Host,
-                                            port = socks5Port.toIntOrNull() ?: 7890,
+                                            host = host,
+                                            port = port,
                                             username = socks5User.trim().ifEmpty { null },
                                             password = socks5Pass,
                                         )
@@ -372,6 +408,13 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             }
                         },
                     )
+                    if (privateDnsStrict) {
+                        Text(
+                            "${s[S.PrivateDnsTitle]}：${s[S.PrivateDnsHint]}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
 
@@ -435,8 +478,10 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
             selected = proxyPackage,
             onDismiss = { showProxyAppDialog = false },
             onSelect = { packageName ->
-                proxyPackage = packageName
-                backend.setSocks5BypassPackage(packageName)
+                guard.run {
+                    proxyPackage = packageName
+                    backend.setSocks5BypassPackage(packageName)
+                }
                 showProxyAppDialog = false
             },
         )
@@ -453,8 +498,10 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
             allowedByRulePackages = allowedByRulePackages,
             onDismiss = { showDirectAppsDialog = false },
             onSave = { packages ->
-                directPackages = packages
-                guard.run { backend.setForwardingDirectPackages(packages) }
+                guard.run {
+                    directPackages = packages
+                    backend.setForwardingDirectPackages(packages)
+                }
                 showDirectAppsDialog = false
             },
         )

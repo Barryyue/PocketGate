@@ -379,16 +379,6 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     }
                 }
             }
-
-            item {
-                SectionCard {
-                    Text(
-                        s[S.IslandContentHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
         }
     }
 

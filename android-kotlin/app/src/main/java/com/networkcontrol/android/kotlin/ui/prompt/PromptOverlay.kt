@@ -2,7 +2,6 @@ package com.networkcontrol.android.kotlin.ui.prompt
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -15,14 +14,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,8 +34,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -156,6 +158,19 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                     }
                 }
                 Spacer(Modifier.width(8.dp))
+                if (prompts.size > 1) {
+                    Text(
+                        "1 / ${prompts.size}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
                 Text(
                     networkLabel,
                     style = MaterialTheme.typography.labelSmall,
@@ -171,10 +186,10 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
 
             val rawMessage = PromptSheetText.message(s, ownName, appLabel, network.kind)
             val primaryColor = MaterialTheme.colorScheme.primary
-            val annotatedMessage = remember(rawMessage, appLabel, primaryColor) {
+            val annotatedMessage = remember(rawMessage, appLabel, ownName, primaryColor) {
                 buildAnnotatedString {
                     append(rawMessage)
-                    val start = rawMessage.indexOf(appLabel)
+                    val start = rawMessage.indexOf(appLabel, startIndex = ownName.length)
                     if (start >= 0) {
                         addStyle(
                             SpanStyle(
@@ -197,23 +212,26 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
 
             if (prefs.promptShowDetails) {
                 val first = prompt.flows.firstOrNull()
-                val target = first?.let {
-                    it.domains.firstOrNull() ?: "${it.remote.address.hostAddress}:${it.remote.port}"
-                }.orEmpty()
-                val more = if (prompt.flows.size > 1) " · " + s.format(S.PromptFlows, prompt.flows.size) else ""
-                Box(
-                    modifier = Modifier
-                        .padding(top = 10.dp)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                ) {
-                    Text(
-                        "${s[S.PromptTarget]}：$target · ${first?.let { protocolLabel(it.protocol) }.orEmpty()}$more",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                if (first != null) {
+                    val target = first.domains.firstOrNull()
+                        ?: "${first.remote.address.hostAddress}:${first.remote.port}"
+                    val more = if (prompt.flows.size > 1) " · " + s.format(S.PromptFlows, prompt.flows.size) else ""
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 10.dp)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Text(
+                            "${s[S.PromptTarget]}：$target · ${protocolLabel(first.protocol)}$more",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
             if (prompt.isTamperAlert) {
@@ -230,10 +248,16 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                 Row(
                     modifier = Modifier
                         .padding(top = 6.dp)
-                        .clickable { dontAskAgain = !dontAskAgain },
+                        .toggleable(
+                            value = dontAskAgain,
+                            role = Role.Checkbox,
+                            onValueChange = { dontAskAgain = it },
+                        )
+                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(selected = dontAskAgain, onClick = { dontAskAgain = !dontAskAgain })
+                    Checkbox(checked = dontAskAgain, onCheckedChange = null)
+                    Spacer(Modifier.width(8.dp))
                     Text(s[S.PromptDontAskAgain], fontSize = 15.sp)
                 }
             }
@@ -241,7 +265,7 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(top = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SheetAction(s[S.PromptDeny]) {
+                SheetAction(s[S.PromptDeny], color = MaterialTheme.colorScheme.error) {
                     backend.answerPrompt(
                         prompt.id,
                         VerdictAction.Deny,
@@ -269,7 +293,11 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun RowScope.SheetAction(label: String, onClick: () -> Unit) {
+private fun RowScope.SheetAction(
+    label: String,
+    color: Color = MaterialTheme.colorScheme.primary,
+    onClick: () -> Unit,
+) {
     TextButton(
         onClick = onClick,
         modifier = Modifier.weight(1f),
@@ -279,7 +307,7 @@ private fun RowScope.SheetAction(label: String, onClick: () -> Unit) {
         BasicText(
             label,
             style = MaterialTheme.typography.bodyLarge.copy(
-                color = MaterialTheme.colorScheme.primary,
+                color = color,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             ),

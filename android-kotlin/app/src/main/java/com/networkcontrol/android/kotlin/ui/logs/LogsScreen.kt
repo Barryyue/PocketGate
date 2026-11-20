@@ -20,7 +20,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -72,6 +75,7 @@ private enum class LogsTab { Blocked, Allowed, Live }
 
 @Composable
 fun LogsScreen(backend: AppBackend) {
+    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -79,6 +83,7 @@ fun LogsScreen(backend: AppBackend) {
     var filter by remember { mutableStateOf(ReasonFilter.All) }
     var activeTab by remember { mutableStateOf(LogsTab.Blocked) }
     var entries by remember { mutableStateOf<List<LogEntry>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
     var liveConnections by remember { mutableStateOf<List<AppBackend.LiveConnection>>(emptyList()) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<LogEntry?>(null) }
@@ -101,7 +106,7 @@ fun LogsScreen(backend: AppBackend) {
                 }
             }
             val message = if (result.isSuccess) {
-                s[S.ExportDone]
+                s[S.ExportLogsDone]
             } else {
                 s.format(S.ExportFailed, result.exceptionOrNull()?.message.orEmpty())
             }
@@ -118,6 +123,7 @@ fun LogsScreen(backend: AppBackend) {
                 kotlinx.coroutines.delay(2_000)
             }
         } else {
+            loaded = false
             entries = withContext(Dispatchers.IO) {
                 val action = if (activeTab == LogsTab.Allowed) {
                     com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow
@@ -126,36 +132,41 @@ fun LogsScreen(backend: AppBackend) {
                 }
                 runCatching { backend.getLogs(limit = 500, action = action) }.getOrDefault(emptyList())
             }
+            loaded = true
         }
     }
 
-    val filteredLive = liveConnections.filter { conn ->
-        query.isBlank() ||
-            conn.appLabel.contains(query, ignoreCase = true) ||
-            conn.packageName?.contains(query, ignoreCase = true) == true ||
-            conn.hostname?.contains(query, ignoreCase = true) == true ||
-            conn.remote.address.hostAddress.orEmpty().contains(query)
-    }
-
-    val filtered = entries.asSequence()
-        .filter { entry ->
+    val filteredLive = remember(liveConnections, query) {
+        liveConnections.filter { conn ->
             query.isBlank() ||
-                entry.appName?.contains(query, ignoreCase = true) == true ||
-                entry.appPath?.contains(query, ignoreCase = true) == true ||
-                entry.hostname?.contains(query, ignoreCase = true) == true ||
-                entry.remoteIp.contains(query)
+                conn.appLabel.contains(query, ignoreCase = true) ||
+                conn.packageName?.contains(query, ignoreCase = true) == true ||
+                conn.hostname?.contains(query, ignoreCase = true) == true ||
+                conn.remote.address.hostAddress.orEmpty().contains(query)
         }
-        .filter { entry ->
-            when (filter) {
-                ReasonFilter.All -> true
-                ReasonFilter.Rule -> entry.verdict.reason == VerdictReason.Rule
-                ReasonFilter.Mode -> entry.verdict.reason == VerdictReason.Mode
-                ReasonFilter.Prompt -> entry.verdict.reason == VerdictReason.Prompt
-                ReasonFilter.Dnd -> entry.verdict.reason == VerdictReason.DoNotDisturb
-                ReasonFilter.Blocklist -> entry.verdict.reason == VerdictReason.Blocklist
+    }
+
+    val filtered = remember(entries, query, filter) {
+        entries.asSequence()
+            .filter { entry ->
+                query.isBlank() ||
+                    entry.appName?.contains(query, ignoreCase = true) == true ||
+                    entry.appPath?.contains(query, ignoreCase = true) == true ||
+                    entry.hostname?.contains(query, ignoreCase = true) == true ||
+                    entry.remoteIp.contains(query)
             }
-        }
-        .toList()
+            .filter { entry ->
+                when (filter) {
+                    ReasonFilter.All -> true
+                    ReasonFilter.Rule -> entry.verdict.reason == VerdictReason.Rule
+                    ReasonFilter.Mode -> entry.verdict.reason == VerdictReason.Mode
+                    ReasonFilter.Prompt -> entry.verdict.reason == VerdictReason.Prompt
+                    ReasonFilter.Dnd -> entry.verdict.reason == VerdictReason.DoNotDisturb
+                    ReasonFilter.Blocklist -> entry.verdict.reason == VerdictReason.Blocklist
+                }
+            }
+            .toList()
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -186,7 +197,16 @@ fun LogsScreen(backend: AppBackend) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                label = { Text(s[S.SearchApps]) },
+                label = { Text(s[S.SearchLogsHint]) },
+                trailingIcon = if (query.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Rounded.Close, contentDescription = s[S.Close])
+                        }
+                    }
+                } else {
+                    null
+                },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -230,10 +250,16 @@ fun LogsScreen(backend: AppBackend) {
                     LiveConnectionRow(
                         conn = conn,
                         onCut = {
-                            backend.cutLiveConnection(conn.local, conn.remote)
-                            val target = conn.hostname ?: "${conn.remote.address.hostAddress}:${conn.remote.port}"
-                            Toast.makeText(context, s.format(S.ConnectionCutDone, target), Toast.LENGTH_SHORT).show()
-                            liveConnections = liveConnections.filterNot { it.local == conn.local && it.remote == conn.remote }
+                            guard.run {
+                                val cut = backend.cutLiveConnection(conn.local, conn.remote)
+                                if (cut) {
+                                    val target = conn.hostname ?: "${conn.remote.address.hostAddress}:${conn.remote.port}"
+                                    Toast.makeText(context, s.format(S.ConnectionCutDone, target), Toast.LENGTH_SHORT).show()
+                                    liveConnections = liveConnections.filterNot { it.local == conn.local && it.remote == conn.remote }
+                                } else {
+                                    Toast.makeText(context, s[S.ConnectionCutFailed], Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         },
                     )
                 }
@@ -254,10 +280,24 @@ fun LogsScreen(backend: AppBackend) {
                     FilterChip(filter == ReasonFilter.Blocklist, { filter = ReasonFilter.Blocklist }, { Text(s[S.ReasonBlocklist]) })
                 }
             }
-            if (filtered.isEmpty()) {
+            if (!loaded) {
                 item {
                     Text(
-                        s[S.NoLogs],
+                        s[S.Loading],
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 24.dp),
+                    )
+                }
+            } else if (filtered.isEmpty()) {
+                val emptyText = when {
+                    query.isNotBlank() || filter != ReasonFilter.All -> s[S.NoMatchingLogs]
+                    activeTab == LogsTab.Allowed -> s[S.NoAllowedLogs]
+                    else -> s[S.NoLogs]
+                }
+                item {
+                    Text(
+                        emptyText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 24.dp),
@@ -281,10 +321,12 @@ fun LogsScreen(backend: AppBackend) {
             tracker = backend.trackerOf(entry.hostname),
             listName = { id -> backend.blocklistName(id) },
             onAllowDomain = { host ->
-                scope.launch {
-                    runCatching { backend.allowDomain(host) }
-                        .onSuccess { Toast.makeText(context, s.format(S.AllowDomainDone, host), Toast.LENGTH_SHORT).show() }
-                        .onFailure { Toast.makeText(context, it.message.orEmpty(), Toast.LENGTH_SHORT).show() }
+                guard.run {
+                    scope.launch {
+                        runCatching { backend.allowDomain(host) }
+                            .onSuccess { Toast.makeText(context, s.format(S.AllowDomainDone, host), Toast.LENGTH_SHORT).show() }
+                            .onFailure { Toast.makeText(context, it.message.orEmpty(), Toast.LENGTH_SHORT).show() }
+                    }
                 }
                 selected = null
             },
@@ -525,8 +567,16 @@ private fun LogDetailDialog(
         onDismissRequest = onDismiss,
         title = { Text(s[S.LogDetail]) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                DetailRow(s[S.Time], formatDateTime(entry.firstTs))
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                val timeText = if (entry.count > 1 && entry.lastTs != entry.firstTs) {
+                    "${formatDateTime(entry.firstTs)} – ${formatDateTime(entry.lastTs)}"
+                } else {
+                    formatDateTime(entry.lastTs)
+                }
+                DetailRow(s[S.Time], timeText)
                 DetailRow(s[S.App], entry.appName ?: entry.appPath ?: "—")
                 DetailRow(s[S.Target], entry.hostname ?: "${entry.remoteIp}:${entry.remotePort}")
                 DetailRow(s[S.Protocol], protocolLabel(entry.protocol))
@@ -573,6 +623,8 @@ private fun DetailRow(label: String, value: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(96.dp),
         )
-        Text(value, style = MaterialTheme.typography.bodySmall)
+        SelectionContainer {
+            Text(value, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }

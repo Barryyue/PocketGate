@@ -62,9 +62,9 @@ fun AppLockGate(container: AppContainer, content: @Composable () -> Unit) {
     val s = rememberUiStrings()
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = container.preferences
-    var unlocked by remember { mutableStateOf(!prefs.appLockEnabled) }
-    var lastStoppedAt by remember { mutableLongStateOf(0L) }
-    var lastAuthAt by remember { mutableLongStateOf(0L) }
+    var unlocked by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(!prefs.appLockEnabled) }
+    var lastStoppedAt by androidx.compose.runtime.saveable.rememberSaveable { mutableLongStateOf(0L) }
+    var lastAuthAt by androidx.compose.runtime.saveable.rememberSaveable { mutableLongStateOf(0L) }
     var pendingAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     fun confirmIntent() = runCatching { confirmCredentialIntent(context, s[S.AppLockedTitle], s[S.AppLockConfirmAction]) }.getOrNull()
@@ -118,35 +118,41 @@ fun AppLockGate(container: AppContainer, content: @Composable () -> Unit) {
         }
     }
 
-    if (!prefs.appLockEnabled) {
-        unlocked = true
-        androidx.compose.runtime.CompositionLocalProvider(LocalSensitiveAction provides guard) { content() }
-        return
+    androidx.compose.runtime.LaunchedEffect(prefs.appLockEnabled) {
+        if (!prefs.appLockEnabled) unlocked = true
     }
-    if (unlocked) {
+
+    if (!prefs.appLockEnabled || unlocked) {
         androidx.compose.runtime.CompositionLocalProvider(LocalSensitiveAction provides guard) { content() }
         return
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    androidx.compose.material3.Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Text(
-            s[S.AppLockedTitle],
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Button(
-            onClick = {
-                val intent = runCatching { confirmCredentialIntent(context, s[S.AppLockedTitle], null) }.getOrNull()
-                if (intent == null) {
-                    Toast.makeText(context, s[S.AppLockNoCredential], Toast.LENGTH_LONG).show()
-                } else {
-                    launcher.launch(intent)
-                }
-            },
-        ) { Text(s[S.Unlock]) }
+        Column(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                s[S.AppLockedTitle],
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Button(
+                onClick = {
+                    val intent = runCatching { confirmCredentialIntent(context, s[S.AppLockedTitle], null) }.getOrNull()
+                    if (intent == null) {
+                        // 裝置已關閉系統鎖屏憑證：提示並放行，避免永久鎖死在應用鎖畫面。
+                        Toast.makeText(context, s[S.AppLockNoCredential], Toast.LENGTH_LONG).show()
+                        unlocked = true
+                    } else {
+                        launcher.launch(intent)
+                    }
+                },
+            ) { Text(s[S.Unlock]) }
+        }
     }
 }

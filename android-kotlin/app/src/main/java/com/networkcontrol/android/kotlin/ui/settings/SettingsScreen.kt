@@ -133,6 +133,8 @@ fun SettingsScreen(
     val network by backend.network.collectAsStateWithLifecycle()
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
     val themeStyle by backend.container.theme.themeStyle.collectAsStateWithLifecycle()
+    var languageTag by remember { mutableStateOf(backend.container.preferences.languageTag) }
+    var themeMode by remember { mutableStateOf(backend.container.preferences.themeMode) }
     var toolbarStyle by remember { mutableStateOf(backend.toolbarStyle()) }
     val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
     val blocklistState by backend.blocklistState.collectAsStateWithLifecycle()
@@ -264,6 +266,7 @@ fun SettingsScreen(
                 if (previewMerge == null) {
                     toast(s.format(S.ImportFailed, "invalid file"))
                 } else {
+                    importMode = RuleImportMode.Merge
                     showImportDialog = true
                 }
             }.onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
@@ -287,7 +290,7 @@ fun SettingsScreen(
             SectionCard(s[S.Appearance]) {
                 DropdownSetting(
                     label = s[S.Language],
-                    current = when (backend.container.preferences.languageTag) {
+                    current = when (languageTag) {
                         "zh-CN" -> s[S.ChineseSimplified]
                         "zh-TW" -> s[S.ChineseTraditional]
                         "en-US" -> s[S.English]
@@ -299,11 +302,14 @@ fun SettingsScreen(
                         s[S.ChineseTraditional] to "zh-TW",
                         s[S.English] to "en-US",
                     ),
-                    onSelected = { backend.setLanguage(it) },
+                    onSelected = {
+                        languageTag = it
+                        backend.setLanguage(it)
+                    },
                 )
                 DropdownSetting(
                     label = s[S.Theme],
-                    current = when (backend.container.preferences.themeMode) {
+                    current = when (themeMode) {
                         "light" -> s[S.ThemeLight]
                         "dark" -> s[S.ThemeDark]
                         else -> s[S.ThemeSystem]
@@ -313,7 +319,11 @@ fun SettingsScreen(
                         s[S.ThemeLight] to "light",
                         s[S.ThemeDark] to "dark",
                     ),
-                    onSelected = { backend.setTheme(it ?: "system") },
+                    onSelected = {
+                        val mode = it ?: "system"
+                        themeMode = mode
+                        backend.setTheme(mode)
+                    },
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(s[S.ThemeStyle], style = MaterialTheme.typography.bodyMedium)
@@ -364,32 +374,31 @@ fun SettingsScreen(
                     onCheckedChange = { enabled ->
                         if (enabled && !canDrawOverlays) {
                             toast(s[S.OverlayDenied])
+                            runCatching { context.startActivity(backend.overlayPermissionIntent()) }
                         } else {
                             speedIsland = enabled
                             backend.setSpeedIslandEnabled(enabled)
                         }
                     },
                 )
-                if (speedIsland) {
-                    val modeLabel = when (islandMode) {
-                        SpeedIslandMode.Full -> s[S.IslandModeFull]
-                        SpeedIslandMode.Cycle -> s[S.IslandModeCycle]
-                        SpeedIslandMode.Mini -> s[S.IslandModeMini]
-                    }
-                    val contentLabel = when (islandContent) {
-                        SpeedIslandContent.Speed -> s[S.IslandContentSpeed]
-                        SpeedIslandContent.Traffic -> s[S.IslandContentTraffic]
-                        SpeedIslandContent.Blocked -> s[S.IslandContentBlocked]
-                        SpeedIslandContent.Pending -> s[S.IslandContentPending]
-                        SpeedIslandContent.Network -> s[S.IslandContentNetwork]
-                    }
-                    SettingsNavRow(
-                        title = s[S.IslandConfig],
-                        subtitle = "$contentLabel · $modeLabel · ${(islandOpacity * 100).roundToInt()}%",
-                        actionText = s[S.Edit],
-                        onClick = onOpenIslandSettings,
-                    )
+                val modeLabel = when (islandMode) {
+                    SpeedIslandMode.Full -> s[S.IslandModeFull]
+                    SpeedIslandMode.Cycle -> s[S.IslandModeCycle]
+                    SpeedIslandMode.Mini -> s[S.IslandModeMini]
                 }
+                val contentLabel = when (islandContent) {
+                    SpeedIslandContent.Speed -> s[S.IslandContentSpeed]
+                    SpeedIslandContent.Traffic -> s[S.IslandContentTraffic]
+                    SpeedIslandContent.Blocked -> s[S.IslandContentBlocked]
+                    SpeedIslandContent.Pending -> s[S.IslandContentPending]
+                    SpeedIslandContent.Network -> s[S.IslandContentNetwork]
+                }
+                SettingsNavRow(
+                    title = s[S.IslandConfig],
+                    subtitle = "$contentLabel · $modeLabel · ${(islandOpacity * 100).roundToInt()}%",
+                    actionText = s[S.Edit],
+                    onClick = onOpenIslandSettings,
+                )
             }
         }
 
@@ -439,7 +448,9 @@ fun SettingsScreen(
                     title = s[S.AllowSystemApps],
                     subtitle = s[S.AllowSystemAppsHint],
                     checked = settings.allowSystemAppsByDefault,
-                    onCheckedChange = { backend.setAllowSystemAppsByDefault(it) },
+                    onCheckedChange = { enabled ->
+                        guard.run { backend.setAllowSystemAppsByDefault(enabled) }
+                    },
                 )
                 SettingsNavRow(
                     title = s[S.TrustedPublishers],
@@ -459,9 +470,11 @@ fun SettingsScreen(
                     title = s[S.BlockOnLock],
                     subtitle = s[S.BlockOnLockHint],
                     checked = blockOnLock,
-                    onCheckedChange = {
-                        blockOnLock = it
-                        backend.setBlockOnLockScreen(it)
+                    onCheckedChange = { enabled ->
+                        guard.run {
+                            blockOnLock = enabled
+                            backend.setBlockOnLockScreen(enabled)
+                        }
                     },
                 )
                 if (blockOnLock) {
@@ -477,8 +490,10 @@ fun SettingsScreen(
                     subtitle = s[S.CloneIndependentHint],
                     checked = cloneIndependent,
                     onCheckedChange = { independent ->
-                        cloneIndependent = independent
-                        backend.setCloneAppsInheritPrimary(!independent)
+                        guard.run {
+                            cloneIndependent = independent
+                            backend.setCloneAppsInheritPrimary(!independent)
+                        }
                     },
                 )
                 SettingsNavRow(
@@ -892,8 +907,10 @@ fun SettingsScreen(
             allowedByRulePackages = allowedByRulePackages,
             onDismiss = { showLockWhitelistDialog = false },
             onSave = { packages ->
-                lockWhitelist = packages
-                backend.setLockScreenWhitelist(packages)
+                guard.run {
+                    lockWhitelist = packages
+                    backend.setLockScreenWhitelist(packages)
+                }
                 showLockWhitelistDialog = false
             },
         )
@@ -916,11 +933,14 @@ fun SettingsScreen(
             onDismiss = { showImportDialog = false },
             onApply = {
                 val json = importJson
+                val mode = importMode
                 if (json != null) {
-                    scope.launch {
-                        runCatching { backend.applyImport(json, importMode) }
-                            .onSuccess { toast(s[S.ImportDone]) }
-                            .onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
+                    guard.run {
+                        scope.launch {
+                            runCatching { backend.applyImport(json, mode) }
+                                .onSuccess { toast(s[S.ImportDone]) }
+                                .onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
+                        }
                     }
                 }
                 showImportDialog = false
@@ -1008,6 +1028,8 @@ private fun WebDavBackupDialog(
     var passphrase by remember { mutableStateOf(backend.webdavPassphrase()) }
     var busy by remember { mutableStateOf(false) }
     var lastSyncAt by remember { mutableStateOf(backend.webdavLastSyncAt()) }
+    val trimmedUrl = url.trim()
+    val urlInvalid = trimmedUrl.isNotEmpty() && !trimmedUrl.startsWith("https://", ignoreCase = true)
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -1024,6 +1046,7 @@ private fun WebDavBackupDialog(
                     onValueChange = { url = it },
                     label = { Text(s[S.WebDavUrl]) },
                     placeholder = { Text("https://dav.example.com/pocketgate/") },
+                    isError = urlInvalid,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1068,7 +1091,13 @@ private fun WebDavBackupDialog(
                                 onToast(s[S.OfflineModeBlocked])
                                 return@Button
                             }
-                            backend.saveWebdavConfig(url, username, password, passphrase)
+                            val cleanUrl = url.trim()
+                            if (!cleanUrl.startsWith("https://", ignoreCase = true)) {
+                                onToast(s[S.InvalidHttpsUrl])
+                                return@Button
+                            }
+                            url = cleanUrl
+                            backend.saveWebdavConfig(cleanUrl, username, password, passphrase)
                             busy = true
                             scope.launch {
                                 val res = backend.uploadWebdavBackup()
@@ -1090,7 +1119,13 @@ private fun WebDavBackupDialog(
                                 onToast(s[S.OfflineModeBlocked])
                                 return@OutlinedButton
                             }
-                            backend.saveWebdavConfig(url, username, password, passphrase)
+                            val cleanUrl = url.trim()
+                            if (!cleanUrl.startsWith("https://", ignoreCase = true)) {
+                                onToast(s[S.InvalidHttpsUrl])
+                                return@OutlinedButton
+                            }
+                            url = cleanUrl
+                            backend.saveWebdavConfig(cleanUrl, username, password, passphrase)
                             busy = true
                             scope.launch {
                                 val res = backend.downloadWebdavBackup()
@@ -1111,7 +1146,12 @@ private fun WebDavBackupDialog(
             TextButton(
                 enabled = !busy,
                 onClick = {
-                    backend.saveWebdavConfig(url, username, password, passphrase)
+                    val cleanUrl = url.trim()
+                    if (cleanUrl.isNotEmpty() && !cleanUrl.startsWith("https://", ignoreCase = true)) {
+                        onToast(s[S.InvalidHttpsUrl])
+                        return@TextButton
+                    }
+                    backend.saveWebdavConfig(cleanUrl, username, password, passphrase)
                     onDismiss()
                 },
             ) { Text(s[S.Close]) }
@@ -1165,6 +1205,7 @@ private fun TrustedPublishersDialog(
     onDismiss: () -> Unit,
 ) {
     val s = rememberUiStrings()
+    var confirmClear by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(s[S.TrustedPublishers]) },
@@ -1197,12 +1238,30 @@ private fun TrustedPublishersDialog(
         },
         dismissButton = {
             if (signers.isNotEmpty()) {
-                TextButton(onClick = onClearAll) {
+                TextButton(onClick = { confirmClear = true }) {
                     Text(s[S.ClearTrustedPublishers])
                 }
             }
         },
     )
+    if (confirmClear) {
+        AlertDialog(
+            onDismissRequest = { confirmClear = false },
+            title = { Text(s[S.ClearTrustedPublishers]) },
+            text = { Text(s[S.ClearTrustedConfirm]) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmClear = false
+                        onClearAll()
+                    },
+                ) { Text(s[S.Delete]) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClear = false }) { Text(s[S.Cancel]) }
+            },
+        )
+    }
 }
 
 @Composable
@@ -1275,7 +1334,12 @@ internal fun ProfileDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (profile == null) s[S.AddProfile] else s[S.Edit]) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 480.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
