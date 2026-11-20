@@ -4,6 +4,8 @@
 
 # PocketGate
 
+**中文** · [English](README.en.md)
+
 **每個應用第一次聯網，都先問你。**
 
 跨平台（Android / Windows）的按應用聯網控制工具：應用首次聯網時彈窗詢問，<br>
