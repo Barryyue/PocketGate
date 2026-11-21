@@ -40,6 +40,24 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.6",
+            date = "2026-11-21",
+            features = listOf(
+                t(
+                    "One-tap domain blocking from Logs & system core UID support: allowed log details now offer Block domain, and manual domain-deny rules apply to shared system UIDs (e.g. UID 1000) in per-connection mode while keeping DNS resolver (UID 1051) protected",
+                    "记录详情一键拦截域名与系统核心 UID 提示：已放行连接详情新增「拦截此域名」按钮，逐连接模式下支持手动域名拒绝规则精准拦截系统核心 UID（如 UID 1000 日志采集），同时在应用页清晰说明共用 UID 限制",
+                    "記錄詳情一鍵攔截網域與系統核心 UID 提示：已放行連線詳情新增「攔截此網域」按鈕，逐連線模式下支援手動網域拒絕規則精準攔截系統核心 UID（如 UID 1000 日誌採集），同時在應用程式頁清楚說明共用 UID 限制",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Larger status bar speed icon: enlarged unit typography (+55%) and filled the full 96x96 notification icon canvas for better readability",
+                    "原生状态栏网速图标放大优化：大幅增大单位字号并撑满 96×96 通知图标画布，显著提升状态栏小图标清晰度",
+                    "原生狀態列網速圖示放大最佳化：大幅增大單位字號並撐滿 96×96 通知圖示畫布，顯著提升狀態列小圖示清晰度",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.5",
             date = "2026-11-21",
             features = listOf(

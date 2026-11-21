@@ -518,7 +518,7 @@
 |---|---|---|---|---|
 | K-173 | 全頁面 UI/UX 細節批量修復（2026-11-21）：修復 `AppLockGate` 鎖屏底色、轉屏重鎖與無憑證鎖死並補齊各頁 `guard.run` 敏感操作校驗；`RulesScreen` 顯示域名／遠端目標與搜尋及刪除確認；修復總覽轉發磁貼、切換設定檔、主題語言下拉、退出偵測等狀態同步；修正 `PromptOverlay` 懸浮底欄重疊與按鈕區分；強化 SOCKS5／DoH／WebDAV／彈窗捲動與輸入校驗；釋放狀態列網速圖示入口、清除重複卡片並對內建引導文案脫敏；最佳化 `SpeedChartCard` 重繪分配與亮色主題對比度 | `AppLockGate.kt`、`AppRoot.kt`、`Theme.kt`、`ThemeColorDialog.kt`、`UiStrings.kt`、`OverviewScreen.kt`、`SpeedChartCard.kt`、`AppsScreen.kt`、`RulesScreen.kt`、`LogsScreen.kt`、`PromptOverlay.kt`、`SettingsScreen.kt`、`ForwardingSettingsScreen.kt`、`BlocklistSettingsScreen.kt`、`PromptSettingsScreen.kt`、`SpeedIslandSettingsScreen.kt`、`ProfileScheduleSettingsScreen.kt` | `.\scripts\android-kotlin.ps1 test`（`:app:testDebugUnitTest` `BUILD SUCCESSFUL`） | 真機各頁互動、鎖屏與小螢幕捲動待用戶確認 |
 
-### 未發版（2026-11-21）
+### v0.16.6（2026-11-21）
 
 | ID | 功能 | 實作位置 | 驗證 | 備註 |
 |---|---|---|---|---|
