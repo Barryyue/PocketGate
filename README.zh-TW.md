@@ -11,7 +11,7 @@
 跨平台（Android / Windows）的按應用聯網控制工具：應用首次聯網時彈窗詢問，<br>
 規則精確到網域、IP 與埠，全程在本機執行，不收集任何資料。
 
-[![Android](https://img.shields.io/badge/Android-0.16.2-3DDC84?logo=android&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
+[![Android](https://img.shields.io/badge/Android-0.16.6-3DDC84?logo=android&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![Windows](https://img.shields.io/badge/Windows-0.3.0-0078D4?logo=windows&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE)
 [![No root](https://img.shields.io/badge/root-not%20required-C9F45A)](#android-版)

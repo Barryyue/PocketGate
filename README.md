@@ -11,7 +11,7 @@
 跨平台（Android / Windows）的按应用联网控制工具：应用首次联网时弹窗询问，<br>
 规则精确到域名、IP 与端口，全程在本机运行，不收集任何数据。
 
-[![Android](https://img.shields.io/badge/Android-0.16.2-3DDC84?logo=android&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
+[![Android](https://img.shields.io/badge/Android-0.16.6-3DDC84?logo=android&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![Windows](https://img.shields.io/badge/Windows-0.3.0-0078D4?logo=windows&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE)
 [![No root](https://img.shields.io/badge/root-not%20required-C9F45A)](#android-版)
