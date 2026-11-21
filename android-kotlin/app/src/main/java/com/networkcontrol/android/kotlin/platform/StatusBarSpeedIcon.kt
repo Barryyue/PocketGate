@@ -25,18 +25,18 @@ object StatusBarSpeedIcon {
     private val unitPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        typeface = Typeface.create("sans-serif", Typeface.BOLD)
-        textSize = 27f
+        typeface = Typeface.create("sans-serif-condensed", Typeface.BOLD)
+        textSize = 42f
     }
 
-    /** 格式化為（數字字串, 單位字串），便於雙行排版與單元測試（100 以下保留 1 位小數，貼近系統原生網速顯示）。 */
+    /** 格式化為（數字字串, 單位字串）；10 以上採整數以騰出最大字號，確保在 16dp 通知圖示內清晰可讀。 */
     internal fun splitSpeed(bytesPerSecond: Long): Pair<String, String> {
         val bps = bytesPerSecond.coerceAtLeast(0L)
         return when {
             bps < 1024L -> bps.toString() to "B/s"
-            bps < 100L * 1024L -> "%.1f".format(bps / 1024.0) to "KB/s"
+            bps < 10L * 1024L -> "%.1f".format(bps / 1024.0) to "KB/s"
             bps < 1024L * 1024L -> (bps / 1024L).toString() to "KB/s"
-            bps < 100L * 1024L * 1024L -> "%.1f".format(bps / (1024.0 * 1024.0)) to "MB/s"
+            bps < 10L * 1024L * 1024L -> "%.1f".format(bps / (1024.0 * 1024.0)) to "MB/s"
             bps < 1024L * 1024L * 1024L -> (bps / (1024L * 1024L)).toString() to "MB/s"
             else -> "%.1f".format(bps / (1024.0 * 1024.0 * 1024.0)) to "GB/s"
         }
@@ -47,21 +47,32 @@ object StatusBarSpeedIcon {
         val (num, unit) = splitSpeed(total)
         val bitmap = Bitmap.createBitmap(SIZE_PX, SIZE_PX, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        var size = when {
-            num.length >= 4 -> 44f
-            num.length == 3 -> 50f
-            else -> 56f
+
+        // 撐滿 96×96 畫布上下半區（減少留白浪費），確保 SystemUI 縮放到 ~16dp 時數字與單位依然清晰。
+        var numSize = when {
+            num.length >= 4 -> 50f
+            num.length == 3 -> 54f
+            else -> 60f
         }
-        numberPaint.textSize = size
-        val maxWidth = SIZE_PX - 6f
-        val measured = numberPaint.measureText(num)
-        if (measured > maxWidth) {
-            size *= maxWidth / measured
-            numberPaint.textSize = size
+        numberPaint.textSize = numSize
+        val maxWidth = SIZE_PX - 2f
+        val measuredNum = numberPaint.measureText(num)
+        if (measuredNum > maxWidth) {
+            numSize *= maxWidth / measuredNum
+            numberPaint.textSize = numSize
         }
+
+        var unitSize = 42f
+        unitPaint.textSize = unitSize
+        val measuredUnit = unitPaint.measureText(unit)
+        if (measuredUnit > maxWidth) {
+            unitSize *= maxWidth / measuredUnit
+            unitPaint.textSize = unitSize
+        }
+
         val cx = SIZE_PX / 2f
-        canvas.drawText(num, cx, 46f, numberPaint)
-        canvas.drawText(unit, cx, 80f, unitPaint)
+        canvas.drawText(num, cx, 49f, numberPaint)
+        canvas.drawText(unit, cx, 92f, unitPaint)
         return IconCompat.createWithBitmap(bitmap)
     }
 }
