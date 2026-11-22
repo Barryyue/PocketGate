@@ -11,7 +11,7 @@
 Per-app network control for Android and Windows: a prompt when an app connects for the first time,<br>
 rules down to domain, IP and port, running entirely on your device with zero data collection.
 
-[![Android](https://img.shields.io/badge/Android-0.16.7-3DDC84?logo=android&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
+[![Android](https://img.shields.io/badge/Android-0.16.8-3DDC84?logo=android&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![Windows](https://img.shields.io/badge/Windows-0.3.0-0078D4?logo=windows&logoColor=white)](https://github.com/Barryyue/PocketGate/releases)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue)](LICENSE)
 [![No root](https://img.shields.io/badge/root-not%20required-C9F45A)](#android)

@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.8",
+            date = "2026-11-22",
+            features = listOf(
+                t(
+                    "Light Mist app icon & in-app icon switcher: added a light-toned adaptive launcher icon and a visual Dark / Light icon selector under Settings → Appearance",
+                    "浅色晨雾应用图标与设置页切换：新增浅色调自适应桌面图标，可在「设置 → 外观与显示」中预览并一键切换深色黑曜 / 浅色晨雾图标",
+                    "淺色晨霧應用程式圖示與設定頁切換：新增淺色調自適應桌面圖示，可在「設定 → 外觀與顯示」中預覽並一鍵切換深色黑曜 / 淺色晨霧圖示",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.7",
             date = "2026-11-22",
             features = emptyList(),

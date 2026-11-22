@@ -530,6 +530,12 @@
 |---|---|---|---|---|
 | K-175 | 詢問彈窗與設定頁控制項聯動最佳化（2026-11-22）：系統懸浮窗（`PromptOverlayController`）與應用內卡片（`PromptOverlay`）在勾選「禁止後不再提示」後自動置灰停用「允許 / 僅一次 / 限時」按鈕（同步對齊 Avalonia 版 `PromptOverlayService` / `PromptOverlay`），並修復主文案應用名高亮起始偏移；`SwitchRow` 新增 `enabled` 參數，關閉顯示連線詳情時停用「鎖屏隱藏詳情」、靈動島偏移歸零時停用「重設」、轉發設定自訂 DoH URL 與 SOCKS5 輸入無效時停用「儲存 / 測試代理」 | `PromptOverlayController.kt`、`PromptOverlay.kt`、`SettingsScreen.kt`、`PromptSettingsScreen.kt`、`SpeedIslandSettingsScreen.kt`、`ForwardingSettingsScreen.kt`、`PromptOverlayService.cs`、`PromptOverlay.axaml`、`PromptViewModel.cs` | `.\scripts\android-kotlin.ps1 test` + `dotnet build NetworkControl.Android.slnx` | 懸浮窗與設定頁實際視覺與互動待真機確認 |
 
+### v0.16.8（2026-11-22）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-176 | 淺色調應用圖示與設定頁動態切換（2026-11-22）：新增淺色晨霧（Light Mist）自適應向量圖示（`ic_launcher_light.xml`、`ic_launcher_light_background.xml`、`ic_launcher_light_foreground.xml`），在 `AndroidManifest.xml` 拆分 `.LauncherDark` / `.LauncherLight` 兩個 `<activity-alias>`（`.MainActivity` 始終啟用不影響通知與掛件跳轉），透過 `AppIconSwitcher` 互斥切換，並在設定頁「外觀與顯示」新增雙圖示即時預覽選擇器 | `ic_launcher_light.xml`、`ic_launcher_light_background.xml`、`ic_launcher_light_foreground.xml`、`AndroidManifest.xml`、`AppIconSwitcher.kt`、`AppPreferences.kt`、`AppBackend.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`AppIconSwitcherTest.kt` | `.\scripts\android-kotlin.ps1 test` + `assembleDebug` | 真機桌面圖示切換與各廠商桌面刷新效果待用戶實測確認 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |
