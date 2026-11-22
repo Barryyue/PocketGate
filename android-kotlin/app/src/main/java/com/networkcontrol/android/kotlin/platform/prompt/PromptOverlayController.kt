@@ -312,7 +312,8 @@ class PromptOverlayController(
         val ownName = context.applicationInfo.loadLabel(context.packageManager).toString()
         val rawMessage = PromptSheetText.message(strings, ownName, appLabel, networkKind)
         val spannable = SpannableString(rawMessage)
-        val appStart = rawMessage.indexOf(appLabel)
+        val appStart = rawMessage.indexOf(appLabel, startIndex = ownName.length)
+            .let { if (it >= 0) it else rawMessage.indexOf(appLabel) }
         if (appStart >= 0) {
             val appEnd = appStart + appLabel.length
             spannable.setSpan(StyleSpan(Typeface.BOLD), appStart, appEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -364,8 +365,26 @@ class PromptOverlayController(
 
         val denyPermanent = preferences.promptDenyPermanent
         var dontAskAgain = false
+        val disabledActionColor = (onSurface and 0x00FFFFFF) or 0x61000000
+        val allowButtons = mutableListOf<TextView>()
+        fun updateAllowButtonsEnabled(enabled: Boolean) {
+            allowButtons.forEach { button ->
+                button.isEnabled = enabled
+                button.isClickable = enabled
+                button.setTextColor(if (enabled) accent else disabledActionColor)
+                button.background = if (enabled) {
+                    RippleDrawable(
+                        ColorStateList.valueOf((accent and 0x00FFFFFF) or 0x33000000),
+                        null,
+                        ColorDrawable(Color.WHITE),
+                    )
+                } else {
+                    null
+                }
+            }
+        }
         if (!denyPermanent) {
-            // 勾選後「禁止」改為永久禁止；不勾只禁止到應用關閉。圓形勾選與紅魔一致。
+            // 勾選後「禁止」改為永久禁止，並停用其餘允許按鈕（與紅魔互動一致）；不勾只禁止到應用關閉。
             val dontAsk = RadioButton(context).apply {
                 text = strings[S.PromptDontAskAgain]
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
@@ -377,6 +396,7 @@ class PromptOverlayController(
                 setOnClickListener {
                     dontAskAgain = !dontAskAgain
                     isChecked = dontAskAgain
+                    updateAllowButtonsEnabled(!dontAskAgain)
                 }
             }
             root.addView(
@@ -396,7 +416,7 @@ class PromptOverlayController(
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(8), 0, 0)
         }
-        fun addAction(label: String, onClick: () -> Unit) {
+        fun addAction(label: String, isAllowAction: Boolean = true, onClick: () -> Unit) {
             if (actions.childCount > 0) {
                 actions.addView(
                     View(context).apply { setBackgroundColor(divider) },
@@ -415,14 +435,16 @@ class PromptOverlayController(
                     ColorDrawable(Color.WHITE),
                 )
                 setOnClickListener {
+                    if (!isEnabled) return@setOnClickListener
                     dismissedId = prompt.id
                     onClick()
                     hide()
                 }
             }
+            if (isAllowAction) allowButtons.add(button)
             actions.addView(button, LinearLayout.LayoutParams(0, dp(52), 1f))
         }
-        addAction(strings[S.PromptDeny]) {
+        addAction(strings[S.PromptDeny], isAllowAction = false) {
             onAnswer?.invoke(prompt.id, VerdictAction.Deny, PromptDenyPolicy.lifetime(dontAskAgain, denyPermanent))
         }
         addAction(strings[S.Allow]) {

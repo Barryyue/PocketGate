@@ -369,6 +369,7 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             modifier = Modifier.weight(1f),
                         )
                         TextButton(
+                            enabled = offsetX != 0 || offsetY != 0,
                             onClick = {
                                 offsetX = 0
                                 offsetY = 0

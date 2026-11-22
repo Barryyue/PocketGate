@@ -265,6 +265,7 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(top = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val allowEnabled = !dontAskAgain
                 SheetAction(s[S.PromptDeny], color = MaterialTheme.colorScheme.error) {
                     backend.answerPrompt(
                         prompt.id,
@@ -274,16 +275,16 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                     )
                 }
                 SheetDivider()
-                SheetAction(s[S.Allow]) {
+                SheetAction(s[S.Allow], enabled = allowEnabled) {
                     backend.answerPrompt(prompt.id, VerdictAction.Allow, RuleLifetime.Permanent, null)
                 }
                 SheetDivider()
-                SheetAction(s[S.PromptOnce]) {
+                SheetAction(s[S.PromptOnce], enabled = allowEnabled) {
                     backend.answerPrompt(prompt.id, VerdictAction.Allow, RuleLifetime.UntilAppExit, null)
                 }
                 if (prefs.promptShowTimedOption) {
                     SheetDivider()
-                    SheetAction(s.format(S.PromptTimedShort, timedMinutes)) {
+                    SheetAction(s.format(S.PromptTimedShort, timedMinutes), enabled = allowEnabled) {
                         backend.answerPrompt(prompt.id, VerdictAction.Allow, RuleLifetime.Timed, timedMinutes * 60)
                     }
                 }
@@ -296,10 +297,13 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
 private fun RowScope.SheetAction(
     label: String,
     color: Color = MaterialTheme.colorScheme.primary,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
+    val textColor = if (enabled) color else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
     TextButton(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.weight(1f),
         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
     ) {
@@ -307,7 +311,7 @@ private fun RowScope.SheetAction(
         BasicText(
             label,
             style = MaterialTheme.typography.bodyLarge.copy(
-                color = color,
+                color = textColor,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             ),

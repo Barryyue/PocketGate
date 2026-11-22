@@ -270,7 +270,12 @@ public sealed class PromptOverlayService : IDisposable
         var ownName = _context.ApplicationInfo?.LoadLabel(_context.PackageManager!).ToString() ?? "PocketGate";
         var rawMessage = localizer.Format(_context, PromptLangResourceKind.RequestMessage, ownName, appName, networkLabel);
         var spannable = new SpannableString(rawMessage);
-        var appStart = rawMessage.IndexOf(appName, StringComparison.Ordinal);
+        var appStart = rawMessage.IndexOf(appName, ownName.Length, StringComparison.Ordinal);
+        if (appStart < 0)
+        {
+            appStart = rawMessage.IndexOf(appName, StringComparison.Ordinal);
+        }
+
         if (appStart >= 0)
         {
             var appEnd = appStart + appName.Length;
@@ -323,6 +328,24 @@ public sealed class PromptOverlayService : IDisposable
 
         var denyPermanent = _preferences.PromptDenyPermanent;
         var dontAskAgain = false;
+        var disabledActionColor = Color.Argb(0x61, onSurface.R, onSurface.G, onSurface.B);
+        var allowButtons = new List<TextView>();
+        void UpdateAllowButtonsEnabled(bool enabled)
+        {
+            foreach (var button in allowButtons)
+            {
+                button.Enabled = enabled;
+                button.Clickable = enabled;
+                button.SetTextColor(enabled ? accent : disabledActionColor);
+                button.Background = enabled
+                    ? new RippleDrawable(
+                        ColorStateList.ValueOf(Color.Argb(0x33, accent.R, accent.G, accent.B)),
+                        null,
+                        new ColorDrawable(Color.White))
+                    : null;
+            }
+        }
+
         if (!denyPermanent)
         {
             var dontAsk = new RadioButton(_context)
@@ -338,6 +361,7 @@ public sealed class PromptOverlayService : IDisposable
             {
                 dontAskAgain = !dontAskAgain;
                 dontAsk.Checked = dontAskAgain;
+                UpdateAllowButtonsEnabled(!dontAskAgain);
             };
             var dontAskLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent)
             {
@@ -355,7 +379,7 @@ public sealed class PromptOverlayService : IDisposable
         actions.SetGravity(GravityFlags.CenterVertical);
         actions.SetPadding(0, Dp(8), 0, 0);
 
-        void AddAction(string label, Action onClick)
+        void AddAction(string label, Action onClick, bool isAllowAction = true)
         {
             if (actions.ChildCount > 0)
             {
@@ -374,10 +398,16 @@ public sealed class PromptOverlayService : IDisposable
                 new ColorDrawable(Color.White));
             btn.Click += (_, _) =>
             {
+                if (!btn.Enabled) return;
                 _dismissedId = prompt.Id;
                 onClick();
                 RemoveView();
             };
+            if (isAllowAction)
+            {
+                allowButtons.Add(btn);
+            }
+
             actions.AddView(btn, new LinearLayout.LayoutParams(0, Dp(52), 1f));
         }
 
@@ -385,7 +415,7 @@ public sealed class PromptOverlayService : IDisposable
         {
             var lifetime = denyPermanent || dontAskAgain ? RuleLifetime.Permanent : RuleLifetime.UntilRestart;
             SubmitAnswer(prompt.Id, VerdictAction.Deny, lifetime, null);
-        });
+        }, isAllowAction: false);
         AddAction(localizer.Get(_context, CommonLangResourceKind.Allow), () =>
             SubmitAnswer(prompt.Id, VerdictAction.Allow, RuleLifetime.Permanent, null));
         AddAction(localizer.Get(_context, PromptLangResourceKind.Once), () =>

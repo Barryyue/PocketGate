@@ -67,15 +67,18 @@
                        Content="{loc:PromptLangResource Deny}" />
           <atom:Button ButtonType="Text" HorizontalAlignment="Stretch" Height="48"
                        FontSize="16" FontWeight="Bold"
+                       IsEnabled="{Binding CanAllow}"
                        Command="{Binding AllowCommand}" IsLoading="{Binding IsBusy}"
                        Content="{loc:CommonLangResource Allow}" />
           <atom:Button ButtonType="Text" HorizontalAlignment="Stretch" Height="48"
                        FontSize="16" FontWeight="Bold"
+                       IsEnabled="{Binding CanAllow}"
                        Command="{Binding AllowOnceCommand}" IsLoading="{Binding IsBusy}"
                        Content="{loc:PromptLangResource Once}" />
           <atom:Button ButtonType="Text" HorizontalAlignment="Stretch" Height="48"
                        FontSize="15" FontWeight="Bold"
                        IsVisible="{Binding ShowTimedOption}"
+                       IsEnabled="{Binding CanAllow}"
                        Command="{Binding AllowTimedCommand}" IsLoading="{Binding IsBusy}"
                        Content="{Binding TimedLabel}" />
         </UniformGrid>

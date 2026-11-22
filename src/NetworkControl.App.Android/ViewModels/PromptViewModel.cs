@@ -51,7 +51,10 @@ public sealed partial class PromptViewModel : LocalizedViewModel
     public partial int DurationIndex { get; set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanAllow))]
     public partial bool DontAskAgain { get; set; }
+
+    public bool CanAllow => !DontAskAgain;
 
     [ObservableProperty]
     public partial Bitmap? Icon { get; set; }

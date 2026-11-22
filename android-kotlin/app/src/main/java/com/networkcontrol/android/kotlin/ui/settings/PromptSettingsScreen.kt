@@ -212,6 +212,7 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     SwitchRow(
                         title = s[S.HidePromptDetailsOnLock],
                         checked = hideOnLock,
+                        enabled = promptDetails,
                         onCheckedChange = {
                             hideOnLock = it
                             backend.setPromptHideDetailsOnLockScreen(it)

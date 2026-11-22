@@ -235,16 +235,19 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                     singleLine = true,
                                     modifier = Modifier.weight(1f),
                                 )
-                                TextButton(onClick = {
-                                    val url = exitDnsUrl.trim()
-                                    if (!url.startsWith("https://", ignoreCase = true)) {
-                                        toast(s[S.InvalidHttpsUrl])
-                                        return@TextButton
-                                    }
-                                    exitDnsUrl = url
-                                    backend.setExitDnsCustomUrl(url)
-                                    toast(s[S.Done])
-                                }) { Text(s[S.Save]) }
+                                TextButton(
+                                    enabled = exitDnsUrl.startsWith("https://", ignoreCase = true),
+                                    onClick = {
+                                        val url = exitDnsUrl.trim()
+                                        if (!url.startsWith("https://", ignoreCase = true)) {
+                                            toast(s[S.InvalidHttpsUrl])
+                                            return@TextButton
+                                        }
+                                        exitDnsUrl = url
+                                        backend.setExitDnsCustomUrl(url)
+                                        toast(s[S.Done])
+                                    },
+                                ) { Text(s[S.Save]) }
                             }
                         }
                         if (exitDns != "system") {
@@ -307,6 +310,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(
+                                enabled = socks5HostValid && socks5PortValid,
                                 onClick = {
                                     val host = socks5Host.trim()
                                     val port = socks5Port.toIntOrNull()
@@ -358,7 +362,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                         )
                                     }
                                 },
-                                enabled = !proxyTesting,
+                                enabled = !proxyTesting && socks5HostValid && socks5PortValid,
                             ) {
                                 Text(if (proxyTesting) s[S.Loading] else s[S.ProxyTest])
                             }
