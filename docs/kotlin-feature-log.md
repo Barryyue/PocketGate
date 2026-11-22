@@ -524,6 +524,12 @@
 |---|---|---|---|---|
 | K-174 | 系統核心 UID 卡片提示與逐連線手動網域攔截（2026-11-21）：`AppsScreen` 對 `UID < 10000`（如 `com.android.bbklog` 共用 UID 1000）顯示無法依應用單獨阻斷的說明並隱藏無效按鈕；`ForwardingPolicy.decide` 放行使用者手動條件規則（如網域拒絕規則）套用於系統核心 UID（仍跳過自動廣告名單防誤殺）；`LogsScreen` 已放行記錄詳情新增一鍵「攔截此網域」（`AppBackend.denyDomain`） | `ForwardingPacketFilter.kt`、`AppBackend.kt`、`AppsScreen.kt`、`LogsScreen.kt`、`UiStrings.kt`、`ForwardingTest.kt` | `.\scripts\android-kotlin.ps1 test`（含 `systemUidHonorsManualDomainDenyRuleButSkipsAutoBlocklist`） | 真機針對系統日誌採集網域一鍵攔截待用戶確認 |
 
+### v0.16.7（2026-11-22）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-175 | 詢問彈窗與設定頁控制項聯動最佳化（2026-11-22）：系統懸浮窗（`PromptOverlayController`）與應用內卡片（`PromptOverlay`）在勾選「禁止後不再提示」後自動置灰停用「允許 / 僅一次 / 限時」按鈕（同步對齊 Avalonia 版 `PromptOverlayService` / `PromptOverlay`），並修復主文案應用名高亮起始偏移；`SwitchRow` 新增 `enabled` 參數，關閉顯示連線詳情時停用「鎖屏隱藏詳情」、靈動島偏移歸零時停用「重設」、轉發設定自訂 DoH URL 與 SOCKS5 輸入無效時停用「儲存 / 測試代理」 | `PromptOverlayController.kt`、`PromptOverlay.kt`、`SettingsScreen.kt`、`PromptSettingsScreen.kt`、`SpeedIslandSettingsScreen.kt`、`ForwardingSettingsScreen.kt`、`PromptOverlayService.cs`、`PromptOverlay.axaml`、`PromptViewModel.cs` | `.\scripts\android-kotlin.ps1 test` + `dotnet build NetworkControl.Android.slnx` | 懸浮窗與設定頁實際視覺與互動待真機確認 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

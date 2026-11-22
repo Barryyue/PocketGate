@@ -40,6 +40,23 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.7",
+            date = "2026-11-22",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Prompt overlay & card polish: checking 'Don't ask again after denying' now grays out and disables Allow / Once / Timed actions to prevent accidental taps, and fixed app-name highlight matching",
+                    "悬浮窗与应用内询问卡片细节优化：勾选「禁止后不再提示」时自动置灰并禁用「允许 / 仅一次 / 限时」按钮防止误触，并修复应用名高亮匹配边界",
+                    "懸浮窗與應用程式內詢問卡片細節最佳化：勾選「禁止後不再提示」時自動置灰並停用「允許 / 僅一次 / 限時」按鈕防止誤觸，並修復應用程式名稱高亮比對邊界",
+                ),
+                t(
+                    "Settings control state polish: disabled 'Hide details on lock screen' when connection details are off, disabled Speed Island offset reset when already at zero, and disabled Save / Test buttons in Forwarding settings when custom DoH URL or SOCKS5 input is invalid",
+                    "设置页联动细节优化：关闭显示连线详情时禁用「锁屏时隐藏详情」，偏移已归零时禁用灵动岛「重置」按钮，转发设置输入无效时禁用「保存 / 测试代理」按钮",
+                    "設定頁聯動細節最佳化：關閉顯示連線詳情時停用「鎖定畫面隱藏詳情」，偏移已歸零時停用靈動島「重設」按鈕，轉發設定輸入無效時停用「儲存 / 測試代理」按鈕",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.6",
             date = "2026-11-21",
             features = listOf(
