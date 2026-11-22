@@ -7,6 +7,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -58,10 +59,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -72,6 +75,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
 import com.networkcontrol.android.kotlin.BuildConfig
 import com.networkcontrol.android.kotlin.ForwardingUpstream
+import com.networkcontrol.android.kotlin.R
+import com.networkcontrol.android.kotlin.platform.AppLauncherIcon
 import com.networkcontrol.android.kotlin.core.focus.FocusSchedule
 import com.networkcontrol.android.kotlin.core.model.AppThemeStyle
 import com.networkcontrol.android.kotlin.core.model.AutoActivateCondition
@@ -136,6 +141,7 @@ fun SettingsScreen(
     var languageTag by remember { mutableStateOf(backend.container.preferences.languageTag) }
     var themeMode by remember { mutableStateOf(backend.container.preferences.themeMode) }
     var toolbarStyle by remember { mutableStateOf(backend.toolbarStyle()) }
+    var appIconStyle by remember { mutableStateOf(backend.appIconStyle()) }
     val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
     val blocklistState by backend.blocklistState.collectAsStateWithLifecycle()
     val blocklistMatcher by backend.blocklistMatcher.collectAsStateWithLifecycle()
@@ -347,6 +353,20 @@ fun SettingsScreen(
                     OutlinedButton(onClick = { showThemeColorDialog = true }) {
                         Text(s[S.Edit])
                     }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(s[S.AppIconStyle], style = MaterialTheme.typography.bodyMedium)
+                    AppIconSelector(
+                        selected = appIconStyle,
+                        s = s,
+                        onSelect = { icon ->
+                            if (icon != appIconStyle) {
+                                appIconStyle = icon
+                                backend.setAppIconStyle(icon)
+                                toast(s[S.AppIconSwitched])
+                            }
+                        },
+                    )
                 }
                 DropdownSetting(
                     label = s[S.ToolbarStyle],
@@ -2206,6 +2226,90 @@ private fun ThemeStyleStrip(
                 Text(
                     themeStyleLabel(s, style),
                     style = MaterialTheme.typography.labelSmall,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppIconSelector(
+    selected: AppLauncherIcon,
+    s: UiStrings,
+    onSelect: (AppLauncherIcon) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        AppLauncherIcon.entries.forEach { icon ->
+            val isSelected = icon == selected
+            val label = when (icon) {
+                AppLauncherIcon.Dark -> s[S.AppIconDark]
+                AppLauncherIcon.Light -> s[S.AppIconLight]
+            }
+            val bgRes = when (icon) {
+                AppLauncherIcon.Dark -> R.drawable.ic_launcher_background
+                AppLauncherIcon.Light -> R.drawable.ic_launcher_light_background
+            }
+            val fgRes = when (icon) {
+                AppLauncherIcon.Dark -> R.drawable.ic_launcher_foreground
+                AppLauncherIcon.Light -> R.drawable.ic_launcher_light_foreground
+            }
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(14.dp))
+                    .border(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                    .background(
+                        if (isSelected) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                        },
+                    )
+                    .clickable { onSelect(icon) }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(
+                            width = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(12.dp),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(bgRes),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize().scale(1.22f),
+                    )
+                    Image(
+                        painter = painterResource(fgRes),
+                        contentDescription = label,
+                        modifier = Modifier.fillMaxSize().scale(1.22f),
+                    )
+                }
+                Text(
+                    label,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                     color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,

@@ -1067,6 +1067,16 @@ class AppBackend(val container: AppContainer) {
     fun setToolbarStyle(style: com.networkcontrol.android.kotlin.core.model.ToolbarStyle) =
         container.theme.setToolbarStyle(style)
 
+    fun appIconStyle(): com.networkcontrol.android.kotlin.platform.AppLauncherIcon {
+        val saved = com.networkcontrol.android.kotlin.platform.AppLauncherIcon.fromKey(container.preferences.appIconStyle)
+        return com.networkcontrol.android.kotlin.platform.AppIconSwitcher.current(context, fallback = saved)
+    }
+
+    fun setAppIconStyle(icon: com.networkcontrol.android.kotlin.platform.AppLauncherIcon) {
+        container.preferences.appIconStyle = icon.key
+        com.networkcontrol.android.kotlin.platform.AppIconSwitcher.apply(context, icon)
+    }
+
     fun autoHideBottomBar(): Boolean = container.theme.autoHideBottomBar.value
 
     fun setAutoHideBottomBar(enabled: Boolean) = container.theme.setAutoHideBottomBar(enabled)

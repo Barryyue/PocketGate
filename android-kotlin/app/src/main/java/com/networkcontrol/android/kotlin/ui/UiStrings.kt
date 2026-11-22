@@ -594,6 +594,10 @@ enum class S {
     SystemCoreUidHint,
     DenyDomain,
     DenyDomainDone,
+    AppIconStyle,
+    AppIconDark,
+    AppIconLight,
+    AppIconSwitched,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1210,6 +1214,10 @@ private val EN = mapOf(
     S.SystemCoreUidHint to "Shares system core UID %1\$d with system services and cannot be blocked per app. Use per-connection mode to block specific domains from Logs.",
     S.DenyDomain to "Block domain",
     S.DenyDomainDone to "Blocked %1\$s",
+    S.AppIconStyle to "App icon",
+    S.AppIconDark to "Dark Obsidian",
+    S.AppIconLight to "Light Mist",
+    S.AppIconSwitched to "App icon updated. Your launcher may refresh in a few seconds.",
 )
 
 private val CN = mapOf(
@@ -1802,6 +1810,10 @@ private val CN = mapOf(
     S.SystemCoreUidHint to "与系统核心共用 UID %1\$d，无法按应用单独阻断。可在逐连接模式下从记录中按域名精准拦截。",
     S.DenyDomain to "拦截此域名",
     S.DenyDomainDone to "已添加域名拦截规则：%1\$s",
+    S.AppIconStyle to "应用图标",
+    S.AppIconDark to "深色黑曜",
+    S.AppIconLight to "浅色晨雾",
+    S.AppIconSwitched to "应用图标已切换，桌面将在数秒内刷新。",
 )
 
 private val TW = mapOf(
@@ -2394,4 +2406,8 @@ private val TW = mapOf(
     S.SystemCoreUidHint to "與系統核心共用 UID %1\$d，無法依應用程式單獨阻斷。可在逐連線模式下從記錄中依網域精準攔截。",
     S.DenyDomain to "攔截此網域",
     S.DenyDomainDone to "已新增網域攔截規則：%1\$s",
+    S.AppIconStyle to "應用程式圖示",
+    S.AppIconDark to "深色黑曜",
+    S.AppIconLight to "淺色晨霧",
+    S.AppIconSwitched to "應用程式圖示已切換，桌面將在數秒內重新整理。",
 )

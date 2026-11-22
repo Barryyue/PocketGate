@@ -54,6 +54,11 @@ class AppPreferences(context: Context) {
         }.getOrDefault(com.networkcontrol.android.kotlin.core.model.ToolbarStyle.ClassicSolid)
         set(value) = prefs.edit().putString(KEY_TOOLBAR_STYLE, value.name).apply()
 
+    /** 應用桌面圖示風格：dark（預設黑曜）/ light（淺色晨霧）。 */
+    var appIconStyle: String
+        get() = prefs.getString(KEY_APP_ICON_STYLE, "dark") ?: "dark"
+        set(value) = prefs.edit().putString(KEY_APP_ICON_STYLE, value).apply()
+
     /** 視覺主題風格。 */
     var themeStyle: com.networkcontrol.android.kotlin.core.model.AppThemeStyle
         get() = runCatching {
@@ -383,6 +388,7 @@ class AppPreferences(context: Context) {
         const val KEY_PROTECTION_NOTIFICATION_TITLE = "protection_notification_title"
         const val KEY_THEME_COLOR = "theme_color"
         const val KEY_THEME_STYLE = "theme_style"
+        const val KEY_APP_ICON_STYLE = "app_icon_style"
         const val KEY_TOOLBAR_STYLE = "toolbar_style"
         const val KEY_PROMPT_PRESENTATION = "prompt_presentation"
         const val KEY_PROMPT_OVERLAY_POSITION = "prompt_overlay_position"
