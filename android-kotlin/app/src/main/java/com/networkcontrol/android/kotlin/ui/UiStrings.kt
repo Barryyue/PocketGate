@@ -602,6 +602,8 @@ enum class S {
     UpdateChannelStable,
     UpdateChannelBeta,
     UpdateChannelHint,
+    UpdateChannelStableDesc,
+    UpdateChannelBetaDesc,
     UpdateBetaBadge,
 }
 
@@ -1227,6 +1229,8 @@ private val EN = mapOf(
     S.UpdateChannelStable to "Stable",
     S.UpdateChannelBeta to "Beta",
     S.UpdateChannelHint to "Stable receives verified releases only. Beta also receives pre-release / daily builds.",
+    S.UpdateChannelStableDesc to "Recommended. Receives verified stable releases only.",
+    S.UpdateChannelBetaDesc to "Early access to daily builds and experimental features; may contain unfinished changes or issues.",
     S.UpdateBetaBadge to "Beta",
 )
 
@@ -1828,6 +1832,8 @@ private val CN = mapOf(
     S.UpdateChannelStable to "正式版",
     S.UpdateChannelBeta to "测试版",
     S.UpdateChannelHint to "正式版仅接收稳定更新；测试版可抢先接收日更与预发布版本。",
+    S.UpdateChannelStableDesc to "推荐。仅接收经过验证的稳定版本更新。",
+    S.UpdateChannelBetaDesc to "抢先体验日更与实验功能，可能存在不稳定或界面变动。",
     S.UpdateBetaBadge to "测试版",
 )
 
@@ -2429,5 +2435,7 @@ private val TW = mapOf(
     S.UpdateChannelStable to "正式版",
     S.UpdateChannelBeta to "測試版",
     S.UpdateChannelHint to "正式版僅接收穩定更新；測試版可搶先接收日更與預發佈版本。",
+    S.UpdateChannelStableDesc to "推薦。僅接收經過驗證的穩定版本更新。",
+    S.UpdateChannelBetaDesc to "搶先體驗日更與實驗功能，可能存在不穩定或介面變動。",
     S.UpdateBetaBadge to "測試版",
 )

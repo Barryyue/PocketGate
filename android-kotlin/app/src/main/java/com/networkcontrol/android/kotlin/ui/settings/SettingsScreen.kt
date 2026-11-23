@@ -43,6 +43,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -191,6 +192,7 @@ fun SettingsScreen(
 
     val updateState by backend.updateState.collectAsStateWithLifecycle()
     var updateChannel by remember { mutableStateOf(backend.updateChannel()) }
+    var showUpdateChannelDialog by remember { mutableStateOf(false) }
     var pendingInstallApk by remember { mutableStateOf<java.io.File?>(null) }
     var showReleaseNotes by remember { mutableStateOf(false) }
     var showReleaseHistory by remember { mutableStateOf(false) }
@@ -787,36 +789,16 @@ fun SettingsScreen(
                         Text(if (updateState.checking) s[S.Loading] else s[S.CheckUpdates])
                     }
                 }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        s[S.UpdateChannelTitle],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    FilterChip(
-                        selected = updateChannel == com.networkcontrol.android.kotlin.core.update.UpdateChannel.Stable,
-                        onClick = {
-                            updateChannel = com.networkcontrol.android.kotlin.core.update.UpdateChannel.Stable
-                            backend.setUpdateChannel(updateChannel)
-                        },
-                        label = { Text(s[S.UpdateChannelStable]) },
-                    )
-                    FilterChip(
-                        selected = updateChannel == com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta,
-                        onClick = {
-                            updateChannel = com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta
-                            backend.setUpdateChannel(updateChannel)
-                        },
-                        label = { Text(s[S.UpdateChannelBeta]) },
-                    )
-                }
-                Text(
-                    s[S.UpdateChannelHint],
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                SettingsNavRow(
+                    title = s[S.UpdateChannelTitle],
+                    subtitle = if (updateChannel == com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta) {
+                        s[S.UpdateChannelBeta]
+                    } else {
+                        s[S.UpdateChannelStable]
+                    },
+                    subtitleHighlighted = updateChannel == com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta,
+                    actionText = s[S.Edit],
+                    onClick = { showUpdateChannelDialog = true },
                 )
                 SettingsNavRow(
                     title = "${s[S.Version]} ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
@@ -893,6 +875,86 @@ fun SettingsScreen(
         }
 
         item { Spacer(Modifier.height(12.dp)) }
+    }
+
+    if (showUpdateChannelDialog) {
+        var draftChannel by remember(showUpdateChannelDialog) { mutableStateOf(updateChannel) }
+        AlertDialog(
+            onDismissRequest = { showUpdateChannelDialog = false },
+            title = { Text(s[S.UpdateChannelTitle]) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    listOf(
+                        Triple(
+                            com.networkcontrol.android.kotlin.core.update.UpdateChannel.Stable,
+                            s[S.UpdateChannelStable],
+                            s[S.UpdateChannelStableDesc],
+                        ),
+                        Triple(
+                            com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta,
+                            s[S.UpdateChannelBeta],
+                            s[S.UpdateChannelBetaDesc],
+                        ),
+                    ).forEach { (option, title, desc) ->
+                        val selected = draftChannel == option
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(
+                                    width = if (selected) 1.5.dp else 1.dp,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.outlineVariant
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                )
+                                .clickable { draftChannel = option }
+                                .padding(horizontal = 10.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            RadioButton(
+                                selected = selected,
+                                onClick = { draftChannel = option },
+                            )
+                            Column(Modifier.padding(start = 6.dp, top = 2.dp)) {
+                                Text(
+                                    title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                                Text(
+                                    desc,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val changed = draftChannel != updateChannel
+                        updateChannel = draftChannel
+                        backend.setUpdateChannel(draftChannel)
+                        showUpdateChannelDialog = false
+                        if (changed && !offlineMode && !updateState.checking) {
+                            backend.checkUpdateManually()
+                        }
+                    },
+                ) {
+                    Text(s[S.Save])
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUpdateChannelDialog = false }) {
+                    Text(s[S.Cancel])
+                }
+            },
+        )
     }
 
     if (showThemeColorDialog) {

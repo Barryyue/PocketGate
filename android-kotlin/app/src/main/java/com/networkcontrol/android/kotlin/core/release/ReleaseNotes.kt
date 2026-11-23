@@ -40,6 +40,23 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.10",
+            date = "2026-11-23",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Fixed Gitee release fallback downloading an outdated APK (e.g. 0.14.4) by querying releases in descending order and verifying the fallback version before installing",
+                    "修复 Gitee 更新回退时因接口默认升序导致误下载旧版本（如 0.14.4）的问题，改为倒序查询并在下载前强制校验目标版本号",
+                    "修復 Gitee 更新回退時因介面預設升序導致誤下載舊版本（如 0.14.4）的問題，改為倒序查詢並在下載前強制校驗目標版本號",
+                ),
+                t(
+                    "Refined the update channel switcher under Settings → About into a dedicated row with a confirmation dialog and clear Stable / Beta descriptions",
+                    "优化「设置 → 关于」中的更新通道样式，改为设置行配合带详细说明的单选确认弹窗，防止误触切换",
+                    "最佳化「設定 → 關於」中的更新通道樣式，改為設定列搭配附詳細說明的單選確認彈窗，防止誤觸切換",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.9",
             date = "2026-11-23",
             features = listOf(

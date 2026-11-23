@@ -31,18 +31,22 @@ class AppUpdateManager(
     private val updatesDir: File,
     private val currentVersion: String,
     private val offlineMode: () -> Boolean,
-    private val checkUpdate: suspend () -> UpdateInfo = { UpdateChecker.checkAuto(currentVersion) },
+    private val updateChannel: () -> UpdateChannel = { UpdateChannel.Stable },
+    private val checkUpdate: suspend () -> UpdateInfo = { UpdateChecker.checkAuto(currentVersion, channel = updateChannel()) },
     private val downloadApk: suspend (
         url: String,
         targetFile: File,
         fallbackUrl: String?,
+        expectedVersion: String?,
         onProgress: (Int) -> Unit,
-    ) -> Result<File> = { url, targetFile, fallbackUrl, onProgress ->
+    ) -> Result<File> = { url, targetFile, fallbackUrl, expectedVersion, onProgress ->
         UpdateChecker.downloadApk(
             url = url,
             targetFile = targetFile,
             fallbackUrl = fallbackUrl,
             currentVersion = currentVersion,
+            expectedVersion = expectedVersion,
+            channel = updateChannel(),
             onProgress = onProgress,
         )
     },
@@ -153,7 +157,7 @@ class AppUpdateManager(
 
         downloadJob?.cancel()
         downloadJob = scope.launch {
-            val result = downloadApk(url, targetFile, target.fallbackDownloadUrl) { percent ->
+            val result = downloadApk(url, targetFile, target.fallbackDownloadUrl, target.latestVersion) { percent ->
                 _state.update { state ->
                     if (!state.downloading) state else state.copy(progress = percent.coerceIn(0, 100))
                 }
