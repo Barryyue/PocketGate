@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.0",
+            date = "2026-11-23",
+            features = listOf(
+                t(
+                    "Experimental Screen Auto-Skip (GKD-compatible): runs in an isolated Accessibility process (:automation) with independent storage, JSON5 community subscription import/update, per-group toggles, trigger logs, and optional one-tap Shizuku activation (disabled by default)",
+                    "实验功能「屏幕自动跳过」（兼容 GKD 社区订阅）：运行于独立无障碍进程与独立数据库，不影响 VPN 稳定性；支持社区 JSON5 订阅导入与增量更新、规则组开关、触发记录及 Shizuku 一键开启无障碍（默认关闭）",
+                    "實驗功能「螢幕自動跳過」（相容 GKD 社群訂閱）：運行於獨立無障礙進程與獨立資料庫，不影響 VPN 穩定性；支援社群 JSON5 訂閱匯入與增量更新、規則組開關、觸發記錄及 Shizuku 一鍵開啟無障礙（預設關閉）",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.9",
             date = "2026-11-23",
             features = listOf(
