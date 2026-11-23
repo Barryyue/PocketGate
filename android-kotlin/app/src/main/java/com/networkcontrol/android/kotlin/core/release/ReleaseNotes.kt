@@ -40,6 +40,24 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.9",
+            date = "2026-11-23",
+            features = listOf(
+                t(
+                    "Stable & Beta update channels: switch between verified stable releases and pre-release / daily builds under Settings → About",
+                    "正式版 / 测试版双更新通道：可在「设置 → 关于」切换更新通道，正式版仅接收稳定更新，测试版可抢先接收日更与预发布版本",
+                    "正式版 / 測試版雙更新通道：可在「設定 → 關於」切換更新通道，正式版僅接收穩定更新，測試版可搶先接收日更與預發佈版本",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Precision sliders for Speed Island: added − / + step buttons with press-and-hold repeat, haptic feedback, and tap-to-enter exact numeric values for opacity, font size, and horizontal/vertical offsets",
+                    "灵动岛滑块精准调节：为透明度、字体大小及水平/垂直偏移新增两端 − / + 微调按钮（支持长按连发与触觉反馈），并支持点击数值直接输入精确数字",
+                    "靈動島滑塊精準調節：為透明度、字體大小及水平/垂直偏移新增兩端 − / + 微調按鈕（支援長按連發與觸覺回饋），並支援點擊數值直接輸入精確數字",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.8",
             date = "2026-11-22",
             features = listOf(
