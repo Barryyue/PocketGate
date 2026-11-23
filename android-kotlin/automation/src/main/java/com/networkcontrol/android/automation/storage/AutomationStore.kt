@@ -29,7 +29,8 @@ class AutomationDatabase(context: Context) : SQLiteOpenHelper(
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
         db.enableWriteAheadLogging()
-        db.execSQL("PRAGMA busy_timeout = 3000")
+        // Android SQLite 的 execSQL() 禁止執行會回傳結果列的 PRAGMA，必須使用 rawQuery。
+        db.rawQuery("PRAGMA busy_timeout = 3000", null).use { it.moveToFirst() }
     }
 
     override fun onCreate(db: SQLiteDatabase) {
