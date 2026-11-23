@@ -536,6 +536,13 @@
 |---|---|---|---|---|
 | K-176 | 淺色調應用圖示與設定頁動態切換（2026-11-22）：新增淺色晨霧（Light Mist）自適應向量圖示（`ic_launcher_light.xml`、`ic_launcher_light_background.xml`、`ic_launcher_light_foreground.xml`），在 `AndroidManifest.xml` 拆分 `.LauncherDark` / `.LauncherLight` 兩個 `<activity-alias>`（`.MainActivity` 始終啟用不影響通知與掛件跳轉），透過 `AppIconSwitcher` 互斥切換，並在設定頁「外觀與顯示」新增雙圖示即時預覽選擇器 | `ic_launcher_light.xml`、`ic_launcher_light_background.xml`、`ic_launcher_light_foreground.xml`、`AndroidManifest.xml`、`AppIconSwitcher.kt`、`AppPreferences.kt`、`AppBackend.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`AppIconSwitcherTest.kt` | `.\scripts\android-kotlin.ps1 test` + `assembleDebug` | 真機桌面圖示切換與各廠商桌面刷新效果待用戶實測確認 |
 
+### 分支：`agent/antigravity/slider-and-update-channels`（2026-11-23）
+
+| ID | 功能 | 實作位置 | 驗證 | 備註 |
+|---|---|---|---|---|
+| K-178 | 精準數值調節滑塊（`PrecisionIntSlider` / `PrecisionPercentSlider`）：為速度島設定頁全部 4 處滑塊（透明度、字體大小、水平偏移、垂直偏移）新增兩端 `-` / `+` 輕點微調與長按連發（含觸覺回饋）、移除過密離散刻度防抖動、點擊數值膠囊彈窗手輸精確數值 | `PrecisionSlider.kt`、`SpeedIslandSettingsScreen.kt` | `.\scripts\android-kotlin.ps1 test` + `assembleDebug` | 真機滑塊手感與長按連發待用戶實測確認 |
+| K-179 | 正式版 / 測試版雙更新通道：新增 `UpdateChannel`（`Stable` / `Beta`，預設 `Stable`）、`UpdateInfo.isPrerelease` 與 SemVer 預發佈版本比較（`0.17.0 > 0.17.0-beta.2 > 0.17.0-beta.1`）；設定頁「關於」新增通道切換與三語文本；CI（`android-kotlin.yml`）支援 `beta` 分支、預發佈 tag 與手動勾選 `prerelease` 發佈至 GitHub / Gitee Pre-release | `UpdateChecker.kt`、`AppPreferences.kt`、`AppContainer.kt`、`AppBackend.kt`、`SettingsScreen.kt`、`UiStrings.kt`、`UpdateCheckerTest.kt`、`.github/workflows/android-kotlin.yml` | `.\scripts\android-kotlin.ps1 test`（含 `comparesPrereleaseVersionsAndFiltersByUpdateChannel`）+ `assembleDebug` | 實際推送 `beta` 分支觸發 GitHub Actions 預發佈與真機通道切換下載待驗證 |
+
 ### 尚未完成（待辦，不屬於完成項）
 
 | ID | 功能 | 狀態 / 計劃 |

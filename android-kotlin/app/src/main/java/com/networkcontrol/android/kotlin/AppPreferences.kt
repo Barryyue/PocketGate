@@ -24,6 +24,15 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_LANGUAGE, null)
         set(value) = prefs.edit().putString(KEY_LANGUAGE, value).apply()
 
+    /** 更新通道：Stable（正式版，預設）/ Beta（測試版 / 日更預發佈）。 */
+    var updateChannel: com.networkcontrol.android.kotlin.core.update.UpdateChannel
+        get() = runCatching {
+            enumValueOf<com.networkcontrol.android.kotlin.core.update.UpdateChannel>(
+                prefs.getString(KEY_UPDATE_CHANNEL, "Stable").orEmpty(),
+            )
+        }.getOrDefault(com.networkcontrol.android.kotlin.core.update.UpdateChannel.Stable)
+        set(value) = prefs.edit().putString(KEY_UPDATE_CHANNEL, value.name).apply()
+
     var protectionEnabled: Boolean
         get() = prefs.getBoolean(KEY_PROTECTION, false)
         set(value) = prefs.edit().putBoolean(KEY_PROTECTION, value).apply()
@@ -443,6 +452,7 @@ class AppPreferences(context: Context) {
         const val KEY_UPDATE_SOURCE = "update_source"
         const val KEY_UPDATE_REPO = "update_repo"
         const val KEY_UPDATE_CUSTOM_URL = "update_custom_url"
+        const val KEY_UPDATE_CHANNEL = "update_channel"
         const val KEY_LEGACY_RULES_MIGRATED = "legacy_rules_migrated"
         const val DEFAULT_THEME_COLOR = 0xFF2E7D32.toInt()
     }

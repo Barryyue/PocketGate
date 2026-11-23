@@ -1,5 +1,6 @@
 package com.networkcontrol.android.kotlin
 
+import com.networkcontrol.android.kotlin.core.update.UpdateChannel
 import com.networkcontrol.android.kotlin.core.update.UpdateChecker
 import com.networkcontrol.android.kotlin.core.update.UpdateSource
 import com.networkcontrol.android.kotlin.core.update.compareVersions
@@ -345,5 +346,42 @@ class UpdateCheckerTest {
             com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.decrypt(encrypted, "wrong-key")
         }
         assertTrue(wrongKey.isFailure)
+    }
+
+    @Test
+    fun comparesPrereleaseVersionsAndFiltersByUpdateChannel() {
+        assertTrue(compareVersions("0.17.0", "0.17.0-beta.1") > 0)
+        assertTrue(compareVersions("0.17.0-beta.2", "0.17.0-beta.1") > 0)
+        assertTrue(compareVersions("0.17.0-beta.10", "0.17.0-beta.2") > 0)
+        assertTrue(compareVersions("0.17.0-beta.1", "0.16.8") > 0)
+
+        val body = """
+            [
+              {
+                "tag_name": "v0.17.0-beta.3",
+                "prerelease": true,
+                "assets": [
+                  {"browser_download_url": "https://example.com/PocketGate-0.17.0-beta.3.apk"}
+                ]
+              },
+              {
+                "tag_name": "v0.16.8",
+                "prerelease": false,
+                "assets": [
+                  {"browser_download_url": "https://example.com/PocketGate-0.16.8.apk"}
+                ]
+              }
+            ]
+        """.trimIndent()
+
+        val stable = UpdateChecker.parse(UpdateSource.GitHub, body, "0.16.8", UpdateChannel.Stable)
+        assertEquals("0.16.8", stable.latestVersion)
+        assertTrue(!stable.hasUpdate)
+        assertTrue(!stable.isPrerelease)
+
+        val beta = UpdateChecker.parse(UpdateSource.GitHub, body, "0.16.8", UpdateChannel.Beta)
+        assertEquals("0.17.0-beta.3", beta.latestVersion)
+        assertTrue(beta.hasUpdate)
+        assertTrue(beta.isPrerelease)
     }
 }

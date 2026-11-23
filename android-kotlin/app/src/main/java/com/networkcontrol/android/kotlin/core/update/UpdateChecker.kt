@@ -21,6 +21,12 @@ enum class UpdateSource {
     Custom,
 }
 
+/** 更新通道：正式版（僅接收穩定發佈）或測試版（接收日更 / 預發佈與正式版中較新者）。 */
+enum class UpdateChannel {
+    Stable,
+    Beta,
+}
+
 data class UpdateInfo(
     val latestVersion: String?,
     val downloadUrl: String?,
@@ -28,6 +34,7 @@ data class UpdateInfo(
     val currentVersion: String = "0.0.0",
     val fallbackDownloadUrl: String? = null,
     val releaseNotes: String? = null,
+    val isPrerelease: Boolean = false,
 ) {
     val hasUpdate: Boolean
         get() = latestVersion != null && compareVersions(latestVersion, currentVersion) > 0
@@ -62,21 +69,22 @@ object UpdateChecker {
         currentVersion: String,
         githubRepo: String = DEFAULT_GITHUB_REPO,
         giteeRepo: String = DEFAULT_GITEE_REPO,
+        channel: UpdateChannel = UpdateChannel.Stable,
     ): UpdateInfo = withContext(Dispatchers.IO) {
         resolveWithFallback(
             fetchGitHub = {
-                val primary = checkGitHubWithWebFallback(currentVersion, githubRepo)
+                val primary = checkGitHubWithWebFallback(currentVersion, githubRepo, channel)
                 if (primary.error != null && githubRepo == DEFAULT_GITHUB_REPO) {
-                    val legacy = checkGitHubWithWebFallback(currentVersion, LEGACY_GITHUB_REPO)
+                    val legacy = checkGitHubWithWebFallback(currentVersion, LEGACY_GITHUB_REPO, channel)
                     if (legacy.error == null) legacy else primary
                 } else {
                     primary
                 }
             },
             fetchGitee = {
-                val primary = check(currentVersion, UpdateSource.Gitee, giteeRepo)
+                val primary = check(currentVersion, UpdateSource.Gitee, giteeRepo, channel = channel)
                 if (primary.error != null && giteeRepo == DEFAULT_GITEE_REPO) {
-                    val legacy = check(currentVersion, UpdateSource.Gitee, LEGACY_GITEE_REPO)
+                    val legacy = check(currentVersion, UpdateSource.Gitee, LEGACY_GITEE_REPO, channel = channel)
                     if (legacy.error == null) legacy else primary
                 } else {
                     primary
@@ -86,9 +94,14 @@ object UpdateChecker {
         )
     }
 
-    private suspend fun checkGitHubWithWebFallback(currentVersion: String, repo: String): UpdateInfo {
-        val apiResult = check(currentVersion, UpdateSource.GitHub, repo)
+    private suspend fun checkGitHubWithWebFallback(
+        currentVersion: String,
+        repo: String,
+        channel: UpdateChannel,
+    ): UpdateInfo {
+        val apiResult = check(currentVersion, UpdateSource.GitHub, repo, channel = channel)
         if (apiResult.error == null && apiResult.latestVersion != null) return apiResult
+        // `releases/latest` 重定向永遠只回傳穩定版；測試通道僅在 API 失敗時才回退作為兜底。
         val webResult = checkGitHubRedirect(currentVersion, repo)
         return if (webResult.error == null && webResult.latestVersion != null) webResult else apiResult
     }
@@ -341,6 +354,7 @@ object UpdateChecker {
         source: UpdateSource = UpdateSource.GitHub,
         repo: String = DEFAULT_GITHUB_REPO,
         customUrl: String = "",
+        channel: UpdateChannel = UpdateChannel.Stable,
     ): UpdateInfo = withContext(Dispatchers.IO) {
         val endpoint = endpoint(source, repo, customUrl)
         if (endpoint.isNullOrBlank()) {
@@ -364,7 +378,7 @@ object UpdateChecker {
                     return@runCatching UpdateInfo(null, null, "HTTP ${connection.responseCode}", currentVersion)
                 }
                 val body = connection.inputStream.bufferedReader().use { it.readText() }
-                parse(source, body, currentVersion)
+                parse(source, body, currentVersion, channel)
             } finally {
                 connection.disconnect()
             }
@@ -390,21 +404,36 @@ object UpdateChecker {
         }
     }
 
-    internal fun parse(source: UpdateSource, body: String, currentVersion: String): UpdateInfo {
+    internal fun parse(
+        source: UpdateSource,
+        body: String,
+        currentVersion: String,
+        channel: UpdateChannel = UpdateChannel.Stable,
+    ): UpdateInfo {
         val trimmed = body.trimStart()
         if (trimmed.startsWith("[")) {
             val array = JSONArray(trimmed)
+            var best: UpdateInfo? = null
             for (i in 0 until array.length()) {
                 val item = array.optJSONObject(i) ?: continue
-                if (item.optBoolean("draft", false) || item.optBoolean("prerelease", false)) continue
+                if (item.optBoolean("draft", false)) continue
+                val isPre = item.optBoolean("prerelease", false)
+                if (channel == UpdateChannel.Stable && isPre) continue
                 val rawTag = item.optString("tag_name").trim()
                 if (rawTag.startsWith("atomui-v", ignoreCase = true)) continue
                 val parsed = parseObject(source, item, currentVersion)
                 if (parsed.latestVersion != null && !isAtomUiOnlyRelease(item, parsed.downloadUrl)) {
-                    return parsed
+                    if (channel == UpdateChannel.Stable) {
+                        return parsed
+                    }
+                    // 測試通道：在預發佈與正式版中挑選版本號最高者
+                    val prev = best
+                    if (prev == null || compareVersions(parsed.latestVersion, prev.latestVersion.orEmpty()) > 0) {
+                        best = parsed
+                    }
                 }
             }
-            return UpdateInfo(null, null, null, currentVersion)
+            return best ?: UpdateInfo(null, null, null, currentVersion)
         }
         return parseObject(source, JSONObject(trimmed), currentVersion)
     }
@@ -442,11 +471,17 @@ object UpdateChecker {
             UpdateSource.Custom -> json.optString("notes").ifBlank { json.optString("changelog") }
             else -> json.optString("body")
         }.trim().takeIf { it.isNotBlank() }
+        val isPrerelease = json.optBoolean("prerelease", false) ||
+            tag.contains("-beta", ignoreCase = true) ||
+            tag.contains("-alpha", ignoreCase = true) ||
+            tag.contains("-rc", ignoreCase = true) ||
+            tag.contains("-nightly", ignoreCase = true)
         return UpdateInfo(
             latestVersion = tag.takeIf { it.isNotBlank() },
             downloadUrl = apk ?: releaseUrl.takeIf { it.isNotBlank() },
             currentVersion = currentVersion,
             releaseNotes = notes,
+            isPrerelease = isPrerelease,
         )
     }
 
@@ -487,14 +522,41 @@ object UpdateChecker {
     }
 }
 
+/**
+ * 比較版本號（相容 SemVer 預發佈語意）：
+ * - 先比主版本數字段（`0.17.0` > `0.16.8`，`0.4.0 == 0.4`）；
+ * - 主版本相同時：正式版 > 預發佈版（`0.17.0 > 0.17.0-beta.2 > 0.17.0-beta.1`）；
+ * - 兩邊皆有預發佈後綴時，按 `.` 逐段比對（純數字按數值比較，其餘按字典序比較）。
+ */
 fun compareVersions(a: String, b: String): Int {
-    val left = a.split('.', '-').mapNotNull { it.toIntOrNull() }
-    val right = b.split('.', '-').mapNotNull { it.toIntOrNull() }
+    val aCore = a.substringBefore('-')
+    val bCore = b.substringBefore('-')
+    val left = aCore.split('.').mapNotNull { it.toIntOrNull() }
+    val right = bCore.split('.').mapNotNull { it.toIntOrNull() }
     val size = maxOf(left.size, right.size)
     for (index in 0 until size) {
         val l = left.getOrElse(index) { 0 }
         val r = right.getOrElse(index) { 0 }
         if (l != r) return l.compareTo(r)
+    }
+    val aPre = a.substringAfter('-', "")
+    val bPre = b.substringAfter('-', "")
+    if (aPre.isEmpty() && bPre.isEmpty()) return 0
+    if (aPre.isEmpty()) return 1
+    if (bPre.isEmpty()) return -1
+    val aParts = aPre.split('.')
+    val bParts = bPre.split('.')
+    val preSize = maxOf(aParts.size, bParts.size)
+    for (i in 0 until preSize) {
+        val lp = aParts.getOrNull(i) ?: return -1
+        val rp = bParts.getOrNull(i) ?: return 1
+        val li = lp.toIntOrNull()
+        val ri = rp.toIntOrNull()
+        val cmp = when {
+            li != null && ri != null -> li.compareTo(ri)
+            else -> lp.compareTo(rp, ignoreCase = true)
+        }
+        if (cmp != 0) return cmp
     }
     return 0
 }

@@ -190,6 +190,7 @@ fun SettingsScreen(
     var showThemeColorDialog by remember { mutableStateOf(false) }
 
     val updateState by backend.updateState.collectAsStateWithLifecycle()
+    var updateChannel by remember { mutableStateOf(backend.updateChannel()) }
     var pendingInstallApk by remember { mutableStateOf<java.io.File?>(null) }
     var showReleaseNotes by remember { mutableStateOf(false) }
     var showReleaseHistory by remember { mutableStateOf(false) }
@@ -768,7 +769,14 @@ fun SettingsScreen(
                                 scope.launch(Dispatchers.Main) {
                                     when {
                                         info.error != null -> toast(s.format(S.UpdateFailed, info.error))
-                                        info.hasUpdate -> toast(s.format(S.UpdateAvailable, info.latestVersion))
+                                        info.hasUpdate -> {
+                                            val label = if (info.isPrerelease) {
+                                                "${info.latestVersion} (${s[S.UpdateBetaBadge]})"
+                                            } else {
+                                                info.latestVersion.orEmpty()
+                                            }
+                                            toast(s.format(S.UpdateAvailable, label))
+                                        }
                                         else -> toast(s[S.UpToDate])
                                     }
                                 }
@@ -779,6 +787,37 @@ fun SettingsScreen(
                         Text(if (updateState.checking) s[S.Loading] else s[S.CheckUpdates])
                     }
                 }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        s[S.UpdateChannelTitle],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    FilterChip(
+                        selected = updateChannel == com.networkcontrol.android.kotlin.core.update.UpdateChannel.Stable,
+                        onClick = {
+                            updateChannel = com.networkcontrol.android.kotlin.core.update.UpdateChannel.Stable
+                            backend.setUpdateChannel(updateChannel)
+                        },
+                        label = { Text(s[S.UpdateChannelStable]) },
+                    )
+                    FilterChip(
+                        selected = updateChannel == com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta,
+                        onClick = {
+                            updateChannel = com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta
+                            backend.setUpdateChannel(updateChannel)
+                        },
+                        label = { Text(s[S.UpdateChannelBeta]) },
+                    )
+                }
+                Text(
+                    s[S.UpdateChannelHint],
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 SettingsNavRow(
                     title = "${s[S.Version]} ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                     subtitle = "AndroidVpn · ${modeLabel(runtime.mode, s)} · " +

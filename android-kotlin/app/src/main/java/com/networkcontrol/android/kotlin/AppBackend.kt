@@ -1083,6 +1083,13 @@ class AppBackend(val container: AppContainer) {
 
     fun checkUpdateOnEnter() = container.updateManager.checkOnEnter()
 
+    fun updateChannel(): com.networkcontrol.android.kotlin.core.update.UpdateChannel =
+        container.preferences.updateChannel
+
+    fun setUpdateChannel(channel: com.networkcontrol.android.kotlin.core.update.UpdateChannel) {
+        container.preferences.updateChannel = channel
+    }
+
     fun checkUpdateManually(
         onResult: ((com.networkcontrol.android.kotlin.core.update.UpdateInfo) -> Unit)? = null,
     ) = container.updateManager.checkManually(onResult)

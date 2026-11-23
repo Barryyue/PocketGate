@@ -56,6 +56,8 @@ import com.networkcontrol.android.kotlin.core.model.SpeedIslandContent
 import com.networkcontrol.android.kotlin.core.model.SpeedIslandFontWeight
 import com.networkcontrol.android.kotlin.core.model.SpeedIslandMode
 import com.networkcontrol.android.kotlin.ui.S
+import com.networkcontrol.android.kotlin.ui.common.PrecisionIntSlider
+import com.networkcontrol.android.kotlin.ui.common.PrecisionPercentSlider
 import com.networkcontrol.android.kotlin.ui.common.SectionCard
 import com.networkcontrol.android.kotlin.ui.rememberUiStrings
 import kotlin.math.roundToInt
@@ -212,33 +214,25 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             { Text(s[S.IslandModeMini]) },
                         )
                     }
-                    Text(
-                        s.format(S.IslandOpacity, (opacity * 100).roundToInt()),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Slider(
+                    PrecisionPercentSlider(
+                        label = s.format(S.IslandOpacity, (opacity * 100).roundToInt()),
                         value = opacity,
+                        stepPercent = 1,
                         onValueChange = {
                             opacity = it
                             backend.setSpeedIslandOpacity(it)
                         },
-                        valueRange = 0f..1f,
-                        steps = 19,
                     )
-                    Text(
-                        s.format(S.IslandFontSize, fontScale),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Slider(
-                        value = fontScale.toFloat(),
+                    PrecisionIntSlider(
+                        label = s.format(S.IslandFontSize, fontScale),
+                        value = fontScale,
+                        valueRange = 80..160,
+                        step = 1,
+                        formatValue = { "$it%" },
                         onValueChange = {
-                            fontScale = it.roundToInt()
-                            backend.setSpeedIslandFontScalePercent(fontScale)
+                            fontScale = it
+                            backend.setSpeedIslandFontScalePercent(it)
                         },
-                        valueRange = 80f..160f,
-                        steps = 15,
                     )
                     Text(s[S.IslandFontWeight], style = MaterialTheme.typography.bodyMedium)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -333,33 +327,27 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             backend.setVivoIslandCompatible(it)
                         },
                     )
-                    Text(
-                        s.format(S.IslandHorizontalOffset, offsetX),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Slider(
-                        value = offsetX.toFloat(),
+                    PrecisionIntSlider(
+                        label = s.format(S.IslandHorizontalOffset, offsetX),
+                        value = offsetX,
+                        valueRange = -60..60,
+                        step = 1,
+                        formatValue = { "${if (it > 0) "+$it" else it} dp" },
                         onValueChange = {
-                            offsetX = it.roundToInt()
-                            backend.setSpeedIslandOffsetXDp(offsetX)
+                            offsetX = it
+                            backend.setSpeedIslandOffsetXDp(it)
                         },
-                        valueRange = -60f..60f,
-                        steps = 119,
                     )
-                    Text(
-                        s.format(S.IslandVerticalOffset, offsetY),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Slider(
-                        value = offsetY.toFloat(),
+                    PrecisionIntSlider(
+                        label = s.format(S.IslandVerticalOffset, offsetY),
+                        value = offsetY,
+                        valueRange = -60..60,
+                        step = 1,
+                        formatValue = { "${if (it > 0) "+$it" else it} dp" },
                         onValueChange = {
-                            offsetY = it.roundToInt()
-                            backend.setSpeedIslandOffsetYDp(offsetY)
+                            offsetY = it
+                            backend.setSpeedIslandOffsetYDp(it)
                         },
-                        valueRange = -60f..60f,
-                        steps = 119,
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(

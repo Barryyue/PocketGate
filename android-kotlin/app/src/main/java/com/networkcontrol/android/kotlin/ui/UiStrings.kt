@@ -598,6 +598,11 @@ enum class S {
     AppIconDark,
     AppIconLight,
     AppIconSwitched,
+    UpdateChannelTitle,
+    UpdateChannelStable,
+    UpdateChannelBeta,
+    UpdateChannelHint,
+    UpdateBetaBadge,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1218,6 +1223,11 @@ private val EN = mapOf(
     S.AppIconDark to "Dark Obsidian",
     S.AppIconLight to "Light Mist",
     S.AppIconSwitched to "App icon updated. Your launcher may refresh in a few seconds.",
+    S.UpdateChannelTitle to "Update channel",
+    S.UpdateChannelStable to "Stable",
+    S.UpdateChannelBeta to "Beta",
+    S.UpdateChannelHint to "Stable receives verified releases only. Beta also receives pre-release / daily builds.",
+    S.UpdateBetaBadge to "Beta",
 )
 
 private val CN = mapOf(
@@ -1814,6 +1824,11 @@ private val CN = mapOf(
     S.AppIconDark to "深色黑曜",
     S.AppIconLight to "浅色晨雾",
     S.AppIconSwitched to "应用图标已切换，桌面将在数秒内刷新。",
+    S.UpdateChannelTitle to "更新通道",
+    S.UpdateChannelStable to "正式版",
+    S.UpdateChannelBeta to "测试版",
+    S.UpdateChannelHint to "正式版仅接收稳定更新；测试版可抢先接收日更与预发布版本。",
+    S.UpdateBetaBadge to "测试版",
 )
 
 private val TW = mapOf(
@@ -2410,4 +2425,9 @@ private val TW = mapOf(
     S.AppIconDark to "深色黑曜",
     S.AppIconLight to "淺色晨霧",
     S.AppIconSwitched to "應用程式圖示已切換，桌面將在數秒內重新整理。",
+    S.UpdateChannelTitle to "更新通道",
+    S.UpdateChannelStable to "正式版",
+    S.UpdateChannelBeta to "測試版",
+    S.UpdateChannelHint to "正式版僅接收穩定更新；測試版可搶先接收日更與預發佈版本。",
+    S.UpdateBetaBadge to "測試版",
 )
