@@ -1963,6 +1963,7 @@ internal fun DirectAppsDialog(
     apps: List<InstalledApp>,
     initial: Set<String>,
     allowedByRulePackages: Set<String> = emptySet(),
+    deniedByRulePackages: Set<String> = emptySet(),
     onDismiss: () -> Unit,
     onSave: (Set<String>) -> Unit,
 ) {
@@ -1970,6 +1971,7 @@ internal fun DirectAppsDialog(
     var query by remember { mutableStateOf("") }
     var onlyRuleAllowed by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(initial) }
+    var pendingConflictSave by remember { mutableStateOf<Pair<Set<String>, List<String>>?>(null) }
     val filtered = remember(query, onlyRuleAllowed, apps, allowedByRulePackages) {
         VpnRoutingPlanner.filterPickerApps(
             apps = apps,
@@ -2063,7 +2065,23 @@ internal fun DirectAppsDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(app.label, style = MaterialTheme.typography.bodyMedium)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        Text(
+                                            app.label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.weight(1f, fill = false),
+                                        )
+                                        if (app.packageName in deniedByRulePackages) {
+                                            Text(
+                                                s[S.HasDenyRulesTag],
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
+                                    }
                                     Text(
                                         app.packageName,
                                         style = MaterialTheme.typography.labelSmall,
@@ -2080,12 +2098,50 @@ internal fun DirectAppsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(selected) }) { Text(s[S.Save]) }
+            TextButton(
+                onClick = {
+                    val conflicting = VpnRoutingPlanner.newlyExcludedWithDenyRules(
+                        initial = initial,
+                        next = selected,
+                        deniedByRulePackages = deniedByRulePackages,
+                    )
+                    if (conflicting.isNotEmpty()) {
+                        val labels = apps.filter { it.packageName in conflicting }.map { it.label }
+                        pendingConflictSave = selected to labels
+                    } else {
+                        onSave(selected)
+                    }
+                },
+            ) { Text(s[S.Save]) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
         },
     )
+
+    pendingConflictSave?.let { (nextSelected, labels) ->
+        val preview = if (labels.size > 5) {
+            labels.take(5).joinToString("、") + "…"
+        } else {
+            labels.joinToString("、")
+        }
+        AlertDialog(
+            onDismissRequest = { pendingConflictSave = null },
+            title = { Text(s[S.ExcludeDenyConflictTitle]) },
+            text = { Text(s.format(S.ExcludeDenyConflictBody, labels.size, preview)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingConflictSave = null
+                        onSave(nextSelected)
+                    },
+                ) { Text(s[S.Save], color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingConflictSave = null }) { Text(s[S.Cancel]) }
+            },
+        )
+    }
 }
 
 internal fun toolbarStyleLabel(

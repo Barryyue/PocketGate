@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,6 +43,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +81,10 @@ fun AppsScreen(backend: AppBackend) {
     val plan by backend.plan.collectAsStateWithLifecycle()
     val rules by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
     val runtime by backend.runtime.collectAsStateWithLifecycle()
+    val excludedPackages by backend.excludedPackages.collectAsStateWithLifecycle()
+    val proxyBypassPackage by backend.proxyBypassPackage.collectAsStateWithLifecycle()
+    val isProxyMode = backend.forwardingEnabled() &&
+        backend.forwardingUpstream() == com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
 
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(AppFilter.All) }
@@ -196,6 +202,8 @@ fun AppsScreen(backend: AppBackend) {
                 entry = entry,
                 rulesVersion = rules.version,
                 activeProfileId = runtime.activeProfileId,
+                isExcluded = entry.app.packageName in excludedPackages,
+                isProxyBypass = isProxyMode && proxyBypassPackage == entry.app.packageName,
                 sims = sims,
                 traffic = traffic.byPackage[entry.app.packageName],
                 lastSeen = lastSeen[entry.app.packageName],
@@ -213,6 +221,8 @@ private fun AppRow(
     entry: AppEntry,
     rulesVersion: Long,
     activeProfileId: String,
+    isExcluded: Boolean,
+    isProxyBypass: Boolean,
     sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     traffic: Pair<Long, Long>?,
     lastSeen: Long?,
@@ -291,6 +301,21 @@ private fun AppRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                if (isExcluded || isProxyBypass) {
+                    Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(scheme.error.copy(alpha = 0.14f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            if (isExcluded) s[S.ExcludedBadge] else s[S.ProxyApp],
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.error,
+                        )
+                    }
+                }
                 if (entry.app.isSystem) {
                     Spacer(Modifier.width(6.dp))
                     Box(
@@ -309,6 +334,32 @@ private fun AppRow(
             }
 
             val isSystemCoreUid = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.isSystemUid(entry.app.uid)
+            val bypassed = isExcluded || isProxyBypass
+            if (bypassed && !isSystemCoreUid) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        if (isExcluded) s[S.ExcludedRulesInactiveHint] else s[S.ExcludedProxyAppHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.error,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (isExcluded) {
+                        TextButton(
+                            onClick = {
+                                guard.run {
+                                    backend.setAppExcluded(entry.app.packageName, false)
+                                    onChanged()
+                                }
+                            },
+                        ) {
+                            Text(s[S.ResumeFirewallRules])
+                        }
+                    }
+                }
+            }
             if (isSystemCoreUid) {
                 Text(
                     s.format(S.SystemCoreUidHint, entry.app.uid),
@@ -316,7 +367,10 @@ private fun AppRow(
                     color = scheme.onSurfaceVariant,
                 )
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = if (bypassed) Modifier.alpha(0.45f) else Modifier,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     DecisionChip(
                         label = s[S.Allow],
                         selected = entry.decision == AppDecision.Allow,
@@ -452,9 +506,12 @@ private fun AppRow(
         AppDetailDialog(
             backend = backend,
             entry = entry,
+            isExcluded = isExcluded,
+            isProxyBypass = isProxyBypass,
             rules = appRules,
             traffic = traffic,
             sims = sims,
+            onChanged = onChanged,
             onDismiss = { showDetail = false },
         )
     }
@@ -464,9 +521,12 @@ private fun AppRow(
 private fun AppDetailDialog(
     backend: AppBackend,
     entry: AppEntry,
+    isExcluded: Boolean,
+    isProxyBypass: Boolean,
     rules: List<Rule>,
     traffic: Pair<Long, Long>?,
     sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
+    onChanged: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
@@ -531,6 +591,42 @@ private fun AppDetailDialog(
                     "${s[S.Effective]}：$effectiveLabel · ${s[S.Reason]}：${routingReasonLabel(entry.reason, s)}",
                     style = MaterialTheme.typography.bodySmall,
                 )
+                val isSystemCoreUid = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.isSystemUid(entry.app.uid)
+                if (!isSystemCoreUid && !isProxyBypass) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                s[S.ApplyFirewallRules],
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Text(
+                                s[S.ApplyFirewallRulesHint],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Switch(
+                            checked = !isExcluded,
+                            onCheckedChange = { applyRules ->
+                                guard.run {
+                                    backend.setAppExcluded(entry.app.packageName, !applyRules)
+                                    onChanged()
+                                }
+                            },
+                        )
+                    }
+                } else if (isProxyBypass) {
+                    Text(
+                        s[S.ExcludedProxyAppHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
                 traffic?.let {
                     Text(
                         "${s[S.TrafficToday]}：${formatBytes(it.first + it.second)}",
@@ -549,6 +645,7 @@ private fun AppDetailDialog(
                     Text(
                         "${networkScopeLabel(rule.conditions, sims, s)} → ${actionLabel(rule.action, s)}",
                         style = MaterialTheme.typography.bodySmall,
+                        modifier = if (isExcluded || isProxyBypass) Modifier.alpha(0.5f) else Modifier,
                     )
                 }
                 Text(s[S.RecentActivity], style = MaterialTheme.typography.titleSmall)

@@ -314,4 +314,32 @@ class RoutingPlannerTest {
         )
         assertTrue(afterClearWhenNoVisibleSelected.isEmpty())
     }
+
+    @Test
+    fun deniedByRulePackagesDetectsEnabledDenyRulesAndNewlyExcludedConflicts() {
+        val telegram = InstalledApp("org.telegram.messenger", 10125, "Telegram", false, 1, 1, "signer-a")
+        val rules = RuleSet(
+            listOf(
+                rule("com.android.chrome", VerdictAction.Allow),
+                rule("org.mozilla.firefox", VerdictAction.Deny),
+                rule("org.telegram.messenger", VerdictAction.Deny).copy(enabled = false),
+            ),
+        )
+        val denied = VpnRoutingPlanner.deniedByRulePackages(rules, listOf(chrome, firefox, telegram))
+        assertEquals(setOf("org.mozilla.firefox"), denied)
+
+        val newlyConflicting = VpnRoutingPlanner.newlyExcludedWithDenyRules(
+            initial = setOf("com.android.chrome"),
+            next = setOf("com.android.chrome", "org.mozilla.firefox", "org.telegram.messenger"),
+            deniedByRulePackages = denied,
+        )
+        assertEquals(setOf("org.mozilla.firefox"), newlyConflicting)
+
+        val alreadyExcludedNoNewConflict = VpnRoutingPlanner.newlyExcludedWithDenyRules(
+            initial = setOf("org.mozilla.firefox"),
+            next = setOf("org.mozilla.firefox", "com.android.chrome"),
+            deniedByRulePackages = denied,
+        )
+        assertTrue(alreadyExcludedNoNewConflict.isEmpty())
+    }
 }

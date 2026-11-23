@@ -89,6 +89,32 @@ object VpnRoutingPlanner {
         .map { it.packageName }
         .toSet()
 
+    /**
+     * 目前已啟用規則中設有禁止聯網規則（含按網路或網域條件）的應用包名集合。
+     * 用於在排除應用選擇框中標註衝突，避免使用者誤以為禁止規則仍然生效。
+     */
+    fun deniedByRulePackages(
+        rules: RuleSet,
+        apps: List<InstalledApp>,
+    ): Set<String> {
+        val denyAppPaths = rules.rules.asSequence()
+            .filter { it.enabled && it.action == VerdictAction.Deny && it.app != null }
+            .mapNotNull { it.app?.pathPattern?.lowercase() }
+            .toSet()
+        if (denyAppPaths.isEmpty()) return emptySet()
+        return apps.asSequence()
+            .filter { app -> toIdentity(app).path.lowercase() in denyAppPaths }
+            .map { it.packageName }
+            .toSet()
+    }
+
+    /** 這次新加入排除名單、且目前含有禁止規則的應用包名集合。 */
+    fun newlyExcludedWithDenyRules(
+        initial: Set<String>,
+        next: Set<String>,
+        deniedByRulePackages: Set<String>,
+    ): Set<String> = (next - initial) intersect deniedByRulePackages
+
     fun filterPickerApps(
         apps: List<InstalledApp>,
         query: String,
