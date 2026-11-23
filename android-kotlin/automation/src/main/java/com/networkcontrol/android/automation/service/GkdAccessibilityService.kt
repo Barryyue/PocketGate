@@ -69,8 +69,8 @@ class GkdAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null || !featureEnabled) return
         val pkg = event.packageName?.toString()?.takeIf { it.isNotEmpty() } ?: return
-        // 不處理本應用自身畫面，避免誤操作設定介面
-        if (pkg == packageName) return
+        // 不處理本應用自身與系統 UI 畫面，避免誤操作設定介面或狀態列
+        if (pkg == packageName || pkg == "com.android.systemui" || pkg == "android") return
 
         val now = System.currentTimeMillis()
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
@@ -106,7 +106,11 @@ class GkdAccessibilityService : AccessibilityService() {
 
     private fun evaluateCurrentWindow(appId: String, activityId: String?) {
         val root = runCatching { rootInActiveWindow }.getOrNull() ?: return
-        val adapter = AccessibilityNodeAdapter(appId)
+        val rootPkg = root.packageName?.toString()?.takeIf { it.isNotEmpty() } ?: return
+        // 核心防護：狀態列/系統元件事件可能帶其他包名，但 rootInActiveWindow 仍是本應用；
+        // 必須以活躍視窗真實包名為準，絕不對本應用自身視窗或跨包名視窗執行匹配。
+        if (rootPkg == packageName || rootPkg != appId) return
+        val adapter = AccessibilityNodeAdapter(rootPkg)
         val now = System.currentTimeMillis()
         val matched = runCatching {
             engine.evaluate(
