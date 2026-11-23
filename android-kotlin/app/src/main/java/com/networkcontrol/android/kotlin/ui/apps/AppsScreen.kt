@@ -75,7 +75,10 @@ import kotlinx.coroutines.withContext
 private enum class AppFilter { All, Allowed, Denied, Unset, System }
 
 @Composable
-fun AppsScreen(backend: AppBackend) {
+fun AppsScreen(
+    backend: AppBackend,
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
+) {
     val s = rememberUiStrings()
     val scope = rememberCoroutineScope()
     val plan by backend.plan.collectAsStateWithLifecycle()
@@ -134,6 +137,7 @@ fun AppsScreen(backend: AppBackend) {
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 20.dp,

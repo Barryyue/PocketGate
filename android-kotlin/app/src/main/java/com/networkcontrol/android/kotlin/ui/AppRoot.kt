@@ -180,6 +180,11 @@ fun AppRoot(container: AppContainer) {
             ApkInstaller.launch(context, pending)
         }
     }
+    val overviewListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val appsListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val rulesListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val logsListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val settingsListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val toolbarStyle by container.theme.toolbarStyle.collectAsStateWithLifecycle()
     val autoHideBottomBar by container.theme.autoHideBottomBar.collectAsStateWithLifecycle()
     val density = LocalDensity.current
@@ -361,15 +366,17 @@ fun AppRoot(container: AppContainer) {
                                 when (tab) {
                                     0 -> OverviewScreen(
                                         backend = backend,
+                                        listState = overviewListState,
                                         onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
                                         onOpenBlocklists = { settingsSubScreen = "blocklists" },
                                         onOpenAutomation = { settingsSubScreen = "automation" },
                                     )
-                                    1 -> AppsScreen(backend)
-                                    2 -> RulesScreen(backend)
-                                    3 -> LogsScreen(backend)
+                                    1 -> AppsScreen(backend, listState = appsListState)
+                                    2 -> RulesScreen(backend, listState = rulesListState)
+                                    3 -> LogsScreen(backend, listState = logsListState)
                                     else -> SettingsScreen(
                                         backend = backend,
+                                        listState = settingsListState,
                                         onOpenIslandSettings = { settingsSubScreen = "island" },
                                         onOpenBlocklists = { settingsSubScreen = "blocklists" },
                                         onOpenPromptSettings = { settingsSubScreen = "prompts" },
