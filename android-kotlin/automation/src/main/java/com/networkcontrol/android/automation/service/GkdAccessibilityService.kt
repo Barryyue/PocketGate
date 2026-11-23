@@ -237,6 +237,7 @@ class GkdAccessibilityService : AccessibilityService() {
                     Log.i(TAG, "automation feature disabled; cleared rules")
                     return@launch
                 }
+                store.ensureDefaultSubscriptionSeeded()
                 val subs = store.loadAllEnabledSubscriptions()
                 val overrides = store.listGroupOverrides()
                 engine = RuleEngine(subs, overrides)

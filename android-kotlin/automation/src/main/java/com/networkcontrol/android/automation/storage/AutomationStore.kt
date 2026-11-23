@@ -11,6 +11,7 @@ import com.networkcontrol.android.automation.model.SubscriptionRecord
 import com.networkcontrol.android.automation.model.TriggerLogEntry
 import com.networkcontrol.android.automation.parser.GkdSubscriptionParser
 import java.io.File
+import java.util.zip.GZIPInputStream
 
 /**
  * 獨立於 `config.db` / `activity.db` 之外的自動化資料庫（`automation.db`），
@@ -137,6 +138,37 @@ class AutomationStore(context: Context) {
             SQLiteDatabase.CONFLICT_REPLACE,
         )
     }
+
+    // --- 內建預設訂閱（出庫即帶，可正常更新或刪除，刪除後不強制復活） ---
+
+    /** 首次使用時自動載入內建的離線社群訂閱快照（僅執行一次）。 */
+    @Synchronized
+    fun ensureDefaultSubscriptionSeeded(): Boolean {
+        if (getSetting(KEY_DEFAULT_SUB_SEEDED) == "1") return false
+        if (listSubscriptions().isNotEmpty()) {
+            setSetting(KEY_DEFAULT_SUB_SEEDED, "1")
+            return false
+        }
+        val ok = restoreDefaultSubscription() != null
+        if (ok) {
+            setSetting(KEY_DEFAULT_SUB_SEEDED, "1")
+        }
+        return ok
+    }
+
+    /** 從 APK assets 重新匯入內建訂閱（供首次種入或使用者誤刪後一鍵還原）。 */
+    fun restoreDefaultSubscription(): SubscriptionRecord? = runCatching {
+        val rawText = appContext.assets.open(DEFAULT_SUBSCRIPTION_ASSET).use { input ->
+            GZIPInputStream(input).bufferedReader(Charsets.UTF_8).use { it.readText() }
+        }
+        val parsed = GkdSubscriptionParser.parse(rawText, validateSelectors = true)
+        saveSubscription(
+            parsed = parsed,
+            rawJson5 = rawText,
+            updateUrl = DEFAULT_SUBSCRIPTION_URL,
+            enabled = true,
+        )
+    }.getOrNull()
 
     // --- 訂閱 CRUD ---
 
@@ -380,5 +412,8 @@ class AutomationStore(context: Context) {
     companion object {
         private const val KEY_FEATURE_ENABLED = "feature_enabled"
         private const val KEY_SHIZUKU_KEEP_ALIVE = "shizuku_keep_alive"
+        private const val KEY_DEFAULT_SUB_SEEDED = "default_sub_seeded"
+        const val DEFAULT_SUBSCRIPTION_ASSET = "default_gkd.json5.gz"
+        const val DEFAULT_SUBSCRIPTION_URL = "https://gkd-subscription-667.pages.dev/gkd.json5"
     }
 }

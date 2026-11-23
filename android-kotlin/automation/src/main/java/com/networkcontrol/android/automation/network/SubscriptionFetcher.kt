@@ -31,8 +31,10 @@ class SubscriptionFetcher(
             return@withContext FetchResult.Error("Invalid URL")
         }
 
-        // 若有 checkUpdateUrl，先做輕量版本檢查
-        val checkUrl = existing?.checkUpdateUrl
+        // 若有 checkUpdateUrl，先做輕量版本檢查（支援 ./gkd.version.json5 相對路徑）
+        val checkUrl = existing?.checkUpdateUrl?.let { raw ->
+            runCatching { URL(URL(trimmed), raw).toString() }.getOrNull()
+        }
         if (!checkUrl.isNullOrBlank()) {
             val remoteVersion = runCatching { downloadText(checkUrl) }
                 .mapCatching { GkdSubscriptionParser.parseVersionInfo(it) }

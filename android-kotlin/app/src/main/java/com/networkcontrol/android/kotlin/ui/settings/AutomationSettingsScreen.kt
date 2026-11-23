@@ -276,6 +276,25 @@ fun AutomationSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     }
 
                     if (subscriptions.isEmpty()) {
+                        OutlinedButton(
+                            enabled = !busy,
+                            onClick = {
+                                scope.launch {
+                                    busy = true
+                                    val restored = withContext(Dispatchers.IO) {
+                                        backend.restoreDefaultAutomationSubscription()
+                                    }
+                                    busy = false
+                                    if (restored != null) {
+                                        toast(s.format(S.AutomationSubImported, restored.name))
+                                    }
+                                    refreshData()
+                                }
+                            },
+                            modifier = Modifier.padding(top = 8.dp),
+                        ) {
+                            Text(s[S.AutomationRestoreBuiltin])
+                        }
                         Text(
                             s[S.AutomationNoSubscriptions],
                             style = MaterialTheme.typography.bodySmall,

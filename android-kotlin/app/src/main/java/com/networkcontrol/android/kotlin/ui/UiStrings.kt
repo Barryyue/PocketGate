@@ -640,6 +640,7 @@ enum class S {
     AutomationNoLogs,
     AutomationClearLogs,
     AutomationTodayCount,
+    AutomationRestoreBuiltin,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1302,6 +1303,7 @@ private val EN = mapOf(
     S.AutomationNoLogs to "No auto-skip triggers recorded yet.",
     S.AutomationClearLogs to "Clear",
     S.AutomationTodayCount to "%1\$d skipped today",
+    S.AutomationRestoreBuiltin to "Restore Built-in",
 )
 
 private val CN = mapOf(
@@ -1940,6 +1942,7 @@ private val CN = mapOf(
     S.AutomationNoLogs to "还没有自动跳过记录。",
     S.AutomationClearLogs to "清空",
     S.AutomationTodayCount to "今日跳过 %1\$d 次",
+    S.AutomationRestoreBuiltin to "恢复内置订阅",
 )
 
 private val TW = mapOf(
@@ -2578,4 +2581,5 @@ private val TW = mapOf(
     S.AutomationNoLogs to "還沒有自動跳過記錄。",
     S.AutomationClearLogs to "清空",
     S.AutomationTodayCount to "今日跳過 %1\$d 次",
+    S.AutomationRestoreBuiltin to "還原內建訂閱",
 )

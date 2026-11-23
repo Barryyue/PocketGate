@@ -1241,8 +1241,18 @@ class AppBackend(val container: AppContainer) {
         return res
     }
 
-    fun listAutomationSubscriptions(): List<com.networkcontrol.android.automation.model.SubscriptionRecord> =
-        container.automationStore.listSubscriptions()
+    fun listAutomationSubscriptions(): List<com.networkcontrol.android.automation.model.SubscriptionRecord> {
+        container.automationStore.ensureDefaultSubscriptionSeeded()
+        return container.automationStore.listSubscriptions()
+    }
+
+    fun restoreDefaultAutomationSubscription(): com.networkcontrol.android.automation.model.SubscriptionRecord? {
+        val restored = container.automationStore.restoreDefaultSubscription()
+        if (restored != null) {
+            com.networkcontrol.android.automation.service.GkdAccessibilityService.notifyReload(context)
+        }
+        return restored
+    }
 
     suspend fun importAutomationSubscription(
         url: String,
