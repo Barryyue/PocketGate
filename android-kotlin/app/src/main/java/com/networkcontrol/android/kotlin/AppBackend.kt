@@ -1212,6 +1212,84 @@ class AppBackend(val container: AppContainer) {
         container.scope.launch { container.trafficCollector.collectNow() }
     }
 
+    // --- 實驗功能：螢幕自動跳過（GKD 相容訂閱） ---
+
+    fun automationFeatureEnabled(): Boolean = container.automationStore.featureEnabled
+
+    fun setAutomationFeatureEnabled(enabled: Boolean) {
+        container.automationStore.featureEnabled = enabled
+        com.networkcontrol.android.automation.service.GkdAccessibilityService.notifyReload(context)
+    }
+
+    fun automationServiceActive(): Boolean =
+        com.networkcontrol.android.automation.platform.AccessibilityPrivilegeHelper.isServiceEnabled(context)
+
+    fun automationShizukuRunning(): Boolean =
+        com.networkcontrol.android.automation.platform.AccessibilityPrivilegeHelper.isShizukuRunning()
+
+    fun openAccessibilitySettingsIntent(): android.content.Intent =
+        com.networkcontrol.android.automation.platform.AccessibilityPrivilegeHelper.openAccessibilitySettingsIntent()
+
+    suspend fun setAutomationAccessibilityViaShizuku(
+        enable: Boolean,
+    ): com.networkcontrol.android.automation.platform.AccessibilityGrantOutcome {
+        val res = com.networkcontrol.android.automation.platform.AccessibilityPrivilegeHelper
+            .setServiceEnabledViaPrivilege(context, enable)
+        if (res is com.networkcontrol.android.automation.platform.AccessibilityGrantOutcome.Enabled) {
+            com.networkcontrol.android.automation.service.GkdAccessibilityService.notifyReload(context)
+        }
+        return res
+    }
+
+    fun listAutomationSubscriptions(): List<com.networkcontrol.android.automation.model.SubscriptionRecord> =
+        container.automationStore.listSubscriptions()
+
+    suspend fun importAutomationSubscription(
+        url: String,
+        existing: com.networkcontrol.android.automation.model.SubscriptionRecord? = null,
+    ): com.networkcontrol.android.automation.network.SubscriptionFetcher.FetchResult {
+        val result = container.automationFetcher.fetch(url, existing)
+        if (result is com.networkcontrol.android.automation.network.SubscriptionFetcher.FetchResult.Success) {
+            container.automationStore.saveSubscription(
+                parsed = result.parsed,
+                rawJson5 = result.rawText,
+                updateUrl = url.trim(),
+            )
+            com.networkcontrol.android.automation.service.GkdAccessibilityService.notifyReload(context)
+        }
+        return result
+    }
+
+    fun setAutomationSubscriptionEnabled(id: Long, enabled: Boolean) {
+        container.automationStore.setSubscriptionEnabled(id, enabled)
+        com.networkcontrol.android.automation.service.GkdAccessibilityService.notifyReload(context)
+    }
+
+    fun deleteAutomationSubscription(id: Long) {
+        container.automationStore.deleteSubscription(id)
+        com.networkcontrol.android.automation.service.GkdAccessibilityService.notifyReload(context)
+    }
+
+    fun loadAutomationSubscriptionDetail(id: Long): com.networkcontrol.android.automation.model.RawSubscription? =
+        container.automationStore.loadParsedSubscription(id)
+
+    fun listAutomationGroupOverrides(subscriptionId: Long): List<com.networkcontrol.android.automation.model.GroupOverride> =
+        container.automationStore.listGroupOverrides(subscriptionId)
+
+    fun setAutomationGroupOverride(subscriptionId: Long, appId: String, groupKey: Int, enabled: Boolean) {
+        container.automationStore.setGroupOverride(subscriptionId, appId, groupKey, enabled)
+        com.networkcontrol.android.automation.service.GkdAccessibilityService.notifyReload(context)
+    }
+
+    fun listAutomationTriggerLogs(limit: Int = 80): List<com.networkcontrol.android.automation.model.TriggerLogEntry> =
+        container.automationStore.listTriggerLogs(limit)
+
+    fun clearAutomationTriggerLogs() {
+        container.automationStore.clearTriggerLogs()
+    }
+
+    fun automationTodayTriggers(): Int = container.automationStore.todayTriggerCount()
+
     private fun ownRule(rules: List<Rule>, path: String): Rule? =
         rules.firstOrNull {
             isOwnRule(it, path) && !it.conditions.hasNetworkScope

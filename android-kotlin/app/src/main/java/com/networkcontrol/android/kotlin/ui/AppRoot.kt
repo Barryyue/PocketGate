@@ -98,6 +98,7 @@ import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
 import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
 import com.networkcontrol.android.kotlin.ui.rules.RulesScreen
+import com.networkcontrol.android.kotlin.ui.settings.AutomationSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.BlocklistSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.ForwardingSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.ProfileScheduleSettingsScreen
@@ -289,6 +290,10 @@ fun AppRoot(container: AppContainer) {
                             backend = backend,
                             onBack = { settingsSubScreen = null },
                         )
+                        "automation" -> AutomationSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
                         else -> LaunchedEffect(Unit) { settingsSubScreen = null }
                     }
                 }
@@ -358,6 +363,7 @@ fun AppRoot(container: AppContainer) {
                                         backend = backend,
                                         onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
                                         onOpenBlocklists = { settingsSubScreen = "blocklists" },
+                                        onOpenAutomation = { settingsSubScreen = "automation" },
                                     )
                                     1 -> AppsScreen(backend)
                                     2 -> RulesScreen(backend)
@@ -369,6 +375,7 @@ fun AppRoot(container: AppContainer) {
                                         onOpenPromptSettings = { settingsSubScreen = "prompts" },
                                         onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
                                         onOpenProfileSettings = { settingsSubScreen = "profiles" },
+                                        onOpenAutomation = { settingsSubScreen = "automation" },
                                     )
                                 }
                             }

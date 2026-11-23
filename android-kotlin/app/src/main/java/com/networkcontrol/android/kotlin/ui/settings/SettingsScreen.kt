@@ -125,6 +125,7 @@ fun SettingsScreen(
     onOpenPromptSettings: () -> Unit = {},
     onOpenForwardingSettings: () -> Unit = {},
     onOpenProfileSettings: () -> Unit = {},
+    onOpenAutomation: () -> Unit = {},
 ) {
     val guard = LocalSensitiveAction.current
     val s = rememberUiStrings()
@@ -531,6 +532,19 @@ fun SettingsScreen(
                     subtitleHighlighted = blocklistState.enabled,
                     actionText = s[S.Edit],
                     onClick = onOpenBlocklists,
+                )
+                val automationEnabled = remember(resumeKey) { backend.automationFeatureEnabled() }
+                val automationServiceOn = remember(resumeKey) { backend.automationServiceActive() }
+                SettingsNavRow(
+                    title = "${s[S.AutomationTitle]} (${s[S.AutomationExperimentalBadge]})",
+                    subtitle = when {
+                        automationEnabled && automationServiceOn -> s[S.AutomationServiceOn]
+                        automationEnabled -> s[S.AutomationNeedsA11y]
+                        else -> s[S.Off]
+                    },
+                    subtitleHighlighted = automationEnabled && automationServiceOn,
+                    actionText = s[S.Edit],
+                    onClick = onOpenAutomation,
                 )
                 SwitchRow(
                     title = s[S.ForwardingMode],

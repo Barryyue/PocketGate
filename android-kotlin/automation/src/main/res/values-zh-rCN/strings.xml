@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="automation_service_label">PocketGate 屏幕自动跳过</string>
+    <string name="automation_service_description">实验功能。使用兼容 GKD 的订阅规则在本地自动跳过开屏广告或重复弹窗。默认关闭，不会上传任何屏幕内容。</string>
+</resources>

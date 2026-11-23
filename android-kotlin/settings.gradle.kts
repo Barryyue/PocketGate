@@ -17,3 +17,5 @@ dependencyResolutionManagement {
 rootProject.name = "NetworkControlKT"
 include(":app")
 include(":baselineprofile")
+include(":gkd-selector")
+include(":automation")

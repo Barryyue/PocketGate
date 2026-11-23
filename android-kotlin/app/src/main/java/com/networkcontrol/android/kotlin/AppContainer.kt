@@ -114,6 +114,17 @@ class AppContainer(context: Context) {
         offlineMode = { preferences.offlineMode },
     )
 
+    /** 實驗功能：螢幕自動跳過（相容 GKD 訂閱）；延遲初始化，未啟用時零開銷。 */
+    val automationStore by lazy {
+        com.networkcontrol.android.automation.storage.AutomationStore(appContext)
+    }
+
+    val automationFetcher by lazy {
+        com.networkcontrol.android.automation.network.SubscriptionFetcher { url ->
+            underlyingNetwork.openConnection(java.net.URL(url)) as java.net.HttpURLConnection
+        }
+    }
+
     val vpnEngine: VpnEngine = VpnEngine(
         context = appContext,
         scope = scope,

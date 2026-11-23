@@ -110,6 +110,7 @@ baselineProfile {
 }
 
 dependencies {
+    implementation(project(":automation"))
     implementation(platform("androidx.compose:compose-bom:2025.06.01"))
     // 安裝後依 Baseline Profile 預先編譯啟動路徑（側載安裝也有效）
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
