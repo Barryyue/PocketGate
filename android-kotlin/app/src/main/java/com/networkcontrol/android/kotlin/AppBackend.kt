@@ -926,11 +926,28 @@ class AppBackend(val container: AppContainer) {
         container.preferences.offlineMode = enabled
     }
 
+    private val _excludedPackages = kotlinx.coroutines.flow.MutableStateFlow(container.preferences.forwardingDirectPackages)
+    /** 排除的應用：不經過本應用，所有防火牆規則與記錄均暫停生效。 */
+    val excludedPackages: kotlinx.coroutines.flow.StateFlow<Set<String>> = _excludedPackages
+
+    private val _proxyBypassPackage = kotlinx.coroutines.flow.MutableStateFlow(container.preferences.socks5BypassPackage)
+    /** 外部 SOCKS5 代理應用（用於避免迴路）。 */
+    val proxyBypassPackage: kotlinx.coroutines.flow.StateFlow<String?> = _proxyBypassPackage
+
     fun forwardingDirectPackages(): Set<String> = container.preferences.forwardingDirectPackages
 
     fun setForwardingDirectPackages(packages: Set<String>) {
-        container.preferences.forwardingDirectPackages = packages
+        val next = packages.toSet()
+        container.preferences.forwardingDirectPackages = next
+        _excludedPackages.value = next
         container.vpnEngine.requestReplan()
+    }
+
+    /** 將單一應用加入或移出「排除的應用」。 */
+    fun setAppExcluded(packageName: String, excluded: Boolean) {
+        val current = container.preferences.forwardingDirectPackages
+        val next = if (excluded) current + packageName else current - packageName
+        if (next != current) setForwardingDirectPackages(next)
     }
 
     /** 隧道目前是否真的在轉發（啟動失敗回退到黑洞模式時為 false）。 */
@@ -940,6 +957,7 @@ class AppBackend(val container: AppContainer) {
 
     fun setSocks5BypassPackage(packageName: String?) {
         container.preferences.socks5BypassPackage = packageName
+        _proxyBypassPackage.value = packageName
         container.vpnEngine.requestReplan()
     }
 
@@ -974,6 +992,14 @@ class AppBackend(val container: AppContainer) {
         rules = container.rules.ruleSet.value,
         apps = apps,
         network = container.network.current,
+    )
+
+    /** 目前已啟用規則中設有禁止聯網規則的應用包名集合。 */
+    fun deniedByRulePackages(
+        apps: List<com.networkcontrol.android.kotlin.core.model.InstalledApp> = installedApps(),
+    ): Set<String> = VpnRoutingPlanner.deniedByRulePackages(
+        rules = container.rules.ruleSet.value,
+        apps = apps,
     )
 
     fun canDrawOverlays(): Boolean = container.promptOverlay.canDrawOverlays()

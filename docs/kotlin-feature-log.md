@@ -517,6 +517,7 @@
 | ID | 功能 | 實作位置 | 驗證 | 備註 |
 |---|---|---|---|---|
 | K-173 | 全頁面 UI/UX 細節批量修復（2026-11-21）：修復 `AppLockGate` 鎖屏底色、轉屏重鎖與無憑證鎖死並補齊各頁 `guard.run` 敏感操作校驗；`RulesScreen` 顯示域名／遠端目標與搜尋及刪除確認；修復總覽轉發磁貼、切換設定檔、主題語言下拉、退出偵測等狀態同步；修正 `PromptOverlay` 懸浮底欄重疊與按鈕區分；強化 SOCKS5／DoH／WebDAV／彈窗捲動與輸入校驗；釋放狀態列網速圖示入口、清除重複卡片並對內建引導文案脫敏；最佳化 `SpeedChartCard` 重繪分配與亮色主題對比度 | `AppLockGate.kt`、`AppRoot.kt`、`Theme.kt`、`ThemeColorDialog.kt`、`UiStrings.kt`、`OverviewScreen.kt`、`SpeedChartCard.kt`、`AppsScreen.kt`、`RulesScreen.kt`、`LogsScreen.kt`、`PromptOverlay.kt`、`SettingsScreen.kt`、`ForwardingSettingsScreen.kt`、`BlocklistSettingsScreen.kt`、`PromptSettingsScreen.kt`、`SpeedIslandSettingsScreen.kt`、`ProfileScheduleSettingsScreen.kt` | `.\scripts\android-kotlin.ps1 test`（`:app:testDebugUnitTest` `BUILD SUCCESSFUL`） | 真機各頁互動、鎖屏與小螢幕捲動待用戶確認 |
+| K-174 | 「直連應用」正名為「排除的應用」並消除規則靜默失效（2026-11-23）：（1）三語文案將「直連應用」更名為「排除的應用」，說明流量不經本應用且規則／網域攔截／活動記錄均不生效，並於 ForwardingSettingsScreen 將「代理應用」與「排除的應用」拆卡；（2）VpnEngine 在黑洞模式與回退配置亦統一排除該名單，行為跨模式一致；（3）AppsScreen 詳情頁新增 NetGuard 風格「套用防火牆規則」開關，應用頁與 RulesScreen 對已排除或設為代理的應用顯示徽章、警告橫幅、一鍵恢復與規則置灰（保留原規則開關不破壞配置）；（4）DirectAppsDialog 標註「有禁止規則」並在新增衝突應用時二次確認 | UiStrings.kt、ForwardingSettingsScreen.kt、SettingsScreen.kt、AppsScreen.kt、RulesScreen.kt、AppBackend.kt、RoutingPlanner.kt、VpnEngine.kt、RoutingPlannerTest.kt | .\scriptsndroid-kotlin.ps1 test（含 deniedByRulePackagesDetectsEnabledDenyRulesAndNewlyExcludedConflicts）與 .\scriptsndroid-kotlin.ps1 build 通過 | 模擬器（emulator-5554）端對端 UI 驗證通過（詳情開關、應用頁/規則頁已排除徽章與一鍵恢復、設定頁排除的應用與禁止規則衝突二次確認、零崩潰）；真機待用戶確認 |
 
 ### v0.16.6（2026-11-21）
 

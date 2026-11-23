@@ -35,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +64,10 @@ fun RulesScreen(backend: AppBackend) {
     val scope = rememberCoroutineScope()
     val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
     val runtime by backend.runtime.collectAsStateWithLifecycle()
+    val excludedPackages by backend.excludedPackages.collectAsStateWithLifecycle()
+    val proxyBypassPackage by backend.proxyBypassPackage.collectAsStateWithLifecycle()
+    val isProxyMode = backend.forwardingEnabled() &&
+        backend.forwardingUpstream() == com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
     val activeProfileId = runtime.activeProfileId
     val sims = remember { runCatching { backend.subscriptions() }.getOrDefault(emptyList()) }
     var query by remember { mutableStateOf("") }
@@ -127,9 +132,12 @@ fun RulesScreen(backend: AppBackend) {
             }
         }
         items(filteredGroups, key = { it.key }) { group ->
+            val pkg = group.packageName
             RuleGroupCard(
                 backend = backend,
                 group = group,
+                isExcluded = pkg != null && pkg in excludedPackages,
+                isProxyBypass = pkg != null && isProxyMode && proxyBypassPackage == pkg,
                 sims = sims,
                 onChanged = { },
                 scope = scope,
@@ -143,6 +151,8 @@ fun RulesScreen(backend: AppBackend) {
 private fun RuleGroupCard(
     backend: AppBackend,
     group: RuleGroup,
+    isExcluded: Boolean,
+    isProxyBypass: Boolean,
     sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     onChanged: () -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
@@ -194,6 +204,21 @@ private fun RuleGroupCard(
                         )
                     }
                 }
+                if (isExcluded || isProxyBypass) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(scheme.error.copy(alpha = 0.14f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            if (isExcluded) s[S.ExcludedBadge] else s[S.ProxyApp],
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.error,
+                        )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                }
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(99.dp))
@@ -208,20 +233,51 @@ private fun RuleGroupCard(
                     )
                 }
             }
-            group.rules.forEach { rule ->
-                RuleRow(
-                    rule = rule,
-                    sims = sims,
-                    onToggle = { enabled ->
-                        guard.run {
-                            scope.launch {
-                                backend.setRuleEnabled(rule.id, enabled)
-                                onChanged()
-                            }
+            val bypassed = isExcluded || isProxyBypass
+            if (bypassed) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        if (isExcluded) s[S.ExcludedRulesInactiveHint] else s[S.ExcludedProxyAppHint],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.error,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (isExcluded && group.packageName != null) {
+                        TextButton(
+                            onClick = {
+                                guard.run {
+                                    backend.setAppExcluded(group.packageName, false)
+                                    onChanged()
+                                }
+                            },
+                        ) {
+                            Text(s[S.ResumeFirewallRules])
                         }
-                    },
-                    onDelete = { pendingDelete = rule },
-                )
+                    }
+                }
+            }
+            Column(
+                modifier = if (bypassed) Modifier.alpha(0.5f) else Modifier,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                group.rules.forEach { rule ->
+                    RuleRow(
+                        rule = rule,
+                        sims = sims,
+                        onToggle = { enabled ->
+                            guard.run {
+                                scope.launch {
+                                    backend.setRuleEnabled(rule.id, enabled)
+                                    onChanged()
+                                }
+                            }
+                        },
+                        onDelete = { pendingDelete = rule },
+                    )
+                }
             }
         }
     }

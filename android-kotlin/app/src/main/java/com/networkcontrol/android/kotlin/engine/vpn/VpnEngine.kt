@@ -399,10 +399,10 @@ class VpnEngine(
                 upstreamPassword = server?.password ?: preferences.socks5Password,
             )
         } else {
-            VpnTunnelConfig(plan.bypassPackages)
+            VpnTunnelConfig(plan.bypassPackages + preferences.forwardingDirectPackages)
         }
         // 轉發啟動失敗時隧道在黑洞模式運行，排除名單要跟著路由計畫更新。
-        val fallback = VpnTunnelConfig(plan.bypassPackages)
+        val fallback = VpnTunnelConfig(plan.bypassPackages + preferences.forwardingDirectPackages)
         if (tunnel.state == VpnTunnelState.Active &&
             config.equivalentTo(applied) &&
             (!config.forwarding || tunnel.isForwarding || fallback.equivalentTo(appliedFallback))

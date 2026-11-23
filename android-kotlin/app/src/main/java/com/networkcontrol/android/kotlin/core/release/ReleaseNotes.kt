@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.2",
+            date = "2026-11-23",
+            features = listOf(
+                t(
+                    "Renamed Direct apps to Excluded apps (consistent across blackhole and forwarding modes); added an Apply firewall rules switch in app details, dimmed paused rules with one-tap resume on Apps and Rules screens, and added deny-rule conflict tags and confirmation",
+                    "将「直连应用」更名为「排除的应用」（黑洞与逐连接模式统一生效）；应用详情页新增「应用防火墙规则」开关，应用页与规则页对已排除或设为代理的应用显示徽章、规则置灰提示与一键恢复，并在新增含禁止规则的排除应用时二次确认",
+                    "將「直連應用」更名為「排除的應用」（黑洞與逐連線模式統一生效）；應用詳情頁新增「套用防火牆規則」開關，應用頁與規則頁對已排除或設為代理的應用顯示徽章、規則置灰提示與一鍵恢復，並在新增含禁止規則的排除應用時二次確認",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.0",
             date = "2026-11-23",
             features = listOf(

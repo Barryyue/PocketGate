@@ -422,9 +422,9 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                 }
             }
 
-            item {
-                SectionCard(s[S.DirectApps]) {
-                    if (viaProxy) {
+            if (viaProxy) {
+                item {
+                    SectionCard(s[S.ProxyApp]) {
                         if (VpnEngine.isLoopbackHost(socks5Host) && proxyPackage.isNullOrBlank()) {
                             Text(
                                 s[S.ProxyAppMissingWarning],
@@ -452,6 +452,11 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
+            }
+
+            item {
+                SectionCard(s[S.DirectApps]) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(s[S.DirectApps], style = MaterialTheme.typography.bodyMedium)
@@ -494,12 +499,16 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     val allowedByRulePackages = remember(apps, ruleSet.version, network) {
         apps?.let { backend.allowedByRulePackages(it) } ?: emptySet()
     }
+    val deniedByRulePackages = remember(apps, ruleSet.version) {
+        apps?.let { backend.deniedByRulePackages(it) } ?: emptySet()
+    }
     if (showDirectAppsDialog && apps != null) {
         DirectAppsDialog(
             title = s[S.DirectApps],
             apps = apps,
             initial = directPackages,
             allowedByRulePackages = allowedByRulePackages,
+            deniedByRulePackages = deniedByRulePackages,
             onDismiss = { showDirectAppsDialog = false },
             onSave = { packages ->
                 guard.run {
