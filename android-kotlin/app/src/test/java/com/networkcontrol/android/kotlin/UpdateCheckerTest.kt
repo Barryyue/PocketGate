@@ -122,7 +122,7 @@ class UpdateCheckerTest {
             UpdateChecker.endpoint(UpdateSource.GitLab, "g/p", ""),
         )
         assertEquals(
-            "https://gitee.com/api/v5/repos/o/r/releases?page=1&per_page=20",
+            "https://gitee.com/api/v5/repos/o/r/releases?page=1&per_page=20&direction=desc",
             UpdateChecker.endpoint(UpdateSource.Gitee, "o/r", ""),
         )
         assertEquals(
@@ -284,7 +284,7 @@ class UpdateCheckerTest {
                         currentVersion = "0.15.6",
                     )
                 },
-                downloadApk = { _, targetFile, _, onProgress ->
+                downloadApk = { _, targetFile, _, _, onProgress ->
                     onProgress(40)
                     targetFile.parentFile?.mkdirs()
                     targetFile.writeBytes(byteArrayOf(0x50, 0x4B, 0x03, 0x04, 1, 2, 3, 4))
@@ -383,5 +383,16 @@ class UpdateCheckerTest {
         assertEquals("0.17.0-beta.3", beta.latestVersion)
         assertTrue(beta.hasUpdate)
         assertTrue(beta.isPrerelease)
+
+        // 即使遠端清單按升序回傳（最舊的排第一個），正式通道也必須挑出版本號最高者
+        val ascendingStable = """
+            [
+              {"tag_name": "v0.14.4", "prerelease": false, "assets": [{"browser_download_url": "https://example.com/PocketGate-0.14.4.apk"}]},
+              {"tag_name": "v0.16.9", "prerelease": false, "assets": [{"browser_download_url": "https://example.com/PocketGate-0.16.9.apk"}]}
+            ]
+        """.trimIndent()
+        val picked = UpdateChecker.parse(UpdateSource.Gitee, ascendingStable, "0.16.8", UpdateChannel.Stable)
+        assertEquals("0.16.9", picked.latestVersion)
+        assertTrue(picked.hasUpdate)
     }
 }

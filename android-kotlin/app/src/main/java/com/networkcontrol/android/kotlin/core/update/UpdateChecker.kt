@@ -60,7 +60,8 @@ object UpdateChecker {
     private const val GITHUB_WEB_LATEST = "https://github.com/%s/releases/latest"
     private const val GITLAB_LATEST =
         "https://gitlab.com/api/v4/projects/%s/releases/permalink/latest"
-    private const val GITEE_LATEST = "https://gitee.com/api/v5/repos/%s/releases?page=1&per_page=20"
+    private const val GITEE_LATEST =
+        "https://gitee.com/api/v5/repos/%s/releases?page=1&per_page=20&direction=desc"
 
     /**
      * 自動檢查更新：先走 GitHub，連不通或下載地址不可達時自動回退到 Gitee 或國內加速鏡像。
@@ -186,6 +187,8 @@ object UpdateChecker {
         targetFile: File,
         fallbackUrl: String? = null,
         currentVersion: String = "0.0.0",
+        expectedVersion: String? = null,
+        channel: UpdateChannel = UpdateChannel.Stable,
         onProgress: (Int) -> Unit = {},
     ): Result<File> = withContext(Dispatchers.IO) {
         val candidates = linkedSetOf<String>()
@@ -215,12 +218,20 @@ object UpdateChecker {
             lastResult = attempt
         }
 
-        // 若以上候選皆失敗且尚未查過 Gitee，最後查詢一次 Gitee Releases
+        // 若以上候選皆失敗且尚未查過 Gitee，最後查詢一次 Gitee Releases；
+        // 嚴格校驗版本號，絕不允許把舊版 APK 當成目標版本下載安裝。
         if (rawGitHubUrl != null) {
-            val gitee = check(currentVersion, UpdateSource.Gitee, DEFAULT_GITEE_REPO).let {
-                if (it.error != null) check(currentVersion, UpdateSource.Gitee, LEGACY_GITEE_REPO) else it
+            val gitee = check(currentVersion, UpdateSource.Gitee, DEFAULT_GITEE_REPO, channel = channel).let {
+                if (it.error != null) check(currentVersion, UpdateSource.Gitee, LEGACY_GITEE_REPO, channel = channel) else it
             }
-            val giteeUrl = gitee.downloadUrl?.takeIf { it.endsWith(".apk", ignoreCase = true) && it !in candidates }
+            val versionOk = gitee.latestVersion != null && gitee.hasUpdate && (
+                expectedVersion.isNullOrBlank() || compareVersions(gitee.latestVersion, expectedVersion) >= 0
+            )
+            val giteeUrl = if (versionOk) {
+                gitee.downloadUrl?.takeIf { it.endsWith(".apk", ignoreCase = true) && it !in candidates }
+            } else {
+                null
+            }
             if (giteeUrl != null) {
                 onProgress(0)
                 val giteeAttempt = runCatching {
@@ -423,10 +434,7 @@ object UpdateChecker {
                 if (rawTag.startsWith("atomui-v", ignoreCase = true)) continue
                 val parsed = parseObject(source, item, currentVersion)
                 if (parsed.latestVersion != null && !isAtomUiOnlyRelease(item, parsed.downloadUrl)) {
-                    if (channel == UpdateChannel.Stable) {
-                        return parsed
-                    }
-                    // 測試通道：在預發佈與正式版中挑選版本號最高者
+                    // 無論正式或測試通道，皆挑選清單中版本號最高者，避免 API 回傳升序時誤選最舊版
                     val prev = best
                     if (prev == null || compareVersions(parsed.latestVersion, prev.latestVersion.orEmpty()) > 0) {
                         best = parsed

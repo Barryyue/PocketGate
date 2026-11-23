@@ -188,12 +188,7 @@ class AppContainer(context: Context) {
         updatesDir = java.io.File(appContext.cacheDir, "updates"),
         currentVersion = BuildConfig.VERSION_NAME,
         offlineMode = { preferences.offlineMode },
-        checkUpdate = {
-            com.networkcontrol.android.kotlin.core.update.UpdateChecker.checkAuto(
-                currentVersion = BuildConfig.VERSION_NAME,
-                channel = preferences.updateChannel,
-            )
-        },
+        updateChannel = { preferences.updateChannel },
     )
     val backend = AppBackend(this)
     /** 桌面掛件、控制中心磁貼、長按捷徑的同步中心。 */
