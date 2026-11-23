@@ -160,11 +160,9 @@ class AutomationCoreTest {
 
     @Test
     fun parsesBundledDefaultCommunitySubscriptionAsset() {
-        val assetFile = java.io.File("src/main/assets/default_gkd.json5.gz")
-        assertTrue("Bundled default_gkd.json5.gz should exist", assetFile.exists())
-        val raw = java.util.zip.GZIPInputStream(assetFile.inputStream()).bufferedReader(Charsets.UTF_8).use {
-            it.readText()
-        }
+        val assetFile = java.io.File("src/main/assets/default_gkd.json5")
+        assertTrue("Bundled default_gkd.json5 should exist", assetFile.exists())
+        val raw = assetFile.readText(Charsets.UTF_8)
         val parsed = GkdSubscriptionParser.parse(raw, validateSelectors = true)
         assertEquals(667L, parsed.subscription.id)
         assertTrue("Should parse hundreds of apps", parsed.subscription.apps.size > 500)

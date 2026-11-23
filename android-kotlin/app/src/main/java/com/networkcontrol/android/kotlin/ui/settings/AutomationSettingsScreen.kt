@@ -281,12 +281,14 @@ fun AutomationSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             onClick = {
                                 scope.launch {
                                     busy = true
-                                    val restored = withContext(Dispatchers.IO) {
+                                    val result = withContext(Dispatchers.IO) {
                                         backend.restoreDefaultAutomationSubscription()
                                     }
                                     busy = false
-                                    if (restored != null) {
+                                    result.onSuccess { restored ->
                                         toast(s.format(S.AutomationSubImported, restored.name))
+                                    }.onFailure { err ->
+                                        toast(s.format(S.AutomationSubFailed, err.message ?: err.javaClass.simpleName))
                                     }
                                     refreshData()
                                 }
