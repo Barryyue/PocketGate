@@ -11,11 +11,19 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // 獨立無障礙進程（:automation）絕不初始化主進程的 VPN / AppContainer / config.db，
+        // 避免記憶體翻倍與多進程 SQLite 鎖衝突。
+        if (isAutomationProcess()) return
         container = AppContainer(this)
         com.networkcontrol.android.kotlin.platform.AppLog.init(this)
         NotificationChannels.ensure(this)
         applyThemePreference()
         applyLanguagePreference()
+    }
+
+    private fun isAutomationProcess(): Boolean {
+        val processName = runCatching { getProcessName() }.getOrNull().orEmpty()
+        return processName.endsWith(":automation")
     }
 
     private fun applyThemePreference() {

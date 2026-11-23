@@ -120,6 +120,7 @@ fun OverviewScreen(
     backend: AppBackend,
     onOpenForwardingSettings: () -> Unit = {},
     onOpenBlocklists: () -> Unit = {},
+    onOpenAutomation: () -> Unit = {},
 ) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
@@ -689,6 +690,34 @@ fun OverviewScreen(
                         modifier = Modifier.weight(1f),
                     )
                 }
+            }
+
+            // 實驗功能：螢幕自動跳過快捷入口（預設未啟用）
+            item {
+                val autoEnabled = remember(permResumeKey) { backend.automationFeatureEnabled() }
+                val autoServiceOn = remember(permResumeKey) { backend.automationServiceActive() }
+                val autoToday = remember(permResumeKey, refreshKey) {
+                    if (autoEnabled) backend.automationTodayTriggers() else 0
+                }
+                val autoActive = autoEnabled && autoServiceOn
+                BentoTile(
+                    label = "${s[S.AutomationShortcut]} (${s[S.AutomationExperimentalBadge]})",
+                    value = when {
+                        autoActive -> s[S.QuickOn]
+                        autoEnabled -> s[S.AutomationNeedsA11y]
+                        else -> s[S.Off]
+                    },
+                    icon = Icons.Rounded.Star,
+                    accent = if (autoActive) scheme.primary else scheme.onSurfaceVariant,
+                    highlighted = autoActive,
+                    subtitle = when {
+                        autoActive -> s.format(S.AutomationTodayCount, autoToday)
+                        autoEnabled -> s[S.AutomationNeedsA11y]
+                        else -> s[S.BlocklistsTapHint]
+                    },
+                    onClick = onOpenAutomation,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             // 專注進行中時展開快捷操作條（延長 15 分鐘 / 停止 / 存為配置）
