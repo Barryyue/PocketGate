@@ -121,6 +121,7 @@ import kotlin.math.roundToInt
 @Composable
 fun SettingsScreen(
     backend: AppBackend,
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
     onOpenIslandSettings: () -> Unit = {},
     onOpenBlocklists: () -> Unit = {},
     onOpenPromptSettings: () -> Unit = {},
@@ -283,6 +284,7 @@ fun SettingsScreen(
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = 20.dp,

@@ -74,7 +74,10 @@ private enum class ReasonFilter { All, Rule, Mode, Prompt, Dnd, Blocklist }
 private enum class LogsTab { Blocked, Allowed, Live }
 
 @Composable
-fun LogsScreen(backend: AppBackend) {
+fun LogsScreen(
+    backend: AppBackend,
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
+) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     val context = LocalContext.current
@@ -169,6 +172,7 @@ fun LogsScreen(backend: AppBackend) {
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 20.dp,

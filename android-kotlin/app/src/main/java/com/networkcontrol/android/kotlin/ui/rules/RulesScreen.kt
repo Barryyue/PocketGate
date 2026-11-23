@@ -59,7 +59,10 @@ import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import kotlinx.coroutines.launch
 
 @Composable
-fun RulesScreen(backend: AppBackend) {
+fun RulesScreen(
+    backend: AppBackend,
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
+) {
     val s = rememberUiStrings()
     val scope = rememberCoroutineScope()
     val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
@@ -92,6 +95,7 @@ fun RulesScreen(backend: AppBackend) {
     }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(
             start = 20.dp,

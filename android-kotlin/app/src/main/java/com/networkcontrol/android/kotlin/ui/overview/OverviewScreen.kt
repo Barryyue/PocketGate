@@ -118,6 +118,7 @@ private const val SPEED_HISTORY_POINTS = 36
 @Composable
 fun OverviewScreen(
     backend: AppBackend,
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
     onOpenForwardingSettings: () -> Unit = {},
     onOpenBlocklists: () -> Unit = {},
 ) {
@@ -249,6 +250,7 @@ fun OverviewScreen(
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = 18.dp,

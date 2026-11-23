@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.16.12",
+            date = "2026-11-23",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Preserved scroll position across all main tabs and when returning from Settings sub-screens",
+                    "优化页面滚动体验：从设置二级页面返回或切换底部页签时，自动保留进入前的滚动位置",
+                    "優化頁面捲動體驗：從設定二級頁面返回或切換底部頁籤時，自動保留進入前的捲動位置",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.16.11",
             date = "2026-11-23",
             features = listOf(
