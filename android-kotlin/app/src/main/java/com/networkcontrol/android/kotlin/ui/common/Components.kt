@@ -108,43 +108,6 @@ fun SectionCard(
     }
 }
 
-@Composable
-fun MetricCard(label: String, value: String, modifier: Modifier = Modifier, hint: String? = null) {
-    val tokens = LocalAppVisualTokens.current
-    val container = if (tokens.cardContainer != Color.Unspecified) {
-        tokens.cardContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-    }
-    val border = if (tokens.cardBorder != Color.Transparent) {
-        BorderStroke(1.dp, tokens.cardBorder)
-    } else {
-        null
-    }
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = container,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        shape = RoundedCornerShape(tokens.metricCornerRadius),
-        border = border,
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                value,
-                style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
-                fontWeight = FontWeight.SemiBold,
-            )
-            if (hint != null) {
-                Text(hint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
 /**
  * 雙列 Bento 儀表盤瓷磚卡片：左上圖示徽章 + 短標題 + 核心等寬數值 + 輔助說明，
  * 支援強調態邊框與點擊互動。

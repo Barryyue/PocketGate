@@ -173,19 +173,21 @@ fun SettingsScreen(
     var lockWhitelist by remember { mutableStateOf(backend.lockScreenWhitelist()) }
     var showLockWhitelistDialog by remember { mutableStateOf(false) }
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
-    var offlineMode by remember { mutableStateOf(backend.offlineMode()) }
-    var notificationsEnabled by remember(resumeKey) {
+    val offlineModeFlowVal by backend.offlineModeFlow.collectAsStateWithLifecycle()
+    val forwardingEnabledFlowVal by backend.forwardingEnabledFlow.collectAsStateWithLifecycle()
+    val forwardingUpstream by backend.forwardingUpstreamFlow.collectAsStateWithLifecycle()
+    var offlineMode by remember(offlineModeFlowVal) { mutableStateOf(offlineModeFlowVal) }
+    var notificationsEnabled by remember(effectiveResumeKey) {
         mutableStateOf(backend.container.preferences.notificationsEnabled)
     }
-    var autoHideBottomBar by remember(resumeKey) {
+    var autoHideBottomBar by remember(effectiveResumeKey) {
         mutableStateOf(backend.autoHideBottomBar())
     }
-    var cloneIndependent by remember(resumeKey) {
+    var cloneIndependent by remember(effectiveResumeKey) {
         mutableStateOf(!backend.cloneAppsInheritPrimary())
     }
     var showWebDavDialog by remember { mutableStateOf(false) }
-    var forwardingEnabled by remember(resumeKey) { mutableStateOf(backend.forwardingEnabled()) }
-    val forwardingUpstream = remember(resumeKey) { backend.forwardingUpstream() }
+    var forwardingEnabled by remember(forwardingEnabledFlowVal) { mutableStateOf(forwardingEnabledFlowVal) }
     val viaProxy = forwardingUpstream == ForwardingUpstream.SOCKS5
     val socks5Host = remember(resumeKey) { backend.socks5Host() }
     val socks5Port = remember(resumeKey) { backend.socks5Port() }
@@ -539,6 +541,15 @@ fun SettingsScreen(
                     },
                 )
                 SwitchRow(
+                    title = s[S.AllowIcmp],
+                    checked = settings.allowIcmpByDefault,
+                    onCheckedChange = { allow ->
+                        guard.run {
+                            backend.updateSettings { it.copy(allowIcmpByDefault = allow) }
+                        }
+                    },
+                )
+                SwitchRow(
                     title = s[S.CloneIndependent],
                     subtitle = s[S.CloneIndependentHint],
                     checked = cloneIndependent,
@@ -741,22 +752,11 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
-                Row(
+                OutlinedButton(
+                    onClick = { context.startActivity(backend.openAlwaysOnVpnSettings()) },
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutlinedButton(
-                        onClick = { context.startActivity(backend.openAlwaysOnVpnSettings()) },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(s[S.AlwaysOnVpn])
-                    }
-                    OutlinedButton(
-                        onClick = { context.startActivity(backend.openBatteryOptimizationSettings()) },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(s[S.BatteryOptimization])
-                    }
+                    Text(s[S.AlwaysOnVpn])
                 }
             }
         }
@@ -2241,14 +2241,6 @@ internal fun toolbarStyleLabel(
     ToolbarStyle.FloatingFrosted -> s[S.ToolbarFloatingFrosted]
     ToolbarStyle.FloatingTransparent -> s[S.ToolbarFloatingTransparent]
 }
-
-internal fun updateSourceLabel(s: UiStrings, source: UpdateSource): String =
-    when (source) {
-        UpdateSource.GitHub -> s[S.UpdateSourceGitHub]
-        UpdateSource.GitLab -> s[S.UpdateSourceGitLab]
-        UpdateSource.Gitee -> s[S.UpdateSourceGitee]
-        UpdateSource.Custom -> s[S.UpdateSourceCustom]
-    }
 
 private val KNOWN_PROXY_KEYWORDS = listOf(
     "flclash", "clash", "v2ray", "nekobox", "singbox", "sfa", "reqable",

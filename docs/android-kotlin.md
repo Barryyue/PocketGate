@@ -1811,5 +1811,9 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
   - 驗證：`test` + `build` 通過；真機新應用通知與 GKD 規則組互動待回歸。
 
 ### P3：代碼債與真機回歸債
-- [ ] **P3-1 孤兒代碼清理與響應式狀態**：移除廢棄 `updateSource/Repo/CustomUrl`、`promptShowExplanation`、`MetricCard`；將跨頁共享偏好收斂為 `StateFlow`；整理設定頁分組（ICMP 移出詢問設定頁、統一殘餘文案）並拆分 `SettingsScreen.kt` 與共用 Shizuku/Root 執行器。
-- [ ] **P3-2 真機回歸收口**：集中回歸 v0.13.4～v0.17.x 累積的未真機驗證項（6 套主題、導覽列自動隱藏、應用內更新安裝、WebDAV 同步、GKD 自動跳過、待機耗電）。
+- [x] (antigravity, 2026-11-24) **P3-1 孤兒代碼清理與響應式狀態**：
+  - 移除廢棄的 `updateSource` / `updateRepo` / `updateCustomUrl` / `updateSourceLabel`、`promptShowExplanation` 與無引用的 `MetricCard`。
+  - 在 `AppBackend` 新增 `forwardingEnabledFlow` / `forwardingUpstreamFlow` / `offlineModeFlow`，`SettingsScreen` / `AppsScreen` / `RulesScreen` 全面訂閱，消除跨頁切換狀態不同步。
+  - 將「預設允許 ICMP（Ping）」從詢問設定頁移至防護與網路卡片，移除權限體檢卡底部重複的電池最佳化按鈕，並補齊 `ReleaseNotes.kt` 0.17.4 / 0.17.5 三語版本說明。
+  - 驗證：`.\scripts\android-kotlin.ps1 test`（含 `ReleaseNotesTest`）+ `build` 通過。
+- [ ] **P3-2 真機回歸收口**：集中回歸 v0.13.4～v0.17.5 累積的未真機驗證項（6 套主題、導覽列自動隱藏、應用內更新安裝與 SHA-256 校驗、WebDAV v2 同步、GKD 自動跳過、待機耗電、區網/漫遊/QUIC、小窗電池授權刷新）。

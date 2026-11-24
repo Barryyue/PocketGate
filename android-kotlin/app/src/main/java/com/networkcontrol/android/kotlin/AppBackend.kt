@@ -653,13 +653,6 @@ class AppBackend(val container: AppContainer) {
         container.promptRouter.refresh()
     }
 
-    fun promptShowExplanation(): Boolean = container.preferences.promptShowExplanation
-
-    fun setPromptShowExplanation(show: Boolean) {
-        container.preferences.promptShowExplanation = show
-        container.promptRouter.refresh()
-    }
-
     fun promptHideDetailsOnLockScreen(): Boolean = container.preferences.promptHideDetailsOnLockScreen
 
     fun setPromptHideDetailsOnLockScreen(hide: Boolean) {
@@ -700,10 +693,20 @@ class AppBackend(val container: AppContainer) {
         container.preferences.appLockEnabled = enabled
     }
 
+    private val _forwardingEnabled = kotlinx.coroutines.flow.MutableStateFlow(container.preferences.forwardingEnabled)
+    val forwardingEnabledFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = _forwardingEnabled
+
+    private val _forwardingUpstream = kotlinx.coroutines.flow.MutableStateFlow(container.preferences.forwardingUpstream)
+    val forwardingUpstreamFlow: kotlinx.coroutines.flow.StateFlow<String> = _forwardingUpstream
+
+    private val _offlineMode = kotlinx.coroutines.flow.MutableStateFlow(container.preferences.offlineMode)
+    val offlineModeFlow: kotlinx.coroutines.flow.StateFlow<Boolean> = _offlineMode
+
     fun forwardingEnabled(): Boolean = container.preferences.forwardingEnabled
 
     fun setForwardingEnabled(enabled: Boolean) {
         container.preferences.forwardingEnabled = enabled
+        _forwardingEnabled.value = enabled
         container.vpnEngine.requestReplan()
     }
 
@@ -966,6 +969,7 @@ class AppBackend(val container: AppContainer) {
 
     fun setForwardingUpstream(upstream: String) {
         container.preferences.forwardingUpstream = upstream
+        _forwardingUpstream.value = upstream
         container.vpnEngine.requestReplan()
     }
 
@@ -1057,6 +1061,7 @@ class AppBackend(val container: AppContainer) {
 
     fun setOfflineMode(enabled: Boolean) {
         container.preferences.offlineMode = enabled
+        _offlineMode.value = enabled
     }
 
     private val _excludedPackages = kotlinx.coroutines.flow.MutableStateFlow(container.preferences.forwardingDirectPackages)
@@ -1092,25 +1097,6 @@ class AppBackend(val container: AppContainer) {
         container.preferences.socks5BypassPackage = packageName
         _proxyBypassPackage.value = packageName
         container.vpnEngine.requestReplan()
-    }
-
-    fun updateSource(): com.networkcontrol.android.kotlin.core.update.UpdateSource =
-        container.preferences.updateSource
-
-    fun setUpdateSource(source: com.networkcontrol.android.kotlin.core.update.UpdateSource) {
-        container.preferences.updateSource = source
-    }
-
-    fun updateRepo(): String = container.preferences.updateRepo
-
-    fun setUpdateRepo(repo: String) {
-        container.preferences.updateRepo = repo
-    }
-
-    fun updateCustomUrl(): String = container.preferences.updateCustomUrl
-
-    fun setUpdateCustomUrl(url: String) {
-        container.preferences.updateCustomUrl = url
     }
 
     fun installedApps(): List<com.networkcontrol.android.kotlin.core.model.InstalledApp> =
@@ -1387,8 +1373,14 @@ class AppBackend(val container: AppContainer) {
             }
             snapshot.portablePrefs?.let { p ->
                 val prefs = container.preferences
-                p.forwardingEnabled?.let { prefs.forwardingEnabled = it }
-                p.forwardingUpstream?.let { prefs.forwardingUpstream = it }
+                p.forwardingEnabled?.let {
+                    prefs.forwardingEnabled = it
+                    _forwardingEnabled.value = it
+                }
+                p.forwardingUpstream?.let {
+                    prefs.forwardingUpstream = it
+                    _forwardingUpstream.value = it
+                }
                 p.socks5Host?.let { prefs.socks5Host = it }
                 p.socks5Port?.let { prefs.socks5Port = it }
                 p.socks5Udp?.let { prefs.socks5Udp = it }
@@ -1406,7 +1398,10 @@ class AppBackend(val container: AppContainer) {
                     prefs.autoHideBottomBar = it
                     container.theme.setAutoHideBottomBar(it)
                 }
-                p.offlineMode?.let { prefs.offlineMode = it }
+                p.offlineMode?.let {
+                    prefs.offlineMode = it
+                    _offlineMode.value = it
+                }
             }
         }
         val imported = RuleTransferService.importForPlan(snapshot.rulesJson, container.profiles.all)

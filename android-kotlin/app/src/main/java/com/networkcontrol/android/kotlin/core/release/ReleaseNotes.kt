@@ -40,6 +40,56 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.5",
+            date = "2026-11-24",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Unified cross-tab forwarding and offline mode state via reactive flows so switching modes from Overview immediately stays in sync across Settings, Apps and Rules",
+                    "将跨页面共享的逐连接模式与离线模式状态收敛为响应式流，在总览页切换后设置、应用与规则页即时同步",
+                    "將跨頁面共享的逐連線模式與離線模式狀態收斂為響應式流，在總覽頁切換後設定、應用與規則頁即時同步",
+                ),
+                t(
+                    "Moved Allow ICMP out of Prompt settings into Firewall & Network settings and cleaned up unused preferences and components",
+                    "将「允许 ICMP」从询问设置移至防护与网络卡片，移除权限卡重复按钮并清理废弃偏好项与死代码",
+                    "將「允許 ICMP」從詢問設定移至防護與網路卡片，移除權限卡重複按鈕並清理廢棄偏好項與死代碼",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.4",
+            date = "2026-11-24",
+            features = listOf(
+                t(
+                    "Full snapshot backup v2 (rules, profiles, settings, portable preferences and automation subscriptions) with WebDAV ETag conflict protection and backward compatibility for v1 rule files",
+                    "升级完整快照备份 v2（涵盖规则、配置文件、设置、可移植偏好与自动化订阅），新增 WebDAV ETag 冲突检测并向后兼容 v1 规则文件",
+                    "升級完整快照備份 v2（涵蓋規則、配置檔案、設定、可移植偏好與自動化訂閱），新增 WebDAV ETag 衝突偵測並向後相容 v1 規則檔",
+                ),
+                t(
+                    "Added Allow LAN, Block on Roaming, standalone Block QUIC (UDP 443), log retention & database compaction, and new-app notification Allow/Deny actions",
+                    "新增允许局域网 (LAN)、漫游时全部阻止、独立阻断 QUIC (UDP 443)、记录保留天数与数据库压缩，以及新应用安装通知快捷允许/禁止按钮",
+                    "新增允許區域網路 (LAN)、漫遊時全部阻止、獨立阻擋 QUIC (UDP 443)、記錄保留天數與資料庫壓縮，以及新應用安裝通知快捷允許/禁止按鈕",
+                ),
+                t(
+                    "Upgraded Apps, Rules, Logs and Prompt workflows: sorting, batch selection, shared UID badge, manual rule creation/editing, log time range & scoped domain actions, and GKD group search",
+                    "补齐核心页工作流：应用页支持排序/隐藏系统应用/批量操作/共享 UID 标注，规则页支持手动新建与编辑，记录页支持时间范围/清空/作用域选择，屏幕跳过支持规则组搜索与本地时区统计",
+                    "補齊核心頁工作流：應用頁支援排序/隱藏系統應用/批次操作/共享 UID 標註，規則頁支援手動新增與編輯，記錄頁支援時間範圍/清空/作用域選擇，螢幕跳過支援規則組搜尋與本地時區統計",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Fixed global domain deny rules being shadowed by app-level allow rules, IPv4-mapped IPv6 matching, shared UID/clone inheritance edge cases, and WindowFocus permission refresh",
+                    "修复全局域名拒绝规则被应用级允许规则遮蔽、IPv4 映射 IPv6 判断、共享 UID 与分身继承边界，以及小窗授权切回权限状态不刷新的问题",
+                    "修復全域網域拒絕規則被應用級允許規則遮蔽、IPv4 映射 IPv6 判斷、共享 UID 與分身繼承邊界，以及小窗授權切回權限狀態不刷新的問題",
+                ),
+                t(
+                    "Hardened security & privacy: redacted diagnostics export, APK SHA-256 verification, Keystore-encrypted credentials, APK v3 signing key rotation support, and VPN revocation alerts",
+                    "强化安全与隐私：诊断包全面脱敏（不再打包原始数据库）、更新下载校验 SHA-256、敏感凭据接入 Keystore 加密、支持 APK v3 签名轮换防误报，以及 VPN 被撤销主动通知",
+                    "強化安全與隱私：診斷包全面脫敏（不再打包原始資料庫）、更新下載校驗 SHA-256、敏感憑證接入 Keystore 加密、支援 APK v3 簽名輪換防誤報，以及 VPN 被撤銷主動通知",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.3",
             date = "2026-11-23",
             features = emptyList(),
