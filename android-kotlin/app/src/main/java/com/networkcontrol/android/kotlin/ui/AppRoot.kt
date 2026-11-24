@@ -94,6 +94,7 @@ import com.networkcontrol.android.kotlin.BuildConfig
 import com.networkcontrol.android.kotlin.platform.ApkInstaller
 import com.networkcontrol.android.kotlin.core.model.ToolbarStyle
 import com.networkcontrol.android.kotlin.ui.apps.AppsScreen
+import com.networkcontrol.android.kotlin.ui.common.liquidGlassBackdrop
 import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
 import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
@@ -597,20 +598,20 @@ private fun AppBottomBar(
             fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.96f)),
         )
 
-        // 玻璃：底色壓低到 0.08 / 0.18，讓模糊後的光影和顏色真的透上來；
-        // backgroundColor 設為透明，避免未模糊底色在圓角處露邊。
+        // 液態玻璃：24dp 模糊 + 42%/46% 乳白/深色玻璃主體（兼顧通透與清晰可讀），
+        // Android 13+ 搭配背景層 AGSL 邊緣折射 + 輕微色散 + 菲涅爾高光。
         glass -> HazeStyle(
-            blurRadius = 18.dp,
+            blurRadius = 24.dp,
             backgroundColor = Color.Transparent,
-            noiseFactor = 0.04f,
+            noiseFactor = 0.03f,
             tints = listOf(
-                HazeTint(scheme.surface.copy(alpha = if (dark) 0.20f else 0.10f)),
+                HazeTint(scheme.surface.copy(alpha = if (dark) 0.46f else 0.42f)),
                 HazeTint(
                     Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = if (dark) 0.10f else 0.16f),
-                        0.28f to Color.Transparent,
+                        0f to Color.White.copy(alpha = if (dark) 0.14f else 0.28f),
+                        0.32f to Color.Transparent,
                         0.76f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = if (dark) 0.14f else 0.06f),
+                        1f to Color.Black.copy(alpha = if (dark) 0.18f else 0.06f),
                     ),
                 ),
             ),
@@ -672,10 +673,11 @@ private fun AppBottomBar(
                 .then(if (floating) Modifier.clip(shape) else Modifier)
                 .then(
                     when {
-                        hazeStyle != null -> Modifier.hazeEffect(state = hazeState, style = hazeStyle) {
+                        hazeStyle != null && !glass -> Modifier.hazeEffect(state = hazeState, style = hazeStyle) {
                             blurredEdgeTreatment = hazeEdgeTreatment
                         }
-                        else -> Modifier.background(scheme.surface, shape)
+                        hazeStyle == null -> Modifier.background(scheme.surface, shape)
+                        else -> Modifier
                     },
                 )
                 .then(
@@ -686,6 +688,17 @@ private fun AppBottomBar(
                     },
                 ),
         ) {
+            if (glass && hazeStyle != null) {
+                // 獨立玻璃背景層：Haze 模糊 + Android 13+ AGSL 液態玻璃折射，不影響前景圖示與文字銳利度。
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .liquidGlassBackdrop(enabled = true, cornerRadius = 30.dp, dark = dark)
+                        .hazeEffect(state = hazeState, style = hazeStyle) {
+                            blurredEdgeTreatment = hazeEdgeTreatment
+                        },
+                )
+            }
             if (glass) {
                 // 內圈高光：玻璃邊緣的厚度感，比外框亮一級。
                 Box(

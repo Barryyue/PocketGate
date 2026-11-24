@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.8",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Upgraded the Floating Glass bottom bar to a Liquid Glass effect: 24dp blur + balanced milky/dark glass body for crisp legibility, plus an Android 13+ AGSL RuntimeShader adding real capsule-edge refraction, subtle chromatic dispersion and Fresnel specular rim",
+                    "升级「悬浮玻璃」底部导航栏为液态玻璃材质：提高至 24dp 模糊与更扎实的乳白/深色玻璃主体提升文字可读性，Android 13+ 新增 AGSL RuntimeShader 实现真实胶囊边缘折射、轻微色散与菲涅尔高光（旧系统自动平滑降级）",
+                    "升級「懸浮玻璃」底部導覽列為液態玻璃材質：提高至 24dp 模糊與更紮實的乳白/深色玻璃主體提升文字可讀性，Android 13+ 新增 AGSL RuntimeShader 實現真實膠囊邊緣折射、輕微色散與菲涅爾高光（舊系統自動平滑降級）",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.7",
             date = "2026-11-25",
             features = listOf(
