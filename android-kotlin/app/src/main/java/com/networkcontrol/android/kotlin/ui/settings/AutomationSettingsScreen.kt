@@ -404,20 +404,41 @@ fun AutomationSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                         }
                         logs.take(30).forEach { entry ->
                             HorizontalDivider(Modifier.padding(vertical = 6.dp))
-                            Text(
-                                "${entry.groupName} · ${entry.appId}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                "${formatDateTime(entry.timestampMs)} · ${entry.subscriptionName} · ${entry.action}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                            val appLabel = remember(entry.appId) { backend.appLabelOf(entry.appId) }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        "${entry.groupName} · $appLabel",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        "${formatDateTime(entry.timestampMs)} · ${entry.subscriptionName} · ${entry.action}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                TextButton(
+                                    onClick = {
+                                        backend.setAutomationGroupOverride(
+                                            entry.subscriptionId,
+                                            entry.appId,
+                                            entry.groupKey,
+                                            false,
+                                        )
+                                        Toast.makeText(context, "${s[S.AutomationDisableGroup]}: ${entry.groupName}", Toast.LENGTH_SHORT).show()
+                                    },
+                                ) {
+                                    Text(s[S.AutomationDisableGroup], style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
                         }
                     }
                 }
@@ -554,6 +575,11 @@ private fun SubscriptionGroupsDialog(
     val s = rememberUiStrings()
     var rawSub by remember(record.id) { mutableStateOf<RawSubscription?>(null) }
     var overrides by remember(record.id) { mutableStateOf<Map<Pair<String, Int>, Boolean>>(emptyMap()) }
+    var groupQuery by remember(record.id) { mutableStateOf("") }
+    var onlyInstalled by remember(record.id) { mutableStateOf(true) }
+    val installedPkgs = remember {
+        runCatching { backend.container.appCatalog.getApps().map { it.packageName }.toSet() }.getOrDefault(emptySet())
+    }
 
     LaunchedEffect(record.id) {
         val (loaded, ovList) = withContext(Dispatchers.IO) {
@@ -571,68 +597,99 @@ private fun SubscriptionGroupsDialog(
             if (sub == null) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    if (sub.globalGroups.isNotEmpty()) {
-                        item {
-                            Text(
-                                s[S.AutomationGlobalGroups],
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary,
+                val filteredGlobals = remember(sub, groupQuery) {
+                    sub.globalGroups.filter {
+                        groupQuery.isBlank() || it.name.contains(groupQuery, ignoreCase = true)
+                    }
+                }
+                val filteredApps = remember(sub, groupQuery, onlyInstalled, installedPkgs) {
+                    sub.apps.filter { app ->
+                        (!onlyInstalled || app.id in installedPkgs) && (
+                            groupQuery.isBlank() ||
+                                app.id.contains(groupQuery, ignoreCase = true) ||
+                                app.name?.contains(groupQuery, ignoreCase = true) == true ||
+                                app.groups.any { it.name.contains(groupQuery, ignoreCase = true) }
                             )
-                        }
-                        items(sub.globalGroups, key = { "g:${it.key}" }) { group ->
-                            val enabled = overrides["" to group.key] ?: (group.enable ?: true)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = groupQuery,
+                        onValueChange = { groupQuery = it },
+                        label = { Text(s[S.SearchApps]) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material3.FilterChip(
+                            selected = onlyInstalled,
+                            onClick = { onlyInstalled = !onlyInstalled },
+                            label = { Text(s[S.AutomationOnlyInstalled]) },
+                        )
+                    }
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        if (filteredGlobals.isNotEmpty()) {
+                            item {
                                 Text(
-                                    group.name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.weight(1f).padding(end = 8.dp),
-                                )
-                                Switch(
-                                    checked = enabled,
-                                    onCheckedChange = { checked ->
-                                        overrides = overrides + (("" to group.key) to checked)
-                                        backend.setAutomationGroupOverride(record.id, "", group.key, checked)
-                                    },
+                                    s[S.AutomationGlobalGroups],
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
+                            items(filteredGlobals, key = { "g:${it.key}" }) { group ->
+                                val enabled = overrides["" to group.key] ?: (group.enable ?: true)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        group.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                    )
+                                    Switch(
+                                        checked = enabled,
+                                        onCheckedChange = { checked ->
+                                            overrides = overrides + (("" to group.key) to checked)
+                                            backend.setAutomationGroupOverride(record.id, "", group.key, checked)
+                                        },
+                                    )
+                                }
+                            }
                         }
-                    }
-                    sub.apps.forEach { app ->
-                        item(key = "app:${app.id}") {
-                            Text(
-                                app.name?.takeIf { it.isNotBlank() }?.let { "$it (${app.id})" } ?: app.id,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 6.dp),
-                            )
-                        }
-                        items(app.groups, key = { "${app.id}:${it.key}" }) { group ->
-                            val enabled = overrides[app.id to group.key] ?: (group.enable ?: true)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
+                        filteredApps.forEach { app ->
+                            item(key = "app:${app.id}") {
                                 Text(
-                                    group.name,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                    app.name?.takeIf { it.isNotBlank() }?.let { "$it (${app.id})" } ?: app.id,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(top = 6.dp),
                                 )
-                                Switch(
-                                    checked = enabled,
-                                    onCheckedChange = { checked ->
-                                        overrides = overrides + ((app.id to group.key) to checked)
-                                        backend.setAutomationGroupOverride(record.id, app.id, group.key, checked)
-                                    },
-                                )
+                            }
+                            items(app.groups, key = { "${app.id}:${it.key}" }) { group ->
+                                val enabled = overrides[app.id to group.key] ?: (group.enable ?: true)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        group.name,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                    )
+                                    Switch(
+                                        checked = enabled,
+                                        onCheckedChange = { checked ->
+                                            overrides = overrides + ((app.id to group.key) to checked)
+                                            backend.setAutomationGroupOverride(record.id, app.id, group.key, checked)
+                                        },
+                                    )
+                                }
                             }
                         }
                     }

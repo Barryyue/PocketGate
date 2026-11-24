@@ -74,7 +74,8 @@ class CompiledRule(val rule: Rule) {
             return AppMatchOutcome.NoMatch
         }
         if (matcher.requiredSignerId != null &&
-            matcher.requiredSignerId != app.signature?.signerId
+            matcher.requiredSignerId != app.signature?.signerId &&
+            matcher.requiredSignerId !in (app.signature?.signerHistoryIds ?: emptySet())
         ) {
             return AppMatchOutcome.Tampered
         }

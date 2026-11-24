@@ -282,6 +282,21 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_SOCKS5_UDP, true)
         set(value) = prefs.edit().putBoolean(KEY_SOCKS5_UDP, value).apply()
 
+    /** 逐連線模式：獨立阻擋 QUIC (UDP 443)，強制瀏覽器與應用回退 TCP/HTTP2，不影響其他 UDP 服務。 */
+    var blockQuic: Boolean
+        get() = prefs.getBoolean(KEY_BLOCK_QUIC, false)
+        set(value) = prefs.edit().putBoolean(KEY_BLOCK_QUIC, value).apply()
+
+    /** 允許局域網 (LAN)：排除私有網段不經 VPN，讓投屏、NAS、印表機不受攔截。 */
+    var allowLan: Boolean
+        get() = prefs.getBoolean(KEY_ALLOW_LAN, false)
+        set(value) = prefs.edit().putBoolean(KEY_ALLOW_LAN, value).apply()
+
+    /** 行動網路漫遊時自動進入全部阻止模式，防止高額漫遊流量費。 */
+    var blockOnRoaming: Boolean
+        get() = prefs.getBoolean(KEY_BLOCK_ON_ROAMING, false)
+        set(value) = prefs.edit().putBoolean(KEY_BLOCK_ON_ROAMING, value).apply()
+
     /** v0.2 共享應用規則遷移是否已經完成；完成後不再每次啟動都執行。 */
     var legacyRulesMigrated: Boolean
         get() = prefs.getBoolean(KEY_LEGACY_RULES_MIGRATED, false)
@@ -462,6 +477,9 @@ class AppPreferences(context: Context) {
         const val KEY_WEBDAV_PASSPHRASE = "webdav_passphrase"
         const val KEY_WEBDAV_LAST_SYNC = "webdav_last_sync"
         const val KEY_WEBDAV_LAST_ETAG = "webdav_last_etag"
+        const val KEY_BLOCK_QUIC = "block_quic"
+        const val KEY_ALLOW_LAN = "allow_lan"
+        const val KEY_BLOCK_ON_ROAMING = "block_on_roaming"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_SOCKS5_HOST = "socks5_host"
         const val KEY_SOCKS5_PORT = "socks5_port"

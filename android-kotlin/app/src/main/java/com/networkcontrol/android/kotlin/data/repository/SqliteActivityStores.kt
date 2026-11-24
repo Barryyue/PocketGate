@@ -319,7 +319,25 @@ class SqliteActivityStore(private val db: ActivityDatabase) : ActivityStore {
 
     override suspend fun applyRetention(cutoff: Long) {
         withContext(Dispatchers.IO) {
-            db.writableDatabase.delete("connection_log", "last_ts < ?", arrayOf(cutoff.toString()))
+            val database = db.writableDatabase
+            database.delete("connection_log", "last_ts < ?", arrayOf(cutoff.toString()))
+            val now = System.currentTimeMillis()
+            val hourCutoff = now - 90L * 86_400_000L
+            val dayCutoff = now - 365L * 86_400_000L
+            database.delete("traffic_hour", "ts < ?", arrayOf(hourCutoff.toString()))
+            database.delete("traffic_day", "ts < ?", arrayOf(dayCutoff.toString()))
+            database.delete("traffic_network", "unit = ? AND ts < ?", arrayOf("3600000", hourCutoff.toString()))
+            database.delete("traffic_network", "unit = ? AND ts < ?", arrayOf("86400000", dayCutoff.toString()))
+        }
+    }
+
+    suspend fun compact() {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val database = db.writableDatabase
+                database.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null).close()
+                database.execSQL("VACUUM;")
+            }
         }
     }
 }

@@ -79,6 +79,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var socks5Host by remember { mutableStateOf(backend.socks5Host()) }
     var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
     var socks5Udp by remember { mutableStateOf(backend.socks5Udp()) }
+    var blockQuic by remember { mutableStateOf(backend.blockQuic()) }
     var socks5User by remember { mutableStateOf(backend.socks5Username()) }
     var socks5Pass by remember { mutableStateOf(backend.socks5Password()) }
     var proxyTesting by remember { mutableStateOf(false) }
@@ -166,6 +167,17 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             },
                         )
                     }
+                    SwitchRow(
+                        title = s[S.BlockQuic],
+                        subtitle = s[S.BlockQuicHint],
+                        checked = blockQuic,
+                        onCheckedChange = { enabled ->
+                            guard.run {
+                                blockQuic = enabled
+                                backend.setBlockQuic(enabled)
+                            }
+                        },
+                    )
                     Text(
                         s[S.ForwardingAbiHint],
                         style = MaterialTheme.typography.bodySmall,

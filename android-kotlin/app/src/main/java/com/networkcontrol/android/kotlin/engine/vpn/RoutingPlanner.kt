@@ -165,6 +165,7 @@ object VpnRoutingPlanner {
         signature = CodeSignature(
             signerId = app.signerSha256.orEmpty(),
             isPlatformBinary = app.isSystem,
+            signerHistoryIds = app.signerHistorySha256,
         ),
     )
 

@@ -1795,10 +1795,20 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
   - 驗證：`.\scripts\android-kotlin.ps1 test` + `build` 通過；真機懸浮窗與記錄操作待回歸。
 
 ### P2：網路能力、可靠性與系統整合進階優化
-- [ ] **P2-1 防火牆能力補完**：允許局域網 (LAN)、漫遊時禁止聯網（`NET_CAPABILITY_NOT_ROAMING`）、獨立「阻擋 QUIC (UDP 443)」開關、僅前台聯網（背景禁止）、按應用分流出口（K-163）。
-- [ ] **P2-2 防護可靠性與防誤報**：APK v3 簽名輪換歷史鏈（`signingCertificateHistory`）、Always-on / Lockdown 狀態偵測與提示、VPN 被撤銷主動通知與其他 VPN 斷開後恢復引導、隧道重建 10 秒節流補延遲重試。
-- [ ] **P2-3 資料庫容量治理**：設定頁開放 `logRetentionDays` 調整、顯示 `activity.db` 佔用與手動清理/`VACUUM`，並清理 `traffic_hour` / `traffic_day` / `rule_history`。
-- [ ] **P2-4 系統整合與 GKD 實驗模組打磨**：新應用安裝通知快捷按鈕與直達詳情；專注模式排程改 `AlarmManager` + 允許清單 + 結束小結；GKD 規則組搜尋與「只看已安裝應用」、觸發記錄顯示應用名與一鍵停用誤觸規則、跨進程重載去抖、今日統計改本地時區零點；第三方自動化介面（Tasker / MacroDroid）。
+- [x] (antigravity, 2026-11-24) **P2-1 防火牆能力補完**：
+  - 新增 `LanRouteCalculator` 與 `allowLan` 開關（排除私有區網網段，保留本機 VPN / 假 DNS / mapdns）；新增 `blockOnRoaming`（`NetworkContext.isRoaming` + `NET_CAPABILITY_NOT_ROAMING`）；新增逐連線獨立「阻擋 QUIC (UDP 443)」開關（`blockQuic`）。
+  - 剩餘長期項：僅前台聯網（背景禁止）、按應用分流出口（K-163）。
+  - 驗證：`AuditP2Test` + `.\scripts\android-kotlin.ps1 build` 通過；真機區網投屏/NAS、漫遊與 QUIC 回退待回歸。
+- [x] (antigravity, 2026-11-24) **P2-2 防護可靠性與防誤報**：
+  - `AppCatalog` 讀取 `signingCertificateHistory` 並傳入 `CodeSignature.signerHistoryIds`，`CompiledRule.matchApp()` 支援 APK v3 簽名密鑰輪換防誤報；`NcVpnService` 偵測 `isAlwaysOn` / `isLockdownEnabled` 並於設定頁顯示狀態與 Lockdown 警告；`VpnEngine.onRevoked` 主動發送高優先級撤銷通知（`VpnForegroundNotifier.notifyRevoked`）；`onDetached` / `Failed` 10 秒節流內補排延遲重試。
+  - 驗證：`AuditP2Test` + `build` 通過；真機撤銷通知與 Always-on / Lockdown 偵測待回歸。
+- [x] (antigravity, 2026-11-24) **P2-3 資料庫容量治理**：
+  - `SqliteActivityStore.applyRetention()` 同步清理過期 `traffic_hour`（90 天）/ `traffic_day`（365 天）/ `traffic_network` 並新增 `compact()`（`wal_checkpoint(TRUNCATE)` + `VACUUM`）；`AppContainer` 啟動 60 秒即首次執行保留清理；設定頁開放 `logRetentionDays`（7 / 14 / 30 / 90 天）選擇與資料庫佔用顯示／一鍵壓縮。
+  - 驗證：`test` + `build` 通過；真機長期容量壓縮待觀察。
+- [x] (antigravity, 2026-11-24) **P2-4 系統整合與 GKD 實驗模組打磨**：
+  - `PackageChangeReceiver` 新應用安裝通知新增「允許 / 禁止」快捷動作按鈕；`AutomationStore.todayTriggerCount` 改用本地時區零點；`GkdAccessibilityService.reloadRulesAsync` 加 250ms 去抖；`AutomationSettingsScreen` 規則組彈窗新增搜尋與「僅看已安裝」篩選，觸發紀錄顯示實際應用名並支援一鍵停用誤觸規則組。
+  - 剩餘可選項：專注模式改 `AlarmManager` + 排程允許清單 + 結束小結、第三方自動化介面（Tasker / MacroDroid）。
+  - 驗證：`test` + `build` 通過；真機新應用通知與 GKD 規則組互動待回歸。
 
 ### P3：代碼債與真機回歸債
 - [ ] **P3-1 孤兒代碼清理與響應式狀態**：移除廢棄 `updateSource/Repo/CustomUrl`、`promptShowExplanation`、`MetricCard`；將跨頁共享偏好收斂為 `StateFlow`；整理設定頁分組（ICMP 移出詢問設定頁、統一殘餘文案）並拆分 `SettingsScreen.kt` 與共用 Shizuku/Root 執行器。

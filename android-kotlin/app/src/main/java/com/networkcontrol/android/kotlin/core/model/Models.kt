@@ -7,6 +7,7 @@ data class CodeSignature(
     val signerId: String,
     val signingId: String? = null,
     val isPlatformBinary: Boolean = false,
+    val signerHistoryIds: Set<String> = emptySet(),
 )
 
 data class AppKey(
@@ -192,9 +193,10 @@ data class NetworkContext(
     val simSlotIndex: Int? = null,
     val carrierName: String? = null,
     val isMetered: Boolean? = null,
+    val isRoaming: Boolean = false,
 ) {
     val fingerprint: String
-        get() = "${kind.name}|${ssid.orEmpty()}|${networkId.orEmpty()}|${subscriptionId ?: -1}|${simSlotIndex ?: -1}"
+        get() = "${kind.name}|${ssid.orEmpty()}|${networkId.orEmpty()}|${subscriptionId ?: -1}|${simSlotIndex ?: -1}|$isRoaming"
 
     companion object {
         val None = NetworkContext()
@@ -399,6 +401,7 @@ data class InstalledApp(
     val versionCode: Long,
     val lastUpdated: Long,
     val signerSha256: String?,
+    val signerHistorySha256: Set<String> = emptySet(),
 )
 
 data class AppEntry(

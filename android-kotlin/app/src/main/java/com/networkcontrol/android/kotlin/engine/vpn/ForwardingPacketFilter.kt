@@ -76,6 +76,8 @@ class ForwardingPacketFilter(
     private val maxEntries: Int = 12_288,
     /** 嚴格斷網模式（如全部阻止）下，對無法解析或非 TCP/UDP 封包採 fail-close 丟棄。 */
     private val failClosed: () -> Boolean = { false },
+    /** 獨立阻擋 QUIC (UDP 443)，強制應用回退 TCP。 */
+    private val blockQuic: () -> Boolean = { false },
 ) {
     val counters = ForwardingCounters()
     private val dnsRedirect = DnsRedirect(dnsAddress.address)
@@ -354,7 +356,7 @@ class ForwardingPacketFilter(
                     return false
                 }
                 if (!admitFakeIp(packet, length, info, writer)) return false
-                if (blockUdp()) {
+                if (blockUdp() || (blockQuic() && info.destination.port == 443)) {
                     counters.udpDropped.incrementAndGet()
                     writer.write(IpPacketBuilder.icmpPortUnreachable(info.destination, info.source, packet.copyOfRange(0, length)))
                     return false

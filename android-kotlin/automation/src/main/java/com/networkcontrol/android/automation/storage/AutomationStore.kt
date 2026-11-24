@@ -401,7 +401,14 @@ class AutomationStore(context: Context) {
     }
 
     fun todayTriggerCount(nowMs: Long = System.currentTimeMillis()): Int {
-        val startOfDay = nowMs - (nowMs % 86_400_000L)
+        val cal = java.util.Calendar.getInstance().apply {
+            timeInMillis = nowMs
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val startOfDay = cal.timeInMillis
         return dbHelper.readableDatabase.rawQuery(
             "SELECT COUNT(*) FROM trigger_logs WHERE timestamp_ms >= ?",
             arrayOf(startOfDay.toString()),

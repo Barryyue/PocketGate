@@ -689,6 +689,21 @@ enum class S {
     ScopeGlobal,
     FilterThisApp,
     BlockThisApp,
+    AllowLan,
+    AllowLanHint,
+    BlockOnRoaming,
+    BlockOnRoamingHint,
+    BlockQuic,
+    BlockQuicHint,
+    ProtectionRevokedNotifyBody,
+    AlwaysOnVpnReady,
+    AlwaysOnLockdownWarning,
+    LogRetentionTitle,
+    LogRetentionDaysFormat,
+    DbSizeCompact,
+    DbCompacted,
+    AutomationOnlyInstalled,
+    AutomationDisableGroup,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -706,6 +721,13 @@ class UiStrings internal constructor(languageTag: String) {
     operator fun get(key: S): String = table[key] ?: EN[key] ?: key.name
 
     fun format(key: S, vararg args: Any?): String = get(key).format(*args)
+
+    companion object {
+        fun forContext(context: android.content.Context): UiStrings {
+            val tag = context.resources.configuration.locales[0]?.toLanguageTag().orEmpty()
+            return UiStrings(tag)
+        }
+    }
 }
 
 @Composable
@@ -1400,6 +1422,21 @@ private val EN = mapOf(
     S.ScopeGlobal to "All apps (global)",
     S.FilterThisApp to "Filter this app",
     S.BlockThisApp to "Deny this app",
+    S.AllowLan to "Allow local network (LAN)",
+    S.AllowLanHint to "Bypass private LAN ranges (NAS, casting, printers) from VPN while keeping local DNS rules active.",
+    S.BlockOnRoaming to "Block all while roaming",
+    S.BlockOnRoamingHint to "Automatically block outbound traffic on roaming cellular networks to avoid roaming charges.",
+    S.BlockQuic to "Block QUIC (UDP 443)",
+    S.BlockQuicHint to "Force browsers and apps to fall back to TCP/HTTP2 without disabling all UDP traffic.",
+    S.ProtectionRevokedNotifyBody to "Firewall protection was paused by another VPN. Tap to open PocketGate and restore.",
+    S.AlwaysOnVpnReady to "Always-on VPN active",
+    S.AlwaysOnLockdownWarning to "System VPN Lockdown is enabled: excluded apps and built-in direct exit may be blocked by Android.",
+    S.LogRetentionTitle to "Log retention",
+    S.LogRetentionDaysFormat to "%1\$d days",
+    S.DbSizeCompact to "Compact database (%1\$s)",
+    S.DbCompacted to "Database compacted",
+    S.AutomationOnlyInstalled to "Installed only",
+    S.AutomationDisableGroup to "Disable",
 )
 
 private val CN = mapOf(
@@ -2087,6 +2124,21 @@ private val CN = mapOf(
     S.ScopeGlobal to "全部应用（全局）",
     S.FilterThisApp to "只看此应用",
     S.BlockThisApp to "禁止此应用",
+    S.AllowLan to "允许局域网 (LAN)",
+    S.AllowLanHint to "排除私有局域网网段不经过 VPN，让投屏、NAS 和打印机不受拦截，同时保留本地 DNS 规则。",
+    S.BlockOnRoaming to "漫游时全部阻止",
+    S.BlockOnRoamingHint to "处于移动网络漫游时自动阻断联网，避免产生高额漫游流量费。",
+    S.BlockQuic to "阻断 QUIC (UDP 443)",
+    S.BlockQuicHint to "仅拦截 UDP 443 促使应用回退 TCP，不必关闭全部 UDP 流量。",
+    S.ProtectionRevokedNotifyBody to "防火墙已被其他 VPN 取代并暂停，点此打开 PocketGate 恢复保护。",
+    S.AlwaysOnVpnReady to "始终开启的 VPN 已生效",
+    S.AlwaysOnLockdownWarning to "系统已开启「阻止未使用 VPN 的连接」：排除应用与内置直连出口可能会被系统阻断。",
+    S.LogRetentionTitle to "记录保留天数",
+    S.LogRetentionDaysFormat to "%1\$d 天",
+    S.DbSizeCompact to "压缩数据库 (%1\$s)",
+    S.DbCompacted to "数据库已清理压缩",
+    S.AutomationOnlyInstalled to "仅看已安装",
+    S.AutomationDisableGroup to "停用",
 )
 
 private val TW = mapOf(
@@ -2774,4 +2826,19 @@ private val TW = mapOf(
     S.ScopeGlobal to "全部應用（全域）",
     S.FilterThisApp to "只看此應用",
     S.BlockThisApp to "禁止此應用",
+    S.AllowLan to "允許區域網路 (LAN)",
+    S.AllowLanHint to "排除私有區網網段不經 VPN，讓投屏、NAS 與印表機不受攔截，同時保留本機 DNS 規則。",
+    S.BlockOnRoaming to "漫遊時全部阻止",
+    S.BlockOnRoamingHint to "處於行動網路漫遊時自動阻斷聯網，避免產生高額漫遊流量費。",
+    S.BlockQuic to "阻擋 QUIC (UDP 443)",
+    S.BlockQuicHint to "僅攔截 UDP 443 促使應用回退 TCP，不必關閉全部 UDP 流量。",
+    S.ProtectionRevokedNotifyBody to "防火牆已被其他 VPN 取代並暫停，點此開啟 PocketGate 恢復保護。",
+    S.AlwaysOnVpnReady to "始終開啟的 VPN 已生效",
+    S.AlwaysOnLockdownWarning to "系統已開啟「阻止未使用 VPN 的連線」：排除應用與內建直連出口可能會被系統阻斷。",
+    S.LogRetentionTitle to "記錄保留天數",
+    S.LogRetentionDaysFormat to "%1\$d 天",
+    S.DbSizeCompact to "壓縮資料庫 (%1\$s)",
+    S.DbCompacted to "資料庫已清理壓縮",
+    S.AutomationOnlyInstalled to "僅看已安裝",
+    S.AutomationDisableGroup to "停用",
 )

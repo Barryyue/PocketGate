@@ -872,6 +872,52 @@ class AppBackend(val container: AppContainer) {
         container.activityStore.applyRetention(Long.MAX_VALUE)
     }
 
+    fun allowLan(): Boolean = container.preferences.allowLan
+
+    fun setAllowLan(enabled: Boolean) {
+        container.preferences.allowLan = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun blockOnRoaming(): Boolean = container.preferences.blockOnRoaming
+
+    fun setBlockOnRoaming(enabled: Boolean) {
+        container.preferences.blockOnRoaming = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun blockQuic(): Boolean = container.preferences.blockQuic
+
+    fun setBlockQuic(enabled: Boolean) {
+        container.preferences.blockQuic = enabled
+    }
+
+    fun isAlwaysOnVpn(): Boolean = com.networkcontrol.android.kotlin.engine.vpn.NcVpnService.alwaysOnActive
+
+    fun isLockdownVpn(): Boolean = com.networkcontrol.android.kotlin.engine.vpn.NcVpnService.lockdownActive
+
+    fun setLogRetentionDays(days: Int) {
+        container.scope.launch {
+            container.settings.update { it.copy(logRetentionDays = days.coerceIn(1, 365)) }
+        }
+    }
+
+    fun activityDbSizeBytes(): Long {
+        val db = context.getDatabasePath(com.networkcontrol.android.kotlin.data.db.ActivityDatabase.NAME)
+        val wal = java.io.File("${db.path}-wal")
+        return (if (db.isFile) db.length() else 0L) + (if (wal.isFile) wal.length() else 0L)
+    }
+
+    suspend fun compactActivityDb(): Long {
+        val days = container.settings.state.value.logRetentionDays
+        container.activityStore.applyRetention(System.currentTimeMillis() - days * 86_400_000L)
+        container.activityStore.compact()
+        return activityDbSizeBytes()
+    }
+
+    fun appLabelOf(packageName: String): String =
+        container.appCatalog.find(packageName)?.label ?: packageName
+
     fun setTrackerDatabaseEnabled(enabled: Boolean) {
         container.scope.launch {
             container.blocklists.setSourceEnabled(com.networkcontrol.android.kotlin.engine.blocklist.BlocklistCatalog.TRACKER_SOURCE_ID, enabled)
