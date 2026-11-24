@@ -27,8 +27,10 @@ class SubscriptionFetcher(
         existing: SubscriptionRecord? = null,
     ): FetchResult = withContext(Dispatchers.IO) {
         val trimmed = url.trim()
-        if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-            return@withContext FetchResult.Error("Invalid URL")
+        val lower = trimmed.lowercase()
+        val isLocalHttp = lower.startsWith("http://127.0.0.1") || lower.startsWith("http://localhost")
+        if (!lower.startsWith("https://") && !isLocalHttp) {
+            return@withContext FetchResult.Error("Only HTTPS URLs are allowed")
         }
 
         // 若有 checkUpdateUrl，先做輕量版本檢查（支援 ./gkd.version.json5 相對路徑）

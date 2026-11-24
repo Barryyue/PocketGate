@@ -35,6 +35,8 @@ data class UpdateInfo(
     val fallbackDownloadUrl: String? = null,
     val releaseNotes: String? = null,
     val isPrerelease: Boolean = false,
+    val sha256Url: String? = null,
+    val expectedSha256: String? = null,
 ) {
     val hasUpdate: Boolean
         get() = latestVersion != null && compareVersions(latestVersion, currentVersion) > 0
@@ -136,10 +138,12 @@ object UpdateChecker {
                 return@runCatching UpdateInfo(null, null, "empty tag", currentVersion)
             }
             val apkUrl = "https://github.com/${repo.trim()}/releases/download/$rawTag/PocketGate-$version.apk"
+            val shaUrl = "https://github.com/${repo.trim()}/releases/download/$rawTag/SHA256SUMS.txt"
             UpdateInfo(
                 latestVersion = version,
                 downloadUrl = apkUrl,
                 currentVersion = currentVersion,
+                sha256Url = shaUrl,
             )
         } finally {
             connection.disconnect()
@@ -189,6 +193,8 @@ object UpdateChecker {
         currentVersion: String = "0.0.0",
         expectedVersion: String? = null,
         channel: UpdateChannel = UpdateChannel.Stable,
+        sha256Url: String? = null,
+        expectedSha256: String? = null,
         onProgress: (Int) -> Unit = {},
     ): Result<File> = withContext(Dispatchers.IO) {
         val candidates = linkedSetOf<String>()
@@ -208,11 +214,19 @@ object UpdateChecker {
             candidates.add(rawGitHubUrl)
         }
 
+        val resolvedSha256 = expectedSha256?.trim()?.lowercase()?.takeIf { it.length == 64 }
+            ?: resolveExpectedSha256(
+                sha256Url = sha256Url,
+                apkUrl = rawGitHubUrl ?: url,
+                targetFileName = targetFile.name,
+                currentVersion = currentVersion,
+            )
+
         var lastResult: Result<File> = Result.failure(IOException("No download URL"))
         for (candidate in candidates) {
             onProgress(0)
             val attempt = runCatching {
-                downloadFromUrl(candidate, targetFile, currentVersion, onProgress)
+                downloadFromUrl(candidate, targetFile, currentVersion, resolvedSha256, onProgress)
             }
             if (attempt.isSuccess) return@withContext attempt
             lastResult = attempt
@@ -233,9 +247,15 @@ object UpdateChecker {
                 null
             }
             if (giteeUrl != null) {
+                val giteeSha = resolvedSha256 ?: resolveExpectedSha256(
+                    sha256Url = gitee.sha256Url,
+                    apkUrl = giteeUrl,
+                    targetFileName = targetFile.name,
+                    currentVersion = currentVersion,
+                )
                 onProgress(0)
                 val giteeAttempt = runCatching {
-                    downloadFromUrl(giteeUrl, targetFile, currentVersion, onProgress)
+                    downloadFromUrl(giteeUrl, targetFile, currentVersion, giteeSha, onProgress)
                 }
                 if (giteeAttempt.isSuccess) return@withContext giteeAttempt
                 lastResult = giteeAttempt
@@ -244,10 +264,84 @@ object UpdateChecker {
         lastResult
     }
 
+    internal fun parseSha256Sums(content: String, fileName: String): String? {
+        val targetBase = fileName.substringAfterLast('/')
+        for (rawLine in content.lineSequence()) {
+            val line = rawLine.trim()
+            if (line.isEmpty() || line.startsWith("#")) continue
+            val parts = line.split(Regex("\\s+"), limit = 2)
+            if (parts.size < 2) continue
+            val hash = parts[0].trim().lowercase()
+            if (hash.length != 64 || !hash.all { it in '0'..'9' || it in 'a'..'f' }) continue
+            val entryName = parts[1].trim().removePrefix("*").substringAfterLast('/')
+            if (entryName.equals(targetBase, ignoreCase = true)) return hash
+        }
+        return null
+    }
+
+    internal fun sha256Of(file: File): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buf = ByteArray(16 * 1024)
+            while (true) {
+                val n = input.read(buf)
+                if (n < 0) break
+                digest.update(buf, 0, n)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun resolveExpectedSha256(
+        sha256Url: String?,
+        apkUrl: String,
+        targetFileName: String,
+        currentVersion: String,
+    ): String? {
+        val apkNameFromUrl = apkUrl.substringBefore('?').substringAfterLast('/').ifBlank { targetFileName }
+        val candidates = linkedSetOf<String>()
+        if (!sha256Url.isNullOrBlank()) {
+            candidates += sha256Url
+            if (sha256Url.startsWith("https://github.com/", ignoreCase = true)) {
+                candidates += "$GITHUB_MIRROR_PREFIX$sha256Url"
+            }
+        }
+        for (url in candidates) {
+            val text = runCatching { fetchSmallText(url, currentVersion) }.getOrNull() ?: continue
+            val hash = parseSha256Sums(text, apkNameFromUrl) ?: parseSha256Sums(text, targetFileName)
+            if (hash != null) return hash
+        }
+        return null
+    }
+
+    private fun fetchSmallText(url: String, currentVersion: String): String {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 6_000
+            readTimeout = 6_000
+            requestMethod = "GET"
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", "PocketGate/$currentVersion")
+        }
+        return try {
+            if (connection.responseCode !in 200..299) throw IOException("HTTP ${connection.responseCode}")
+            connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun isSafeRedirect(fromUrl: String, toUrl: String): Boolean {
+        val fromHttps = fromUrl.startsWith("https://", ignoreCase = true)
+        val toLower = toUrl.lowercase()
+        val toLocalHttp = toLower.startsWith("http://127.0.0.1") || toLower.startsWith("http://localhost")
+        return !fromHttps || toLower.startsWith("https://") || toLocalHttp
+    }
+
     private fun downloadFromUrl(
         initialUrl: String,
         targetFile: File,
         currentVersion: String,
+        expectedSha256: String?,
         onProgress: (Int) -> Unit,
     ): File {
         targetFile.parentFile?.mkdirs()
@@ -268,7 +362,11 @@ object UpdateChecker {
                 if (code in 300..399) {
                     val location = connection.getHeaderField("Location")
                         ?: throw IOException("Redirect without Location")
-                    currentUrl = URL(URL(currentUrl), location).toString()
+                    val nextUrl = URL(URL(currentUrl), location).toString()
+                    if (!isSafeRedirect(currentUrl, nextUrl)) {
+                        throw IOException("Blocked insecure HTTPS to HTTP redirect")
+                    }
+                    currentUrl = nextUrl
                     redirects++
                     continue
                 }
@@ -302,6 +400,13 @@ object UpdateChecker {
                 if (partFile.length() < 4L || !hasZipMagic(partFile)) {
                     partFile.delete()
                     throw IOException("Downloaded file is not a valid APK")
+                }
+                if (!expectedSha256.isNullOrBlank()) {
+                    val actual = sha256Of(partFile)
+                    if (!actual.equals(expectedSha256, ignoreCase = true)) {
+                        partFile.delete()
+                        throw IOException("APK SHA-256 verification failed")
+                    }
                 }
                 if (targetFile.exists()) targetFile.delete()
                 if (!partFile.renameTo(targetFile)) {
@@ -474,6 +579,7 @@ object UpdateChecker {
             .ifBlank { json.optString("url") }
             .ifBlank { json.optJSONObject("_links")?.optString("self").orEmpty() }
         val apk = findApk(source, json)
+        val sha256Url = findSha256Url(json)
         val notes = when (source) {
             UpdateSource.GitLab -> json.optString("description")
             UpdateSource.Custom -> json.optString("notes").ifBlank { json.optString("changelog") }
@@ -490,7 +596,22 @@ object UpdateChecker {
             currentVersion = currentVersion,
             releaseNotes = notes,
             isPrerelease = isPrerelease,
+            sha256Url = sha256Url,
+            expectedSha256 = json.optString("sha256").trim().takeIf { it.length == 64 },
         )
+    }
+
+    private fun findSha256Url(json: JSONObject): String? {
+        val assets = json.optJSONArray("assets") ?: return null
+        for (i in 0 until assets.length()) {
+            val asset = assets.optJSONObject(i) ?: continue
+            val url = asset.optString("browser_download_url")
+                .ifBlank { asset.optString("url") }
+                .ifBlank { asset.optString("direct_asset_url") }
+            val name = asset.optString("name").ifBlank { url.substringAfterLast('/') }
+            if (name.equals("SHA256SUMS.txt", ignoreCase = true) && url.isNotBlank()) return url
+        }
+        return null
     }
 
     private fun findApk(source: UpdateSource, json: JSONObject): String? {

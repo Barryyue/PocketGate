@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,6 +75,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private enum class AppFilter { All, Allowed, Denied, Unset, System }
+private enum class AppSort { Name, Traffic, Recent, Status }
 
 @Composable
 fun AppsScreen(
@@ -80,17 +83,24 @@ fun AppsScreen(
     listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
 ) {
     val s = rememberUiStrings()
+    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val scope = rememberCoroutineScope()
     val plan by backend.plan.collectAsStateWithLifecycle()
     val rules by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
     val runtime by backend.runtime.collectAsStateWithLifecycle()
     val excludedPackages by backend.excludedPackages.collectAsStateWithLifecycle()
     val proxyBypassPackage by backend.proxyBypassPackage.collectAsStateWithLifecycle()
-    val isProxyMode = backend.forwardingEnabled() &&
-        backend.forwardingUpstream() == com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
+    val isProxyMode = remember(rules.version, runtime.activeProfileId) {
+        backend.forwardingEnabled() &&
+            backend.forwardingUpstream() == com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
+    }
 
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(AppFilter.All) }
+    var hideSystem by remember { mutableStateOf(false) }
+    var sort by remember { mutableStateOf(AppSort.Name) }
+    var batchMode by remember { mutableStateOf(false) }
+    var selectedPackages by remember { mutableStateOf<Set<String>>(emptySet()) }
     var entries by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
     var traffic by remember { mutableStateOf(TrafficUsage.Empty) }
@@ -117,14 +127,19 @@ fun AppsScreen(
         }
     }
 
-    val filtered = remember(entries, query, filter) {
-        entries.asSequence()
+    val sharedUidCounts = remember(entries) {
+        entries.groupingBy { it.app.uid }.eachCount()
+    }
+
+    val filtered = remember(entries, query, filter, hideSystem, sort, traffic, lastSeen) {
+        val base = entries.asSequence()
             .filter { app ->
                 query.isBlank() ||
                     app.app.label.contains(query, ignoreCase = true) ||
                     app.app.packageName.contains(query, ignoreCase = true)
             }
             .filter { app ->
+                if (hideSystem && filter != AppFilter.System && app.app.isSystem) return@filter false
                 when (filter) {
                     AppFilter.All -> true
                     AppFilter.Allowed -> app.decision == AppDecision.Allow
@@ -134,6 +149,28 @@ fun AppsScreen(
                 }
             }
             .toList()
+        when (sort) {
+            AppSort.Name -> base.sortedBy { it.app.label.lowercase() }
+            AppSort.Traffic -> base.sortedWith(
+                compareByDescending<AppEntry> {
+                    val t = traffic.byPackage[it.app.packageName]
+                    (t?.first ?: 0L) + (t?.second ?: 0L)
+                }.thenBy { it.app.label.lowercase() },
+            )
+            AppSort.Recent -> base.sortedWith(
+                compareByDescending<AppEntry> { lastSeen[it.app.packageName] ?: 0L }
+                    .thenBy { it.app.label.lowercase() },
+            )
+            AppSort.Status -> base.sortedWith(
+                compareBy<AppEntry> {
+                    when (it.effective) {
+                        AppRoutingDecision.Block -> 0
+                        AppRoutingDecision.BlockAndAsk -> 1
+                        AppRoutingDecision.Bypass -> 2
+                    }
+                }.thenBy { it.app.label.lowercase() },
+            )
+        }
     }
 
     LazyColumn(
@@ -147,7 +184,88 @@ fun AppsScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { ScreenHeader(s[S.Apps], s[S.AppsSubtitle]) }
+        item {
+            ScreenHeader(
+                title = s[S.Apps],
+                subtitle = s[S.AppsSubtitle],
+                trailing = {
+                    TextButton(
+                        onClick = {
+                            batchMode = !batchMode
+                            if (!batchMode) selectedPackages = emptySet()
+                        },
+                    ) {
+                        Text(if (batchMode) s[S.Cancel] else s[S.BatchSelect])
+                    }
+                },
+            )
+        }
+        if (batchMode) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = RoundedCornerShape(14.dp),
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            s.format(S.BatchSelectedCount, selectedPackages.size),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            FilledTonalButton(
+                                enabled = selectedPackages.isNotEmpty(),
+                                onClick = {
+                                    val targets = selectedPackages
+                                    guard.run {
+                                        scope.launch {
+                                            backend.setAppsDecisionBatch(targets, AppDecision.Allow)
+                                            selectedPackages = emptySet()
+                                            batchMode = false
+                                            refreshKey++
+                                        }
+                                    }
+                                },
+                            ) { Text(s[S.BatchAllow]) }
+                            FilledTonalButton(
+                                enabled = selectedPackages.isNotEmpty(),
+                                onClick = {
+                                    val targets = selectedPackages
+                                    guard.run {
+                                        scope.launch {
+                                            backend.setAppsDecisionBatch(targets, AppDecision.Deny)
+                                            selectedPackages = emptySet()
+                                            batchMode = false
+                                            refreshKey++
+                                        }
+                                    }
+                                },
+                            ) { Text(s[S.BatchDeny]) }
+                            TextButton(
+                                enabled = selectedPackages.isNotEmpty(),
+                                onClick = {
+                                    val targets = selectedPackages
+                                    guard.run {
+                                        scope.launch {
+                                            backend.setAppsDecisionBatch(targets, AppDecision.Unset)
+                                            selectedPackages = emptySet()
+                                            batchMode = false
+                                            refreshKey++
+                                        }
+                                    }
+                                },
+                            ) { Text(s[S.BatchReset]) }
+                        }
+                    }
+                }
+            }
+        }
         item {
             OutlinedTextField(
                 value = query,
@@ -178,7 +296,35 @@ fun AppsScreen(
                 FilterChip(filter == AppFilter.Allowed, { filter = AppFilter.Allowed }, { Text(s[S.FilterAllowed]) })
                 FilterChip(filter == AppFilter.Denied, { filter = AppFilter.Denied }, { Text(s[S.FilterDenied]) })
                 FilterChip(filter == AppFilter.Unset, { filter = AppFilter.Unset }, { Text(s[S.FilterUnset]) })
-                FilterChip(filter == AppFilter.System, { filter = AppFilter.System }, { Text(s[S.FilterSystem]) })
+                FilterChip(
+                    selected = filter == AppFilter.System,
+                    onClick = {
+                        filter = AppFilter.System
+                        hideSystem = false
+                    },
+                    label = { Text(s[S.FilterSystem]) },
+                )
+                FilterChip(
+                    selected = hideSystem,
+                    onClick = {
+                        hideSystem = !hideSystem
+                        if (hideSystem && filter == AppFilter.System) filter = AppFilter.All
+                    },
+                    label = { Text(s[S.HideSystemApps]) },
+                )
+            }
+        }
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(sort == AppSort.Name, { sort = AppSort.Name }, { Text(s[S.SortName]) })
+                FilterChip(sort == AppSort.Traffic, { sort = AppSort.Traffic }, { Text(s[S.SortTraffic]) })
+                FilterChip(sort == AppSort.Recent, { sort = AppSort.Recent }, { Text(s[S.SortRecent]) })
+                FilterChip(sort == AppSort.Status, { sort = AppSort.Status }, { Text(s[S.SortStatus]) })
             }
         }
         if (!loaded) {
@@ -201,6 +347,8 @@ fun AppsScreen(
             }
         }
         items(filtered, key = { it.app.packageName }) { entry ->
+            val sharedPeers = (sharedUidCounts[entry.app.uid] ?: 1) - 1
+            val isSystemCore = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.isSystemUid(entry.app.uid)
             AppRow(
                 backend = backend,
                 entry = entry,
@@ -208,6 +356,13 @@ fun AppsScreen(
                 activeProfileId = runtime.activeProfileId,
                 isExcluded = entry.app.packageName in excludedPackages,
                 isProxyBypass = isProxyMode && proxyBypassPackage == entry.app.packageName,
+                sharedUidPeers = if (isSystemCore) 0 else sharedPeers.coerceAtLeast(0),
+                batchMode = batchMode && !isSystemCore,
+                batchSelected = entry.app.packageName in selectedPackages,
+                onBatchToggle = {
+                    val pkg = entry.app.packageName
+                    selectedPackages = if (pkg in selectedPackages) selectedPackages - pkg else selectedPackages + pkg
+                },
                 sims = sims,
                 traffic = traffic.byPackage[entry.app.packageName],
                 lastSeen = lastSeen[entry.app.packageName],
@@ -227,6 +382,10 @@ private fun AppRow(
     activeProfileId: String,
     isExcluded: Boolean,
     isProxyBypass: Boolean,
+    sharedUidPeers: Int,
+    batchMode: Boolean,
+    batchSelected: Boolean,
+    onBatchToggle: () -> Unit,
     sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     traffic: Pair<Long, Long>?,
     lastSeen: Long?,
@@ -275,6 +434,12 @@ private fun AppRow(
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (batchMode) {
+                    Checkbox(
+                        checked = batchSelected,
+                        onCheckedChange = { onBatchToggle() },
+                    )
+                }
                 AppIcon(entry.app.packageName, Modifier.width(44.dp).height(44.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -339,6 +504,13 @@ private fun AppRow(
 
             val isSystemCoreUid = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.isSystemUid(entry.app.uid)
             val bypassed = isExcluded || isProxyBypass
+            if (sharedUidPeers > 0) {
+                Text(
+                    s.format(S.SharedUidBadge, sharedUidPeers),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.tertiary,
+                )
+            }
             if (bypassed && !isSystemCoreUid) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

@@ -152,17 +152,19 @@ fun SettingsScreen(
     val forwardingAvailable = remember { backend.forwardingAvailable() }
 
     var resumeKey by remember { mutableIntStateOf(0) }
+    val windowFocusTick by com.networkcontrol.android.kotlin.WindowFocusBus.ticks.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         resumeKey++
         backend.refreshSpeedIsland()
     }
-    val canDrawOverlays = remember(resumeKey) { backend.canDrawOverlays() }
-    val hasTrafficAccess = remember(resumeKey) { backend.hasTrafficAccess() }
-    val promptMode = remember(resumeKey) { backend.promptPresentationMode() }
-    var speedIsland by remember(resumeKey) { mutableStateOf(backend.speedIslandEnabled()) }
-    val islandOpacity = remember(resumeKey) { backend.speedIslandOpacity() }
-    val islandMode = remember(resumeKey) { backend.speedIslandMode() }
-    val islandContent = remember(resumeKey) { backend.speedIslandContent() }
+    val effectiveResumeKey = resumeKey * 31 + windowFocusTick
+    val canDrawOverlays = remember(effectiveResumeKey) { backend.canDrawOverlays() }
+    val hasTrafficAccess = remember(effectiveResumeKey) { backend.hasTrafficAccess() }
+    val promptMode = remember(effectiveResumeKey) { backend.promptPresentationMode() }
+    var speedIsland by remember(effectiveResumeKey) { mutableStateOf(backend.speedIslandEnabled()) }
+    val islandOpacity = remember(effectiveResumeKey) { backend.speedIslandOpacity() }
+    val islandMode = remember(effectiveResumeKey) { backend.speedIslandMode() }
+    val islandContent = remember(effectiveResumeKey) { backend.speedIslandContent() }
 
     var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
     var lockWhitelist by remember { mutableStateOf(backend.lockScreenWhitelist()) }

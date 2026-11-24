@@ -741,14 +741,20 @@ class AppBackend(val container: AppContainer) {
             input.use { container.blocklists.import(name, it) }
         }
 
-    /** 從記錄一鍵放行被名單誤攔的域名：建立「所有應用、允許、該域名」的規則（屬於目前的配置文件）。 */
-    suspend fun allowDomain(hostname: String) {
+    /** 從記錄一鍵放行域名：支援「全域所有應用」或「僅指定應用」（屬於目前的配置文件）。 */
+    suspend fun allowDomain(hostname: String, packageName: String? = null) {
         val now = com.networkcontrol.android.kotlin.core.Time.now()
+        val appMatcher = packageName?.takeIf { it.isNotBlank() }?.let { pkg ->
+            com.networkcontrol.android.kotlin.core.model.AppMatcher(
+                pathPattern = AppCatalog.appPath(pkg),
+                requiredSignerId = container.appCatalog.find(pkg)?.signerSha256,
+            )
+        }
         container.rules.add(
             com.networkcontrol.android.kotlin.core.model.Rule(
                 id = java.util.UUID.randomUUID().toString(),
                 profileId = container.profiles.active.id,
-                app = null,
+                app = appMatcher,
                 conditions = com.networkcontrol.android.kotlin.core.model.RuleConditions(
                     direction = com.networkcontrol.android.kotlin.core.model.Direction.Outbound,
                     remote = com.networkcontrol.android.kotlin.core.model.RemoteTarget.Domain(hostname.lowercase()),
@@ -763,14 +769,20 @@ class AppBackend(val container: AppContainer) {
         )
     }
 
-    /** 從記錄一鍵攔截指定域名：建立「所有應用、拒絕、該域名」的規則（含系統核心 UID 的逐連線精準攔截）。 */
-    suspend fun denyDomain(hostname: String) {
+    /** 從記錄一鍵攔截指定域名：支援「全域所有應用」或「僅指定應用」（含系統核心 UID 的逐連線精準攔截）。 */
+    suspend fun denyDomain(hostname: String, packageName: String? = null) {
         val now = com.networkcontrol.android.kotlin.core.Time.now()
+        val appMatcher = packageName?.takeIf { it.isNotBlank() }?.let { pkg ->
+            com.networkcontrol.android.kotlin.core.model.AppMatcher(
+                pathPattern = AppCatalog.appPath(pkg),
+                requiredSignerId = container.appCatalog.find(pkg)?.signerSha256,
+            )
+        }
         container.rules.add(
             com.networkcontrol.android.kotlin.core.model.Rule(
                 id = java.util.UUID.randomUUID().toString(),
                 profileId = container.profiles.active.id,
-                app = null,
+                app = appMatcher,
                 conditions = com.networkcontrol.android.kotlin.core.model.RuleConditions(
                     direction = com.networkcontrol.android.kotlin.core.model.Direction.Outbound,
                     remote = com.networkcontrol.android.kotlin.core.model.RemoteTarget.Domain(hostname.lowercase()),
@@ -783,6 +795,81 @@ class AppBackend(val container: AppContainer) {
                 updatedAt = now,
             ),
         )
+    }
+
+    /** 手動新建或編輯規則（支援全域/指定應用、域名、遠端連接埠、網路類型與備註）。 */
+    suspend fun saveCustomRule(
+        existing: Rule? = null,
+        packageName: String? = null,
+        action: VerdictAction,
+        domainPattern: String? = null,
+        remotePort: com.networkcontrol.android.kotlin.core.model.PortRange? = null,
+        networkKinds: Set<com.networkcontrol.android.kotlin.core.model.NetworkKind> = emptySet(),
+        note: String? = null,
+    ) {
+        val now = com.networkcontrol.android.kotlin.core.Time.now()
+        val appMatcher = if (existing != null) {
+            existing.app
+        } else {
+            packageName?.takeIf { it.isNotBlank() }?.let { pkg ->
+                com.networkcontrol.android.kotlin.core.model.AppMatcher(
+                    pathPattern = AppCatalog.appPath(pkg),
+                    requiredSignerId = container.appCatalog.find(pkg)?.signerSha256,
+                )
+            }
+        }
+        val cleanedDomain = domainPattern?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        val remoteTarget = cleanedDomain?.let {
+            com.networkcontrol.android.kotlin.core.model.RemoteTarget.Domain(it)
+        } ?: existing?.conditions?.remote?.takeIf { domainPattern == null }
+        val conditions = RuleConditions(
+            direction = existing?.conditions?.direction ?: com.networkcontrol.android.kotlin.core.model.Direction.Outbound,
+            protocol = existing?.conditions?.protocol,
+            remote = remoteTarget,
+            remotePort = remotePort,
+            localPort = existing?.conditions?.localPort,
+            networkKinds = networkKinds,
+            subscriptionIds = existing?.conditions?.subscriptionIds ?: emptySet(),
+            simSlots = existing?.conditions?.simSlots ?: emptySet(),
+        )
+        val cleanNote = note?.trim()?.takeIf { it.isNotEmpty() }
+        if (existing != null) {
+            container.rules.update(
+                existing.copy(
+                    action = action,
+                    conditions = conditions,
+                    note = cleanNote,
+                    updatedAt = now,
+                ),
+            )
+        } else {
+            container.rules.add(
+                Rule(
+                    id = java.util.UUID.randomUUID().toString(),
+                    profileId = container.profiles.active.id,
+                    app = appMatcher,
+                    conditions = conditions,
+                    action = action,
+                    lifetime = RuleLifetime.Permanent,
+                    source = RuleSource.User,
+                    note = cleanNote,
+                    createdAt = now,
+                    updatedAt = now,
+                ),
+            )
+        }
+    }
+
+    /** 批量設定多個應用的聯網決定（允許 / 禁止 / 未設定）。 */
+    suspend fun setAppsDecisionBatch(packageNames: Set<String>, decision: AppDecision) {
+        packageNames.forEach { pkg ->
+            setAppDecision(pkg, decision, replaceAllScopes = false)
+        }
+    }
+
+    /** 清空全部連線記錄（保留流量統計）。 */
+    suspend fun clearConnectionLogs() {
+        container.activityStore.applyRetention(Long.MAX_VALUE)
     }
 
     fun setTrackerDatabaseEnabled(enabled: Boolean) {
@@ -1131,6 +1218,40 @@ class AppBackend(val container: AppContainer) {
 
     fun exportRules(): String = RuleTransferService.export(container.rules.all)
 
+    /** 匯出完整快照（規則 + 配置檔案 + 設定 + 可移植偏好設定，不含敏感密碼）。 */
+    fun exportFullBackup(): String {
+        val prefs = container.preferences
+        val autoUrls = runCatching {
+            container.automationStore.listSubscriptions().mapNotNull { it.updateUrl?.takeIf(String::isNotBlank) }
+        }.getOrDefault(emptyList())
+        return com.networkcontrol.android.kotlin.data.backup.FullBackupCodec.export(
+            rules = container.rules.all,
+            profiles = container.profiles.all,
+            activeProfileId = container.profiles.active.id,
+            userSettings = container.settings.state.value,
+            portablePrefs = com.networkcontrol.android.kotlin.data.backup.PortablePrefsSnapshot(
+                forwardingEnabled = prefs.forwardingEnabled,
+                forwardingUpstream = prefs.forwardingUpstream,
+                socks5Host = prefs.socks5Host,
+                socks5Port = prefs.socks5Port,
+                socks5Udp = prefs.socks5Udp,
+                socks5BypassPackage = prefs.socks5BypassPackage,
+                forwardingDirectPackages = prefs.forwardingDirectPackages,
+                dnsBypassProtection = prefs.dnsBypassProtection,
+                exitDnsProvider = prefs.exitDnsProvider,
+                exitDnsCustomUrl = prefs.exitDnsCustomUrl,
+                exitDnsFallback = prefs.exitDnsFallback,
+                blockOnLockScreen = prefs.blockOnLockScreen,
+                lockScreenWhitelist = prefs.lockScreenWhitelist,
+                cloneAppsInheritPrimary = prefs.cloneAppsInheritPrimary,
+                focusSchedulesJson = prefs.focusSchedulesJson,
+                autoHideBottomBar = prefs.autoHideBottomBar,
+                offlineMode = prefs.offlineMode,
+            ),
+            automationSubscriptionUrls = autoUrls,
+        )
+    }
+
     fun cloneAppsInheritPrimary(): Boolean = container.preferences.cloneAppsInheritPrimary
 
     fun setCloneAppsInheritPrimary(inherit: Boolean) {
@@ -1151,41 +1272,49 @@ class AppBackend(val container: AppContainer) {
         container.preferences.webdavPassphrase = passphrase
     }
 
-    suspend fun uploadWebdavBackup(): Result<String> {
+    suspend fun uploadWebdavBackup(forceOverwrite: Boolean = false): Result<String> {
         if (offlineMode()) return Result.failure(IllegalStateException("offline_mode"))
         val prefs = container.preferences
-        val result = com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.upload(
+        val result = com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.uploadWithMeta(
             baseUrl = prefs.webdavUrl,
             username = prefs.webdavUsername,
             password = prefs.webdavPassword,
             passphrase = prefs.webdavPassphrase,
-            jsonContent = exportRules(),
+            jsonContent = exportFullBackup(),
+            expectedEtag = if (forceOverwrite) null else prefs.webdavLastEtag,
         )
-        if (result.isSuccess) {
+        result.onSuccess { meta ->
             prefs.webdavLastSyncAt = System.currentTimeMillis()
+            if (!meta.etag.isNullOrBlank()) prefs.webdavLastEtag = meta.etag
         }
-        return result
+        return result.map { it.targetUrl }
     }
 
     suspend fun downloadWebdavBackup(): Result<String> {
         if (offlineMode()) return Result.failure(IllegalStateException("offline_mode"))
         val prefs = container.preferences
-        return com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.download(
+        val result = com.networkcontrol.android.kotlin.data.backup.WebDavBackupClient.downloadWithMeta(
             baseUrl = prefs.webdavUrl,
             username = prefs.webdavUsername,
             password = prefs.webdavPassword,
             passphrase = prefs.webdavPassphrase,
         )
+        result.onSuccess { meta ->
+            if (!meta.etag.isNullOrBlank()) prefs.webdavLastEtag = meta.etag
+        }
+        return result.map { it.content }
     }
 
     fun saveLocalBackupToDownloads(): Result<String> =
-        com.networkcontrol.android.kotlin.data.backup.LocalRulesBackup.saveToDownloads(context, exportRules())
+        com.networkcontrol.android.kotlin.data.backup.LocalRulesBackup.saveToDownloads(context, exportFullBackup())
 
     fun readLocalBackupFromDownloads(): Result<String> =
         com.networkcontrol.android.kotlin.data.backup.LocalRulesBackup.readLatestFromDownloads(context)
 
     fun previewImport(json: String, mode: RuleImportMode): RuleImportPreview {
-        val imported = RuleTransferService.importForPlan(json, container.profiles.all)
+        val snapshot = com.networkcontrol.android.kotlin.data.backup.FullBackupCodec.parse(json)
+        val mergedProfiles = (container.profiles.all + snapshot.profiles).distinctBy { it.id }
+        val imported = RuleTransferService.importForPlan(snapshot.rulesJson, mergedProfiles)
         val plan = RuleTransferService.plan(
             current = container.rules.all,
             imported = imported,
@@ -1202,7 +1331,39 @@ class AppBackend(val container: AppContainer) {
     }
 
     suspend fun applyImport(json: String, mode: RuleImportMode): RuleImportPreview {
-        val imported = RuleTransferService.importForPlan(json, container.profiles.all)
+        val snapshot = com.networkcontrol.android.kotlin.data.backup.FullBackupCodec.parse(json)
+        if (snapshot.isFullSnapshot) {
+            if (snapshot.profiles.isNotEmpty()) {
+                container.profiles.upsertImported(snapshot.profiles)
+            }
+            snapshot.userSettings?.let { importedSettings ->
+                container.settings.update { importedSettings }
+            }
+            snapshot.portablePrefs?.let { p ->
+                val prefs = container.preferences
+                p.forwardingEnabled?.let { prefs.forwardingEnabled = it }
+                p.forwardingUpstream?.let { prefs.forwardingUpstream = it }
+                p.socks5Host?.let { prefs.socks5Host = it }
+                p.socks5Port?.let { prefs.socks5Port = it }
+                p.socks5Udp?.let { prefs.socks5Udp = it }
+                p.socks5BypassPackage?.let { prefs.socks5BypassPackage = it }
+                p.forwardingDirectPackages?.let { prefs.forwardingDirectPackages = it }
+                p.dnsBypassProtection?.let { prefs.dnsBypassProtection = it }
+                p.exitDnsProvider?.let { prefs.exitDnsProvider = it }
+                p.exitDnsCustomUrl?.let { prefs.exitDnsCustomUrl = it }
+                p.exitDnsFallback?.let { prefs.exitDnsFallback = it }
+                p.blockOnLockScreen?.let { prefs.blockOnLockScreen = it }
+                p.lockScreenWhitelist?.let { prefs.lockScreenWhitelist = it }
+                p.cloneAppsInheritPrimary?.let { prefs.cloneAppsInheritPrimary = it }
+                p.focusSchedulesJson?.let { prefs.focusSchedulesJson = it }
+                p.autoHideBottomBar?.let {
+                    prefs.autoHideBottomBar = it
+                    container.theme.setAutoHideBottomBar(it)
+                }
+                p.offlineMode?.let { prefs.offlineMode = it }
+            }
+        }
+        val imported = RuleTransferService.importForPlan(snapshot.rulesJson, container.profiles.all)
         val plan = RuleTransferService.plan(container.rules.all, imported, mode)
         // Replace 模式先刪除未匯入的規則，再新增/更新；避免身份合併後又被刪掉。
         if (plan.toRemove.isNotEmpty()) {
@@ -1210,6 +1371,9 @@ class AppBackend(val container: AppContainer) {
         }
         if (plan.toAdd.isNotEmpty()) container.rules.addRange(plan.toAdd)
         plan.toUpdate.forEach { container.rules.update(it) }
+        if (snapshot.isFullSnapshot) {
+            container.vpnEngine.requestReplan()
+        }
         return RuleImportPreview(
             total = imported.size,
             added = plan.toAdd.size,
@@ -1284,6 +1448,11 @@ class AppBackend(val container: AppContainer) {
         url: String,
         existing: com.networkcontrol.android.automation.model.SubscriptionRecord? = null,
     ): com.networkcontrol.android.automation.network.SubscriptionFetcher.FetchResult {
+        if (container.preferences.offlineMode) {
+            return com.networkcontrol.android.automation.network.SubscriptionFetcher.FetchResult.Error(
+                "Offline mode is enabled",
+            )
+        }
         val result = container.automationFetcher.fetch(url, existing)
         if (result is com.networkcontrol.android.automation.network.SubscriptionFetcher.FetchResult.Success) {
             container.automationStore.saveSubscription(

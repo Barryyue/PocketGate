@@ -269,8 +269,14 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_SOCKS5_USERNAME, value).apply()
 
     var socks5Password: String?
-        get() = prefs.getString(KEY_SOCKS5_PASSWORD, null)?.takeIf { it.isNotEmpty() }
-        set(value) = prefs.edit().putString(KEY_SOCKS5_PASSWORD, value).apply()
+        get() = com.networkcontrol.android.kotlin.platform.SecretPrefsCipher
+            .decrypt(prefs.getString(KEY_SOCKS5_PASSWORD, null))
+            ?.takeIf { it.isNotEmpty() }
+        set(value) {
+            val stored = value?.takeIf { it.isNotEmpty() }
+                ?.let(com.networkcontrol.android.kotlin.platform.SecretPrefsCipher::encrypt)
+            prefs.edit().putString(KEY_SOCKS5_PASSWORD, stored).apply()
+        }
 
     var socks5Udp: Boolean
         get() = prefs.getBoolean(KEY_SOCKS5_UDP, true)
@@ -370,16 +376,30 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_WEBDAV_USERNAME, value.trim()).apply()
 
     var webdavPassword: String
-        get() = prefs.getString(KEY_WEBDAV_PASSWORD, "").orEmpty()
-        set(value) = prefs.edit().putString(KEY_WEBDAV_PASSWORD, value).apply()
+        get() = com.networkcontrol.android.kotlin.platform.SecretPrefsCipher
+            .decrypt(prefs.getString(KEY_WEBDAV_PASSWORD, ""))
+            .orEmpty()
+        set(value) {
+            val stored = if (value.isEmpty()) "" else com.networkcontrol.android.kotlin.platform.SecretPrefsCipher.encrypt(value)
+            prefs.edit().putString(KEY_WEBDAV_PASSWORD, stored).apply()
+        }
 
     var webdavPassphrase: String
-        get() = prefs.getString(KEY_WEBDAV_PASSPHRASE, "").orEmpty()
-        set(value) = prefs.edit().putString(KEY_WEBDAV_PASSPHRASE, value).apply()
+        get() = com.networkcontrol.android.kotlin.platform.SecretPrefsCipher
+            .decrypt(prefs.getString(KEY_WEBDAV_PASSPHRASE, ""))
+            .orEmpty()
+        set(value) {
+            val stored = if (value.isEmpty()) "" else com.networkcontrol.android.kotlin.platform.SecretPrefsCipher.encrypt(value)
+            prefs.edit().putString(KEY_WEBDAV_PASSPHRASE, stored).apply()
+        }
 
     var webdavLastSyncAt: Long
         get() = prefs.getLong(KEY_WEBDAV_LAST_SYNC, 0L)
         set(value) = prefs.edit().putLong(KEY_WEBDAV_LAST_SYNC, value).apply()
+
+    var webdavLastEtag: String?
+        get() = prefs.getString(KEY_WEBDAV_LAST_ETAG, null)?.takeIf { it.isNotBlank() }
+        set(value) = prefs.edit().putString(KEY_WEBDAV_LAST_ETAG, value).apply()
 
     private companion object {
         const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
@@ -441,6 +461,7 @@ class AppPreferences(context: Context) {
         const val KEY_WEBDAV_PASSWORD = "webdav_password"
         const val KEY_WEBDAV_PASSPHRASE = "webdav_passphrase"
         const val KEY_WEBDAV_LAST_SYNC = "webdav_last_sync"
+        const val KEY_WEBDAV_LAST_ETAG = "webdav_last_etag"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_SOCKS5_HOST = "socks5_host"
         const val KEY_SOCKS5_PORT = "socks5_port"

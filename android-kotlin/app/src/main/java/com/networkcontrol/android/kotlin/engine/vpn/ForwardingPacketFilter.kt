@@ -72,7 +72,10 @@ class ForwardingPacketFilter(
     private val dnsAddress: InetAddress = ForwardingDefaults.MapDnsAddress,
     private val dnsPort: Int = ForwardingDefaults.MAP_DNS_PORT,
     private val clock: () -> Long = { System.nanoTime() / 1_000_000L },
-    private val maxEntries: Int = 8192,
+    // 需大於 ForwardingDefaults.MAP_CACHE_SIZE (10_000)，避免高負載時提早淘汰假 IP 域名映射
+    private val maxEntries: Int = 12_288,
+    /** 嚴格斷網模式（如全部阻止）下，對無法解析或非 TCP/UDP 封包採 fail-close 丟棄。 */
+    private val failClosed: () -> Boolean = { false },
 ) {
     val counters = ForwardingCounters()
     private val dnsRedirect = DnsRedirect(dnsAddress.address)
@@ -312,7 +315,11 @@ class ForwardingPacketFilter(
             return true
         }
         val info = IpPacketParser.tryParse(packet, length) ?: run {
-            // 無法解析（分片、未知協定）時交給 hev 自行處理，避免誤殺。
+            if (failClosed()) {
+                counters.blocked.incrementAndGet()
+                return false
+            }
+            // 一般模式下無法解析（分片、未知協定）時交給 hev 自行處理，避免誤殺。
             counters.forwarded.incrementAndGet()
             return true
         }
@@ -354,6 +361,10 @@ class ForwardingPacketFilter(
                 }
             }
             else -> {
+                if (failClosed()) {
+                    counters.blocked.incrementAndGet()
+                    return false
+                }
                 counters.forwarded.incrementAndGet()
                 return true
             }
@@ -772,7 +783,7 @@ object ForwardingPolicy {
 
     /**
      * 只回傳帶連線條件的規則的判決：應用級規則已經反映在路由計畫中（含可信應用、篡改檢測）。
-     * 第一條符合的規則是應用級規則時回傳 null，交給路由計畫。
+     * 直接在連線條件規則集合中依優先級匹配，確保全域域名拒絕規則不會被應用級允許規則遮蔽。
      */
     fun conditionalAction(
         ruleSet: com.networkcontrol.android.kotlin.core.rules.RuleSet,
@@ -782,8 +793,7 @@ object ForwardingPolicy {
         network: com.networkcontrol.android.kotlin.core.model.NetworkContext,
     ): com.networkcontrol.android.kotlin.core.model.VerdictAction? {
         if (!ruleSet.hasFlowConditions) return null
-        val rule = ruleSet.evaluate(flow, flow.app, domains, zone, network).rule ?: return null
-        return if (VpnRoutingPlanner.isEnforceable(rule)) null else rule.action
+        return ruleSet.evaluateFlowCondition(flow, flow.app, domains, zone, network)?.action
     }
 
     fun decide(plan: com.networkcontrol.android.kotlin.core.model.VpnRoutingPlan, uid: Int?): ForwardingDecision {

@@ -97,6 +97,7 @@ class VpnEngine(
         redirectDns = { preferences.dnsBypassProtection },
         onForwarded = { info, uid -> reporter.reportAllowed(info, uid) },
         onBlocklisted = { info, uid -> reporter.reportBlocklisted(info, uid) },
+        failClosed = { _plan.value.mode == com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll },
     )
 
     /** 內建直連出口；只在逐連線模式且選擇直連時執行。 */
@@ -209,7 +210,9 @@ class VpnEngine(
 
     private fun identityFor(plan: VpnRoutingPlan, uid: Int): com.networkcontrol.android.kotlin.core.model.AppIdentity? {
         identities[uid]?.let { return it }
-        val packageName = plan.find(uid)?.packageName ?: catalog.packagesForUid(uid).firstOrNull() ?: return null
+        val packageName = plan.find(uid)?.packageName
+            ?: catalog.packagesForUid(uid, inheritPrimary = plan.cloneAppsInheritPrimary).firstOrNull()
+            ?: return null
         val identity = catalog.find(packageName)?.let(catalog::toIdentity) ?: return null
         identities[uid] = identity
         return identity
