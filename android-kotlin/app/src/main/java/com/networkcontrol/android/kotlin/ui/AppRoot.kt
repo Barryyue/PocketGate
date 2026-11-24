@@ -98,11 +98,15 @@ import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
 import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
 import com.networkcontrol.android.kotlin.ui.rules.RulesScreen
+import com.networkcontrol.android.kotlin.ui.settings.AppearanceSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.AutomationSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.BlocklistSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.DataBackupSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.ForwardingSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.PermissionsSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.ProfileScheduleSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.PromptSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.ProtectionSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.SettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.SpeedIslandSettingsScreen
 import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
@@ -299,6 +303,22 @@ fun AppRoot(container: AppContainer) {
                             backend = backend,
                             onBack = { settingsSubScreen = null },
                         )
+                        "appearance" -> AppearanceSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "protection" -> ProtectionSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "permissions" -> PermissionsSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "data" -> DataBackupSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
                         else -> LaunchedEffect(Unit) { settingsSubScreen = null }
                     }
                 }
@@ -385,6 +405,10 @@ fun AppRoot(container: AppContainer) {
                                         onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
                                         onOpenProfileSettings = { settingsSubScreen = "profiles" },
                                         onOpenAutomation = { settingsSubScreen = "automation" },
+                                        onOpenAppearanceSettings = { settingsSubScreen = "appearance" },
+                                        onOpenProtectionSettings = { settingsSubScreen = "protection" },
+                                        onOpenPermissionsSettings = { settingsSubScreen = "permissions" },
+                                        onOpenDataBackupSettings = { settingsSubScreen = "data" },
                                     )
                                 }
                             }

@@ -40,6 +40,23 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.6",
+            date = "2026-11-24",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Redesigned Settings into a clean 5-group hub with tinted icon badges, status pills, hairline dividers and dedicated sub-pages (Appearance, Protection Policies, Permissions, Backup & Data)",
+                    "重构设置页信息架构与视觉层次：主页面收敛为 5 组清爽入口（配圆角图标徽章、状态胶囊与细分隔线），并将外观、防护策略、权限体检与备份存储拆分至独立二级页",
+                    "重構設定頁資訊架構與視覺層次：主頁面收斂為 5 組清爽入口（配圓角圖示徽章、狀態膠囊與細分隔線），並將外觀、防護策略、權限體檢與備份儲存拆分至獨立二級頁",
+                ),
+                t(
+                    "Replaced the cramped log-retention chip row with a full-width segmented pill control so 90-day and all retention options align cleanly without wrapping or distortion",
+                    "将「记录保留天数」与主题模式改为全宽等分分段胶囊控件，修复 90 天选项在窄屏下换行变形与标题未居中对齐的问题",
+                    "將「記錄保留天數」與主題模式改為全寬等分分段膠囊控制項，修復 90 天選項在窄螢幕下換行變形與標題未置中對齊的問題",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.5",
             date = "2026-11-24",
             features = emptyList(),

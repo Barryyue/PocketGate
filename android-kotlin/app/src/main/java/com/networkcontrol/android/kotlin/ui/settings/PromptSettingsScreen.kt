@@ -84,6 +84,11 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var showExitGrantGuide by remember { mutableStateOf(false) }
 
     var editingNumberTarget by remember { mutableStateOf<PromptNumberTarget?>(null) }
+    var notificationsEnabled by remember(overlayKey) {
+        mutableStateOf(backend.container.preferences.notificationsEnabled)
+    }
+    var notificationTitle by remember { mutableStateOf(backend.protectionNotificationTitle()) }
+    var showNotificationTitleDialog by remember { mutableStateOf(false) }
 
     fun toast(text: String) = Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
 
@@ -308,7 +313,50 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     )
                 }
             }
+            item {
+                SectionCard(s[S.Notifications]) {
+                    SwitchRow(
+                        title = s[S.NotificationsEnabled],
+                        checked = notificationsEnabled,
+                        onCheckedChange = { enabled ->
+                            notificationsEnabled = enabled
+                            backend.setNotificationsEnabled(enabled)
+                        },
+                    )
+                    CompactValueRow(
+                        title = s[S.NotificationTitle],
+                        valueText = notificationTitle.ifBlank { s[S.ProtectionOn] },
+                        actionText = s[S.Edit],
+                        onClick = { showNotificationTitleDialog = true },
+                    )
+                    OutlinedButton(
+                        onClick = { context.startActivity(backend.openNotificationSettings()) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(s[S.OpenNotificationSettings])
+                    }
+                }
+            }
         }
+    }
+
+    if (showNotificationTitleDialog) {
+        NotificationTitleDialog(
+            initialTitle = notificationTitle,
+            onDismiss = { showNotificationTitleDialog = false },
+            onReset = {
+                notificationTitle = ""
+                backend.setProtectionNotificationTitle("")
+                showNotificationTitleDialog = false
+                toast(s[S.Reset])
+            },
+            onSave = { newTitle ->
+                notificationTitle = newTitle
+                backend.setProtectionNotificationTitle(newTitle)
+                showNotificationTitleDialog = false
+                toast(s[S.Done])
+            },
+        )
     }
 
     if (showOverlayPositionDialog) {

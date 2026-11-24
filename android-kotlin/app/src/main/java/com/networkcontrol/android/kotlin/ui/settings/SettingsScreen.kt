@@ -35,6 +35,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.DateRange
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -128,6 +140,10 @@ fun SettingsScreen(
     onOpenForwardingSettings: () -> Unit = {},
     onOpenProfileSettings: () -> Unit = {},
     onOpenAutomation: () -> Unit = {},
+    onOpenAppearanceSettings: () -> Unit = {},
+    onOpenProtectionSettings: () -> Unit = {},
+    onOpenPermissionsSettings: () -> Unit = {},
+    onOpenDataBackupSettings: () -> Unit = {},
 ) {
     val guard = LocalSensitiveAction.current
     val s = rememberUiStrings()
@@ -137,19 +153,17 @@ fun SettingsScreen(
     val runtime by backend.runtime.collectAsStateWithLifecycle()
     val profiles by backend.profiles.collectAsStateWithLifecycle()
     val plan by backend.plan.collectAsStateWithLifecycle()
-    val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
-    val network by backend.network.collectAsStateWithLifecycle()
     val themeColor by backend.container.theme.color.collectAsStateWithLifecycle()
     val themeStyle by backend.container.theme.themeStyle.collectAsStateWithLifecycle()
-    var languageTag by remember { mutableStateOf(backend.container.preferences.languageTag) }
-    var themeMode by remember { mutableStateOf(backend.container.preferences.themeMode) }
-    var toolbarStyle by remember { mutableStateOf(backend.toolbarStyle()) }
-    var appIconStyle by remember { mutableStateOf(backend.appIconStyle()) }
     val focusSchedules by backend.focusSchedules.collectAsStateWithLifecycle()
     val blocklistState by backend.blocklistState.collectAsStateWithLifecycle()
     val blocklistMatcher by backend.blocklistMatcher.collectAsStateWithLifecycle()
     val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
     val forwardingAvailable = remember { backend.forwardingAvailable() }
+    val offlineModeFlowVal by backend.offlineModeFlow.collectAsStateWithLifecycle()
+    val forwardingEnabledFlowVal by backend.forwardingEnabledFlow.collectAsStateWithLifecycle()
+    val forwardingUpstream by backend.forwardingUpstreamFlow.collectAsStateWithLifecycle()
+    val updateState by backend.updateState.collectAsStateWithLifecycle()
 
     var resumeKey by remember { mutableIntStateOf(0) }
     val windowFocusTick by com.networkcontrol.android.kotlin.WindowFocusBus.ticks.collectAsStateWithLifecycle()
@@ -158,49 +172,35 @@ fun SettingsScreen(
         backend.refreshSpeedIsland()
     }
     val effectiveResumeKey = resumeKey * 31 + windowFocusTick
-    val canDrawOverlays = remember(effectiveResumeKey) { backend.canDrawOverlays() }
-    val hasTrafficAccess = remember(effectiveResumeKey) { backend.hasTrafficAccess() }
+
+    val languageTag = remember(effectiveResumeKey) { backend.container.preferences.languageTag }
+    val themeMode = remember(effectiveResumeKey) { backend.container.preferences.themeMode }
     val promptMode = remember(effectiveResumeKey) { backend.promptPresentationMode() }
-    var speedIsland by remember(effectiveResumeKey) { mutableStateOf(backend.speedIslandEnabled()) }
+    val speedIsland = remember(effectiveResumeKey) { backend.speedIslandEnabled() }
     val islandOpacity = remember(effectiveResumeKey) { backend.speedIslandOpacity() }
     val islandMode = remember(effectiveResumeKey) { backend.speedIslandMode() }
     val islandContent = remember(effectiveResumeKey) { backend.speedIslandContent() }
-
-    var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
-    var allowLan by remember { mutableStateOf(backend.allowLan()) }
-    var blockOnRoaming by remember { mutableStateOf(backend.blockOnRoaming()) }
-    var dbSizeBytes by remember(effectiveResumeKey) { mutableStateOf(backend.activityDbSizeBytes()) }
-    var lockWhitelist by remember { mutableStateOf(backend.lockScreenWhitelist()) }
-    var showLockWhitelistDialog by remember { mutableStateOf(false) }
-    var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
-    val offlineModeFlowVal by backend.offlineModeFlow.collectAsStateWithLifecycle()
-    val forwardingEnabledFlowVal by backend.forwardingEnabledFlow.collectAsStateWithLifecycle()
-    val forwardingUpstream by backend.forwardingUpstreamFlow.collectAsStateWithLifecycle()
-    var offlineMode by remember(offlineModeFlowVal) { mutableStateOf(offlineModeFlowVal) }
-    var notificationsEnabled by remember(effectiveResumeKey) {
-        mutableStateOf(backend.container.preferences.notificationsEnabled)
-    }
-    var autoHideBottomBar by remember(effectiveResumeKey) {
-        mutableStateOf(backend.autoHideBottomBar())
-    }
-    var cloneIndependent by remember(effectiveResumeKey) {
-        mutableStateOf(!backend.cloneAppsInheritPrimary())
-    }
-    var showWebDavDialog by remember { mutableStateOf(false) }
-    var forwardingEnabled by remember(forwardingEnabledFlowVal) { mutableStateOf(forwardingEnabledFlowVal) }
+    val blockOnLock = remember(effectiveResumeKey) { backend.blockOnLockScreen() }
+    val allowLan = remember(effectiveResumeKey) { backend.allowLan() }
+    val blockOnRoaming = remember(effectiveResumeKey) { backend.blockOnRoaming() }
+    val dbSizeBytes = remember(effectiveResumeKey) { backend.activityDbSizeBytes() }
     val viaProxy = forwardingUpstream == ForwardingUpstream.SOCKS5
-    val socks5Host = remember(resumeKey) { backend.socks5Host() }
-    val socks5Port = remember(resumeKey) { backend.socks5Port() }
-    val exitDns = remember(resumeKey) { backend.exitDnsProvider() }
-    val directPackages = remember(resumeKey) { backend.forwardingDirectPackages() }
+    val socks5Host = remember(effectiveResumeKey) { backend.socks5Host() }
+    val socks5Port = remember(effectiveResumeKey) { backend.socks5Port() }
+    val exitDns = remember(effectiveResumeKey) { backend.exitDnsProvider() }
+    val directPackages = remember(effectiveResumeKey) { backend.forwardingDirectPackages() }
+    val automationEnabled = remember(effectiveResumeKey) { backend.automationFeatureEnabled() }
+    val automationServiceOn = remember(effectiveResumeKey) { backend.automationServiceActive() }
 
-    var notificationTitle by remember { mutableStateOf(backend.protectionNotificationTitle()) }
-    var showNotificationTitleDialog by remember { mutableStateOf(false) }
-    var showTrustedPublishersDialog by remember { mutableStateOf(false) }
-    var showThemeColorDialog by remember { mutableStateOf(false) }
+    val vpnOk = remember(effectiveResumeKey) { backend.isVpnPrepared() }
+    val notifOk = remember(effectiveResumeKey) { backend.notificationsAvailable() }
+    val hasTrafficAccess = remember(effectiveResumeKey) { backend.hasTrafficAccess() }
+    val canDrawOverlays = remember(effectiveResumeKey) { backend.canDrawOverlays() }
+    val batteryOk = remember(effectiveResumeKey) { backend.isIgnoringBatteryOptimizations() }
 
-    val updateState by backend.updateState.collectAsStateWithLifecycle()
-    var updateChannel by remember { mutableStateOf(backend.updateChannel()) }
+    var appLock by remember(effectiveResumeKey) { mutableStateOf(backend.isAppLockEnabled()) }
+    var offlineMode by remember(offlineModeFlowVal) { mutableStateOf(offlineModeFlowVal) }
+    var updateChannel by remember(effectiveResumeKey) { mutableStateOf(backend.updateChannel()) }
     var showUpdateChannelDialog by remember { mutableStateOf(false) }
     var pendingInstallApk by remember { mutableStateOf<java.io.File?>(null) }
     var showReleaseNotes by remember { mutableStateOf(false) }
@@ -219,27 +219,12 @@ fun SettingsScreen(
         }
     }
 
-    var importJson by remember { mutableStateOf<String?>(null) }
-    var previewMerge by remember { mutableStateOf<RuleImportPreview?>(null) }
-    var previewReplace by remember { mutableStateOf<RuleImportPreview?>(null) }
-    var importMode by remember { mutableStateOf(RuleImportMode.Merge) }
-    var showImportDialog by remember { mutableStateOf(false) }
-
-    // 已安裝應用列表需要 PackageManager：在背景載入，不在主執行緒上卡住界面。
-    val pickerApps by produceState<List<InstalledApp>?>(
-        initialValue = null,
-        showLockWhitelistDialog,
-    ) {
-        if (showLockWhitelistDialog) {
-            value = withContext(Dispatchers.IO) { backend.installedApps() }
-        }
-    }
     val installedCount by produceState(initialValue = -1) {
         value = withContext(Dispatchers.IO) { backend.container.appCatalog.getApps().size }
     }
     val appList by produceState<AppCatalog.AppListVisibility?>(
         initialValue = null,
-        key1 = resumeKey,
+        key1 = effectiveResumeKey,
     ) {
         value = withContext(Dispatchers.IO) { backend.appListVisibility() }
     }
@@ -250,46 +235,10 @@ fun SettingsScreen(
         backend.profileErrors.collect { message -> toast(message) }
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            runCatching {
-                withContext(Dispatchers.IO) {
-                    context.contentResolver.openOutputStream(uri)?.use {
-                        it.write(backend.exportRules().toByteArray(Charsets.UTF_8))
-                    }
-                }
-            }.onSuccess { toast(s[S.ExportDone]) }
-                .onFailure { toast(s.format(S.ExportFailed, it.message.orEmpty())) }
-        }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            runCatching {
-                withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-                }
-            }.onSuccess { json ->
-                if (json == null) {
-                    toast(s.format(S.ImportFailed, "empty file"))
-                    return@onSuccess
-                }
-                importJson = json
-                previewMerge = runCatching { backend.previewImport(json, RuleImportMode.Merge) }.getOrNull()
-                previewReplace = runCatching { backend.previewImport(json, RuleImportMode.Replace) }.getOrNull()
-                if (previewMerge == null) {
-                    toast(s.format(S.ImportFailed, "invalid file"))
-                } else {
-                    importMode = RuleImportMode.Merge
-                    showImportDialog = true
-                }
-            }.onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
-        }
-    }
+    val scheme = MaterialTheme.colorScheme
+    val appListRestricted = appList?.restricted == true
+    val permOkCount = listOf(vpnOk, notifOk, hasTrafficAccess, !appListRestricted, canDrawOverlays, batteryOk).count { it }
+    val permMissingCount = 6 - permOkCount
 
     LazyColumn(
         state = listState,
@@ -300,620 +249,37 @@ fun SettingsScreen(
             end = 20.dp,
             bottom = 20.dp + LocalBottomContentPadding.current,
         ),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { ScreenHeader(s[S.Settings], s[S.SettingsSubtitle]) }
 
-        // 1. 外觀與顯示（語言、主題、主題色、工具欄樣式 Dropdown、靈動島）
-        item {
-            SectionCard(s[S.Appearance]) {
-                DropdownSetting(
-                    label = s[S.Language],
-                    current = when (languageTag) {
-                        "zh-CN" -> s[S.ChineseSimplified]
-                        "zh-TW" -> s[S.ChineseTraditional]
-                        "en-US" -> s[S.English]
-                        else -> s[S.SystemDefault]
-                    },
-                    options = listOf(
-                        s[S.SystemDefault] to null,
-                        s[S.ChineseSimplified] to "zh-CN",
-                        s[S.ChineseTraditional] to "zh-TW",
-                        s[S.English] to "en-US",
-                    ),
-                    onSelected = {
-                        languageTag = it
-                        backend.setLanguage(it)
-                    },
-                )
-                DropdownSetting(
-                    label = s[S.Theme],
-                    current = when (themeMode) {
-                        "light" -> s[S.ThemeLight]
-                        "dark" -> s[S.ThemeDark]
-                        else -> s[S.ThemeSystem]
-                    },
-                    options = listOf(
-                        s[S.ThemeSystem] to "system",
-                        s[S.ThemeLight] to "light",
-                        s[S.ThemeDark] to "dark",
-                    ),
-                    onSelected = {
-                        val mode = it ?: "system"
-                        themeMode = mode
-                        backend.setTheme(mode)
-                    },
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(s[S.ThemeStyle], style = MaterialTheme.typography.bodyMedium)
-                    ThemeStyleStrip(
-                        selected = themeStyle,
-                        seedColor = themeColor,
-                        s = s,
-                        onSelect = { backend.setThemeStyle(it) },
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(s[S.ThemeColor], style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    Box(
-                        Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(themeColor)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    OutlinedButton(onClick = { showThemeColorDialog = true }) {
-                        Text(s[S.Edit])
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(s[S.AppIconStyle], style = MaterialTheme.typography.bodyMedium)
-                    AppIconSelector(
-                        selected = appIconStyle,
-                        s = s,
-                        onSelect = { icon ->
-                            if (icon != appIconStyle) {
-                                appIconStyle = icon
-                                backend.setAppIconStyle(icon)
-                                toast(s[S.AppIconSwitched])
-                            }
-                        },
-                    )
-                }
-                DropdownSetting(
-                    label = s[S.ToolbarStyle],
-                    current = toolbarStyleLabel(s, toolbarStyle),
-                    options = ToolbarStyle.entries.map { toolbarStyleLabel(s, it) to it.name },
-                    onSelected = { name ->
-                        val style = ToolbarStyle.entries.firstOrNull { it.name == name } ?: ToolbarStyle.ClassicSolid
-                        toolbarStyle = style
-                        backend.setToolbarStyle(style)
-                    },
-                )
-                SwitchRow(
-                    title = s[S.AutoHideBottomBar],
-                    subtitle = s[S.AutoHideBottomBarHint],
-                    checked = autoHideBottomBar,
-                    onCheckedChange = { enabled ->
-                        autoHideBottomBar = enabled
-                        backend.setAutoHideBottomBar(enabled)
-                    },
-                )
-                SwitchRow(
-                    title = s[S.SpeedIsland],
-                    subtitle = s[S.SpeedIslandHint],
-                    checked = speedIsland,
-                    onCheckedChange = { enabled ->
-                        if (enabled && !canDrawOverlays) {
-                            toast(s[S.OverlayDenied])
-                            runCatching { context.startActivity(backend.overlayPermissionIntent()) }
-                        } else {
-                            speedIsland = enabled
-                            backend.setSpeedIslandEnabled(enabled)
-                        }
-                    },
-                )
-                val modeLabel = when (islandMode) {
-                    SpeedIslandMode.Full -> s[S.IslandModeFull]
-                    SpeedIslandMode.Cycle -> s[S.IslandModeCycle]
-                    SpeedIslandMode.Mini -> s[S.IslandModeMini]
-                }
-                val contentLabel = when (islandContent) {
-                    SpeedIslandContent.Speed -> s[S.IslandContentSpeed]
-                    SpeedIslandContent.Traffic -> s[S.IslandContentTraffic]
-                    SpeedIslandContent.Blocked -> s[S.IslandContentBlocked]
-                    SpeedIslandContent.Pending -> s[S.IslandContentPending]
-                    SpeedIslandContent.Network -> s[S.IslandContentNetwork]
-                }
-                SettingsNavRow(
-                    title = s[S.IslandConfig],
-                    subtitle = "$contentLabel · $modeLabel · ${(islandOpacity * 100).roundToInt()}%",
-                    actionText = s[S.Edit],
-                    onClick = onOpenIslandSettings,
-                )
-            }
-        }
-
-        // 2. 聯網詢問與通知（詢問二級頁入口、通知開關、通知標題彈框、系統通知設定）
-        item {
-            SectionCard("${s[S.PromptSettings]} · ${s[S.Notifications]}") {
-                val presentationLabel = if (promptMode == "auto") {
-                    s[S.PromptPresentationAuto]
-                } else {
-                    s[S.PromptPresentationNotification]
-                }
-                val defaultActionLabel = if (settings.promptDefaultAction == VerdictAction.Deny) {
-                    s[S.Deny]
-                } else {
-                    s[S.Allow]
-                }
-                SettingsNavRow(
-                    title = s[S.PromptSettings],
-                    subtitle = "$presentationLabel · ${settings.promptTimeoutSeconds}s · $defaultActionLabel",
-                    actionText = s[S.Edit],
-                    onClick = onOpenPromptSettings,
-                )
-                SwitchRow(
-                    title = s[S.NotificationsEnabled],
-                    checked = notificationsEnabled,
-                    onCheckedChange = { enabled ->
-                        notificationsEnabled = enabled
-                        backend.setNotificationsEnabled(enabled)
-                    },
-                )
-                SettingsNavRow(
-                    title = s[S.NotificationTitle],
-                    subtitle = notificationTitle.ifBlank { s[S.ProtectionOn] },
-                    actionText = s[S.Edit],
-                    onClick = { showNotificationTitleDialog = true },
-                )
-                OutlinedButton(onClick = { context.startActivity(backend.openNotificationSettings()) }) {
-                    Text(s[S.OpenNotificationSettings])
-                }
-            }
-        }
-
-        // 3. 防護、信任與網路（系統應用、可信發布者、鎖屏斷網、攔截列表、逐連線轉發模式）
-        item {
-            SectionCard(s[S.VpnSettings]) {
-                SwitchRow(
-                    title = s[S.AllowSystemApps],
-                    subtitle = s[S.AllowSystemAppsHint],
-                    checked = settings.allowSystemAppsByDefault,
-                    onCheckedChange = { enabled ->
-                        guard.run { backend.setAllowSystemAppsByDefault(enabled) }
-                    },
-                )
-                SettingsNavRow(
-                    title = s[S.TrustedPublishers],
-                    subtitle = if (settings.trustedSigners.isEmpty()) {
-                        s[S.NoTrustedPublishers]
-                    } else {
-                        "${settings.trustedSigners.size}"
-                    },
-                    actionText = if (settings.trustedSigners.isEmpty()) null else s[S.Edit],
-                    onClick = {
-                        if (settings.trustedSigners.isNotEmpty()) {
-                            showTrustedPublishersDialog = true
-                        }
-                    },
-                )
-                SwitchRow(
-                    title = s[S.BlockOnLock],
-                    subtitle = s[S.BlockOnLockHint],
-                    checked = blockOnLock,
-                    onCheckedChange = { enabled ->
-                        guard.run {
-                            blockOnLock = enabled
-                            backend.setBlockOnLockScreen(enabled)
-                        }
-                    },
-                )
-                if (blockOnLock) {
-                    SettingsNavRow(
-                        title = s[S.LockScreenWhitelist],
-                        subtitle = s.format(S.LockScreenWhitelistCount, lockWhitelist.size),
-                        actionText = s[S.Select],
-                        onClick = { showLockWhitelistDialog = true },
-                    )
-                }
-                SwitchRow(
-                    title = s[S.AllowLan],
-                    subtitle = s[S.AllowLanHint],
-                    checked = allowLan,
-                    onCheckedChange = { enabled ->
-                        guard.run {
-                            allowLan = enabled
-                            backend.setAllowLan(enabled)
-                        }
-                    },
-                )
-                SwitchRow(
-                    title = s[S.BlockOnRoaming],
-                    subtitle = s[S.BlockOnRoamingHint],
-                    checked = blockOnRoaming,
-                    onCheckedChange = { enabled ->
-                        guard.run {
-                            blockOnRoaming = enabled
-                            backend.setBlockOnRoaming(enabled)
-                        }
-                    },
-                )
-                SwitchRow(
-                    title = s[S.AllowIcmp],
-                    checked = settings.allowIcmpByDefault,
-                    onCheckedChange = { allow ->
-                        guard.run {
-                            backend.updateSettings { it.copy(allowIcmpByDefault = allow) }
-                        }
-                    },
-                )
-                SwitchRow(
-                    title = s[S.CloneIndependent],
-                    subtitle = s[S.CloneIndependentHint],
-                    checked = cloneIndependent,
-                    onCheckedChange = { independent ->
-                        guard.run {
-                            cloneIndependent = independent
-                            backend.setCloneAppsInheritPrimary(!independent)
-                        }
-                    },
-                )
-                SettingsNavRow(
-                    title = s[S.Blocklists],
-                    subtitle = if (blocklistState.enabled) {
-                        s.format(
-                            S.BlocklistsActive,
-                            NumberFormat.getIntegerInstance().format(blocklistMatcher.totalEntries),
-                            blocklistState.lists.count { it.enabled && it.entries > 0 },
-                        )
-                    } else {
-                        s[S.Off]
-                    },
-                    subtitleHighlighted = blocklistState.enabled,
-                    actionText = s[S.Edit],
-                    onClick = onOpenBlocklists,
-                )
-                val automationEnabled = remember(resumeKey) { backend.automationFeatureEnabled() }
-                val automationServiceOn = remember(resumeKey) { backend.automationServiceActive() }
-                SettingsNavRow(
-                    title = "${s[S.AutomationTitle]} (${s[S.AutomationExperimentalBadge]})",
-                    subtitle = when {
-                        automationEnabled && automationServiceOn -> s[S.AutomationServiceOn]
-                        automationEnabled -> s[S.AutomationNeedsA11y]
-                        else -> s[S.Off]
-                    },
-                    subtitleHighlighted = automationEnabled && automationServiceOn,
-                    actionText = s[S.Edit],
-                    onClick = onOpenAutomation,
-                )
-                SwitchRow(
-                    title = s[S.ForwardingMode],
-                    checked = forwardingEnabled,
-                    onCheckedChange = { enabled ->
-                        if (enabled && !forwardingAvailable) {
-                            toast(s[S.ForwardingUnavailable])
-                        } else {
-                            guard.run {
-                                forwardingEnabled = enabled
-                                backend.setForwardingEnabled(enabled)
-                            }
-                        }
-                    },
-                )
-                val exitDnsLabel = when (exitDns) {
-                    "system" -> s[S.ExitDnsSystem]
-                    "custom" -> s[S.ExitDnsCustom]
-                    else -> DohProviders.all.firstOrNull { it.id == exitDns }?.name ?: exitDns
-                }
-                val upstreamSummary = if (viaProxy) {
-                    "${s[S.UpstreamSocks5]} ($socks5Host:$socks5Port)"
-                } else {
-                    "${s[S.UpstreamDirect]} ($exitDnsLabel)"
-                }
-                val forwardingStatusSummary = when {
-                    !forwardingAvailable -> s[S.ForwardingUnavailable]
-                    forwardingEnabled && forwardingActive -> "${s[S.ForwardingStatusActive]} · $upstreamSummary"
-                    forwardingEnabled -> "${s[S.ForwardingStatusInactive]} · $upstreamSummary"
-                    else -> "$upstreamSummary · ${s.format(S.DirectAppsCount, directPackages.size)}"
-                }
-                SettingsNavRow(
-                    title = s[S.ForwardingUpstream],
-                    subtitle = forwardingStatusSummary,
-                    subtitleHighlighted = forwardingEnabled && forwardingActive,
-                    actionText = s[S.Edit],
-                    onClick = onOpenForwardingSettings,
-                )
-            }
-        }
-
-        // 4. 配置檔案與專注時間表
-        item {
-            SectionCard("${s[S.ProfileSettings]} · ${s[S.FocusSchedule]}") {
-                val activeProfile = profiles.firstOrNull { it.id == runtime.activeProfileId } ?: profiles.firstOrNull()
-                val profileSummary = if (activeProfile != null) {
-                    "${activeProfile.name} (${modeLabel(activeProfile.mode, s)}) · ${profiles.size}"
-                } else {
-                    "${profiles.size}"
-                }
-                SettingsNavRow(
-                    title = s[S.ProfileSettings],
-                    subtitle = profileSummary,
-                    actionText = s[S.Edit],
-                    onClick = onOpenProfileSettings,
-                )
-                val scheduleSummary = if (focusSchedules.isEmpty()) {
-                    s[S.NoFocusSchedules]
-                } else {
-                    val activeCount = focusSchedules.count { it.enabled }
-                    val first = focusSchedules.first()
-                    "$activeCount / ${focusSchedules.size} · ${first.dayLabel(context)} ${first.timeLabel()}"
-                }
-                SettingsNavRow(
-                    title = s[S.FocusSchedule],
-                    subtitle = scheduleSummary,
-                    actionText = s[S.Edit],
-                    onClick = onOpenProfileSettings,
-                )
-            }
-        }
-
-        // 5. 安全與系統權限（應用鎖、6 項紅綠燈權限體檢、常駐 VPN 與電池最佳化）
-        item {
-            val vpnOk = remember(resumeKey) { backend.isVpnPrepared() }
-            val notifOk = remember(resumeKey) { backend.notificationsAvailable() }
-            val batteryOk = remember(resumeKey) { backend.isIgnoringBatteryOptimizations() }
-            val appListRestricted = appList?.restricted == true
-            val okCount = listOf(vpnOk, notifOk, hasTrafficAccess, !appListRestricted, canDrawOverlays, batteryOk).count { it }
-            SectionCard("${s[S.PermissionHealth]} · $okCount / 6") {
-                SwitchRow(
-                    title = s[S.AppLock],
-                    subtitle = s[S.AppLockHint],
-                    checked = appLock,
-                    onCheckedChange = { enabled ->
-                        if (enabled && !backend.isDeviceSecure()) {
-                            toast(s[S.AppLockNoCredential])
-                        } else if (!enabled) {
-                            guard.run {
-                                appLock = false
-                                backend.setAppLockEnabled(false)
-                            }
-                        } else {
-                            appLock = true
-                            backend.setAppLockEnabled(true)
-                        }
-                    },
-                )
-                SwitchRow(
-                    title = s[S.OfflineMode],
-                    subtitle = s[S.OfflineModeHint],
-                    checked = offlineMode,
-                    onCheckedChange = { enabled ->
-                        offlineMode = enabled
-                        backend.setOfflineMode(enabled)
-                    },
-                )
-                PermissionRow(
-                    title = s[S.PermVpn],
-                    statusText = if (vpnOk) s[S.PermissionOk] else s[S.PermissionMissing],
-                    ok = vpnOk,
-                    actionText = if (vpnOk) null else s[S.GoToSettings],
-                    onAction = { context.startActivity(backend.openAlwaysOnVpnSettings()) },
-                )
-                PermissionRow(
-                    title = s[S.PermNotifications],
-                    statusText = if (notifOk) s[S.PermissionOk] else s[S.PermissionMissing],
-                    ok = notifOk,
-                    actionText = if (notifOk) null else s[S.GoToSettings],
-                    onAction = { context.startActivity(backend.openNotificationSettings()) },
-                )
-                PermissionRow(
-                    title = s[S.PermUsage],
-                    statusText = if (hasTrafficAccess) s[S.UsageAccessGranted] else s[S.UsageAccessDenied],
-                    ok = hasTrafficAccess,
-                    actionText = if (hasTrafficAccess) null else s[S.GrantAccess],
-                    onAction = { context.startActivity(backend.trafficAccessIntent()) },
-                )
-                PermissionRow(
-                    title = s[S.PermAppList],
-                    statusText = if (appListRestricted) s[S.AppListPermissionRestricted] else s[S.AppListPermissionOk],
-                    ok = !appListRestricted,
-                    actionText = if (appListRestricted) s[S.GoToSettings] else null,
-                    onAction = { context.startActivity(backend.openAppSettings()) },
-                )
-                PermissionRow(
-                    title = s[S.PermOverlay],
-                    statusText = if (canDrawOverlays) s[S.OverlayGranted] else s[S.OverlayDenied],
-                    ok = canDrawOverlays,
-                    actionText = if (canDrawOverlays) null else s[S.OverlayGrant],
-                    onAction = { context.startActivity(backend.overlayPermissionIntent()) },
-                )
-                PermissionRow(
-                    title = s[S.PermBattery],
-                    statusText = if (batteryOk) s[S.PermissionOk] else s[S.PermissionMissing],
-                    ok = batteryOk,
-                    actionText = if (batteryOk) null else s[S.GoToSettings],
-                    onAction = { context.startActivity(backend.openBatteryOptimizationSettings()) },
-                )
-                val alwaysOnActive = remember(effectiveResumeKey) { backend.isAlwaysOnVpn() }
-                val lockdownActive = remember(effectiveResumeKey) { backend.isLockdownVpn() }
-                if (alwaysOnActive) {
-                    Text(
-                        s[S.AlwaysOnVpnReady],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                if (lockdownActive) {
-                    Text(
-                        s[S.AlwaysOnLockdownWarning],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                OutlinedButton(
-                    onClick = { context.startActivity(backend.openAlwaysOnVpnSettings()) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(s[S.AlwaysOnVpn])
-                }
-            }
-        }
-
-        // 6. 資料、診斷與關於（規則導入導出 + 診斷 + 檢查更新並排、版本與狀態摘要）
-        item {
-            SectionCard(s[S.About]) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedButton(onClick = { exportLauncher.launch("pocketgate-rules.json") }) {
-                        Text(s[S.ExportRules])
-                    }
-                    OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) }) {
-                        Text(s[S.ImportRules])
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                val res = withContext(Dispatchers.IO) { backend.saveLocalBackupToDownloads() }
-                                res.onSuccess { path -> toast(s.format(S.LocalBackupSaved, path)) }
-                                    .onFailure { toast(s.format(S.ExportFailed, it.message.orEmpty())) }
-                            }
-                        },
-                    ) { Text(s[S.LocalBackupSave]) }
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                val res = withContext(Dispatchers.IO) { backend.readLocalBackupFromDownloads() }
-                                res.onSuccess { json ->
-                                    runCatching {
-                                        importJson = json
-                                        previewMerge = backend.previewImport(json, RuleImportMode.Merge)
-                                        previewReplace = backend.previewImport(json, RuleImportMode.Replace)
-                                        importMode = RuleImportMode.Merge
-                                        showImportDialog = true
-                                    }.onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
-                                }.onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
-                            }
-                        },
-                    ) { Text(s[S.LocalBackupRestore]) }
-                    OutlinedButton(onClick = { showWebDavDialog = true }) {
-                        Text(s[S.WebDavSync])
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                runCatching { withContext(Dispatchers.IO) { backend.exportDiagnostics() } }
-                                    .onSuccess { file ->
-                                        val uri = backend.diagnosticsShareUri(file)
-                                        val send = Intent(Intent.ACTION_SEND).apply {
-                                            type = "application/zip"
-                                            putExtra(Intent.EXTRA_STREAM, uri)
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        context.startActivity(Intent.createChooser(send, s[S.Share]))
-                                    }
-                                    .onFailure { toast(s.format(S.ExportFailed, it.message.orEmpty())) }
-                            }
-                        },
-                    ) { Text(s[S.ExportDiagnostics]) }
-                    OutlinedButton(
-                        onClick = {
-                            if (offlineMode) {
-                                toast(s[S.OfflineModeBlocked])
-                                return@OutlinedButton
-                            }
-                            if (updateState.checking) return@OutlinedButton
-                            backend.checkUpdateManually { info ->
-                                scope.launch(Dispatchers.Main) {
-                                    when {
-                                        info.error != null -> toast(s.format(S.UpdateFailed, info.error))
-                                        info.hasUpdate -> {
-                                            val label = if (info.isPrerelease) {
-                                                "${info.latestVersion} (${s[S.UpdateBetaBadge]})"
-                                            } else {
-                                                info.latestVersion.orEmpty()
-                                            }
-                                            toast(s.format(S.UpdateAvailable, label))
-                                        }
-                                        else -> toast(s[S.UpToDate])
-                                    }
-                                }
-                            }
-                        },
-                        enabled = !updateState.checking,
+        // 若有新版本可用，在頂部提供醒目的下載 / 安裝橫幅。
+        updateState.info?.takeIf { it.hasUpdate }?.let { info ->
+            item {
+                val readyApk = updateState.downloadedFile
+                SettingsGroup {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(if (updateState.checking) s[S.Loading] else s[S.CheckUpdates])
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(s[S.LogRetentionTitle], style = MaterialTheme.typography.bodyMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(7, 14, 30, 90).forEach { days ->
-                            FilterChip(
-                                selected = settings.logRetentionDays == days,
-                                onClick = { backend.setLogRetentionDays(days) },
-                                label = { Text(s.format(S.LogRetentionDaysFormat, days)) },
-                            )
-                        }
-                    }
-                }
-                OutlinedButton(
-                    onClick = {
-                        scope.launch {
-                            dbSizeBytes = backend.compactActivityDb()
-                            toast(s[S.DbCompacted])
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(s.format(S.DbSizeCompact, com.networkcontrol.android.kotlin.ui.common.formatBytes(dbSizeBytes)))
-                }
-                SettingsNavRow(
-                    title = s[S.UpdateChannelTitle],
-                    subtitle = if (updateChannel == com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta) {
-                        s[S.UpdateChannelBeta]
-                    } else {
-                        s[S.UpdateChannelStable]
-                    },
-                    subtitleHighlighted = updateChannel == com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta,
-                    actionText = s[S.Edit],
-                    onClick = { showUpdateChannelDialog = true },
-                )
-                SettingsNavRow(
-                    title = "${s[S.Version]} ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                    subtitle = "AndroidVpn · ${modeLabel(runtime.mode, s)} · " +
-                        "${s[S.AppsCount]} ${if (installedCount < 0) "…" else installedCount} · " +
-                        "${s[S.SkippedRules]} ${plan.skippedRules.size}",
-                    actionText = s[S.ViewDetails],
-                    onClick = {
-                        showReleaseHistory = false
-                        showReleaseNotes = true
-                    },
-                )
-                if (backend.isWorkProfile()) {
-                    Text(
-                        "${s[S.WorkProfile]} ✓ · ${s[S.WorkProfileHint]}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                updateState.info?.takeIf { it.hasUpdate }?.let { info ->
-                    val readyApk = updateState.downloadedFile
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                s.format(S.UpdateAvailable, info.latestVersion.orEmpty()),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.weight(1f),
-                            )
+                            SettingsIconBadge(icon = Icons.Rounded.Refresh, accent = scheme.primary)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    s.format(S.UpdateAvailable, info.latestVersion.orEmpty()),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = scheme.primary,
+                                )
+                                Text(
+                                    "${s[S.Version]} ${BuildConfig.VERSION_NAME}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onSurfaceVariant,
+                                )
+                            }
                             TextButton(
                                 enabled = !updateState.downloading,
                                 onClick = {
@@ -957,6 +323,335 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // 1. 核心防護
+        item {
+            val exitDnsLabel = when (exitDns) {
+                "system" -> s[S.ExitDnsSystem]
+                "custom" -> s[S.ExitDnsCustom]
+                else -> DohProviders.all.firstOrNull { it.id == exitDns }?.name ?: exitDns
+            }
+            val upstreamSummary = if (viaProxy) {
+                "${s[S.UpstreamSocks5]} ($socks5Host:$socks5Port)"
+            } else {
+                "${s[S.UpstreamDirect]} ($exitDnsLabel)"
+            }
+            val forwardingSubtitle = when {
+                !forwardingAvailable -> s[S.ForwardingUnavailable]
+                forwardingEnabledFlowVal -> upstreamSummary
+                else -> "${s[S.BlackholeMode]} · ${s.format(S.DirectAppsCount, directPackages.size)}"
+            }
+            val presentationLabel = if (promptMode == "auto") {
+                s[S.PromptPresentationAuto]
+            } else {
+                s[S.PromptPresentationNotification]
+            }
+            val defaultActionLabel = if (settings.promptDefaultAction == VerdictAction.Deny) {
+                s[S.Deny]
+            } else {
+                s[S.Allow]
+            }
+            val activePolicies = buildList {
+                if (allowLan) add(s[S.AllowLan])
+                if (blockOnLock) add(s[S.BlockOnLock])
+                if (blockOnRoaming) add(s[S.BlockOnRoaming])
+                if (settings.allowSystemAppsByDefault) add(s[S.AllowSystemApps])
+            }
+            val policySummary = if (activePolicies.isEmpty()) {
+                s[S.VpnSettings]
+            } else {
+                activePolicies.take(2).joinToString(" · ")
+            }
+
+            SettingsGroup(s[S.SettingsGroupCore]) {
+                SettingsTile(
+                    title = s[S.ForwardingMode],
+                    subtitle = forwardingSubtitle,
+                    drawableIcon = R.drawable.ic_shield,
+                    iconAccent = scheme.primary,
+                    subtitleHighlighted = forwardingEnabledFlowVal && forwardingActive,
+                    badgeText = when {
+                        !forwardingAvailable -> null
+                        forwardingEnabledFlowVal && forwardingActive -> s[S.On]
+                        forwardingEnabledFlowVal -> s[S.ForwardingStatusInactive]
+                        else -> s[S.Off]
+                    },
+                    badgeAccent = if (forwardingEnabledFlowVal && forwardingActive) scheme.primary else scheme.onSurfaceVariant,
+                    onClick = onOpenForwardingSettings,
+                )
+                SettingsDivider()
+                SettingsTile(
+                    title = "${s[S.PromptSettings]} · ${s[S.Notifications]}",
+                    subtitle = "$presentationLabel · ${settings.promptTimeoutSeconds}s · $defaultActionLabel",
+                    icon = Icons.Rounded.Notifications,
+                    iconAccent = scheme.tertiary,
+                    onClick = onOpenPromptSettings,
+                )
+                SettingsDivider()
+                SettingsTile(
+                    title = s[S.Blocklists],
+                    subtitle = if (blocklistState.enabled) {
+                        s.format(
+                            S.BlocklistsActive,
+                            NumberFormat.getIntegerInstance().format(blocklistMatcher.totalEntries),
+                            blocklistState.lists.count { it.enabled && it.entries > 0 },
+                        )
+                    } else {
+                        s[S.Off]
+                    },
+                    icon = Icons.Rounded.Lock,
+                    iconAccent = scheme.secondary,
+                    subtitleHighlighted = blocklistState.enabled,
+                    badgeText = if (blocklistState.enabled) s[S.On] else s[S.Off],
+                    badgeAccent = if (blocklistState.enabled) scheme.primary else scheme.onSurfaceVariant,
+                    onClick = onOpenBlocklists,
+                )
+                SettingsDivider()
+                SettingsTile(
+                    title = s[S.ProtectionPolicies],
+                    subtitle = policySummary,
+                    icon = Icons.Rounded.Build,
+                    iconAccent = scheme.primary,
+                    onClick = onOpenProtectionSettings,
+                )
+            }
+        }
+
+        // 2. 場景與自動化
+        item {
+            val activeProfile = profiles.firstOrNull { it.id == runtime.activeProfileId } ?: profiles.firstOrNull()
+            val profileSummary = buildString {
+                if (activeProfile != null) {
+                    append("${activeProfile.name} (${modeLabel(activeProfile.mode, s)})")
+                } else {
+                    append("${profiles.size}")
+                }
+                if (focusSchedules.isNotEmpty()) {
+                    val activeCount = focusSchedules.count { it.enabled }
+                    append(" · ${s[S.FocusSchedule]} $activeCount/${focusSchedules.size}")
+                }
+            }
+            SettingsGroup(s[S.SettingsGroupAutomation]) {
+                SettingsTile(
+                    title = "${s[S.ProfileSettings]} · ${s[S.FocusSchedule]}",
+                    subtitle = profileSummary,
+                    icon = Icons.Rounded.DateRange,
+                    iconAccent = scheme.tertiary,
+                    onClick = onOpenProfileSettings,
+                )
+                SettingsDivider()
+                SettingsTile(
+                    title = s[S.AutomationTitle],
+                    subtitle = when {
+                        automationEnabled && automationServiceOn -> s[S.AutomationServiceOn]
+                        automationEnabled -> s[S.AutomationNeedsA11y]
+                        else -> s[S.AutomationExperimentalBadge]
+                    },
+                    icon = Icons.Rounded.PlayArrow,
+                    iconAccent = scheme.secondary,
+                    subtitleHighlighted = automationEnabled && automationServiceOn,
+                    badgeText = when {
+                        automationEnabled && automationServiceOn -> s[S.On]
+                        automationEnabled -> s[S.PermissionMissing]
+                        else -> s[S.Off]
+                    },
+                    badgeAccent = when {
+                        automationEnabled && automationServiceOn -> scheme.primary
+                        automationEnabled -> scheme.error
+                        else -> scheme.onSurfaceVariant
+                    },
+                    onClick = onOpenAutomation,
+                )
+            }
+        }
+
+        // 3. 外觀與體驗
+        item {
+            val themeModeLabel = when (themeMode) {
+                "light" -> s[S.ThemeLight]
+                "dark" -> s[S.ThemeDark]
+                else -> s[S.ThemeSystem]
+            }
+            val langLabel = when (languageTag) {
+                "zh-CN" -> s[S.ChineseSimplified]
+                "zh-TW" -> s[S.ChineseTraditional]
+                "en-US" -> s[S.English]
+                else -> s[S.SystemDefault]
+            }
+            val islandModeLabel = when (islandMode) {
+                SpeedIslandMode.Full -> s[S.IslandModeFull]
+                SpeedIslandMode.Cycle -> s[S.IslandModeCycle]
+                SpeedIslandMode.Mini -> s[S.IslandModeMini]
+            }
+            val islandContentLabel = when (islandContent) {
+                SpeedIslandContent.Speed -> s[S.IslandContentSpeed]
+                SpeedIslandContent.Traffic -> s[S.IslandContentTraffic]
+                SpeedIslandContent.Blocked -> s[S.IslandContentBlocked]
+                SpeedIslandContent.Pending -> s[S.IslandContentPending]
+                SpeedIslandContent.Network -> s[S.IslandContentNetwork]
+            }
+            SettingsGroup(s[S.SettingsGroupExperience]) {
+                SettingsTile(
+                    title = s[S.Appearance],
+                    subtitle = "${themeStyleLabel(s, themeStyle)} · $themeModeLabel · $langLabel",
+                    icon = Icons.Rounded.Star,
+                    iconAccent = themeColor,
+                    trailingCustom = {
+                        Box(
+                            Modifier
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(themeColor)
+                                .border(1.dp, scheme.outlineVariant, CircleShape),
+                        )
+                    },
+                    onClick = onOpenAppearanceSettings,
+                )
+                SettingsDivider()
+                SettingsTile(
+                    title = s[S.SpeedIsland],
+                    subtitle = if (speedIsland) {
+                        "$islandContentLabel · $islandModeLabel · ${(islandOpacity * 100).roundToInt()}%"
+                    } else {
+                        s[S.SpeedIslandHint]
+                    },
+                    icon = Icons.Rounded.Info,
+                    iconAccent = scheme.tertiary,
+                    badgeText = if (speedIsland) s[S.On] else s[S.Off],
+                    badgeAccent = if (speedIsland) scheme.primary else scheme.onSurfaceVariant,
+                    onClick = onOpenIslandSettings,
+                )
+            }
+        }
+
+        // 4. 安全與權限
+        item {
+            SettingsGroup(s[S.SettingsGroupSecurity]) {
+                SettingsTile(
+                    title = s[S.PermissionHealth],
+                    subtitle = if (permMissingCount == 0) {
+                        s[S.PermissionAllReady]
+                    } else {
+                        s.format(S.PermissionNeedsAction, permMissingCount)
+                    },
+                    icon = Icons.Rounded.CheckCircle,
+                    iconAccent = if (permMissingCount == 0) scheme.primary else scheme.error,
+                    badgeText = "$permOkCount / 6",
+                    badgeAccent = if (permMissingCount == 0) scheme.primary else scheme.error,
+                    onClick = onOpenPermissionsSettings,
+                )
+                SettingsDivider()
+                SettingsSwitchTile(
+                    title = s[S.AppLock],
+                    subtitle = s[S.AppLockHint],
+                    icon = Icons.Rounded.Lock,
+                    iconAccent = scheme.primary,
+                    checked = appLock,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !backend.isDeviceSecure()) {
+                            toast(s[S.AppLockNoCredential])
+                        } else if (!enabled) {
+                            guard.run {
+                                appLock = false
+                                backend.setAppLockEnabled(false)
+                            }
+                        } else {
+                            appLock = true
+                            backend.setAppLockEnabled(true)
+                        }
+                    },
+                )
+                SettingsDivider()
+                SettingsSwitchTile(
+                    title = s[S.OfflineMode],
+                    subtitle = s[S.OfflineModeHint],
+                    icon = Icons.Rounded.Warning,
+                    iconAccent = scheme.secondary,
+                    checked = offlineMode,
+                    onCheckedChange = { enabled ->
+                        offlineMode = enabled
+                        backend.setOfflineMode(enabled)
+                    },
+                )
+            }
+        }
+
+        // 5. 資料與關於
+        item {
+            val channelLabel = if (updateChannel == com.networkcontrol.android.kotlin.core.update.UpdateChannel.Beta) {
+                s[S.UpdateChannelBeta]
+            } else {
+                s[S.UpdateChannelStable]
+            }
+            val dbSizeText = com.networkcontrol.android.kotlin.ui.common.formatBytes(dbSizeBytes)
+            val retentionText = s.format(S.LogRetentionDaysFormat, settings.logRetentionDays)
+            SettingsGroup(s[S.SettingsGroupDataAbout]) {
+                SettingsTile(
+                    title = s[S.DataAndBackup],
+                    subtitle = "${s[S.LogRetentionTitle]} $retentionText · $dbSizeText",
+                    icon = Icons.Rounded.Share,
+                    iconAccent = scheme.primary,
+                    onClick = onOpenDataBackupSettings,
+                )
+                SettingsDivider()
+                SettingsTile(
+                    title = s[S.UpdateChannelTitle],
+                    trailingText = channelLabel,
+                    icon = Icons.Rounded.Refresh,
+                    iconAccent = scheme.tertiary,
+                    onClick = { showUpdateChannelDialog = true },
+                )
+                SettingsDivider()
+                SettingsTile(
+                    title = s[S.CheckUpdates],
+                    trailingText = if (updateState.checking) s[S.Loading] else null,
+                    icon = Icons.Rounded.Refresh,
+                    iconAccent = scheme.secondary,
+                    enabled = !updateState.checking,
+                    onClick = {
+                        if (offlineMode) {
+                            toast(s[S.OfflineModeBlocked])
+                            return@SettingsTile
+                        }
+                        if (updateState.checking) return@SettingsTile
+                        backend.checkUpdateManually { info ->
+                            scope.launch(Dispatchers.Main) {
+                                when {
+                                    info.error != null -> toast(s.format(S.UpdateFailed, info.error))
+                                    info.hasUpdate -> {
+                                        val label = if (info.isPrerelease) {
+                                            "${info.latestVersion} (${s[S.UpdateBetaBadge]})"
+                                        } else {
+                                            info.latestVersion.orEmpty()
+                                        }
+                                        toast(s.format(S.UpdateAvailable, label))
+                                    }
+                                    else -> toast(s[S.UpToDate])
+                                }
+                            }
+                        }
+                    },
+                )
+                SettingsDivider()
+                SettingsTile(
+                    title = "${s[S.Version]} ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    subtitle = buildString {
+                        append("AndroidVpn · ${modeLabel(runtime.mode, s)} · ")
+                        append("${s[S.AppsCount]} ${if (installedCount < 0) "…" else installedCount} · ")
+                        append("${s[S.SkippedRules]} ${plan.skippedRules.size}")
+                        if (backend.isWorkProfile()) {
+                            append(" · ${s[S.WorkProfile]} ✓")
+                        }
+                    },
+                    drawableIcon = R.drawable.ic_shield,
+                    iconAccent = scheme.primary,
+                    onClick = {
+                        showReleaseHistory = false
+                        showReleaseNotes = true
+                    },
+                )
             }
         }
 
@@ -1043,115 +738,12 @@ fun SettingsScreen(
         )
     }
 
-    if (showThemeColorDialog) {
-        ThemeColorDialog(
-            current = themeColor,
-            onDismiss = { showThemeColorDialog = false },
-            onSelect = { backend.setThemeColor(it) },
-        )
-    }
-
-    if (showNotificationTitleDialog) {
-        NotificationTitleDialog(
-            initialTitle = notificationTitle,
-            onDismiss = { showNotificationTitleDialog = false },
-            onReset = {
-                notificationTitle = ""
-                backend.setProtectionNotificationTitle("")
-                showNotificationTitleDialog = false
-                toast(s[S.Reset])
-            },
-            onSave = { newTitle ->
-                notificationTitle = newTitle
-                backend.setProtectionNotificationTitle(newTitle)
-                showNotificationTitleDialog = false
-                toast(s[S.Done])
-            },
-        )
-    }
-
-    if (showWebDavDialog) {
-        WebDavBackupDialog(
-            backend = backend,
-            offlineMode = offlineMode,
-            s = s,
-            onToast = ::toast,
-            onRestoreJson = { json ->
-                runCatching {
-                    importJson = json
-                    previewMerge = backend.previewImport(json, RuleImportMode.Merge)
-                    previewReplace = backend.previewImport(json, RuleImportMode.Replace)
-                    importMode = RuleImportMode.Merge
-                    showWebDavDialog = false
-                    showImportDialog = true
-                }.onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
-            },
-            onDismiss = { showWebDavDialog = false },
-        )
-    }
-
-    if (showTrustedPublishersDialog) {
-        TrustedPublishersDialog(
-            signers = settings.trustedSigners,
-            onUntrust = { backend.untrustPublisher(it) },
-            onClearAll = {
-                backend.clearTrustedPublishers()
-                showTrustedPublishersDialog = false
-            },
-            onDismiss = { showTrustedPublishersDialog = false },
-        )
-    }
-
-    val directApps = pickerApps
-    val allowedByRulePackages = remember(directApps, ruleSet.version, network) {
-        directApps?.let { backend.allowedByRulePackages(it) } ?: emptySet()
-    }
-    if (showLockWhitelistDialog && directApps != null) {
-        DirectAppsDialog(
-            title = s[S.LockScreenWhitelist],
-            apps = directApps,
-            initial = lockWhitelist,
-            allowedByRulePackages = allowedByRulePackages,
-            onDismiss = { showLockWhitelistDialog = false },
-            onSave = { packages ->
-                guard.run {
-                    lockWhitelist = packages
-                    backend.setLockScreenWhitelist(packages)
-                }
-                showLockWhitelistDialog = false
-            },
-        )
-    }
-
     if (showReleaseNotes) {
         ReleaseNotesDialog(
             currentVersion = BuildConfig.VERSION_NAME,
             history = showReleaseHistory,
             onToggleHistory = { showReleaseHistory = !showReleaseHistory },
             onDismiss = { showReleaseNotes = false },
-        )
-    }
-
-    if (showImportDialog) {
-        ImportDialog(
-            preview = if (importMode == RuleImportMode.Merge) previewMerge else previewReplace,
-            mode = importMode,
-            onModeChange = { importMode = it },
-            onDismiss = { showImportDialog = false },
-            onApply = {
-                val json = importJson
-                val mode = importMode
-                if (json != null) {
-                    guard.run {
-                        scope.launch {
-                            runCatching { backend.applyImport(json, mode) }
-                                .onSuccess { toast(s[S.ImportDone]) }
-                                .onFailure { toast(s.format(S.ImportFailed, it.message.orEmpty())) }
-                        }
-                    }
-                }
-                showImportDialog = false
-            },
         )
     }
 }
@@ -1220,7 +812,7 @@ private fun PermissionRow(
 }
 
 @Composable
-private fun WebDavBackupDialog(
+internal fun WebDavBackupDialog(
     backend: AppBackend,
     offlineMode: Boolean,
     s: UiStrings,
@@ -1367,7 +959,7 @@ private fun WebDavBackupDialog(
 }
 
 @Composable
-private fun NotificationTitleDialog(
+internal fun NotificationTitleDialog(
     initialTitle: String,
     onDismiss: () -> Unit,
     onReset: () -> Unit,
@@ -1405,7 +997,7 @@ private fun NotificationTitleDialog(
 }
 
 @Composable
-private fun TrustedPublishersDialog(
+internal fun TrustedPublishersDialog(
     signers: Set<String>,
     onUntrust: (String) -> Unit,
     onClearAll: () -> Unit,
@@ -1674,7 +1266,7 @@ internal fun ProfileDialog(
 }
 
 @Composable
-private fun ImportDialog(
+internal fun ImportDialog(
     preview: RuleImportPreview?,
     mode: RuleImportMode,
     onModeChange: (RuleImportMode) -> Unit,
@@ -2345,7 +1937,7 @@ internal fun ProxyAppDialog(
     )
 }
 
-private fun themeStyleLabel(s: UiStrings, style: AppThemeStyle): String = when (style) {
+internal fun themeStyleLabel(s: UiStrings, style: AppThemeStyle): String = when (style) {
     AppThemeStyle.Classic -> s[S.ThemeStyleClassic]
     AppThemeStyle.ObsidianCyber -> s[S.ThemeStyleObsidian]
     AppThemeStyle.FrostMinimal -> s[S.ThemeStyleFrost]
@@ -2355,7 +1947,7 @@ private fun themeStyleLabel(s: UiStrings, style: AppThemeStyle): String = when (
 }
 
 @Composable
-private fun ThemeStyleStrip(
+internal fun ThemeStyleStrip(
     selected: AppThemeStyle,
     seedColor: Color,
     s: UiStrings,
@@ -2472,7 +2064,7 @@ private fun ThemeStyleStrip(
 }
 
 @Composable
-private fun AppIconSelector(
+internal fun AppIconSelector(
     selected: AppLauncherIcon,
     s: UiStrings,
     onSelect: (AppLauncherIcon) -> Unit,
