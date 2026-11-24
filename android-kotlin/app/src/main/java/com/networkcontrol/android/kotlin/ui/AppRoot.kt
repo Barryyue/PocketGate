@@ -598,25 +598,39 @@ private fun AppBottomBar(
             fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.96f)),
         )
 
-        // 液態玻璃：24dp 模糊 + 42%/46% 乳白/深色玻璃主體（兼顧通透與清晰可讀），
-        // Android 13+ 搭配背景層 AGSL 邊緣折射 + 輕微色散 + 菲涅爾高光。
-        glass -> HazeStyle(
-            blurRadius = 24.dp,
-            backgroundColor = Color.Transparent,
-            noiseFactor = 0.03f,
-            tints = listOf(
-                HazeTint(scheme.surface.copy(alpha = if (dark) 0.46f else 0.42f)),
-                HazeTint(
-                    Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = if (dark) 0.14f else 0.28f),
-                        0.32f to Color.Transparent,
-                        0.76f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = if (dark) 0.18f else 0.06f),
+        // 液態玻璃：
+        // - Android 13+（支援 AGSL 折射）：降低模糊至 8dp、通透度 22%/26%，讓背後內容在滾動時呈現明顯的
+        //   凸透鏡放大與邊緣液態折射、棱鏡色散及菲涅爾高光；
+        // - Android 10–12（無 AGSL）：自動維持 24dp 模糊 + 42%/46% 乳白/深色毛玻璃以確保文字清晰。
+        glass -> {
+            val liquidSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+            HazeStyle(
+                blurRadius = if (liquidSupported) 8.dp else 24.dp,
+                backgroundColor = Color.Transparent,
+                noiseFactor = if (liquidSupported) 0.015f else 0.03f,
+                tints = listOf(
+                    HazeTint(
+                        scheme.surface.copy(
+                            alpha = when {
+                                liquidSupported && dark -> 0.26f
+                                liquidSupported -> 0.22f
+                                dark -> 0.46f
+                                else -> 0.42f
+                            },
+                        ),
+                    ),
+                    HazeTint(
+                        Brush.verticalGradient(
+                            0f to Color.White.copy(alpha = if (dark) 0.16f else 0.34f),
+                            0.26f to Color.Transparent,
+                            0.74f to Color.Transparent,
+                            1f to Color.Black.copy(alpha = if (dark) 0.20f else 0.08f),
+                        ),
                     ),
                 ),
-            ),
-            fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.92f)),
-        )
+                fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.92f)),
+            )
+        }
 
         // 透明：只做很淺的模糊，後方內容還在但不會和標籤打架；比玻璃更「實」、比磨砂更清楚。
         transparent -> HazeStyle(

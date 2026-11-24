@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.9",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Enhanced Android 13+ Liquid Glass refraction: density-scaled bezel curvature (18dp bezel, 24dp dome refraction, 2.8dp chromatic rim dispersion), subtle center magnification, dual Fresnel highlights, and clearer 8dp optical blur so scrolling content visibly bends around the glass capsule",
+                    "增强 Android 13+ 液态玻璃折射质感：全部光学参数按屏幕密度（dp）缩放（18dp 曲面倒角、24dp 半球折射、2.8dp 边缘棱镜色散），加入中央轻度凸透镜放大、双向菲涅尔高光与 8dp 高透光学模糊，滚动时玻璃折射观感更接近 iOS Liquid Glass",
+                    "增強 Android 13+ 液態玻璃折射質感：全部光學參數按螢幕密度（dp）縮放（18dp 曲面倒角、24dp 半球折射、2.8dp 邊緣棱鏡色散），加入中央輕度凸透鏡放大、雙向菲涅爾高光與 8dp 高透光學模糊，滾動時玻璃折射觀感更接近 iOS Liquid Glass",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.8",
             date = "2026-11-25",
             features = emptyList(),
