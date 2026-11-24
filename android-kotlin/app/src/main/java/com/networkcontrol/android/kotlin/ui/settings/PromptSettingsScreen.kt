@@ -306,13 +306,6 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             }
                         },
                     )
-                    SwitchRow(
-                        title = s[S.AllowIcmp],
-                        checked = settings.allowIcmpByDefault,
-                        onCheckedChange = { allow ->
-                            backend.updateSettings { it.copy(allowIcmpByDefault = allow) }
-                        },
-                    )
                 }
             }
         }

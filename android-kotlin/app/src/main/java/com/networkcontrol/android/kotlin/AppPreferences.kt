@@ -207,10 +207,6 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_PROMPT_SHOW_DETAILS, true)
         set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_DETAILS, value).apply()
 
-    var promptShowExplanation: Boolean
-        get() = prefs.getBoolean(KEY_PROMPT_SHOW_EXPLANATION, true)
-        set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_EXPLANATION, value).apply()
-
     var promptHideDetailsOnLockScreen: Boolean
         get() = prefs.getBoolean(KEY_PROMPT_HIDE_DETAILS_LOCK, true)
         set(value) = prefs.edit().putBoolean(KEY_PROMPT_HIDE_DETAILS_LOCK, value).apply()
@@ -341,26 +337,6 @@ class AppPreferences(context: Context) {
     var socks5BypassPackage: String?
         get() = prefs.getString(KEY_SOCKS5_BYPASS_PACKAGE, null)?.takeIf { it.isNotBlank() }
         set(value) = prefs.edit().putString(KEY_SOCKS5_BYPASS_PACKAGE, value).apply()
-
-    /** 更新來源：GitHub / GitLab / Gitee / Custom。 */
-    var updateSource: com.networkcontrol.android.kotlin.core.update.UpdateSource
-        get() = runCatching {
-            enumValueOf<com.networkcontrol.android.kotlin.core.update.UpdateSource>(
-                prefs.getString(KEY_UPDATE_SOURCE, "GitHub").orEmpty(),
-            )
-        }.getOrDefault(com.networkcontrol.android.kotlin.core.update.UpdateSource.GitHub)
-        set(value) = prefs.edit().putString(KEY_UPDATE_SOURCE, value.name).apply()
-
-    /** GitHub / Gitee 為 owner/repo；GitLab 為 group/project。 */
-    var updateRepo: String
-        get() = prefs.getString(KEY_UPDATE_REPO, "Barryyue/PocketGate")
-            ?: "Barryyue/PocketGate"
-        set(value) = prefs.edit().putString(KEY_UPDATE_REPO, value.trim()).apply()
-
-    /** Custom 來源使用的 JSON URL。 */
-    var updateCustomUrl: String
-        get() = prefs.getString(KEY_UPDATE_CUSTOM_URL, "").orEmpty()
-        set(value) = prefs.edit().putString(KEY_UPDATE_CUSTOM_URL, value.trim()).apply()
 
     /** 首次啟動的權限引導彈窗是否已經展示或略過。 */
     var permissionGuideShown: Boolean

@@ -79,8 +79,10 @@ fun RulesScreen(
     val runtime by backend.runtime.collectAsStateWithLifecycle()
     val excludedPackages by backend.excludedPackages.collectAsStateWithLifecycle()
     val proxyBypassPackage by backend.proxyBypassPackage.collectAsStateWithLifecycle()
-    val isProxyMode = backend.forwardingEnabled() &&
-        backend.forwardingUpstream() == com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
+    val forwardingEnabled by backend.forwardingEnabledFlow.collectAsStateWithLifecycle()
+    val forwardingUpstream by backend.forwardingUpstreamFlow.collectAsStateWithLifecycle()
+    val isProxyMode = forwardingEnabled &&
+        forwardingUpstream == com.networkcontrol.android.kotlin.ForwardingUpstream.SOCKS5
     val activeProfileId = runtime.activeProfileId
     val sims = remember { runCatching { backend.subscriptions() }.getOrDefault(emptyList()) }
     var query by remember { mutableStateOf("") }
