@@ -182,6 +182,17 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                         .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(999.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                 )
+                Spacer(Modifier.width(4.dp))
+                TextButton(
+                    onClick = { backend.dismissPrompt(prompt.id) },
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        s[S.PromptLater],
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             val rawMessage = PromptSheetText.message(s, ownName, appLabel, network.kind)

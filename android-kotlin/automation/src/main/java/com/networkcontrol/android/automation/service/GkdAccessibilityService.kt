@@ -228,8 +228,12 @@ class GkdAccessibilityService : AccessibilityService() {
         return null
     }
 
+    private var reloadJob: kotlinx.coroutines.Job? = null
+
     private fun reloadRulesAsync() {
-        scope.launch {
+        reloadJob?.cancel()
+        reloadJob = scope.launch {
+            kotlinx.coroutines.delay(250L)
             runCatching {
                 featureEnabled = store.featureEnabled
                 if (!featureEnabled) {

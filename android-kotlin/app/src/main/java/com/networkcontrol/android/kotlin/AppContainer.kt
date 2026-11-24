@@ -251,8 +251,11 @@ class AppContainer(context: Context) {
     suspend fun awaitStarted() = started.await()
 
     private suspend fun startTrafficLoop() {
+        var firstRun = true
         while (scope.isActive) {
-            delay(10 * 60 * 1000L)
+            // 首次延遲 60 秒即先執行一次保留清理，避免短生命週期進程從未觸發清理。
+            delay(if (firstRun) 60_000L else 10 * 60 * 1000L)
+            firstRun = false
             runCatching { trafficCollector.collectNow() }
             runCatching { rules.flushHits() }
             runCatching { configBackup.backupIfNeeded() }

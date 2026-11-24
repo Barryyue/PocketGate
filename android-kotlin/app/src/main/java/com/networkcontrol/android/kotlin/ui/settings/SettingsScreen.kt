@@ -152,19 +152,24 @@ fun SettingsScreen(
     val forwardingAvailable = remember { backend.forwardingAvailable() }
 
     var resumeKey by remember { mutableIntStateOf(0) }
+    val windowFocusTick by com.networkcontrol.android.kotlin.WindowFocusBus.ticks.collectAsStateWithLifecycle()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         resumeKey++
         backend.refreshSpeedIsland()
     }
-    val canDrawOverlays = remember(resumeKey) { backend.canDrawOverlays() }
-    val hasTrafficAccess = remember(resumeKey) { backend.hasTrafficAccess() }
-    val promptMode = remember(resumeKey) { backend.promptPresentationMode() }
-    var speedIsland by remember(resumeKey) { mutableStateOf(backend.speedIslandEnabled()) }
-    val islandOpacity = remember(resumeKey) { backend.speedIslandOpacity() }
-    val islandMode = remember(resumeKey) { backend.speedIslandMode() }
-    val islandContent = remember(resumeKey) { backend.speedIslandContent() }
+    val effectiveResumeKey = resumeKey * 31 + windowFocusTick
+    val canDrawOverlays = remember(effectiveResumeKey) { backend.canDrawOverlays() }
+    val hasTrafficAccess = remember(effectiveResumeKey) { backend.hasTrafficAccess() }
+    val promptMode = remember(effectiveResumeKey) { backend.promptPresentationMode() }
+    var speedIsland by remember(effectiveResumeKey) { mutableStateOf(backend.speedIslandEnabled()) }
+    val islandOpacity = remember(effectiveResumeKey) { backend.speedIslandOpacity() }
+    val islandMode = remember(effectiveResumeKey) { backend.speedIslandMode() }
+    val islandContent = remember(effectiveResumeKey) { backend.speedIslandContent() }
 
     var blockOnLock by remember { mutableStateOf(backend.blockOnLockScreen()) }
+    var allowLan by remember { mutableStateOf(backend.allowLan()) }
+    var blockOnRoaming by remember { mutableStateOf(backend.blockOnRoaming()) }
+    var dbSizeBytes by remember(effectiveResumeKey) { mutableStateOf(backend.activityDbSizeBytes()) }
     var lockWhitelist by remember { mutableStateOf(backend.lockScreenWhitelist()) }
     var showLockWhitelistDialog by remember { mutableStateOf(false) }
     var appLock by remember { mutableStateOf(backend.isAppLockEnabled()) }
@@ -512,6 +517,28 @@ fun SettingsScreen(
                     )
                 }
                 SwitchRow(
+                    title = s[S.AllowLan],
+                    subtitle = s[S.AllowLanHint],
+                    checked = allowLan,
+                    onCheckedChange = { enabled ->
+                        guard.run {
+                            allowLan = enabled
+                            backend.setAllowLan(enabled)
+                        }
+                    },
+                )
+                SwitchRow(
+                    title = s[S.BlockOnRoaming],
+                    subtitle = s[S.BlockOnRoamingHint],
+                    checked = blockOnRoaming,
+                    onCheckedChange = { enabled ->
+                        guard.run {
+                            blockOnRoaming = enabled
+                            backend.setBlockOnRoaming(enabled)
+                        }
+                    },
+                )
+                SwitchRow(
                     title = s[S.CloneIndependent],
                     subtitle = s[S.CloneIndependentHint],
                     checked = cloneIndependent,
@@ -698,6 +725,22 @@ fun SettingsScreen(
                     actionText = if (batteryOk) null else s[S.GoToSettings],
                     onAction = { context.startActivity(backend.openBatteryOptimizationSettings()) },
                 )
+                val alwaysOnActive = remember(effectiveResumeKey) { backend.isAlwaysOnVpn() }
+                val lockdownActive = remember(effectiveResumeKey) { backend.isLockdownVpn() }
+                if (alwaysOnActive) {
+                    Text(
+                        s[S.AlwaysOnVpnReady],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                if (lockdownActive) {
+                    Text(
+                        s[S.AlwaysOnLockdownWarning],
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -804,6 +847,33 @@ fun SettingsScreen(
                     ) {
                         Text(if (updateState.checking) s[S.Loading] else s[S.CheckUpdates])
                     }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(s[S.LogRetentionTitle], style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(7, 14, 30, 90).forEach { days ->
+                            FilterChip(
+                                selected = settings.logRetentionDays == days,
+                                onClick = { backend.setLogRetentionDays(days) },
+                                label = { Text(s.format(S.LogRetentionDaysFormat, days)) },
+                            )
+                        }
+                    }
+                }
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            dbSizeBytes = backend.compactActivityDb()
+                            toast(s[S.DbCompacted])
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(s.format(S.DbSizeCompact, com.networkcontrol.android.kotlin.ui.common.formatBytes(dbSizeBytes)))
                 }
                 SettingsNavRow(
                     title = s[S.UpdateChannelTitle],

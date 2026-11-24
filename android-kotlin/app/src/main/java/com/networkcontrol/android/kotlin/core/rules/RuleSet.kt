@@ -74,7 +74,8 @@ class CompiledRule(val rule: Rule) {
             return AppMatchOutcome.NoMatch
         }
         if (matcher.requiredSignerId != null &&
-            matcher.requiredSignerId != app.signature?.signerId
+            matcher.requiredSignerId != app.signature?.signerId &&
+            matcher.requiredSignerId !in (app.signature?.signerHistoryIds ?: emptySet())
         ) {
             return AppMatchOutcome.Tampered
         }
@@ -144,6 +145,29 @@ class RuleSet(rules: List<Rule>, val version: Long = 0) {
             }
         }
         return RuleMatch(null, tampered)
+    }
+
+    /**
+     * 只在「帶連線條件（遠端位址 / 域名 / 端口 / 協定）」的規則中依優先級評估。
+     * 用於逐連線轉發層：確保全域域名拒絕規則（如日誌一鍵攔截網域）不會被寬泛的應用級允許規則遮蔽，
+     * 同時保留「特定應用 + 域名」高於「全域域名」的具體度順序。
+     */
+    fun evaluateFlowCondition(
+        flow: FlowInfo,
+        app: AppIdentity?,
+        domains: DomainCandidates,
+        remoteZone: NetworkZone,
+        network: NetworkContext = NetworkContext.None,
+    ): Rule? {
+        if (!hasFlowConditions) return null
+        for (candidate in compiled) {
+            val c = candidate.rule.conditions
+            val isFlowConditional = c.remote != null || c.remotePort != null || c.localPort != null || c.protocol != null
+            if (!isFlowConditional) continue
+            if (!candidate.matchConditions(flow, domains, remoteZone, network)) continue
+            if (candidate.matchApp(app) == AppMatchOutcome.Match) return candidate.rule
+        }
+        return null
     }
 
     /**

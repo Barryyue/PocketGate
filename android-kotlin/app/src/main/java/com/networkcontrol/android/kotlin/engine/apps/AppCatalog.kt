@@ -55,10 +55,10 @@ class AppCatalog(private val context: Context) {
 
     fun find(packageName: String): InstalledApp? = current().byPackage[packageName]
 
-    fun packagesForUid(uid: Int): List<String> {
+    fun packagesForUid(uid: Int, inheritPrimary: Boolean = true): List<String> {
         current().byUid[uid]?.let { return it }
         // 應用分身（如 vivo / MIUI user 999）與主應用共用 appId = uid % 100_000
-        if (uid >= 100_000) current().byUid[uid % 100_000]?.let { return it }
+        if (inheritPrimary && uid >= 100_000) current().byUid[uid % 100_000]?.let { return it }
         return runCatching {
             appContext.packageManager.getPackagesForUid(uid)?.sorted().orEmpty()
         }.getOrDefault(emptyList())
@@ -145,6 +145,7 @@ class AppCatalog(private val context: Context) {
         signature = CodeSignature(
             signerId = app.signerSha256.orEmpty(),
             isPlatformBinary = app.isSystem,
+            signerHistoryIds = app.signerHistorySha256,
         ),
     )
 
@@ -179,6 +180,7 @@ class AppCatalog(private val context: Context) {
                 versionCode = info.longVersionCode,
                 lastUpdated = info.lastUpdateTime,
                 signerSha256 = signerOf(info),
+                signerHistorySha256 = signerHistoryOf(info),
             )
         }
         return Snapshot(apps)
@@ -195,6 +197,17 @@ class AppCatalog(private val context: Context) {
             }
             .sorted()
             .joinToString(",")
+    }
+
+    /** 讀取 APK Signature Scheme v3 簽名輪換歷史鏈，避免合法換簽名密鑰時誤報篡改。 */
+    private fun signerHistoryOf(info: PackageInfo): Set<String> {
+        val history = info.signingInfo?.signingCertificateHistory ?: return emptySet()
+        if (history.isEmpty()) return emptySet()
+        val digest = MessageDigest.getInstance("SHA-256")
+        return history.map { signature ->
+            digest.reset()
+            digest.digest(signature.toByteArray()).joinToString("") { "%02x".format(it) }
+        }.toSet()
     }
 
     private class Snapshot(apps: List<InstalledApp>) {

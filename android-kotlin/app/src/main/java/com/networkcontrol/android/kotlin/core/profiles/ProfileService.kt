@@ -52,6 +52,21 @@ class ProfileService(
 
     fun find(id: String): Profile? = all.firstOrNull { it.id == id }
 
+    /** 匯入完整備份時還原配置檔案（保留原 id，避免匯入規則的 profileId 失聯降級）。 */
+    suspend fun upsertImported(imported: List<Profile>) {
+        if (imported.isEmpty()) return
+        gate.withLock {
+            val map = all.associateBy { it.id }.toMutableMap()
+            imported.forEach { profile ->
+                val valid = profile.copy(mode = validateMode(profile.mode))
+                store.upsert(valid)
+                map[valid.id] = valid
+            }
+            _profiles.value = sort(map.values.toList())
+            _revision.value++
+        }
+    }
+
     suspend fun create(
         name: String,
         mode: FilterMode,

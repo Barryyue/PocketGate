@@ -60,14 +60,18 @@ jobs:
       - name: Decode release keystore (if configured)
         env:
           NC_ANDROID_KEYSTORE_BASE64: ${{ secrets.NC_ANDROID_KEYSTORE_BASE64 }}
+          WILL_PUBLISH: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta' || startsWith(github.ref, 'refs/tags/') || inputs.create_release == true }}
         run: |
           set -euo pipefail
           if [ -n "$NC_ANDROID_KEYSTORE_BASE64" ]; then
             echo "$NC_ANDROID_KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > /tmp/pocketgate-release.jks
             echo "NC_ANDROID_KEYSTORE=/tmp/pocketgate-release.jks" >> "$GITHUB_ENV"
             echo "Using official release keystore from GitHub Secrets."
+          elif [ "$WILL_PUBLISH" = "true" ]; then
+            echo "::error::NC_ANDROID_KEYSTORE_BASE64 is required for Release publishing; refusing to fall back to public shared keystore."
+            exit 1
           else
-            echo "NC_ANDROID_KEYSTORE_BASE64 not set; falling back to shared keystore."
+            echo "NC_ANDROID_KEYSTORE_BASE64 not set (non-release build); falling back to shared keystore."
           fi
 
       - name: Release APKs (per ABI)
@@ -153,11 +157,16 @@ jobs:
           if [ "$status" = "404" ] && [ "$repo" = "yuexiaobai/PocketGate" ]; then
             repo="yuexiaobai/networkcontrol"
           fi
-          git push "https://oauth2:${GITEE_TOKEN}@gitee.com/${repo}.git" HEAD:refs/heads/main || true
+          target_branch="${GITHUB_REF_NAME:-main}"
+          if [ "${GITHUB_REF_TYPE:-branch}" = "branch" ] && { [ "$target_branch" = "main" ] || [ "$target_branch" = "beta" ]; }; then
+            git push "https://oauth2:${GITEE_TOKEN}@gitee.com/${repo}.git" "HEAD:refs/heads/${target_branch}" || true
+          else
+            target_branch="main"
+          fi
           resp=$(curl -sS -X POST "https://gitee.com/api/v5/repos/${repo}/releases" \
             -F "access_token=${GITEE_TOKEN}" \
             -F "tag_name=${tag}" \
-            -F "target_commitish=main" \
+            -F "target_commitish=${target_branch}" \
             -F "name=PocketGate ${tag#v}" \
             -F "prerelease=${IS_PRERELEASE}" \
             -F "body=Automated release for PocketGate ${tag#v}")
@@ -175,10 +184,15 @@ jobs:
               echo "Deleting duplicate Gitee attachment ${fid} (${apk_name})..."
               curl -sS -X DELETE "https://gitee.com/api/v5/repos/${repo}/releases/${release_id}/attach_files/${fid}?access_token=${GITEE_TOKEN}" >/dev/null || true
             done
-            echo "Uploading ${apk} to Gitee release ${release_id} (${repo})..."
+            echo "Uploading ${apk} and SHA256SUMS.txt to Gitee release ${release_id} (${repo})..."
             curl -fsSL -X POST "https://gitee.com/api/v5/repos/${repo}/releases/${release_id}/attach_files" \
               -F "access_token=${GITEE_TOKEN}" \
               -F "file=@${apk}" >/dev/null
+            if [ -f "dist/SHA256SUMS.txt" ]; then
+              curl -fsSL -X POST "https://gitee.com/api/v5/repos/${repo}/releases/${release_id}/attach_files" \
+                -F "access_token=${GITEE_TOKEN}" \
+                -F "file=@dist/SHA256SUMS.txt" >/dev/null || true
+            fi
             echo "Successfully uploaded ${apk} to Gitee Release ${tag}."
           else
             echo "::warning::Could not create or find Gitee release for ${tag}"

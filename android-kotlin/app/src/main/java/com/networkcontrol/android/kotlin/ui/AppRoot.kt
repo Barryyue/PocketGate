@@ -370,6 +370,8 @@ fun AppRoot(container: AppContainer) {
                                         onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
                                         onOpenBlocklists = { settingsSubScreen = "blocklists" },
                                         onOpenAutomation = { settingsSubScreen = "automation" },
+                                        onOpenRules = { selected = 2 },
+                                        onOpenLogs = { selected = 3 },
                                     )
                                     1 -> AppsScreen(backend, listState = appsListState)
                                     2 -> RulesScreen(backend, listState = rulesListState)

@@ -33,23 +33,13 @@ class AppUpdateManager(
     private val offlineMode: () -> Boolean,
     private val updateChannel: () -> UpdateChannel = { UpdateChannel.Stable },
     private val checkUpdate: suspend () -> UpdateInfo = { UpdateChecker.checkAuto(currentVersion, channel = updateChannel()) },
-    private val downloadApk: suspend (
+    private val downloadApk: (suspend (
         url: String,
         targetFile: File,
         fallbackUrl: String?,
         expectedVersion: String?,
         onProgress: (Int) -> Unit,
-    ) -> Result<File> = { url, targetFile, fallbackUrl, expectedVersion, onProgress ->
-        UpdateChecker.downloadApk(
-            url = url,
-            targetFile = targetFile,
-            fallbackUrl = fallbackUrl,
-            currentVersion = currentVersion,
-            expectedVersion = expectedVersion,
-            channel = updateChannel(),
-            onProgress = onProgress,
-        )
-    },
+    ) -> Result<File>)? = null,
     private val nowMs: () -> Long = { System.currentTimeMillis() },
 ) {
     private val _state = MutableStateFlow(AppUpdateState())
@@ -127,8 +117,16 @@ class AppUpdateManager(
 
         val versionTag = (target.latestVersion ?: "latest").replace(Regex("[^A-Za-z0-9._-]"), "_")
         val targetFile = File(updatesDir, "PocketGate-$versionTag.apk")
-        // 若同版本 APK 已存在且非空，直接進入待安裝狀態避免重複下載。
-        if (targetFile.exists() && targetFile.length() > 1024L && isZipHeader(targetFile)) {
+        // 清理舊版殘留 APK 與未完成暫存檔，避免快取持續增長。
+        updatesDir.listFiles()?.forEach { f ->
+            if (f.isFile && f.name != targetFile.name && (f.name.endsWith(".apk") || f.name.endsWith(".part"))) {
+                f.delete()
+            }
+        }
+        // 若同版本 APK 已存在且通過基本結構（及已知 SHA-256）檢查，直接進入待安裝狀態避免重複下載。
+        val shaMatches = target.expectedSha256.isNullOrBlank() ||
+            runCatching { UpdateChecker.sha256Of(targetFile).equals(target.expectedSha256, ignoreCase = true) }.getOrDefault(false)
+        if (targetFile.exists() && targetFile.length() > 1024L && isZipHeader(targetFile) && shaMatches) {
             _state.update {
                 it.copy(
                     info = target,
@@ -157,10 +155,25 @@ class AppUpdateManager(
 
         downloadJob?.cancel()
         downloadJob = scope.launch {
-            val result = downloadApk(url, targetFile, target.fallbackDownloadUrl, target.latestVersion) { percent ->
+            val progressCallback: (Int) -> Unit = { percent ->
                 _state.update { state ->
                     if (!state.downloading) state else state.copy(progress = percent.coerceIn(0, 100))
                 }
+            }
+            val result = if (downloadApk != null) {
+                downloadApk.invoke(url, targetFile, target.fallbackDownloadUrl, target.latestVersion, progressCallback)
+            } else {
+                UpdateChecker.downloadApk(
+                    url = url,
+                    targetFile = targetFile,
+                    fallbackUrl = target.fallbackDownloadUrl,
+                    currentVersion = currentVersion,
+                    expectedVersion = target.latestVersion,
+                    channel = updateChannel(),
+                    sha256Url = target.sha256Url,
+                    expectedSha256 = target.expectedSha256,
+                    onProgress = progressCallback,
+                )
             }
             result.onSuccess { file ->
                 _state.update {

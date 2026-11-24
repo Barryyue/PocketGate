@@ -1755,3 +1755,61 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
 - 真機：應用分身（vivo / MIUI user 999）繼承主應用規則、待機耗電的實際改善、外部 SOCKS5 代理的長時間穩定性。
 - 真機：WebDAV 加密同步與還原（不同 WebDAV 服務）、`Download/PocketGate/` 留檔在各 Android 版本的讀寫權限、導覽列自動隱藏手勢。
 - 已知問題（2026-11-20 用戶回報）：在系統設定授予「忽略電池最佳化」後，權限狀態要重啟應用才更新；模擬器上從應用按鈕跳轉授予可正常刷新，懷疑與小窗 / 分屏打開設定頁（應用一直在前台，收不到 `ON_RESUME`）有關，未修。
+
+---
+
+## 62. 2026-11-24 全盤產品審查與待辦清單（P0～P3）
+
+> 審查基線：`beta` 分支 v0.17.3。本節為統一待辦看板，完成後同步落盤至 [kotlin-feature-log.md](kotlin-feature-log.md)。
+
+### P0：隱蔽 Bug 與安全／隱私隱患
+- [x] (antigravity, 2026-11-24) **P0-1 核心規則與網路邏輯 Bug**：
+  - `RuleSet.evaluateFlowCondition()` + `ForwardingPolicy.conditionalAction()` 修正全域域名拒絕規則被應用級允許規則遮蔽的問題（保留應用+域名高於全域域名）。
+  - `Patterns.kt` 修復 IPv4-mapped IPv6 有號 Byte 比較（`and 0xFF`）。
+  - `ForwardingPacketFilter` 假 IP 域名表 `maxEntries` 由 8192 提升至 12,288（大於 `MAP_CACHE_SIZE` 10,000），並在 `BlockAll` 模式下對無法解析／非 TCP-UDP 封包採 fail-close 丟棄。
+  - `AppCatalog.packagesForUid(uid, inheritPrimary)` 配合 `VpnEngine` 遵守 `cloneAppsInheritPrimary`；`RoutingPlanner` 遍歷共享 UID 下所有套件的規則（拒絕優先）。
+  - `AppBackend.importAutomationSubscription()` 遵守 `offlineMode`，`SubscriptionFetcher` 預設禁止遠端明文 `http://`。
+  - 驗證：`.\scripts\android-kotlin.ps1 test`（含 `AuditP0P1Test`）+ `build` 通過；真機分身/共享 UID 實測待回歸。
+- [x] (antigravity, 2026-11-24) **P0-2 安全、隱私與發版鏈路**：
+  - `DiagnosticsExporter` + `DiagnosticsRedactor`：不再打包原始 `activity.db` / `config.db`，改為脫敏 `summary.txt`（遮蔽真實 `ssid` 與公網 IPv6）、`rules-summary.txt`、`plan.txt` 與逐行脫敏的日誌。
+  - `UpdateChecker` / `AppUpdateManager`：解析並校驗 `SHA256SUMS.txt`、禁止 HTTPS→HTTP 重定向降級、自動清理舊版快取 APK；`.github/workflows/android-kotlin.yml` 發佈流程缺正式簽名 Secret 直接失敗、修正 `beta` 誤推 Gitee `main` 並同步上傳 `SHA256SUMS.txt`。
+  - `SecretPrefsCipher`（AndroidKeyStore AES-256-GCM，向後相容舊明文）保護 `socks5Password` / `webdavPassword` / `webdavPassphrase`；`WebDavBackupClient` 升級 `PGWB2`（PBKDF2 210,000 次，向後相容 `PGWB1`）且預設禁止遠端明文 `http://`。
+  - 驗證：`.\scripts\android-kotlin.ps1 test`（含 `AuditP0P1Test`）+ `build` 通過；真機 Keystore 加密與 CI 實際發佈待回歸。
+
+### P1：高價值產品體驗與核心工作流補齊
+- [x] (antigravity, 2026-11-24) **P1-1 完整快照備份還原與 WebDAV 衝突檢查**：
+  - 新增 `FullBackupCodec`（`pocketgate-backup` v2，涵蓋規則 + Profiles + `UserSettings` + 可移植 `AppPreferences` + 自動化訂閱 URL，向後相容 v1 `netcontrol-rules`）；`ProfileService.upsertImported` 保留原 `profileId`；`WebDavBackupClient` 補 `ETag` / `If-Match` 衝突檢查。
+  - 驗證：`AuditP0P1Test.fullBackupCodecRoundTripAndV1BackwardCompatibility` + `build` 通過；真機 WebDAV 跨裝置同步與本機留檔還原待回歸。
+- [x] (antigravity, 2026-11-24) **P1-2 權限即時刷新、首次引導與總覽頁優化**：
+  - `MainActivity` 新增 `WindowFocusBus`（`onWindowFocusChanged(true)`）驅動 `PermissionGuide` 與 `SettingsScreen` 即時刷新；`OverviewScreen` 通知權限卡片綁定 `permHealth.notificationsOk`。
+  - `PermissionGuideDialog` 新增首次啟動 Step 0 輕量 Onboarding（本機 VPN 原理、模式選擇、系統應用預設允許），取消 `MainActivity.onCreate` 首次啟動疊彈通知權限。
+  - `OverviewScreen` Bento「今日攔截」「規則」點擊跳轉記錄／規則分頁；預設關閉的實驗功能「螢幕自動跳過」僅啟用時於首頁顯示；精簡頂欄重複配置名；逐連線彈窗補上模式簡明說明。
+  - 驗證：`.\scripts\android-kotlin.ps1 test` + `build` 通過；真機小窗授權「忽略電池最佳化」切回刷新與 Onboarding 視覺待回歸。
+- [x] (antigravity, 2026-11-24) **P1-3 應用頁與規則頁工作流補齊**：
+  - `AppsScreen`：新增排序（名稱 / 流量 / 最近活躍 / 狀態）、「隱藏系統應用」組合切換、多選批量模式（批量允許 / 禁止 / 重設）、共享 UID 標註。
+  - `RulesScreen`：新增手動「新增規則」與「編輯規則」對話框（支援全域/應用、域名、遠端連接埠、網路類型、備註），規則列顯示 `lastHitAt` / 限時到期時間 / 備註，修正搜尋空狀態文案為 `S.NoMatchingRules`。
+  - 驗證：`.\scripts\android-kotlin.ps1 test` + `build` 通過；真機互動待回歸。
+- [x] (antigravity, 2026-11-24) **P1-4 記錄頁與詢問面板體驗補齊**：
+  - `LogsScreen`：新增時間範圍篩選（全部 / 今天 / 24h / 7 天）、清空記錄（帶確認）、日誌詳情「只看此應用」與一鍵放行/攔截作用域選擇（僅此應用 / 全域所有應用）、黑洞模式「已允許」引導提示、「即時連線」一鍵攔截域名。
+  - `PromptOverlay` / `PromptOverlayController`：補上明確「稍後」關閉按鈕，系統懸浮窗「禁止後不再提示」改用 `CheckBox` 與應用內卡片一致。
+  - 驗證：`.\scripts\android-kotlin.ps1 test` + `build` 通過；真機懸浮窗與記錄操作待回歸。
+
+### P2：網路能力、可靠性與系統整合進階優化
+- [x] (antigravity, 2026-11-24) **P2-1 防火牆能力補完**：
+  - 新增 `LanRouteCalculator` 與 `allowLan` 開關（排除私有區網網段，保留本機 VPN / 假 DNS / mapdns）；新增 `blockOnRoaming`（`NetworkContext.isRoaming` + `NET_CAPABILITY_NOT_ROAMING`）；新增逐連線獨立「阻擋 QUIC (UDP 443)」開關（`blockQuic`）。
+  - 剩餘長期項：僅前台聯網（背景禁止）、按應用分流出口（K-163）。
+  - 驗證：`AuditP2Test` + `.\scripts\android-kotlin.ps1 build` 通過；真機區網投屏/NAS、漫遊與 QUIC 回退待回歸。
+- [x] (antigravity, 2026-11-24) **P2-2 防護可靠性與防誤報**：
+  - `AppCatalog` 讀取 `signingCertificateHistory` 並傳入 `CodeSignature.signerHistoryIds`，`CompiledRule.matchApp()` 支援 APK v3 簽名密鑰輪換防誤報；`NcVpnService` 偵測 `isAlwaysOn` / `isLockdownEnabled` 並於設定頁顯示狀態與 Lockdown 警告；`VpnEngine.onRevoked` 主動發送高優先級撤銷通知（`VpnForegroundNotifier.notifyRevoked`）；`onDetached` / `Failed` 10 秒節流內補排延遲重試。
+  - 驗證：`AuditP2Test` + `build` 通過；真機撤銷通知與 Always-on / Lockdown 偵測待回歸。
+- [x] (antigravity, 2026-11-24) **P2-3 資料庫容量治理**：
+  - `SqliteActivityStore.applyRetention()` 同步清理過期 `traffic_hour`（90 天）/ `traffic_day`（365 天）/ `traffic_network` 並新增 `compact()`（`wal_checkpoint(TRUNCATE)` + `VACUUM`）；`AppContainer` 啟動 60 秒即首次執行保留清理；設定頁開放 `logRetentionDays`（7 / 14 / 30 / 90 天）選擇與資料庫佔用顯示／一鍵壓縮。
+  - 驗證：`test` + `build` 通過；真機長期容量壓縮待觀察。
+- [x] (antigravity, 2026-11-24) **P2-4 系統整合與 GKD 實驗模組打磨**：
+  - `PackageChangeReceiver` 新應用安裝通知新增「允許 / 禁止」快捷動作按鈕；`AutomationStore.todayTriggerCount` 改用本地時區零點；`GkdAccessibilityService.reloadRulesAsync` 加 250ms 去抖；`AutomationSettingsScreen` 規則組彈窗新增搜尋與「僅看已安裝」篩選，觸發紀錄顯示實際應用名並支援一鍵停用誤觸規則組。
+  - 剩餘可選項：專注模式改 `AlarmManager` + 排程允許清單 + 結束小結、第三方自動化介面（Tasker / MacroDroid）。
+  - 驗證：`test` + `build` 通過；真機新應用通知與 GKD 規則組互動待回歸。
+
+### P3：代碼債與真機回歸債
+- [ ] **P3-1 孤兒代碼清理與響應式狀態**：移除廢棄 `updateSource/Repo/CustomUrl`、`promptShowExplanation`、`MetricCard`；將跨頁共享偏好收斂為 `StateFlow`；整理設定頁分組（ICMP 移出詢問設定頁、統一殘餘文案）並拆分 `SettingsScreen.kt` 與共用 Shizuku/Root 執行器。
+- [ ] **P3-2 真機回歸收口**：集中回歸 v0.13.4～v0.17.x 累積的未真機驗證項（6 套主題、導覽列自動隱藏、應用內更新安裝、WebDAV 同步、GKD 自動跳過、待機耗電）。

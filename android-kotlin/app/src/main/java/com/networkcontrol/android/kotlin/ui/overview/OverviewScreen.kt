@@ -122,6 +122,8 @@ fun OverviewScreen(
     onOpenForwardingSettings: () -> Unit = {},
     onOpenBlocklists: () -> Unit = {},
     onOpenAutomation: () -> Unit = {},
+    onOpenRules: () -> Unit = {},
+    onOpenLogs: () -> Unit = {},
 ) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
@@ -157,6 +159,7 @@ fun OverviewScreen(
     var privateDnsMode by remember { mutableStateOf("off") }
     var permResumeKey by remember { mutableIntStateOf(0) }
     var showPermissionGuide by remember { mutableStateOf(false) }
+    var permissionGuideIntro by remember { mutableStateOf(false) }
     var bannerDismissed by remember { mutableStateOf(backend.permissionBannerDismissed()) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -169,8 +172,9 @@ fun OverviewScreen(
     }
     val permHealth = rememberPermissionHealth(backend, permResumeKey)
     LaunchedEffect(permHealth.loaded) {
-        if (permHealth.loaded && !backend.permissionGuideShown() && permHealth.missingCount > 0) {
+        if (permHealth.loaded && !backend.permissionGuideShown()) {
             backend.setPermissionGuideShown(true)
+            permissionGuideIntro = true
             showPermissionGuide = true
         }
     }
@@ -248,6 +252,7 @@ fun OverviewScreen(
         forwardingActive -> "${s[S.ForwardingMode]} · ${s[S.UpstreamDirect]}"
         else -> activeProfile?.name ?: s[S.ProtectionOn]
     }
+    val autoEnabledOverview = remember(permResumeKey) { backend.automationFeatureEnabled() }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -261,11 +266,11 @@ fun OverviewScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // 1. 簡潔頂欄：標題 + 配置文件名 + 輕量刷新圖示
+            // 1. 簡潔頂欄：標題 + 副標題 + 輕量刷新圖示
             item {
                 ScreenHeader(
                     title = s[S.Overview],
-                    subtitle = activeProfile?.let { "${s[S.Profile]} · ${it.name}" } ?: s[S.OverviewSubtitle],
+                    subtitle = s[S.OverviewSubtitle],
                     trailing = {
                         IconButton(onClick = { refreshKey++ }) {
                             Icon(
@@ -546,6 +551,7 @@ fun OverviewScreen(
                         icon = Icons.Rounded.Warning,
                         accent = if (blockedToday > 0) scheme.error else scheme.primary,
                         subtitle = if (isActive) s[S.ProtectionOn] else s[S.ProtectionOff],
+                        onClick = onOpenLogs,
                         modifier = Modifier.weight(1f),
                     )
                     BentoTile(
@@ -588,6 +594,7 @@ fun OverviewScreen(
                         icon = Icons.Rounded.Lock,
                         accent = scheme.primary,
                         subtitle = activeProfile?.name ?: "—",
+                        onClick = onOpenRules,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -694,32 +701,27 @@ fun OverviewScreen(
                 }
             }
 
-            // 實驗功能：螢幕自動跳過快捷入口（預設未啟用）
-            item {
-                val autoEnabled = remember(permResumeKey) { backend.automationFeatureEnabled() }
-                val autoServiceOn = remember(permResumeKey) { backend.automationServiceActive() }
-                val autoToday = remember(permResumeKey, refreshKey) {
-                    if (autoEnabled) backend.automationTodayTriggers() else 0
+            // 實驗功能：螢幕自動跳過快捷入口（僅在已啟用時於首頁顯示，未啟用時留在設定頁入口保持首頁清爽）
+            if (autoEnabledOverview) {
+                item {
+                    val autoServiceOn = remember(permResumeKey) { backend.automationServiceActive() }
+                    val autoToday = remember(permResumeKey, refreshKey) { backend.automationTodayTriggers() }
+                    val autoActive = autoServiceOn
+                    BentoTile(
+                        label = "${s[S.AutomationShortcut]} (${s[S.AutomationExperimentalBadge]})",
+                        value = if (autoActive) s[S.QuickOn] else s[S.AutomationNeedsA11y],
+                        icon = Icons.Rounded.Star,
+                        accent = if (autoActive) scheme.primary else scheme.onSurfaceVariant,
+                        highlighted = autoActive,
+                        subtitle = if (autoActive) {
+                            s.format(S.AutomationTodayCount, autoToday)
+                        } else {
+                            s[S.AutomationNeedsA11y]
+                        },
+                        onClick = onOpenAutomation,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
-                val autoActive = autoEnabled && autoServiceOn
-                BentoTile(
-                    label = "${s[S.AutomationShortcut]} (${s[S.AutomationExperimentalBadge]})",
-                    value = when {
-                        autoActive -> s[S.QuickOn]
-                        autoEnabled -> s[S.AutomationNeedsA11y]
-                        else -> s[S.Off]
-                    },
-                    icon = Icons.Rounded.Star,
-                    accent = if (autoActive) scheme.primary else scheme.onSurfaceVariant,
-                    highlighted = autoActive,
-                    subtitle = when {
-                        autoActive -> s.format(S.AutomationTodayCount, autoToday)
-                        autoEnabled -> s[S.AutomationNeedsA11y]
-                        else -> s[S.BlocklistsTapHint]
-                    },
-                    onClick = onOpenAutomation,
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
 
             // 專注進行中時展開快捷操作條（延長 15 分鐘 / 停止 / 存為配置）
@@ -794,7 +796,7 @@ fun OverviewScreen(
                     }
                 }
             }
-            if (!backend.notificationsAvailable()) {
+            if (!permHealth.notificationsOk) {
                 item {
                     SectionCard(s[S.Notifications]) {
                         Text(
@@ -916,7 +918,11 @@ fun OverviewScreen(
             backend = backend,
             health = permHealth,
             s = s,
-            onDismiss = { showPermissionGuide = false },
+            showIntroStep = permissionGuideIntro,
+            onDismiss = {
+                showPermissionGuide = false
+                permissionGuideIntro = false
+            },
         )
     }
 
@@ -1054,7 +1060,7 @@ fun OverviewScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ForwardingModeOption(
                         title = s[S.BlackholeMode],
-                        subtitle = null,
+                        subtitle = s[S.BlackholeModeDesc],
                         selected = !forwardingEnabled,
                         onSelect = {
                             guard.run {
@@ -1066,7 +1072,7 @@ fun OverviewScreen(
                     )
                     ForwardingModeOption(
                         title = "${s[S.ForwardingMode]} · ${s[S.UpstreamDirect]}",
-                        subtitle = null,
+                        subtitle = s[S.DirectForwardingDesc],
                         selected = forwardingEnabled && forwardingUpstream != ForwardingUpstream.SOCKS5,
                         onSelect = {
                             if (!forwardingAvailable) {

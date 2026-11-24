@@ -97,6 +97,8 @@ class VpnEngine(
         redirectDns = { preferences.dnsBypassProtection },
         onForwarded = { info, uid -> reporter.reportAllowed(info, uid) },
         onBlocklisted = { info, uid -> reporter.reportBlocklisted(info, uid) },
+        failClosed = { _plan.value.mode == com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll },
+        blockQuic = { preferences.blockQuic },
     )
 
     /** 內建直連出口；只在逐連線模式且選擇直連時執行。 */
@@ -136,6 +138,18 @@ class VpnEngine(
     private val identities = java.util.concurrent.ConcurrentHashMap<Int, com.networkcontrol.android.kotlin.core.model.AppIdentity>()
     private var lastDetachRebuild = 0L
     private var lastFailureRebuild = 0L
+    private var delayedRebuildJob: kotlinx.coroutines.Job? = null
+
+    private fun scheduleDelayedRebuild(waitMs: Long) {
+        if (delayedRebuildJob?.isActive == true) return
+        delayedRebuildJob = scope.launch {
+            delay(waitMs.coerceAtLeast(1_000L))
+            if (protection.isEnabled && tunnel.state != VpnTunnelState.Active) {
+                applied = null
+                requestReplan()
+            }
+        }
+    }
 
     /** 在虛擬網卡讀取執行緒上呼叫：只有存在條件規則或攔截列表時才建立 FlowInfo 比對。 */
     private fun decideForwarding(uid: Int?, info: PacketInfo, hostname: String?): ForwardingDecision {
@@ -209,7 +223,9 @@ class VpnEngine(
 
     private fun identityFor(plan: VpnRoutingPlan, uid: Int): com.networkcontrol.android.kotlin.core.model.AppIdentity? {
         identities[uid]?.let { return it }
-        val packageName = plan.find(uid)?.packageName ?: catalog.packagesForUid(uid).firstOrNull() ?: return null
+        val packageName = plan.find(uid)?.packageName
+            ?: catalog.packagesForUid(uid, inheritPrimary = plan.cloneAppsInheritPrimary).firstOrNull()
+            ?: return null
         val identity = catalog.find(packageName)?.let(catalog::toIdentity) ?: return null
         identities[uid] = identity
         return identity
@@ -217,23 +233,29 @@ class VpnEngine(
 
     fun start() {
         tunnel.onDetached = {
-            // 系統結束了 VPN 服務（例如記憶體不足）而防護仍開啟：重建隧道。限制頻率，避免反覆崩潰時打轉。
+            // 系統結束了 VPN 服務（例如記憶體不足）而防護仍開啟：重建隧道。限制頻率，節流內則補排延遲重試。
             val now = android.os.SystemClock.elapsedRealtime()
-            if (protection.isEnabled && now - lastDetachRebuild >= DETACH_REBUILD_INTERVAL_MS) {
-                lastDetachRebuild = now
-                applied = null
-                com.networkcontrol.android.kotlin.platform.AppLog.w("vpn", "service detached while protection on; rebuilding")
-                requestReplan()
+            if (protection.isEnabled) {
+                val elapsed = now - lastDetachRebuild
+                if (elapsed >= DETACH_REBUILD_INTERVAL_MS) {
+                    lastDetachRebuild = now
+                    applied = null
+                    com.networkcontrol.android.kotlin.platform.AppLog.w("vpn", "service detached while protection on; rebuilding")
+                    requestReplan()
+                } else {
+                    scheduleDelayedRebuild(DETACH_REBUILD_INTERVAL_MS - elapsed)
+                }
             }
         }
         tunnel.onStateChanged = {
             _tunnelState.value = tunnel.state
             _tunnelError.value = tunnel.lastError
             _forwardingActive.value = tunnel.isForwarding
-            // 轉送執行緒或虛擬網卡讀取失敗：重新建立隧道，避免 VPN 保持 Active 但實際已斷。
+            // 轉送執行緒或虛擬網卡讀取失敗：重新建立隧道，節流內補排延遲重試避免停留在 Failed。
             if (tunnel.state == VpnTunnelState.Failed && protection.isEnabled) {
                 val now = android.os.SystemClock.elapsedRealtime()
-                if (now - lastFailureRebuild >= FAILURE_REBUILD_INTERVAL_MS) {
+                val elapsed = now - lastFailureRebuild
+                if (elapsed >= FAILURE_REBUILD_INTERVAL_MS) {
                     lastFailureRebuild = now
                     applied = null
                     com.networkcontrol.android.kotlin.platform.AppLog.w(
@@ -241,6 +263,8 @@ class VpnEngine(
                         "tunnel failed while protection on; rebuilding",
                     )
                     requestReplan()
+                } else {
+                    scheduleDelayedRebuild(FAILURE_REBUILD_INTERVAL_MS - elapsed)
                 }
             }
         }
@@ -248,6 +272,7 @@ class VpnEngine(
             protection.setEnabled(false)
             _tunnelState.value = VpnTunnelState.Revoked
             _tunnelError.value = tunnel.lastError
+            notifier.notifyRevoked()
         }
         catalog.onChange = {
             identities.clear()
@@ -343,9 +368,10 @@ class VpnEngine(
     private suspend fun replanNow() {
         val focusSession = focus.active()
         val lockBlocking = screenState.locked.value && blockOnLockScreen()
+        val roamingBlocking = preferences.blockOnRoaming && network.current.isRoaming
         val plan = VpnRoutingPlanner.plan(
             rules = rules.ruleSet.value,
-            mode = if (focusSession != null || lockBlocking) {
+            mode = if (focusSession != null || lockBlocking || roamingBlocking) {
                 com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll
             } else {
                 runtime.mode
@@ -356,7 +382,7 @@ class VpnEngine(
             allowSystemAppsByDefault = settings.state.value.allowSystemAppsByDefault,
             trustedSigners = settings.state.value.trustedSigners,
             focusAllowedPackages = focusSession?.allowedPackages ?: emptySet(),
-            lockScreenAllowedPackages = if (lockBlocking && focusSession == null) {
+            lockScreenAllowedPackages = if (lockBlocking && !roamingBlocking && focusSession == null) {
                 preferences.lockScreenWhitelist
             } else {
                 emptySet()
@@ -383,6 +409,7 @@ class VpnEngine(
 
         val direct = preferences.forwardingEnabled && preferences.usesDirectUpstream
         val server = if (direct) ensureDirectServer() else null
+        val allowLan = preferences.allowLan
         val config = if (preferences.forwardingEnabled) {
             VpnTunnelConfig(
                 bypassPackages = buildSet {
@@ -397,12 +424,13 @@ class VpnEngine(
                 upstreamUdp = preferences.socks5Udp,
                 upstreamUsername = server?.username ?: preferences.socks5Username,
                 upstreamPassword = server?.password ?: preferences.socks5Password,
+                allowLan = allowLan,
             )
         } else {
-            VpnTunnelConfig(plan.bypassPackages + preferences.forwardingDirectPackages)
+            VpnTunnelConfig(plan.bypassPackages + preferences.forwardingDirectPackages, allowLan = allowLan)
         }
         // 轉發啟動失敗時隧道在黑洞模式運行，排除名單要跟著路由計畫更新。
-        val fallback = VpnTunnelConfig(plan.bypassPackages + preferences.forwardingDirectPackages)
+        val fallback = VpnTunnelConfig(plan.bypassPackages + preferences.forwardingDirectPackages, allowLan = allowLan)
         if (tunnel.state == VpnTunnelState.Active &&
             config.equivalentTo(applied) &&
             (!config.forwarding || tunnel.isForwarding || fallback.equivalentTo(appliedFallback))

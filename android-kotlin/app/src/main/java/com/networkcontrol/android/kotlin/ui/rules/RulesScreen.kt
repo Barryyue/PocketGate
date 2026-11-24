@@ -15,18 +15,27 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.networkcontrol.android.kotlin.core.model.PortRange
+import com.networkcontrol.android.kotlin.ui.common.formatDateTime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +73,7 @@ fun RulesScreen(
     listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
 ) {
     val s = rememberUiStrings()
+    val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val scope = rememberCoroutineScope()
     val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
     val runtime by backend.runtime.collectAsStateWithLifecycle()
@@ -74,6 +84,8 @@ fun RulesScreen(
     val activeProfileId = runtime.activeProfileId
     val sims = remember { runCatching { backend.subscriptions() }.getOrDefault(emptyList()) }
     var query by remember { mutableStateOf("") }
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var editingRule by remember { mutableStateOf<Rule?>(null) }
     val groups = remember(ruleSet.version, activeProfileId) { backend.ruleGroups() }
     val filteredGroups = remember(groups, query) {
         if (query.isBlank()) {
@@ -86,7 +98,8 @@ fun RulesScreen(
                     group
                 } else {
                     val matchedRules = group.rules.filter { rule ->
-                        remoteTargetLabel(rule.conditions)?.contains(query, ignoreCase = true) == true
+                        remoteTargetLabel(rule.conditions)?.contains(query, ignoreCase = true) == true ||
+                            rule.note?.contains(query, ignoreCase = true) == true
                     }
                     if (matchedRules.isNotEmpty()) group.copy(rules = matchedRules) else null
                 }
@@ -105,7 +118,19 @@ fun RulesScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { ScreenHeader(s[S.Rules], s[S.RulesSubtitle]) }
+        item {
+            ScreenHeader(
+                title = s[S.Rules],
+                subtitle = s[S.RulesSubtitle],
+                trailing = {
+                    FilledTonalButton(onClick = { showCreateDialog = true }) {
+                        Icon(Icons.Rounded.Add, contentDescription = null)
+                        Spacer(Modifier.width(4.dp))
+                        Text(s[S.RuleAdd])
+                    }
+                },
+            )
+        }
         item {
             OutlinedTextField(
                 value = query,
@@ -128,7 +153,7 @@ fun RulesScreen(
         if (filteredGroups.isEmpty()) {
             item {
                 Text(
-                    if (query.isNotBlank()) s[S.NoMatchingLogs] else s[S.NoRules],
+                    if (query.isNotBlank()) s[S.NoMatchingRules] else s[S.NoRules],
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 24.dp),
@@ -143,11 +168,41 @@ fun RulesScreen(
                 isExcluded = pkg != null && pkg in excludedPackages,
                 isProxyBypass = pkg != null && isProxyMode && proxyBypassPackage == pkg,
                 sims = sims,
+                onEdit = { editingRule = it },
                 onChanged = { },
                 scope = scope,
             )
         }
         item { Spacer(Modifier.height(12.dp)) }
+    }
+
+    if (showCreateDialog || editingRule != null) {
+        RuleEditorDialog(
+            backend = backend,
+            existing = editingRule,
+            onDismiss = {
+                showCreateDialog = false
+                editingRule = null
+            },
+            onSave = { pkg, action, domain, port, networkKinds, note ->
+                val target = editingRule
+                showCreateDialog = false
+                editingRule = null
+                guard.run {
+                    scope.launch {
+                        backend.saveCustomRule(
+                            existing = target,
+                            packageName = pkg,
+                            action = action,
+                            domainPattern = domain,
+                            remotePort = port,
+                            networkKinds = networkKinds,
+                            note = note,
+                        )
+                    }
+                }
+            },
+        )
     }
 }
 
@@ -158,6 +213,7 @@ private fun RuleGroupCard(
     isExcluded: Boolean,
     isProxyBypass: Boolean,
     sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
+    onEdit: (Rule) -> Unit,
     onChanged: () -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
@@ -279,6 +335,7 @@ private fun RuleGroupCard(
                                 }
                             }
                         },
+                        onEdit = { onEdit(rule) },
                         onDelete = { pendingDelete = rule },
                     )
                 }
@@ -315,6 +372,7 @@ private fun RuleRow(
     rule: Rule,
     sims: List<com.networkcontrol.android.kotlin.core.model.SimInfo>,
     onToggle: (Boolean) -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val s = rememberUiStrings()
@@ -365,16 +423,233 @@ private fun RuleRow(
                     if (rule.hitCount > 0) {
                         append(" · ${rule.hitCount}×")
                     }
+                    rule.lastHitAt?.let {
+                        append(" · ")
+                        append(s.format(S.RuleLastHit, formatDateTime(it)))
+                    }
+                    rule.expiresAt?.takeIf { rule.lifetime == RuleLifetime.Timed }?.let {
+                        append(" · ")
+                        append(s.format(S.RuleExpiresIn, formatDateTime(it)))
+                    }
                 },
                 style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                 color = scheme.onSurfaceVariant,
             )
+            rule.note?.takeIf { it.isNotBlank() }?.let { note ->
+                Text(
+                    note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         Switch(checked = rule.enabled, onCheckedChange = onToggle)
         if (rule.source != RuleSource.Builtin) {
+            TextButton(onClick = onEdit) { Text(s[S.Edit]) }
             TextButton(onClick = onDelete) { Text(s[S.Delete]) }
         }
     }
+}
+
+@Composable
+private fun RuleEditorDialog(
+    backend: AppBackend,
+    existing: Rule?,
+    onDismiss: () -> Unit,
+    onSave: (
+        packageName: String?,
+        action: VerdictAction,
+        domainPattern: String?,
+        remotePort: PortRange?,
+        networkKinds: Set<NetworkKind>,
+        note: String?,
+    ) -> Unit,
+) {
+    val s = rememberUiStrings()
+    var action by remember(existing) { mutableStateOf(existing?.action ?: VerdictAction.Deny) }
+    var globalScope by remember(existing) { mutableStateOf(existing?.app == null) }
+    var packageName by remember(existing) {
+        mutableStateOf(existing?.app?.pathPattern?.removePrefix("android-app://").orEmpty())
+    }
+    var domain by remember(existing) {
+        mutableStateOf((existing?.conditions?.remote as? RemoteTarget.Domain)?.pattern.orEmpty())
+    }
+    var portText by remember(existing) {
+        mutableStateOf(existing?.conditions?.remotePort?.toString().orEmpty())
+    }
+    var networkKinds by remember(existing) {
+        mutableStateOf(existing?.conditions?.networkKinds ?: emptySet())
+    }
+    var note by remember(existing) { mutableStateOf(existing?.note.orEmpty()) }
+    var errorText by remember { mutableStateOf<String?>(null) }
+    val installedApps = remember { runCatching { backend.container.appCatalog.getApps().sortedBy { it.label.lowercase() } }.getOrDefault(emptyList()) }
+    var appSearch by remember { mutableStateOf("") }
+
+    fun parsePortRange(raw: String): PortRange? {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return null
+        val dash = trimmed.indexOf('-')
+        return if (dash >= 0) {
+            val from = trimmed.substring(0, dash).trim().toIntOrNull()
+            val to = trimmed.substring(dash + 1).trim().toIntOrNull()
+            if (from != null && to != null && from in 1..65535 && to in from..65535) PortRange(from, to) else null
+        } else {
+            val single = trimmed.toIntOrNull()
+            if (single != null && single in 1..65535) PortRange(single, single) else null
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (existing == null) s[S.RuleAdd] else s[S.RuleEdit]) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = action == VerdictAction.Allow,
+                        onClick = { action = VerdictAction.Allow },
+                        label = { Text(s[S.Allow]) },
+                    )
+                    FilterChip(
+                        selected = action == VerdictAction.Deny,
+                        onClick = { action = VerdictAction.Deny },
+                        label = { Text(s[S.Deny]) },
+                    )
+                }
+                if (existing == null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = globalScope,
+                            onClick = { globalScope = true },
+                            label = { Text(s[S.RuleScopeGlobal]) },
+                        )
+                        FilterChip(
+                            selected = !globalScope,
+                            onClick = { globalScope = false },
+                            label = { Text(s[S.RuleScopeApp]) },
+                        )
+                    }
+                    if (!globalScope) {
+                        OutlinedTextField(
+                            value = appSearch,
+                            onValueChange = { appSearch = it },
+                            label = { Text(s[S.SearchApps]) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        val candidates = remember(installedApps, appSearch) {
+                            installedApps.filter {
+                                appSearch.isBlank() ||
+                                    it.label.contains(appSearch, ignoreCase = true) ||
+                                    it.packageName.contains(appSearch, ignoreCase = true)
+                            }.take(6)
+                        }
+                        candidates.forEach { app ->
+                            FilterChip(
+                                selected = packageName == app.packageName,
+                                onClick = { packageName = app.packageName },
+                                label = { Text("${app.label} (${app.packageName})", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = domain,
+                    onValueChange = { domain = it; errorText = null },
+                    label = { Text(s[S.RuleDomainHint]) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = portText,
+                    onValueChange = { portText = it; errorText = null },
+                    label = { Text(s[S.RuleRemotePortHint]) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = networkKinds.isEmpty(),
+                        onClick = { networkKinds = emptySet() },
+                        label = { Text(s[S.AnyNetwork]) },
+                    )
+                    FilterChip(
+                        selected = NetworkKind.Wifi in networkKinds,
+                        onClick = {
+                            networkKinds = if (NetworkKind.Wifi in networkKinds) {
+                                networkKinds - NetworkKind.Wifi
+                            } else {
+                                networkKinds + NetworkKind.Wifi
+                            }
+                        },
+                        label = { Text(s[S.Wifi]) },
+                    )
+                    FilterChip(
+                        selected = NetworkKind.Cellular in networkKinds,
+                        onClick = {
+                            networkKinds = if (NetworkKind.Cellular in networkKinds) {
+                                networkKinds - NetworkKind.Cellular
+                            } else {
+                                networkKinds + NetworkKind.Cellular
+                            }
+                        },
+                        label = { Text(s[S.Cellular]) },
+                    )
+                }
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    label = { Text(s[S.RuleNoteHint]) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                errorText?.let { err ->
+                    Text(err, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val parsedPort = if (portText.isBlank()) {
+                        null
+                    } else {
+                        parsePortRange(portText) ?: run {
+                            errorText = "Invalid port (1-65535)"
+                            return@Button
+                        }
+                    }
+                    if (existing == null && !globalScope && packageName.isBlank()) {
+                        errorText = "Please select an app"
+                        return@Button
+                    }
+                    if (existing == null && globalScope && domain.isBlank() && parsedPort == null) {
+                        errorText = "Global rule requires domain or port"
+                        return@Button
+                    }
+                    onSave(
+                        if (globalScope) null else packageName,
+                        action,
+                        domain,
+                        parsedPort,
+                        networkKinds,
+                        note,
+                    )
+                },
+            ) { Text(s[S.Save]) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
+        },
+    )
 }
 
 private fun actionLabel(
