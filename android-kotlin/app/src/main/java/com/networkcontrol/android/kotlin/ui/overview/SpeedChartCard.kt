@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -94,40 +95,48 @@ fun SpeedChartCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
                     title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
                 Text(
                     "${formatBytes(peakBytes)}/s",
                     style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
-                    color = scheme.onSurfaceVariant.copy(alpha = 0.72f),
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SpeedLegendValue(
                     dotColor = downColor,
                     prefix = "↓",
                     value = "${formatBytes(downloadBytesPerSec)}/s",
+                    modifier = Modifier.weight(1f),
                 )
                 SpeedLegendValue(
                     dotColor = upColor,
                     prefix = "↑",
                     value = "${formatBytes(uploadBytesPerSec)}/s",
+                    modifier = Modifier.weight(1f),
                 )
             }
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(82.dp),
+                    .height(82.dp)
+                    .clipToBounds(),
             ) {
                 val width = size.width
                 val height = size.height
@@ -214,8 +223,9 @@ private fun SpeedLegendValue(
     dotColor: Color,
     prefix: String,
     value: String,
+    modifier: Modifier = Modifier,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
                 .size(7.dp)
@@ -227,6 +237,8 @@ private fun SpeedLegendValue(
             "$prefix $value",
             style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
             fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 }

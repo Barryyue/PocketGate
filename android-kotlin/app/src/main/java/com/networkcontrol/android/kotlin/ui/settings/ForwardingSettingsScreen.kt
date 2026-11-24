@@ -173,7 +173,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
             }
 
             item {
-                SectionCard(s[S.ForwardingUpstream]) {
+                SettingsGroup(s[S.ForwardingUpstream]) {
                     SettingsSegmentedRow(
                         title = s[S.ForwardingUpstream],
                         options = listOf(
@@ -186,25 +186,36 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             backend.setForwardingUpstream(selected)
                         },
                     )
-                    SwitchRow(
-                        title = s[S.SplitExitTitle],
-                        subtitle = s[S.SplitExitHint],
-                        checked = splitExitEnabled,
-                        onCheckedChange = { enabled ->
-                            guard.run {
-                                splitExitEnabled = enabled
-                                backend.setForwardingSplitExitEnabled(enabled)
+                    SettingsDivider(insetWithIcon = false)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        SwitchRow(
+                            title = s[S.SplitExitTitle],
+                            subtitle = s[S.SplitExitHint],
+                            checked = splitExitEnabled,
+                            onCheckedChange = { enabled ->
+                                guard.run {
+                                    splitExitEnabled = enabled
+                                    backend.setForwardingSplitExitEnabled(enabled)
+                                }
+                            },
+                        )
+                        if (splitExitEnabled) {
+                            OutlinedButton(
+                                onClick = { showSplitProxyAppsDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    "${s[S.SplitExitProxyApps]} (${s.format(S.SplitExitProxyAppsCount, proxyPackages.size)})",
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
                             }
-                        },
-                    )
-                    if (splitExitEnabled) {
-                        OutlinedButton(
-                            onClick = { showSplitProxyAppsDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("${s[S.SplitExitProxyApps]} (${s.format(S.SplitExitProxyAppsCount, proxyPackages.size)})")
                         }
-                    }
                     if (!viaProxy) {
                         Text(
                             s[S.UpstreamDirectHint],
@@ -302,32 +313,33 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = socks5User,
-                                onValueChange = { socks5User = it },
-                                label = { Text(s[S.Socks5Username]) },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                            )
-                            OutlinedTextField(
-                                value = socks5Pass,
-                                onValueChange = { socks5Pass = it },
-                                label = { Text(s[S.Socks5Password]) },
-                                singleLine = true,
-                                visualTransformation = PasswordVisualTransformation(),
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
+                        OutlinedTextField(
+                            value = socks5User,
+                            onValueChange = { socks5User = it },
+                            label = { Text(s[S.Socks5Username]) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = socks5Pass,
+                            onValueChange = { socks5Pass = it },
+                            label = { Text(s[S.Socks5Password]) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            androidx.compose.material3.Button(
                                 enabled = socks5HostValid && socks5PortValid,
                                 onClick = {
                                     val host = socks5Host.trim()
                                     val port = socks5Port.toIntOrNull()
                                     if (host.isEmpty() || port == null || port !in 1..65535) {
                                         toast(s[S.InvalidHostOrPort])
-                                        return@OutlinedButton
+                                        return@Button
                                     }
                                     socks5Host = host
                                     backend.setSocks5Config(
@@ -338,7 +350,8 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                     )
                                     toast(s[S.Done])
                                 },
-                            ) { Text(s[S.Save]) }
+                                modifier = Modifier.weight(1f),
+                            ) { Text(s[S.Save], maxLines = 1, softWrap = false) }
                             OutlinedButton(
                                 onClick = {
                                     val host = socks5Host.trim()
@@ -374,8 +387,13 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                     }
                                 },
                                 enabled = !proxyTesting && socks5HostValid && socks5PortValid,
+                                modifier = Modifier.weight(1f),
                             ) {
-                                Text(if (proxyTesting) s[S.Loading] else s[S.ProxyTest])
+                                Text(
+                                    if (proxyTesting) s[S.Loading] else s[S.ProxyTest],
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
                             }
                         }
                         probeReport?.let { report ->
@@ -429,6 +447,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
+                    }
                     }
                 }
             }

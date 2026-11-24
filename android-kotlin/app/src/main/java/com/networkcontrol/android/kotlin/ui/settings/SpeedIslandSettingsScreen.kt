@@ -253,7 +253,11 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     if (textMode == "custom") {
                         OutlinedButton(onClick = { showTextColorDialog = true }) {
                             Box(
-                                Modifier.size(16.dp).clip(CircleShape).background(Color(textColor)),
+                                Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(textColor))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(s[S.CustomColor])
@@ -270,7 +274,11 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     if (showDot) {
                         OutlinedButton(onClick = { showDotColorDialog = true }) {
                             Box(
-                                Modifier.size(16.dp).clip(CircleShape).background(Color(dotColor)),
+                                Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(dotColor))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(s[S.IslandDotColor])

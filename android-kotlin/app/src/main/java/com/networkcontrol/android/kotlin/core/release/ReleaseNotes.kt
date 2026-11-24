@@ -40,6 +40,23 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.10",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Full narrow-screen & visual polish pass across Overview, Apps, Rules, Logs and PromptOverlay: unified 20dp tab margins, adaptive accent bars, segmented Logs tabs, decluttered Rule & Profile rows, non-wrapping dialog chips, and localized rule validation messages",
+                    "全页面窄屏与视觉细节打磨：统一总览/应用/规则/设置页 20dp 边距、记录页顶部升级为分段胶囊标签、规则与配置文件行释放文本空间、悬浮询问框防挤压并齐平复选框、弹窗选项防换行，以及规则校验提示三语本地化",
+                    "全頁面窄螢幕與視覺細節打磨：統一總覽/應用/規則/設定頁 20dp 邊距、記錄頁頂部升級為分段膠囊分頁、規則與配置檔案列釋放文本空間、懸浮詢問框防擠壓並齊平核取方塊、彈窗選項防換行，以及規則校驗提示三語本地化",
+                ),
+                t(
+                    "Polished Settings sub-pages: fixed duplicate upstream header & inset in Forwarding, stacked SOCKS5 credentials full-width, upgraded Blocklist update intervals to a segmented control, added borders on Speed Island color swatches, and refined segmented pill padding",
+                    "打磨设置二级页细节：修复逐连接上游卡片重复标题与双层缩进、SOCKS5 账号密码改为全宽上下排列、拦截列表更新周期升级为分段胶囊、灵动岛色块补充描边，并优化通用分段控件内边距与省略保护",
+                    "打磨設定二級頁細節：修復逐連線出口卡片重複標題與雙層縮排、SOCKS5 帳密改為全寬上下排列、攔截列表更新週期升級為分段膠囊、靈動島色塊補充描邊，並優化通用分段控制項內邊距與省略保護",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.9",
             date = "2026-11-25",
             features = emptyList(),

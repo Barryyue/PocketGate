@@ -41,9 +41,9 @@ android {
         applicationId = "com.networkcontrol.android.kotlin"
         minSdk = 29
         targetSdk = 36
-        versionCode = 96
+        versionCode = 97
         val versionSuffix = System.getenv("NC_VERSION_NAME_SUFFIX").orEmpty()
-        versionName = "0.17.9$versionSuffix"
+        versionName = "0.17.10$versionSuffix"
         vectorDrawables.useSupportLibrary = true
     }
 

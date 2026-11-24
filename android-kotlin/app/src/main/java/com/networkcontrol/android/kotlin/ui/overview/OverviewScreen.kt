@@ -259,9 +259,9 @@ fun OverviewScreen(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                start = 18.dp,
-                top = 18.dp,
-                end = 18.dp,
+                start = 20.dp,
+                top = 20.dp,
+                end = 20.dp,
                 bottom = 20.dp + bottomPadding,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -324,6 +324,7 @@ fun OverviewScreen(
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 ) {
                                     Text(
                                         s.format(S.UpdateReadyTitle, latest),
@@ -416,6 +417,9 @@ fun OverviewScreen(
                                         statusText,
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
                                     )
                                     Box(
                                         modifier = Modifier
@@ -500,7 +504,13 @@ fun OverviewScreen(
                                 onClick = { guard.run { backend.setMode(mode) } },
                                 shape = SegmentedButtonDefaults.itemShape(index, options.size),
                             ) {
-                                Text(labels[index], maxLines = 1)
+                                Text(
+                                    labels[index],
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
                             }
                         }
                     }
@@ -1435,38 +1445,45 @@ private fun BatchPromptDialog(
                     }
                 }
                 Text(s[S.BatchPromptsHint], style = MaterialTheme.typography.bodySmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     FilterChip(
                         lifetime == RuleLifetime.UntilAppExit,
                         { lifetime = RuleLifetime.UntilAppExit },
-                        { Text(s[S.PromptOnce]) },
+                        { Text(s[S.PromptOnce], maxLines = 1, softWrap = false) },
                     )
                     FilterChip(
                         lifetime == RuleLifetime.Permanent,
                         { lifetime = RuleLifetime.Permanent },
-                        { Text(s[S.PromptPermanent]) },
+                        { Text(s[S.PromptPermanent], maxLines = 1, softWrap = false) },
                     )
                     FilterChip(
                         lifetime == RuleLifetime.Timed,
                         { lifetime = RuleLifetime.Timed },
-                        { Text(s.format(S.PromptTimed, timedMinutes)) },
+                        { Text(s.format(S.PromptTimed, timedMinutes), maxLines = 1, softWrap = false) },
                     )
+                }
+                TextButton(
+                    onClick = { onLater(selected) },
+                    enabled = selected.isNotEmpty(),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                ) {
+                    Text(s[S.PromptLater], maxLines = 1, softWrap = false)
                 }
             }
         },
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TextButton(onClick = { onLater(selected) }, enabled = selected.isNotEmpty()) {
-                    Text(s[S.PromptLater])
-                }
                 OutlinedButton(
                     onClick = { onAnswer(selected, VerdictAction.Deny, lifetime) },
                     enabled = selected.isNotEmpty(),
-                ) { Text(s[S.Deny]) }
+                ) { Text(s[S.Deny], maxLines = 1, softWrap = false) }
                 Button(
                     onClick = { onAnswer(selected, VerdictAction.Allow, lifetime) },
                     enabled = selected.isNotEmpty(),
-                ) { Text(s[S.Allow]) }
+                ) { Text(s[S.Allow], maxLines = 1, softWrap = false) }
             }
         },
         dismissButton = {

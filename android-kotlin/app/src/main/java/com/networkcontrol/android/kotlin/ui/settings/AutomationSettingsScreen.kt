@@ -139,6 +139,7 @@ fun AutomationSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             s[S.AutomationEnableSwitch],
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
+                            modifier = Modifier.weight(1f).padding(end = 12.dp),
                         )
                         Switch(
                             checked = featureEnabled,
@@ -220,8 +221,13 @@ fun AutomationSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                 showAddDialog = true
                             },
                             enabled = !busy,
+                            modifier = Modifier.weight(1f),
                         ) {
-                            Text(s[S.AutomationAddSubscription])
+                            Text(
+                                s[S.AutomationAddSubscription],
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                         if (subscriptions.isNotEmpty()) {
                             OutlinedButton(
@@ -250,8 +256,13 @@ fun AutomationSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                         }
                                     }
                                 },
+                                modifier = Modifier.weight(1f),
                             ) {
-                                Text(s[S.AutomationUpdateAll])
+                                Text(
+                                    s[S.AutomationUpdateAll],
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
                             }
                         }
                     }

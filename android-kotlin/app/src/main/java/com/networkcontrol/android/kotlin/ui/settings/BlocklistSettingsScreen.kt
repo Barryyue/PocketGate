@@ -140,7 +140,7 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     )
                 }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             enabled = !state.updating,
                             onClick = {
@@ -153,38 +153,39 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                     toast(s.format(S.BlocklistsUpdateResult, result.updated, result.unchanged, result.failed))
                                 }
                             },
-                        ) { Text(if (state.updating) s[S.BlocklistsUpdating] else s[S.BlocklistsUpdateNow]) }
-                        OutlinedButton(onClick = { showAddDialog = true }) { Text(s[S.BlocklistsAddUrl]) }
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(if (state.updating) s[S.BlocklistsUpdating] else s[S.BlocklistsUpdateNow], maxLines = 1, softWrap = false) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            OutlinedButton(
+                                onClick = { showAddDialog = true },
+                                modifier = Modifier.weight(1f),
+                            ) { Text(s[S.BlocklistsAddUrl], maxLines = 1, softWrap = false) }
+                            OutlinedButton(
+                                onClick = { importLauncher.launch(arrayOf("text/*", "application/octet-stream")) },
+                                modifier = Modifier.weight(1f),
+                            ) { Text(s[S.BlocklistsImport], maxLines = 1, softWrap = false) }
+                        }
                     }
                 }
                 item {
-                    OutlinedButton(onClick = { importLauncher.launch(arrayOf("text/*", "application/octet-stream")) }) {
-                        Text(s[S.BlocklistsImport])
-                    }
-                }
-                item {
-                    SectionCard(s[S.BlocklistsAutoUpdate]) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(s[S.BlocklistsWifiOnly], style = MaterialTheme.typography.bodyMedium)
-                                Text(
-                                    s[S.BlocklistsWifiOnlyHint],
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Switch(checked = state.wifiOnly, onCheckedChange = { backend.setBlocklistWifiOnly(it) })
-                        }
-                        Text(s[S.BlocklistsInterval], style = MaterialTheme.typography.bodyMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            listOf(1, 3, 7, 14).forEach { days ->
-                                FilterChip(
-                                    selected = state.intervalDays == days,
-                                    onClick = { backend.setBlocklistIntervalDays(days) },
-                                    label = { Text(s.format(S.BlocklistsDays, days)) },
-                                )
-                            }
-                        }
+                    SettingsGroup(s[S.BlocklistsAutoUpdate]) {
+                        SettingsSwitchTile(
+                            title = s[S.BlocklistsWifiOnly],
+                            subtitle = s[S.BlocklistsWifiOnlyHint],
+                            checked = state.wifiOnly,
+                            onCheckedChange = { backend.setBlocklistWifiOnly(it) },
+                        )
+                        SettingsDivider(insetWithIcon = false)
+                        SettingsSegmentedRow(
+                            title = s[S.BlocklistsInterval],
+                            currentBadge = s.format(S.BlocklistsDays, state.intervalDays),
+                            options = listOf(1, 3, 7, 14).map { days -> days to s.format(S.BlocklistsDays, days) },
+                            selected = state.intervalDays,
+                            onSelect = { backend.setBlocklistIntervalDays(it) },
+                        )
                     }
                 }
                 item {

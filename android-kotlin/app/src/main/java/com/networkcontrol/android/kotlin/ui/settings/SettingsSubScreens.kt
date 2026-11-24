@@ -672,7 +672,7 @@ fun DataBackupSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             }
                         },
                     ) {
-                        Text(s[S.CompactNow])
+                        Text(s[S.CompactNow], maxLines = 1, softWrap = false)
                     }
                 }
             }

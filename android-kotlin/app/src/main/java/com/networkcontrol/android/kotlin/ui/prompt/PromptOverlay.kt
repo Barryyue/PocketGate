@@ -2,6 +2,8 @@ package com.networkcontrol.android.kotlin.ui.prompt
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -99,9 +101,13 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth().padding(12.dp),
         shape = RoundedCornerShape(22.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+        ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
-        Column(Modifier.padding(start = 22.dp, end = 22.dp, top = 20.dp, bottom = 6.dp)) {
+        Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 6.dp)) {
             val appLabel = prompt.app?.displayName
                 ?: prompt.app?.name
                 ?: promptDisplayName(prompt.executablePath)
@@ -113,17 +119,17 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                 else -> s[S.PromptNetAny]
             }
 
-            // 頂部應用識別列：圓角應用圖示 + 加粗突出應用名稱與包名 + 網路類型膠囊標籤
+            // 頂部應用識別列：圓角圖示 + 應用名稱 + 右上緊湊「稍後」；網路與佇列膠囊移至次行避免窄屏擠壓應用名。
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
             ) {
                 if (pkgName != null) {
-                    AppIcon(packageName = pkgName, modifier = Modifier.size(46.dp))
+                    AppIcon(packageName = pkgName, modifier = Modifier.size(44.dp))
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
+                            .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center,
@@ -132,65 +138,66 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                             painterResource(R.drawable.ic_shield),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(26.dp),
+                            modifier = Modifier.size(24.dp),
                         )
                     }
                 }
                 Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         appLabel,
-                        fontSize = 18.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    val subtitleText = pkgName ?: promptDisplayName(prompt.executablePath) ?: ""
-                    if (subtitleText.isNotBlank() && subtitleText != appLabel) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
                         Text(
-                            subtitleText,
+                            networkLabel,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(999.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
                         )
+                        if (prompts.size > 1) {
+                            Text(
+                                "1 / ${prompts.size}",
+                                style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp),
+                            )
+                        }
                     }
                 }
-                Spacer(Modifier.width(8.dp))
-                if (prompts.size > 1) {
-                    Text(
-                        "1 / ${prompts.size}",
-                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                }
-                Text(
-                    networkLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
+                Spacer(Modifier.width(6.dp))
+                Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(999.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(999.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                )
-                Spacer(Modifier.width(4.dp))
-                TextButton(
-                    onClick = { backend.dismissPrompt(prompt.id) },
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                        .clickable { backend.dismissPrompt(prompt.id) }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                 ) {
                     Text(
                         s[S.PromptLater],
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
             }
@@ -258,22 +265,31 @@ fun PromptOverlay(backend: AppBackend, modifier: Modifier = Modifier) {
                 // 勾選後「禁止」改為永久禁止；不勾只禁止到應用關閉。
                 Row(
                     modifier = Modifier
-                        .padding(top = 6.dp)
+                        .padding(top = 8.dp)
                         .toggleable(
                             value = dontAskAgain,
                             role = Role.Checkbox,
                             onValueChange = { dontAskAgain = it },
                         )
-                        .padding(vertical = 6.dp),
+                        .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Checkbox(checked = dontAskAgain, onCheckedChange = null)
-                    Spacer(Modifier.width(8.dp))
+                    Checkbox(
+                        checked = dontAskAgain,
+                        onCheckedChange = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
                     Text(s[S.PromptDontAskAgain], fontSize = 15.sp)
                 }
             }
+            androidx.compose.material3.HorizontalDivider(
+                modifier = Modifier.padding(top = 6.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+            )
             Row(
-                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(top = 6.dp),
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val allowEnabled = !dontAskAgain

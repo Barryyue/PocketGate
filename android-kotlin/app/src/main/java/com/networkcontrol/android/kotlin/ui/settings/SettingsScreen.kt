@@ -697,9 +697,10 @@ fun SettingsScreen(
                         ) {
                             RadioButton(
                                 selected = selected,
-                                onClick = { draftChannel = option },
+                                onClick = null,
+                                modifier = Modifier.padding(top = 2.dp).size(20.dp),
                             )
-                            Column(Modifier.padding(start = 6.dp, top = 2.dp)) {
+                            Column(Modifier.padding(start = 10.dp)) {
                                 Text(
                                     title,
                                     style = MaterialTheme.typography.bodyLarge,
@@ -1080,38 +1081,53 @@ internal fun ProfileRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                profile.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-            )
-            Text(
-                "${profile.mode.name}${if (active) " · ${s[S.ActiveProfile]}" else ""}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            profile.autoActivate?.let { auto ->
-                val network = when (auto.kind) {
-                    NetworkKind.Wifi -> s[S.Wifi]
-                    NetworkKind.Cellular -> s[S.Cellular]
-                    NetworkKind.Wired -> s[S.Wired]
-                    else -> s[S.AnyNetwork]
-                }
-                Text(
-                    "${s[S.AutoSwitch]}: $network${auto.ssids.firstOrNull()?.let { " · $it" }.orEmpty()}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                )
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            profile.name,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            "${modeLabel(profile.mode, s)}${if (active) " · ${s[S.ActiveProfile]}" else ""}",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        profile.autoActivate?.let { auto ->
+            val network = when (auto.kind) {
+                NetworkKind.Wifi -> s[S.Wifi]
+                NetworkKind.Cellular -> s[S.Cellular]
+                NetworkKind.Wired -> s[S.Wired]
+                else -> s[S.AnyNetwork]
             }
+            Text(
+                "${s[S.AutoSwitch]}: $network${auto.ssids.firstOrNull()?.let { " · $it" }.orEmpty()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
         }
-        if (!active) {
-            TextButton(onClick = onActivate) { Text(s[S.Open]) }
-        }
-        TextButton(onClick = onEdit) { Text(s[S.Edit]) }
-        if (!active && profile.id != Profile.DEFAULT_ID) {
-            TextButton(onClick = onDelete) { Text(s[S.Delete]) }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (!active) {
+                TextButton(
+                    onClick = onActivate,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                ) { Text(s[S.Open], maxLines = 1, softWrap = false) }
+            }
+            TextButton(
+                onClick = onEdit,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+            ) { Text(s[S.Edit], maxLines = 1, softWrap = false) }
+            if (!active && profile.id != Profile.DEFAULT_ID) {
+                TextButton(
+                    onClick = onDelete,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                ) { Text(s[S.Delete], color = MaterialTheme.colorScheme.error, maxLines = 1, softWrap = false) }
+            }
         }
     }
 }
@@ -1152,46 +1168,54 @@ internal fun ProfileDialog(
                     onValueChange = { name = it },
                     label = { Text(s[S.ProfileName]) },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Text(s[S.ProfileMode], style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(mode == FilterMode.Ask, { mode = FilterMode.Ask }, { Text(s[S.ModeAsk]) })
-                    FilterChip(mode == FilterMode.Whitelist, { mode = FilterMode.Whitelist }, { Text(s[S.ModeWhitelist]) })
-                    FilterChip(mode == FilterMode.Blacklist, { mode = FilterMode.Blacklist }, { Text(s[S.ModeBlacklist]) })
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    FilterChip(mode == FilterMode.Ask, { mode = FilterMode.Ask }, { Text(s[S.ModeAsk], maxLines = 1, softWrap = false) })
+                    FilterChip(mode == FilterMode.Whitelist, { mode = FilterMode.Whitelist }, { Text(s[S.ModeWhitelist], maxLines = 1, softWrap = false) })
+                    FilterChip(mode == FilterMode.Blacklist, { mode = FilterMode.Blacklist }, { Text(s[S.ModeBlacklist], maxLines = 1, softWrap = false) })
                 }
                 Text(s[S.AutoSwitch], style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(autoKind == null, { autoKind = null }, { Text(s[S.AnyNetwork]) })
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    FilterChip(autoKind == null, { autoKind = null }, { Text(s[S.AnyNetwork], maxLines = 1, softWrap = false) })
                     FilterChip(
                         autoKind == NetworkKind.Wifi,
                         { autoKind = NetworkKind.Wifi },
-                        { Text(s[S.Wifi]) },
+                        { Text(s[S.Wifi], maxLines = 1, softWrap = false) },
                     )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         autoKind == NetworkKind.Cellular,
                         { autoKind = NetworkKind.Cellular },
-                        { Text(s[S.Cellular]) },
+                        { Text(s[S.Cellular], maxLines = 1, softWrap = false) },
                     )
                     FilterChip(
                         autoKind == NetworkKind.Wired,
                         { autoKind = NetworkKind.Wired },
-                        { Text(s[S.Wired]) },
+                        { Text(s[S.Wired], maxLines = 1, softWrap = false) },
                     )
                 }
                 Text(s[S.SimCard], style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     FilterChip(
                         simSubscriptionId == null,
                         { simSubscriptionId = null },
-                        { Text(s[S.AllSims]) },
+                        { Text(s[S.AllSims], maxLines = 1, softWrap = false) },
                     )
                     sims.take(2).forEach { sim ->
                         FilterChip(
                             simSubscriptionId == sim.subscriptionId,
                             { simSubscriptionId = sim.subscriptionId },
-                            { Text(sim.label) },
+                            { Text(sim.label, maxLines = 1, softWrap = false) },
                         )
                     }
                 }
@@ -1382,24 +1406,27 @@ internal fun ScheduleDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(s[S.ScheduleDays], style = MaterialTheme.typography.bodyMedium)
-                listOf(1..4, 5..7).forEach { range ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        range.forEach { day ->
-                            FilterChip(
-                                day in days,
-                                {
-                                    days = if (day in days) days - day else days + day
-                                },
-                                {
-                                    Text(
-                                        DayOfWeek.of(day).getDisplayName(
-                                            TextStyle.SHORT,
-                                            context.resources.configuration.locales[0] ?: Locale.getDefault(),
-                                        ),
-                                    )
-                                },
-                            )
-                        }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    (1..7).forEach { day ->
+                        FilterChip(
+                            selected = day in days,
+                            onClick = {
+                                days = if (day in days) days - day else days + day
+                            },
+                            label = {
+                                Text(
+                                    DayOfWeek.of(day).getDisplayName(
+                                        TextStyle.SHORT,
+                                        context.resources.configuration.locales[0] ?: Locale.getDefault(),
+                                    ),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                )
+                            },
+                        )
                     }
                 }
                 OutlinedButton(
@@ -1506,7 +1533,10 @@ internal fun OverlayPositionDialog(
         onDismissRequest = onDismiss,
         title = { Text(s[S.OverlayPosition]) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Text(
                     s.format(S.OverlayPositionPercent, (ratio * 100).roundToInt()),
                     style = MaterialTheme.typography.bodyMedium,
@@ -1514,14 +1544,14 @@ internal fun OverlayPositionDialog(
                 BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(380.dp)
+                        .height(280.dp)
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             RoundedCornerShape(16.dp),
                         )
                         .pointerInput(Unit) {
                             detectVerticalDragGestures { _, dragAmount ->
-                                val available = (380.dp - panelHeight).toPx().coerceAtLeast(1f)
+                                val available = (280.dp - panelHeight).toPx().coerceAtLeast(1f)
                                 ratio = (ratio + dragAmount / available).coerceIn(0f, 1f)
                             }
                         },
@@ -1900,6 +1930,7 @@ internal fun ProxyAppDialog(
                     onValueChange = { query = it },
                     label = { Text(s[S.SearchApps]) },
                     singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
                 LazyColumn(Modifier.heightIn(max = 360.dp)) {

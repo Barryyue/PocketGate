@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
@@ -261,6 +263,8 @@ internal fun SettingsTile(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 136.dp),
             )
         }
         if (trailingCustom != null) {
@@ -413,7 +417,7 @@ internal fun <T> SettingsSegmentedRow(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(36.dp)
+                        .heightIn(min = 38.dp)
                         .clip(RoundedCornerShape(9.dp))
                         .background(
                             if (isSelected) {
@@ -433,7 +437,8 @@ internal fun <T> SettingsSegmentedRow(
                                 Modifier
                             },
                         )
-                        .clickable { onSelect(value) },
+                        .clickable { onSelect(value) }
+                        .padding(horizontal = 6.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -499,7 +504,11 @@ internal fun SettingsPermissionTile(
             SettingsStatusPill(
                 text = actionText,
                 accent = scheme.primary,
-                modifier = Modifier.clickable(onClick = onAction),
+                modifier = Modifier.border(
+                    width = 1.dp,
+                    color = scheme.primary.copy(alpha = 0.35f),
+                    shape = RoundedCornerShape(999.dp),
+                ),
             )
         }
     }

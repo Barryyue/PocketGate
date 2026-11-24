@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -482,6 +483,8 @@ private fun AppRow(
                             if (isExcluded) s[S.ExcludedBadge] else s[S.ProxyApp],
                             style = MaterialTheme.typography.labelSmall,
                             color = scheme.error,
+                            maxLines = 1,
+                            softWrap = false,
                         )
                     }
                 }
@@ -497,6 +500,8 @@ private fun AppRow(
                             s[S.FilterSystem],
                             style = MaterialTheme.typography.labelSmall,
                             color = scheme.primary,
+                            maxLines = 1,
+                            softWrap = false,
                         )
                     }
                 }
@@ -592,20 +597,31 @@ private fun AppRow(
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
+            ) {
                 if (!isSystemCoreUid) {
-                    TextButton(onClick = { showNetworkDialog = true }) {
-                        Text(s[S.NetworkConditions])
+                    TextButton(
+                        onClick = { showNetworkDialog = true },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    ) {
+                        Text(s[S.NetworkConditions], maxLines = 1, softWrap = false)
                     }
                 }
-                TextButton(onClick = { showDetail = true }) {
-                    Text(s[S.Details])
+                TextButton(
+                    onClick = { showDetail = true },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                ) {
+                    Text(s[S.Details], maxLines = 1, softWrap = false)
                 }
                 if (scopedRules.isNotEmpty()) {
                     Text(
                         "${s[S.NetworkRules]}：${scopedRules.size}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
             }
@@ -990,10 +1006,13 @@ private fun NetworkRuleDialog(
                     }
                 }
                 Text(s[S.RuleAction], style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(decision == AppDecision.Allow, { decision = AppDecision.Allow }, { Text(s[S.Allow]) })
-                    FilterChip(decision == AppDecision.Deny, { decision = AppDecision.Deny }, { Text(s[S.Deny]) })
-                    FilterChip(decision == AppDecision.Unset, { decision = AppDecision.Unset }, { Text(s[S.Unset]) })
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    FilterChip(decision == AppDecision.Allow, { decision = AppDecision.Allow }, { Text(s[S.Allow], maxLines = 1, softWrap = false) })
+                    FilterChip(decision == AppDecision.Deny, { decision = AppDecision.Deny }, { Text(s[S.Deny], maxLines = 1, softWrap = false) })
+                    FilterChip(decision == AppDecision.Unset, { decision = AppDecision.Unset }, { Text(s[S.Unset], maxLines = 1, softWrap = false) })
                 }
                 Text(
                     s[S.NetworkRuleHint],

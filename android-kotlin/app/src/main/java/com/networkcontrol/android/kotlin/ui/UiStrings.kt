@@ -737,6 +737,9 @@ enum class S {
     SplitExitHint,
     SplitExitProxyApps,
     SplitExitProxyAppsCount,
+    RuleInvalidPort,
+    RuleSelectAppRequired,
+    RuleGlobalNeedsTarget,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1503,6 +1506,9 @@ private val EN = mapOf(
     S.SplitExitHint to "Route selected apps through external SOCKS5 proxy while other apps use built-in direct exit, keeping firewall & domain rules active for all",
     S.SplitExitProxyApps to "Apps routed via SOCKS5",
     S.SplitExitProxyAppsCount to "%1\$d apps via proxy",
+    S.RuleInvalidPort to "Invalid port (1–65535)",
+    S.RuleSelectAppRequired to "Please select an app",
+    S.RuleGlobalNeedsTarget to "Global rule requires a domain or port",
 )
 
 private val CN = mapOf(
@@ -2238,6 +2244,9 @@ private val CN = mapOf(
     S.SplitExitHint to "选中的应用走外部 SOCKS5 代理，其余应用走内置直连；所有应用均保留完整防火墙、域名规则与日志",
     S.SplitExitProxyApps to "走 SOCKS5 代理的应用",
     S.SplitExitProxyAppsCount to "%1\$d 个应用走代理",
+    S.RuleInvalidPort to "端口无效（范围 1–65535）",
+    S.RuleSelectAppRequired to "请选择一个应用",
+    S.RuleGlobalNeedsTarget to "全局规则需填写域名或端口",
 )
 
 private val TW = mapOf(
@@ -2973,4 +2982,7 @@ private val TW = mapOf(
     S.SplitExitHint to "選中的應用走外部 SOCKS5 代理，其餘應用走內建直連；所有應用均保留完整防火牆、網域規則與日誌",
     S.SplitExitProxyApps to "走 SOCKS5 代理的應用",
     S.SplitExitProxyAppsCount to "%1\$d 個應用走代理",
+    S.RuleInvalidPort to "連接埠無效（範圍 1–65535）",
+    S.RuleSelectAppRequired to "請選擇一個應用",
+    S.RuleGlobalNeedsTarget to "全域規則需填寫網域或連接埠",
 )

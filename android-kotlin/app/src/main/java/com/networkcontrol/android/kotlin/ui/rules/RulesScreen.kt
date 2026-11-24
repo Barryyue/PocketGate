@@ -5,8 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -380,77 +382,105 @@ private fun RuleRow(
     val s = rememberUiStrings()
     val scheme = MaterialTheme.colorScheme
     val accent = if (rule.action == VerdictAction.Allow) scheme.primary else scheme.error
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
             modifier = Modifier
-                .width(3.dp)
-                .height(34.dp)
-                .clip(RoundedCornerShape(99.dp))
-                .background(if (rule.enabled) accent else scheme.outlineVariant),
-        )
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    actionLabel(rule.action, s),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = accent,
-                )
-                Text(
-                    "· ${networkScopeLabel(rule.conditions, sims, s)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            remoteTargetLabel(rule.conditions)?.let { remote ->
-                Text(
-                    remote,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Text(
-                buildString {
-                    append(lifetimeLabel(rule.lifetime, s))
-                    append(" · ")
-                    append(if (rule.profileId == null) s[S.GlobalRule] else s[S.ActiveProfile])
-                    if (rule.hitCount > 0) {
-                        append(" · ${rule.hitCount}×")
-                    }
-                    rule.lastHitAt?.let {
-                        append(" · ")
-                        append(s.format(S.RuleLastHit, formatDateTime(it)))
-                    }
-                    rule.expiresAt?.takeIf { rule.lifetime == RuleLifetime.Timed }?.let {
-                        append(" · ")
-                        append(s.format(S.RuleExpiresIn, formatDateTime(it)))
-                    }
-                },
-                style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
-                color = scheme.onSurfaceVariant,
+                .fillMaxWidth()
+                .height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .fillMaxHeight()
+                    .padding(vertical = 2.dp)
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(if (rule.enabled) accent else scheme.outlineVariant),
             )
-            rule.note?.takeIf { it.isNotBlank() }?.let { note ->
+            Spacer(Modifier.width(10.dp))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        actionLabel(rule.action, s),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accent,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                    Text(
+                        "· ${networkScopeLabel(rule.conditions, sims, s)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
+                remoteTargetLabel(rule.conditions)?.let { remote ->
+                    Text(
+                        remote,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
-                    note,
-                    style = MaterialTheme.typography.bodySmall,
+                    buildString {
+                        append(lifetimeLabel(rule.lifetime, s))
+                        append(" · ")
+                        append(if (rule.profileId == null) s[S.GlobalRule] else s[S.ActiveProfile])
+                        if (rule.hitCount > 0) {
+                            append(" · ${rule.hitCount}×")
+                        }
+                        rule.lastHitAt?.let {
+                            append(" · ")
+                            append(s.format(S.RuleLastHit, formatDateTime(it)))
+                        }
+                        rule.expiresAt?.takeIf { rule.lifetime == RuleLifetime.Timed }?.let {
+                            append(" · ")
+                            append(s.format(S.RuleExpiresIn, formatDateTime(it)))
+                        }
+                    },
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                     color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
+                rule.note?.takeIf { it.isNotBlank() }?.let { note ->
+                    Text(
+                        note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
+            Switch(checked = rule.enabled, onCheckedChange = onToggle)
         }
-        Switch(checked = rule.enabled, onCheckedChange = onToggle)
         if (rule.source != RuleSource.Builtin) {
-            TextButton(onClick = onEdit) { Text(s[S.Edit]) }
-            TextButton(onClick = onDelete) { Text(s[S.Delete]) }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 13.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(
+                    onClick = onEdit,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                ) { Text(s[S.Edit]) }
+                TextButton(
+                    onClick = onDelete,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                ) { Text(s[S.Delete], color = scheme.error) }
+            }
         }
     }
 }
@@ -526,16 +556,19 @@ private fun RuleEditorDialog(
                     )
                 }
                 if (existing == null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
                         FilterChip(
                             selected = globalScope,
                             onClick = { globalScope = true },
-                            label = { Text(s[S.RuleScopeGlobal]) },
+                            label = { Text(s[S.RuleScopeGlobal], maxLines = 1, softWrap = false) },
                         )
                         FilterChip(
                             selected = !globalScope,
                             onClick = { globalScope = false },
-                            label = { Text(s[S.RuleScopeApp]) },
+                            label = { Text(s[S.RuleScopeApp], maxLines = 1, softWrap = false) },
                         )
                     }
                     if (!globalScope) {
@@ -577,11 +610,14 @@ private fun RuleEditorDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     FilterChip(
                         selected = networkKinds.isEmpty(),
                         onClick = { networkKinds = emptySet() },
-                        label = { Text(s[S.AnyNetwork]) },
+                        label = { Text(s[S.AnyNetwork], maxLines = 1, softWrap = false) },
                     )
                     FilterChip(
                         selected = NetworkKind.Wifi in networkKinds,
@@ -592,7 +628,7 @@ private fun RuleEditorDialog(
                                 networkKinds + NetworkKind.Wifi
                             }
                         },
-                        label = { Text(s[S.Wifi]) },
+                        label = { Text(s[S.Wifi], maxLines = 1, softWrap = false) },
                     )
                     FilterChip(
                         selected = NetworkKind.Cellular in networkKinds,
@@ -603,7 +639,7 @@ private fun RuleEditorDialog(
                                 networkKinds + NetworkKind.Cellular
                             }
                         },
-                        label = { Text(s[S.Cellular]) },
+                        label = { Text(s[S.Cellular], maxLines = 1, softWrap = false) },
                     )
                 }
                 OutlinedTextField(
@@ -625,16 +661,16 @@ private fun RuleEditorDialog(
                         null
                     } else {
                         parsePortRange(portText) ?: run {
-                            errorText = "Invalid port (1-65535)"
+                            errorText = s[S.RuleInvalidPort]
                             return@Button
                         }
                     }
                     if (existing == null && !globalScope && packageName.isBlank()) {
-                        errorText = "Please select an app"
+                        errorText = s[S.RuleSelectAppRequired]
                         return@Button
                     }
                     if (existing == null && globalScope && domain.isBlank() && parsedPort == null) {
-                        errorText = "Global rule requires domain or port"
+                        errorText = s[S.RuleGlobalNeedsTarget]
                         return@Button
                     }
                     onSave(
