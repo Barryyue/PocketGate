@@ -38,8 +38,8 @@ jobs:
     name: Test, build and package APK
     runs-on: ubuntu-latest
     env:
-      # arm64 安裝包的體積上限（bytes）。加入 Glance 掛件與 Haze 模糊後約 5.6 MB；超過 6.5 MB 代表引入了大依賴或資源，需要先評估。
-      APK_SIZE_BUDGET: "6500000"
+      # arm64 安裝包的體積上限（bytes）。加入 Glance 掛件、Haze 模糊、GKD 離線預設訂閱與 P0～P3 功能後約 6.58 MB；超過 7.2 MB 代表引入了大依賴或資源，需要先評估。
+      APK_SIZE_BUDGET: "7200000"
     defaults:
       run:
         working-directory: android-kotlin
