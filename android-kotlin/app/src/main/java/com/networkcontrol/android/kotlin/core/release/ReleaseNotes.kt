@@ -40,6 +40,34 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.7",
+            date = "2026-11-25",
+            features = listOf(
+                t(
+                    "Foreground-only networking: restrict selected apps to connect only while in the foreground and auto-block them in the background or when the screen turns off",
+                    "新增「仅前台联网」：按应用设置仅在前台时放行，切到后台或息屏后自动禁网，未启用或息屏时零轮询省电",
+                    "新增「僅前台聯網」：按應用設定僅在前台時放行，切到背景或息屏後自動禁網，未啟用或息屏時零輪詢省電",
+                ),
+                t(
+                    "Per-app split exit in forwarding mode: route selected apps through an external SOCKS5 proxy while other apps use built-in direct exit, keeping firewall, domain rules and logs active for all",
+                    "新增逐连接「按应用分流出口」：选中的应用走外部 SOCKS5 代理，其余应用走内置直连，全部流量仍保留完整防火墙、域名规则与日志",
+                    "新增逐連線「按應用分流出口」：選中的應用走外部 SOCKS5 代理，其餘應用走內建直連，全部流量仍保留完整防火牆、網域規則與日誌",
+                ),
+                t(
+                    "Third-party automation broadcast API (Tasker / MacroDroid) with opt-in toggle and optional auth token, plus AlarmManager focus wakeups, per-schedule allowed apps and focus session summary notifications",
+                    "新增第三方自动化广播接口（Tasker / MacroDroid，默认关闭并支持 Token 鉴权），并增强专注模式（AlarmManager 精准唤醒、排程独立允许列表与专注结束拦截小结）",
+                    "新增第三方自動化廣播介面（Tasker / MacroDroid，預設關閉並支援 Token 驗證），並增強專注模式（AlarmManager 精準喚醒、排程獨立允許清單與專注結束攔截小結）",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Unified all remaining Settings sub-pages (Prompts, Forwarding, Speed Island, Blocklists, Profiles & Automation) with the new Material 3 back-header and segmented controls",
+                    "将所有旧设置二级页（询问、逐连接、灵动岛、拦截列表、配置与自动跳过）统一升级为新版视觉顶栏与分段胶囊控件",
+                    "將所有舊設定二級頁（詢問、逐連線、靈動島、攔截列表、配置與自動跳過）統一升級為新版視覺頂欄與分段膠囊控制項",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.6",
             date = "2026-11-24",
             features = emptyList(),

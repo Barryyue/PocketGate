@@ -1363,6 +1363,7 @@ internal fun DropdownSetting(
 @Composable
 internal fun ScheduleDialog(
     schedule: FocusSchedule?,
+    apps: List<InstalledApp> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (FocusSchedule) -> Unit,
 ) {
@@ -1371,6 +1372,8 @@ internal fun ScheduleDialog(
     var days by remember { mutableStateOf(schedule?.days ?: setOf(1, 2, 3, 4, 5)) }
     var startMinute by remember { mutableIntStateOf(schedule?.startMinute ?: 9 * 60) }
     var endMinute by remember { mutableIntStateOf(schedule?.endMinute ?: 18 * 60) }
+    var allowedPackages by remember { mutableStateOf(schedule?.allowedPackages ?: emptySet()) }
+    var showAllowedPicker by remember { mutableStateOf(false) }
     val valid = days.isNotEmpty() && startMinute != endMinute
 
     AlertDialog(
@@ -1427,6 +1430,14 @@ internal fun ScheduleDialog(
                 ) {
                     Text("${s[S.ScheduleEnd]}：${minutesToText(endMinute)}")
                 }
+                if (apps.isNotEmpty()) {
+                    OutlinedButton(
+                        onClick = { showAllowedPicker = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("${s[S.FocusAllowedApps]} (${s.format(S.FocusAllowedAppsCount, allowedPackages.size)})")
+                    }
+                }
                 Text(
                     s[S.ScheduleHint],
                     style = MaterialTheme.typography.bodySmall,
@@ -1444,6 +1455,7 @@ internal fun ScheduleDialog(
                             startMinute = startMinute,
                             endMinute = endMinute,
                             enabled = schedule?.enabled ?: true,
+                            allowedPackages = allowedPackages,
                         ),
                     )
                 },
@@ -1454,6 +1466,18 @@ internal fun ScheduleDialog(
             TextButton(onClick = onDismiss) { Text(s[S.Cancel]) }
         },
     )
+    if (showAllowedPicker) {
+        DirectAppsDialog(
+            title = s[S.FocusAllowedApps],
+            apps = apps,
+            initial = allowedPackages,
+            onDismiss = { showAllowedPicker = false },
+            onSave = { selected ->
+                allowedPackages = selected
+                showAllowedPicker = false
+            },
+        )
+    }
 }
 
 internal fun FocusSchedule.timeLabel(): String = "${minutesToText(startMinute)}–${minutesToText(endMinute)}"

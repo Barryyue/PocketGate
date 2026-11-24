@@ -1816,4 +1816,16 @@ Debug 包使用 `.debug` 後綴，可與 Avalonia 版、Release 版並存：
   - 在 `AppBackend` 新增 `forwardingEnabledFlow` / `forwardingUpstreamFlow` / `offlineModeFlow`，`SettingsScreen` / `AppsScreen` / `RulesScreen` 全面訂閱，消除跨頁切換狀態不同步。
   - 將「預設允許 ICMP（Ping）」從詢問設定頁移至防護與網路卡片，移除權限體檢卡底部重複的電池最佳化按鈕，並補齊 `ReleaseNotes.kt` 0.17.4 / 0.17.5 三語版本說明。
   - 驗證：`.\scripts\android-kotlin.ps1 test`（含 `ReleaseNotesTest`）+ `build` 通過。
-- [ ] **P3-2 真機回歸收口**：集中回歸 v0.13.4～v0.17.5 累積的未真機驗證項（6 套主題、導覽列自動隱藏、應用內更新安裝與 SHA-256 校驗、WebDAV v2 同步、GKD 自動跳過、待機耗電、區網/漫遊/QUIC、小窗電池授權刷新）。
+- [ ] **P3-2 真機回歸收口**：集中回歸 v0.13.4～v0.17.6 累積的未真機驗證項（6 套主題、新版設定頁、導覽列自動隱藏、應用內更新安裝與 SHA-256 校驗、WebDAV v2 同步、GKD 自動跳過、待機耗電、區網/漫遊/QUIC、小窗電池授權刷新）。
+
+---
+
+## 63. 2026-11-25 進階產品優化待辦（5 項）
+
+> 基線：`beta` 分支 v0.17.6（提交 `5393842`）。
+
+- [x] (antigravity, 2026-11-25) **OPT-1 舊設定二級頁視覺統一（K-185）**：將 `PromptSettingsScreen`、`ForwardingSettingsScreen`、`SpeedIslandSettingsScreen`、`BlocklistSettingsScreen`、`ProfileScheduleSettingsScreen`、`AutomationSettingsScreen` 統一遷移至 `SettingsSubScreenScaffold` 與 `SettingsSegmentedRow`。
+- [x] (antigravity, 2026-11-25) **OPT-2 僅前台聯網 / 背景禁網（K-186）**：按應用配置「僅前台聯網」，切到背景或息屏時自動阻斷聯網（`AppRoutingReason.BackgroundBlocked`），結合 `PromptForegroundTracker` + `ScreenStateMonitor` 僅在有設定且亮屏時低耗監控；同步納入完整備份 v2 與應用詳情開關。
+- [x] (antigravity, 2026-11-25) **OPT-3 專注模式增強（K-187）**：新增 `FocusAlarmScheduler` / `FocusAlarmReceiver`（`AlarmManager.setAndAllowWhileIdle` 精準喚醒）、每個 `FocusSchedule` 支援獨立 `allowedPackages` 允許清單，以及專注結束後由 `FocusSummaryNotifier` 發送攔截小結通知。
+- [x] (antigravity, 2026-11-25) **OPT-4 第三方自動化介面（K-188）**：新增預設關閉 + 常數時間 Token 驗證的 `ExternalAutomationReceiver`，支援 Tasker / MacroDroid 透過廣播 Intent 控制防護開關、模式、配置切換、專注與勿擾，並於權限設定頁提供一鍵複製範本。
+- [x] (antigravity, 2026-11-25) **OPT-5 按應用分流出口（K-163）**：將 `DirectSocksServer` 升級為本機智慧 SOCKS5 路由器，搭配 `SplitExitRouter` 與 `ForwardingPacketFilter.onForwarded` 傳遞的流路由決策，在保留完整防火牆／網域規則／攔截列表／日誌的前提下，實現逐連線模式內同時支援「內建直連 + 外部 SOCKS5 代理」按應用分流（含真實本機鏈式 socket 單元測試驗證）。

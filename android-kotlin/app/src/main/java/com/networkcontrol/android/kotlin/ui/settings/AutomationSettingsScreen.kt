@@ -117,30 +117,11 @@ fun AutomationSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
 
     BackHandler { onBack() }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("‹ ${s[S.Back]}") }
-            Text(
-                "${s[S.AutomationTitle]} (${s[S.AutomationExperimentalBadge]})",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-        }
-        if (busy) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    SettingsSubScreenScaffold(
+        title = "${s[S.AutomationTitle]} (${s[S.AutomationExperimentalBadge]})",
+        onBack = onBack,
+        loading = busy,
+    ) {
             // 1. 總開關與服務狀態
             item {
                 SectionCard {
@@ -443,7 +424,6 @@ fun AutomationSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     }
                 }
             }
-        }
     }
 
     // 開啟時無障礙未授權引導彈窗

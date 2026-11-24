@@ -78,8 +78,22 @@ class AppContainer(context: Context) {
         scope = scope,
     )
     val protection = ProtectionController(preferences)
-    val focus = com.networkcontrol.android.kotlin.core.focus.FocusController(preferences, scope)
-    val focusScheduler = com.networkcontrol.android.kotlin.core.focus.FocusScheduler(preferences, focus, scope)
+    val focusAlarmScheduler = com.networkcontrol.android.kotlin.platform.focus.FocusAlarmScheduler(appContext)
+    val focusSummaryNotifier = com.networkcontrol.android.kotlin.platform.focus.FocusSummaryNotifier(
+        context = appContext,
+        activityStore = activityStore,
+        scope = scope,
+        notificationsEnabled = { preferences.notificationsEnabled },
+    )
+    val focus = com.networkcontrol.android.kotlin.core.focus.FocusController(preferences, scope).also { fc ->
+        fc.onSessionEnded = { session, mins ->
+            focusSummaryNotifier.notifyEnded(session, mins)
+        }
+    }
+    val focusScheduler = com.networkcontrol.android.kotlin.core.focus.FocusScheduler(preferences, focus, scope).also { fs ->
+        fs.onScheduleUpdated = { nextAt -> focusAlarmScheduler.schedule(nextAt) }
+        focusAlarmScheduler.schedule(fs.nextTriggerMillis())
+    }
     val vpnNotifier = VpnForegroundNotifier(appContext, preferences)
     val vpnTunnel = VpnTunnelController(appContext, vpnNotifier)
     val quietPeriods = com.networkcontrol.android.kotlin.core.prompts.QuietPeriodTracker(runtime, scope)
@@ -125,6 +139,8 @@ class AppContainer(context: Context) {
         }
     }
 
+    val foregroundTracker = com.networkcontrol.android.kotlin.platform.prompt.PromptForegroundTracker(appContext)
+
     val vpnEngine: VpnEngine = VpnEngine(
         context = appContext,
         scope = scope,
@@ -145,6 +161,7 @@ class AppContainer(context: Context) {
         notifier = vpnNotifier,
         selfPackage = appContext.packageName,
         blocklist = { blocklists.matcher.value },
+        foregroundPackageProvider = { foregroundTracker.foregroundPackage() },
     )
 
     val trafficCollector = TrafficCollector(appContext, appCatalog, appStore, trafficStore)
@@ -165,7 +182,6 @@ class AppContainer(context: Context) {
     val ruleLifetime = RuleLifetimeManager(rules, scope)
     val promptNotifier = com.networkcontrol.android.kotlin.platform.PromptNotifier(appContext, preferences)
     val appUiVisibility = com.networkcontrol.android.kotlin.platform.prompt.AppUiVisibility(appContext)
-    val foregroundTracker = com.networkcontrol.android.kotlin.platform.prompt.PromptForegroundTracker(appContext)
     val promptOverlay = com.networkcontrol.android.kotlin.platform.prompt.PromptOverlayController(
         context = appContext,
         preferences = preferences,

@@ -768,6 +768,9 @@ private fun AppDetailDialog(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 val isSystemCoreUid = com.networkcontrol.android.kotlin.engine.vpn.VpnRoutingPlanner.isSystemUid(entry.app.uid)
+                var foregroundOnly by remember(entry.app.packageName) {
+                    mutableStateOf(entry.app.packageName in backend.foregroundOnlyPackages())
+                }
                 if (!isSystemCoreUid && !isProxyBypass) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -795,6 +798,36 @@ private fun AppDetailDialog(
                                 }
                             },
                         )
+                    }
+                    if (!isExcluded) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    s[S.ForegroundOnly],
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                )
+                                Text(
+                                    s[S.ForegroundOnlyHint],
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Switch(
+                                checked = foregroundOnly,
+                                onCheckedChange = { enabled ->
+                                    guard.run {
+                                        foregroundOnly = enabled
+                                        backend.setAppForegroundOnly(entry.app.packageName, enabled)
+                                        onChanged()
+                                    }
+                                },
+                            )
+                        }
                     }
                 } else if (isProxyBypass) {
                     Text(
@@ -1044,5 +1077,6 @@ private fun routingReasonLabel(
     AppRoutingReason.Trusted -> s[S.Trusted]
     AppRoutingReason.Focus -> s[S.FocusMode]
     AppRoutingReason.LockScreen -> s[S.BlockOnLock]
+    AppRoutingReason.BackgroundBlocked -> s[S.BackgroundBlocked]
 }
 

@@ -392,6 +392,36 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_WEBDAV_LAST_ETAG, null)?.takeIf { it.isNotBlank() }
         set(value) = prefs.edit().putString(KEY_WEBDAV_LAST_ETAG, value).apply()
 
+    /** 僅前台聯網（切到背景或息屏自動阻斷）的應用包名集合。 */
+    var foregroundOnlyPackages: Set<String>
+        get() = prefs.getStringSet(KEY_FOREGROUND_ONLY_PACKAGES, emptySet())?.toSet().orEmpty()
+        set(value) = prefs.edit().putStringSet(KEY_FOREGROUND_ONLY_PACKAGES, value.toSet()).apply()
+
+    /** 是否允許第三方自動化工具（Tasker / MacroDroid）透過廣播 Intent 控制。預設關閉。 */
+    var externalAutomationEnabled: Boolean
+        get() = prefs.getBoolean(KEY_EXTERNAL_AUTOMATION_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_EXTERNAL_AUTOMATION_ENABLED, value).apply()
+
+    /** 第三方自動化廣播驗證 Token（選填；非空時呼叫方必須帶相同 token）。 */
+    var externalAutomationToken: String
+        get() = com.networkcontrol.android.kotlin.platform.SecretPrefsCipher
+            .decrypt(prefs.getString(KEY_EXTERNAL_AUTOMATION_TOKEN, ""))
+            .orEmpty()
+        set(value) {
+            val stored = if (value.isEmpty()) "" else com.networkcontrol.android.kotlin.platform.SecretPrefsCipher.encrypt(value)
+            prefs.edit().putString(KEY_EXTERNAL_AUTOMATION_TOKEN, stored).apply()
+        }
+
+    /** 逐連線模式是否啟用按應用分流出口（部分應用走外部 SOCKS5、其餘走內建直連）。 */
+    var forwardingSplitExitEnabled: Boolean
+        get() = prefs.getBoolean(KEY_FORWARDING_SPLIT_EXIT, false)
+        set(value) = prefs.edit().putBoolean(KEY_FORWARDING_SPLIT_EXIT, value).apply()
+
+    /** 分流出口啟用時，指定改走外部 SOCKS5 代理的應用包名集合。 */
+    var forwardingProxyPackages: Set<String>
+        get() = prefs.getStringSet(KEY_FORWARDING_PROXY_PACKAGES, emptySet())?.toSet().orEmpty()
+        set(value) = prefs.edit().putStringSet(KEY_FORWARDING_PROXY_PACKAGES, value.toSet()).apply()
+
     private companion object {
         const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
         const val UPSTREAM_SOCKS5 = ForwardingUpstream.SOCKS5
@@ -453,6 +483,11 @@ class AppPreferences(context: Context) {
         const val KEY_WEBDAV_PASSPHRASE = "webdav_passphrase"
         const val KEY_WEBDAV_LAST_SYNC = "webdav_last_sync"
         const val KEY_WEBDAV_LAST_ETAG = "webdav_last_etag"
+        const val KEY_FOREGROUND_ONLY_PACKAGES = "foreground_only_packages"
+        const val KEY_EXTERNAL_AUTOMATION_ENABLED = "external_automation_enabled"
+        const val KEY_EXTERNAL_AUTOMATION_TOKEN = "external_automation_token"
+        const val KEY_FORWARDING_SPLIT_EXIT = "forwarding_split_exit"
+        const val KEY_FORWARDING_PROXY_PACKAGES = "forwarding_proxy_packages"
         const val KEY_BLOCK_QUIC = "block_quic"
         const val KEY_ALLOW_LAN = "allow_lan"
         const val KEY_BLOCK_ON_ROAMING = "block_on_roaming"

@@ -32,6 +32,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -511,6 +512,7 @@ internal fun SettingsPermissionTile(
 internal fun SettingsSubScreenScaffold(
     title: String,
     onBack: () -> Unit,
+    loading: Boolean = false,
     content: LazyListScope.() -> Unit,
 ) {
     Column(
@@ -539,6 +541,9 @@ internal fun SettingsSubScreenScaffold(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 4.dp, end = 12.dp),
             )
+        }
+        if (loading) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

@@ -94,119 +94,59 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
 
     BackHandler { onBack() }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("‹ ${s[S.Back]}") }
-            Text(
-                s[S.PromptSettings],
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    SettingsSubScreenScaffold(title = s[S.PromptSettings], onBack = onBack) {
             item {
-                SectionCard(s[S.PromptPresentation]) {
+                SettingsGroup(s[S.PromptPresentation]) {
                     val autoOverlay = promptMode == "auto"
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = autoOverlay,
-                            onClick = {
-                                promptMode = "auto"
-                                backend.setPromptPresentationMode("auto")
-                            },
-                            label = { Text(s[S.PromptPresentationAuto]) },
-                        )
-                        FilterChip(
-                            selected = !autoOverlay,
-                            onClick = {
-                                promptMode = "notification"
-                                backend.setPromptPresentationMode("notification")
-                            },
-                            label = { Text(s[S.PromptPresentationNotification]) },
-                        )
-                    }
-                    Text(
-                        s[S.PromptPresentationHint],
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    SettingsSegmentedRow(
+                        title = s[S.PromptPresentation],
+                        subtitle = s[S.PromptPresentationHint],
+                        options = listOf(
+                            "auto" to s[S.PromptPresentationAuto],
+                            "notification" to s[S.PromptPresentationNotification],
+                        ),
+                        selected = if (autoOverlay) "auto" else "notification",
+                        onSelect = { selectedMode ->
+                            promptMode = selectedMode
+                            backend.setPromptPresentationMode(selectedMode)
+                        },
                     )
                     if (autoOverlay) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                s[S.OverlayPermission],
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Text(
-                                if (canDrawOverlays) s[S.OverlayGranted] else s[S.OverlayDenied],
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (canDrawOverlays) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.error
-                                },
-                            )
-                            if (!canDrawOverlays) {
-                                Spacer(Modifier.width(8.dp))
-                                OutlinedButton(onClick = { context.startActivity(backend.overlayPermissionIntent()) }) {
-                                    Text(s[S.OverlayGrant])
-                                }
-                            }
-                        }
-                        Text(s[S.OverlayPosition], style = MaterialTheme.typography.bodyMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(
-                                selected = promptPosition == "top",
-                                onClick = {
-                                    promptPosition = "top"
-                                    backend.setPromptOverlayPosition("top")
-                                },
-                                label = { Text(s[S.OverlayTop]) },
-                            )
-                            FilterChip(
-                                selected = promptPosition == "bottom",
-                                onClick = {
-                                    promptPosition = "bottom"
-                                    backend.setPromptOverlayPosition("bottom")
-                                },
-                                label = { Text(s[S.OverlayBottom]) },
-                            )
-                            FilterChip(
-                                selected = promptPosition == "custom",
-                                onClick = {
-                                    promptPosition = "custom"
-                                    backend.setPromptOverlayPosition("custom")
-                                },
-                                label = { Text(s[S.OverlayCustom]) },
-                            )
-                        }
-                        if (promptPosition == "custom") {
-                            OutlinedButton(onClick = { showOverlayPositionDialog = true }) {
-                                Text("${s[S.OverlayAdjustPosition]} (${(promptRatio * 100).roundToInt()}%)")
-                            }
-                            Text(
-                                s[S.OverlayCustomHint],
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Text(
-                            s[S.OverlayOemHint],
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        SettingsDivider(insetWithIcon = false)
+                        SettingsPermissionTile(
+                            title = s[S.OverlayPermission],
+                            statusText = if (canDrawOverlays) s[S.OverlayGranted] else s[S.OverlayDenied],
+                            ok = canDrawOverlays,
+                            actionText = if (canDrawOverlays) null else s[S.OverlayGrant],
+                            onAction = { context.startActivity(backend.overlayPermissionIntent()) },
                         )
+                        SettingsDivider(insetWithIcon = false)
+                        SettingsSegmentedRow(
+                            title = s[S.OverlayPosition],
+                            subtitle = s[S.OverlayOemHint],
+                            options = listOf(
+                                "top" to s[S.OverlayTop],
+                                "bottom" to s[S.OverlayBottom],
+                                "custom" to s[S.OverlayCustom],
+                            ),
+                            selected = promptPosition,
+                            onSelect = { pos ->
+                                promptPosition = pos
+                                backend.setPromptOverlayPosition(pos)
+                            },
+                        )
+                        if (promptPosition == "custom") {
+                            SettingsDivider(insetWithIcon = false)
+                            SettingsTile(
+                                title = s[S.OverlayAdjustPosition],
+                                subtitle = s[S.OverlayCustomHint],
+                                trailingText = "${(promptRatio * 100).roundToInt()}%",
+                                onClick = { showOverlayPositionDialog = true },
+                            )
+                        }
                     }
-                    Text(s[S.PromptContentSettings], style = MaterialTheme.typography.bodyMedium)
-                    SwitchRow(
+                    SettingsDivider(insetWithIcon = false)
+                    SettingsSwitchTile(
                         title = s[S.ShowPromptDetails],
                         checked = promptDetails,
                         onCheckedChange = {
@@ -214,6 +154,10 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             backend.setPromptShowDetails(it)
                         },
                     )
+                }
+            }
+            item {
+                SectionCard(s[S.PromptContentSettings]) {
                     SwitchRow(
                         title = s[S.HidePromptDetailsOnLock],
                         checked = hideOnLock,
@@ -337,7 +281,6 @@ fun PromptSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     }
                 }
             }
-        }
     }
 
     if (showNotificationTitleDialog) {

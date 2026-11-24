@@ -33,6 +33,9 @@ data class PortablePrefsSnapshot(
     val focusSchedulesJson: String? = null,
     val autoHideBottomBar: Boolean? = null,
     val offlineMode: Boolean? = null,
+    val foregroundOnlyPackages: Set<String>? = null,
+    val forwardingSplitExitEnabled: Boolean? = null,
+    val forwardingProxyPackages: Set<String>? = null,
 )
 
 data class FullBackupSnapshot(
@@ -91,6 +94,9 @@ object FullBackupCodec {
             portablePrefs.focusSchedulesJson?.let { put("focusSchedulesJson", it) }
             portablePrefs.autoHideBottomBar?.let { put("autoHideBottomBar", it) }
             portablePrefs.offlineMode?.let { put("offlineMode", it) }
+            portablePrefs.foregroundOnlyPackages?.let { put("foregroundOnlyPackages", JSONArray(it.sorted())) }
+            portablePrefs.forwardingSplitExitEnabled?.let { put("forwardingSplitExitEnabled", it) }
+            portablePrefs.forwardingProxyPackages?.let { put("forwardingProxyPackages", JSONArray(it.sorted())) }
         }
         return JSONObject().apply {
             put("format", FORMAT)
@@ -160,6 +166,9 @@ object FullBackupCodec {
                 focusSchedulesJson = p.optString("focusSchedulesJson").takeIf { it.isNotBlank() },
                 autoHideBottomBar = if (p.has("autoHideBottomBar")) p.optBoolean("autoHideBottomBar") else null,
                 offlineMode = if (p.has("offlineMode")) p.optBoolean("offlineMode") else null,
+                foregroundOnlyPackages = p.optJSONArray("foregroundOnlyPackages")?.toStringList()?.toSet(),
+                forwardingSplitExitEnabled = if (p.has("forwardingSplitExitEnabled")) p.optBoolean("forwardingSplitExitEnabled") else null,
+                forwardingProxyPackages = p.optJSONArray("forwardingProxyPackages")?.toStringList()?.toSet(),
             )
         }
         val autoUrls = root.optJSONArray("automationSubscriptionUrls")?.toStringList().orEmpty()

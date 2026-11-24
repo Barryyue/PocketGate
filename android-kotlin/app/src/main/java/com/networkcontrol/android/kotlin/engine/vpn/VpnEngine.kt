@@ -46,6 +46,8 @@ class VpnEngine(
     private val blocklist: () -> com.networkcontrol.android.kotlin.engine.blocklist.BlocklistMatcher = {
         com.networkcontrol.android.kotlin.engine.blocklist.BlocklistMatcher.Empty
     },
+    /** 查詢目前前台應用包名（僅在設定了「僅前台聯網」且亮屏未鎖屏時呼叫）。 */
+    private val foregroundPackageProvider: () -> String? = { null },
 ) {
     val counters = VpnEngineCounters()
     val fakeDns = FakeDnsPool()
@@ -75,6 +77,10 @@ class VpnEngine(
     @Volatile
     private var applied: VpnTunnelConfig? = null
 
+    /** 目前偵測到的前台應用包名（供「僅前台聯網」策略使用；息屏或鎖屏時為 null）。 */
+    @Volatile
+    private var currentForegroundPackage: String? = null
+
     private val reporter: BlockedFlowReporter = BlockedFlowReporter(
         owners = owners,
         catalog = catalog,
@@ -88,6 +94,9 @@ class VpnEngine(
         onBlocklisted = { flow: FlowInfo -> pipeline.recordBlocklisted(flow, blockedListId(flow)) },
     )
 
+    /** 按應用分流出口路由快取：由 ForwardingPacketFilter 寫入，DirectSocksServer 讀取。 */
+    val splitExitRouter = SplitExitRouter()
+
     /** 轉發模式的逐連線過濾層：路由計畫決定放行（轉發）、阻止或詢問。 */
     val forwardingFilter: ForwardingPacketFilter = ForwardingPacketFilter(
         ownerOf = { protocol, local, remote -> owners.getOwnerUid(protocol, local, remote) },
@@ -95,11 +104,37 @@ class VpnEngine(
         onBlocked = { info, uid, _ -> reporter.report(info, uid) },
         blockUdp = { !preferences.socks5Udp },
         redirectDns = { preferences.dnsBypassProtection },
-        onForwarded = { info, uid -> reporter.reportAllowed(info, uid) },
+        onForwarded = { info, uid ->
+            recordSplitExitRoute(info, uid)
+            reporter.reportAllowed(info, uid)
+        },
         onBlocklisted = { info, uid -> reporter.reportBlocklisted(info, uid) },
         failClosed = { _plan.value.mode == com.networkcontrol.android.kotlin.core.model.FilterMode.BlockAll },
         blockQuic = { preferences.blockQuic },
     )
+
+    private fun recordSplitExitRoute(info: PacketInfo, uid: Int?) {
+        if (!preferences.forwardingSplitExitEnabled || uid == null) return
+        val target = forwardingFilter.hostnameFor(info.destination.address)
+            ?: info.destination.address.hostAddress
+            ?: return
+        val proxyApps = preferences.forwardingProxyPackages
+        val packages = _plan.value.find(uid)?.packages
+            ?: catalog.packagesForUid(uid, inheritPrimary = _plan.value.cloneAppsInheritPrimary)
+        val route = if (proxyApps.isNotEmpty() && packages.any { it in proxyApps }) {
+            ExitRoute.Socks5(
+                UpstreamSocks5Config(
+                    host = preferences.socks5Host,
+                    port = preferences.socks5Port,
+                    username = preferences.socks5Username.orEmpty(),
+                    password = preferences.socks5Password.orEmpty(),
+                ),
+            )
+        } else {
+            ExitRoute.Direct
+        }
+        splitExitRouter.record(target, info.destination.port, route)
+    }
 
     /** 內建直連出口；只在逐連線模式且選擇直連時執行。 */
     @Volatile
@@ -124,6 +159,13 @@ class VpnEngine(
             resolve = exitResolver::resolve,
             bindSocket = { underlying.bind(it) },
             bindDatagram = { underlying.bind(it) },
+            routeFor = { req ->
+                if (preferences.forwardingSplitExitEnabled) {
+                    splitExitRouter.resolve(req.host ?: req.address?.hostAddress, req.port)
+                } else {
+                    ExitRoute.Direct
+                }
+            },
         ).also {
             it.start()
             directServer = it
@@ -287,8 +329,39 @@ class VpnEngine(
         scope.launch { network.state.collect { requestReplan() } }
         scope.launch {
             screenState.locked.collect { locked ->
+                if (locked) currentForegroundPackage = null
                 requestReplan()
                 if (!locked) requestUpstreamCheck()
+            }
+        }
+        scope.launch {
+            screenState.interactive.collect { interactive ->
+                if (!interactive) {
+                    currentForegroundPackage = null
+                    if (preferences.foregroundOnlyPackages.isNotEmpty()) requestReplan()
+                }
+            }
+        }
+        scope.launch {
+            while (isActive) {
+                val fgOnly = preferences.foregroundOnlyPackages
+                if (fgOnly.isEmpty() || !protection.isEnabled || !screenState.interactive.value || screenState.locked.value) {
+                    if (currentForegroundPackage != null) {
+                        currentForegroundPackage = null
+                        if (fgOnly.isNotEmpty()) requestReplan()
+                    }
+                    delay(FOREGROUND_IDLE_POLL_MS)
+                    continue
+                }
+                val detected = runCatching { foregroundPackageProvider() }.getOrNull()
+                val previous = currentForegroundPackage
+                if (detected != previous) {
+                    currentForegroundPackage = detected
+                    if ((previous != null && previous in fgOnly) || (detected != null && detected in fgOnly)) {
+                        requestReplan()
+                    }
+                }
+                delay(FOREGROUND_ACTIVE_POLL_MS)
             }
         }
         scope.launch { focus.session.collect { requestReplan() } }
@@ -388,9 +461,16 @@ class VpnEngine(
                 emptySet()
             },
             cloneAppsInheritPrimary = preferences.cloneAppsInheritPrimary,
+            foregroundOnlyPackages = preferences.foregroundOnlyPackages,
+            foregroundPackage = if (screenState.interactive.value && !screenState.locked.value) {
+                currentForegroundPackage
+            } else {
+                null
+            },
         )
         _plan.value = plan
         identities.clear()
+        splitExitRouter.clear()
         forwardingFilter.invalidate()
 
         if (!protection.isEnabled) {
@@ -407,15 +487,18 @@ class VpnEngine(
             return
         }
 
-        val direct = preferences.forwardingEnabled && preferences.usesDirectUpstream
-        val server = if (direct) ensureDirectServer() else null
+        val splitExit = preferences.forwardingEnabled && preferences.forwardingSplitExitEnabled
+        val useLocalRouter = preferences.forwardingEnabled && (preferences.usesDirectUpstream || splitExit)
+        val server = if (useLocalRouter) ensureDirectServer() else null
         val allowLan = preferences.allowLan
         val config = if (preferences.forwardingEnabled) {
             VpnTunnelConfig(
                 bypassPackages = buildSet {
-                    // 本應用必須排除：內建出口的對外連線才不會回到虛擬網卡。
+                    // 本應用必須排除：內建出口／分流路由的對外連線才不會回到虛擬網卡。
                     add(selfPackage)
-                    if (!direct) preferences.socks5BypassPackage?.let(::add)
+                    if (!preferences.usesDirectUpstream || splitExit) {
+                        preferences.socks5BypassPackage?.let(::add)
+                    }
                     addAll(preferences.forwardingDirectPackages)
                 },
                 forwarding = true,
@@ -445,7 +528,7 @@ class VpnEngine(
         _forwardingActive.value = tunnel.isForwarding
         _tunnelState.value = tunnel.state
         _tunnelError.value = tunnel.lastError
-        if (config.forwarding && !direct && tunnel.isForwarding) {
+        if (config.forwarding && (!useLocalRouter || splitExit) && tunnel.isForwarding) {
             requestUpstreamCheck()
         }
         com.networkcontrol.android.kotlin.platform.AppLog.i(
@@ -481,6 +564,8 @@ class VpnEngine(
         private const val DETACH_REBUILD_INTERVAL_MS = 10_000L
         private const val DNS_BYPASS_LIST_ID = "dns-bypass"
         private const val FAILURE_REBUILD_INTERVAL_MS = 10_000L
+        private const val FOREGROUND_ACTIVE_POLL_MS = 1_500L
+        private const val FOREGROUND_IDLE_POLL_MS = 5_000L
 
         /** 判斷代理主機是否指向本機回環位址。 */
         fun isLoopbackHost(host: String): Boolean {

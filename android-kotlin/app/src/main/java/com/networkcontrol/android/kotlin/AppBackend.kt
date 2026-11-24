@@ -1088,6 +1088,46 @@ class AppBackend(val container: AppContainer) {
         if (next != current) setForwardingDirectPackages(next)
     }
 
+    /** 僅前台聯網（背景自動禁網）的應用集合。 */
+    fun foregroundOnlyPackages(): Set<String> = container.preferences.foregroundOnlyPackages
+
+    fun setAppForegroundOnly(packageName: String, foregroundOnly: Boolean) {
+        val current = container.preferences.foregroundOnlyPackages
+        val next = if (foregroundOnly) current + packageName else current - packageName
+        if (next != current) {
+            container.preferences.foregroundOnlyPackages = next
+            container.vpnEngine.requestReplan()
+        }
+    }
+
+    /** 第三方自動化（Tasker / MacroDroid）廣播介面開關與 Token。 */
+    fun externalAutomationEnabled(): Boolean = container.preferences.externalAutomationEnabled
+
+    fun setExternalAutomationEnabled(enabled: Boolean) {
+        container.preferences.externalAutomationEnabled = enabled
+    }
+
+    fun externalAutomationToken(): String = container.preferences.externalAutomationToken
+
+    fun setExternalAutomationToken(token: String) {
+        container.preferences.externalAutomationToken = token.trim()
+    }
+
+    /** 逐連線按應用分流出口（部分應用走外部 SOCKS5、其餘走內建直連）。 */
+    fun forwardingSplitExitEnabled(): Boolean = container.preferences.forwardingSplitExitEnabled
+
+    fun setForwardingSplitExitEnabled(enabled: Boolean) {
+        container.preferences.forwardingSplitExitEnabled = enabled
+        container.vpnEngine.requestReplan()
+    }
+
+    fun forwardingProxyPackages(): Set<String> = container.preferences.forwardingProxyPackages
+
+    fun setForwardingProxyPackages(packages: Set<String>) {
+        container.preferences.forwardingProxyPackages = packages.toSet()
+        container.vpnEngine.requestReplan()
+    }
+
     /** 隧道目前是否真的在轉發（啟動失敗回退到黑洞模式時為 false）。 */
     val forwardingActive = container.vpnEngine.forwardingActive
 
@@ -1279,6 +1319,9 @@ class AppBackend(val container: AppContainer) {
                 focusSchedulesJson = prefs.focusSchedulesJson,
                 autoHideBottomBar = prefs.autoHideBottomBar,
                 offlineMode = prefs.offlineMode,
+                foregroundOnlyPackages = prefs.foregroundOnlyPackages,
+                forwardingSplitExitEnabled = prefs.forwardingSplitExitEnabled,
+                forwardingProxyPackages = prefs.forwardingProxyPackages,
             ),
             automationSubscriptionUrls = autoUrls,
         )
@@ -1402,6 +1445,9 @@ class AppBackend(val container: AppContainer) {
                     prefs.offlineMode = it
                     _offlineMode.value = it
                 }
+                p.foregroundOnlyPackages?.let { prefs.foregroundOnlyPackages = it }
+                p.forwardingSplitExitEnabled?.let { prefs.forwardingSplitExitEnabled = it }
+                p.forwardingProxyPackages?.let { prefs.forwardingProxyPackages = it }
             }
         }
         val imported = RuleTransferService.importForPlan(snapshot.rulesJson, container.profiles.all)

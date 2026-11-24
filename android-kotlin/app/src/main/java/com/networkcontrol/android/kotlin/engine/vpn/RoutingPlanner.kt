@@ -34,6 +34,8 @@ object VpnRoutingPlanner {
         focusAllowedPackages: Set<String> = emptySet(),
         lockScreenAllowedPackages: Set<String> = emptySet(),
         cloneAppsInheritPrimary: Boolean = true,
+        foregroundOnlyPackages: Set<String> = emptySet(),
+        foregroundPackage: String? = null,
     ): VpnRoutingPlan {
         val skipped = rules.rules.mapNotNull { rule ->
             getSkipReason(rule)?.let { SkippedRule(rule.id, it) }
@@ -58,6 +60,8 @@ object VpnRoutingPlanner {
                 trustedSigners,
                 focusAllowedPackages,
                 lockScreenAllowedPackages,
+                foregroundOnlyPackages,
+                foregroundPackage,
             )
             byUid[uid] = routing
             if (routing.decision == AppRoutingDecision.Bypass) bypass.addAll(packages)
@@ -182,6 +186,8 @@ object VpnRoutingPlanner {
         trustedSigners: Set<String>,
         focusAllowedPackages: Set<String>,
         lockScreenAllowedPackages: Set<String>,
+        foregroundOnlyPackages: Set<String>,
+        foregroundPackage: String?,
     ): AppRouting {
         if (packages.contains(selfPackage)) {
             return AppRouting(uid, primary.packageName, packages, AppRoutingDecision.Bypass, AppRoutingReason.Self)
@@ -215,6 +221,18 @@ object VpnRoutingPlanner {
                 uid, primary.packageName, packages, AppRoutingDecision.Block, AppRoutingReason.Mode,
             )
             else -> Unit
+        }
+        if (foregroundOnlyPackages.isNotEmpty() &&
+            packages.any { it in foregroundOnlyPackages } &&
+            (foregroundPackage == null || foregroundPackage !in packages)
+        ) {
+            return AppRouting(
+                uid,
+                primary.packageName,
+                packages,
+                AppRoutingDecision.Block,
+                AppRoutingReason.BackgroundBlocked,
+            )
         }
 
         // 共享 UID：遍歷組內所有套件，按規則優先級（拒絕優先）選出勝出規則，避免非首個套件的規則被靜默忽略。

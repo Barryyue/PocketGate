@@ -49,7 +49,7 @@ class PromptForegroundTracker(private val context: Context) {
         keyguard?.isKeyguardLocked == true
 
     @Synchronized
-    fun foregroundUid(): Int? {
+    fun foregroundPackage(): String? {
         if (!isAvailable()) return null
         if (!sessionsInitialized) {
             sessionsInitialized = true
@@ -115,7 +115,12 @@ class PromptForegroundTracker(private val context: Context) {
         }.onFailure {
             currentPackage = null
         }
-        val packageName = currentPackage ?: return null
+        return currentPackage
+    }
+
+    @Synchronized
+    fun foregroundUid(): Int? {
+        val packageName = foregroundPackage() ?: return null
         return uidForPackage(packageName)
     }
 
@@ -137,13 +142,6 @@ class PromptForegroundTracker(private val context: Context) {
     /** 應用目前是否有頁面在前台。呼叫前先用 [foregroundPackage] 刷新事件。 */
     @Synchronized
     fun isForeground(packageName: String): Boolean = sessions.isForeground(packageName)
-
-    /** 取得目前前台套件名稱；會順便刷新 UsageStats。 */
-    @Synchronized
-    fun foregroundPackage(): String? {
-        foregroundUid()
-        return currentPackage
-    }
 
     private fun activityKey(packageName: String, className: String?): String =
         "$packageName/${className.orEmpty()}"

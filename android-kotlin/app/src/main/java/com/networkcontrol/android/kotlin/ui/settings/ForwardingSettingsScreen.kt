@@ -88,6 +88,9 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var showProxyAppDialog by remember { mutableStateOf(false) }
     var directPackages by remember { mutableStateOf(backend.forwardingDirectPackages()) }
     var showDirectAppsDialog by remember { mutableStateOf(false) }
+    var splitExitEnabled by remember { mutableStateOf(backend.forwardingSplitExitEnabled()) }
+    var proxyPackages by remember { mutableStateOf(backend.forwardingProxyPackages()) }
+    var showSplitProxyAppsDialog by remember { mutableStateOf(false) }
     var privateDnsStrict by remember { mutableStateOf(backend.privateDnsMode() == "hostname") }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         privateDnsStrict = backend.privateDnsMode() == "hostname"
@@ -97,8 +100,9 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
         initialValue = null,
         showProxyAppDialog,
         showDirectAppsDialog,
+        showSplitProxyAppsDialog,
     ) {
-        if (showProxyAppDialog || showDirectAppsDialog) {
+        if (showProxyAppDialog || showDirectAppsDialog || showSplitProxyAppsDialog) {
             value = withContext(Dispatchers.IO) { backend.installedApps() }
         }
     }
@@ -107,25 +111,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
 
     BackHandler { onBack() }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("‹ ${s[S.Back]}") }
-            Text(
-                s[S.ForwardingMode],
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    SettingsSubScreenScaffold(title = s[S.ForwardingMode], onBack = onBack) {
             item {
                 SectionCard {
                     Text(
@@ -188,23 +174,36 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
 
             item {
                 SectionCard(s[S.ForwardingUpstream]) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = !viaProxy,
-                            onClick = {
-                                forwardingUpstream = ForwardingUpstream.DIRECT
-                                backend.setForwardingUpstream(forwardingUpstream)
-                            },
-                            label = { Text(s[S.UpstreamDirect]) },
-                        )
-                        FilterChip(
-                            selected = viaProxy,
-                            onClick = {
-                                forwardingUpstream = ForwardingUpstream.SOCKS5
-                                backend.setForwardingUpstream(forwardingUpstream)
-                            },
-                            label = { Text(s[S.UpstreamSocks5]) },
-                        )
+                    SettingsSegmentedRow(
+                        title = s[S.ForwardingUpstream],
+                        options = listOf(
+                            ForwardingUpstream.DIRECT to s[S.UpstreamDirect],
+                            ForwardingUpstream.SOCKS5 to s[S.UpstreamSocks5],
+                        ),
+                        selected = forwardingUpstream,
+                        onSelect = { selected ->
+                            forwardingUpstream = selected
+                            backend.setForwardingUpstream(selected)
+                        },
+                    )
+                    SwitchRow(
+                        title = s[S.SplitExitTitle],
+                        subtitle = s[S.SplitExitHint],
+                        checked = splitExitEnabled,
+                        onCheckedChange = { enabled ->
+                            guard.run {
+                                splitExitEnabled = enabled
+                                backend.setForwardingSplitExitEnabled(enabled)
+                            }
+                        },
+                    )
+                    if (splitExitEnabled) {
+                        OutlinedButton(
+                            onClick = { showSplitProxyAppsDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("${s[S.SplitExitProxyApps]} (${s.format(S.SplitExitProxyAppsCount, proxyPackages.size)})")
+                        }
                     }
                     if (!viaProxy) {
                         Text(
@@ -489,10 +488,24 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     )
                 }
             }
-        }
     }
 
     val apps = pickerApps
+    if (showSplitProxyAppsDialog && apps != null) {
+        DirectAppsDialog(
+            title = s[S.SplitExitProxyApps],
+            apps = apps,
+            initial = proxyPackages,
+            onDismiss = { showSplitProxyAppsDialog = false },
+            onSave = { selected ->
+                guard.run {
+                    proxyPackages = selected
+                    backend.setForwardingProxyPackages(selected)
+                }
+                showSplitProxyAppsDialog = false
+            },
+        )
+    }
     if (showProxyAppDialog && apps != null) {
         ProxyAppDialog(
             apps = apps,

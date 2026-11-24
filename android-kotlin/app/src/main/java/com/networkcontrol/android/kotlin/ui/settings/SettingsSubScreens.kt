@@ -509,6 +509,57 @@ fun PermissionsSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                 )
             }
         }
+
+        item {
+            val guard = LocalSensitiveAction.current
+            var extEnabled by remember { mutableStateOf(backend.externalAutomationEnabled()) }
+            var extToken by remember { mutableStateOf(backend.externalAutomationToken()) }
+            SettingsGroup(s[S.ExternalAutomation]) {
+                SettingsSwitchTile(
+                    title = s[S.ExternalAutomation],
+                    subtitle = s[S.ExternalAutomationHint],
+                    checked = extEnabled,
+                    onCheckedChange = { enabled ->
+                        guard.run {
+                            extEnabled = enabled
+                            backend.setExternalAutomationEnabled(enabled)
+                        }
+                    },
+                )
+                if (extEnabled) {
+                    SettingsDivider(insetWithIcon = false)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = extToken,
+                            onValueChange = {
+                                extToken = it.take(64)
+                                backend.setExternalAutomationToken(extToken)
+                            },
+                            label = { Text(s[S.ExternalAutomationToken]) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                val snippet = com.networkcontrol.android.kotlin.platform.automation
+                                    .ExternalAutomationCommand.exampleSnippet(extToken)
+                                context.getSystemService(android.content.ClipboardManager::class.java)
+                                    ?.setPrimaryClip(android.content.ClipData.newPlainText("pocketgate-automation", snippet))
+                                Toast.makeText(context, s[S.Copied], Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(s[S.ExternalAutomationCopyExample])
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -22,6 +22,8 @@ data class FocusSchedule(
     val startMinute: Int = 9 * 60,
     val endMinute: Int = 18 * 60,
     val enabled: Boolean = true,
+    /** 此時間表內仍允許聯網的應用包名集合；空集合表示全部阻止。 */
+    val allowedPackages: Set<String> = emptySet(),
 ) {
     val crossesMidnight: Boolean get() = endMinute <= startMinute
 }
@@ -37,6 +39,9 @@ class FocusScheduler(
 ) {
     private val _schedules = MutableStateFlow(load())
     val schedules: StateFlow<List<FocusSchedule>> = _schedules.asStateFlow()
+
+    /** 排程變更或觸發後回呼下一次喚醒時間（毫秒），供 AlarmManager 精準喚醒。 */
+    var onScheduleUpdated: ((Long?) -> Unit)? = null
 
     init {
         // 沒有啟用的專注時間表時完全掛起零喚醒；有啟用時對齊每分鐘整點檢查一次。
@@ -77,11 +82,32 @@ class FocusScheduler(
             schedule.enabled && day in schedule.days && schedule.contains(minute)
         } ?: return
         val end = endTime(now, match)
-        focus.startUntil(end.toInstant().toEpochMilli(), emptySet())
+        focus.startUntil(end.toInstant().toEpochMilli(), match.allowedPackages)
+        onScheduleUpdated?.invoke(nextTriggerMillis(now.plusMinutes(1)))
         com.networkcontrol.android.kotlin.platform.AppLog.i(
             "focus",
-            "schedule started id=${match.id} until=$end",
+            "schedule started id=${match.id} allowed=${match.allowedPackages.size} until=$end",
         )
+    }
+
+    /** 計算下一個最近的排程啟動時間（epoch 毫秒）；無啟用排程時回傳 null。 */
+    fun nextTriggerMillis(now: ZonedDateTime = ZonedDateTime.now()): Long? {
+        val activeSchedules = _schedules.value.filter { it.enabled && it.days.isNotEmpty() }
+        if (activeSchedules.isEmpty()) return null
+        var best: Long? = null
+        for (dayOffset in 0L..7L) {
+            val date = now.toLocalDate().plusDays(dayOffset)
+            val dayOfWeek = date.dayOfWeek.value
+            for (schedule in activeSchedules) {
+                if (dayOfWeek !in schedule.days) continue
+                val candidate = date.atTime(LocalTime.of(schedule.startMinute / 60, schedule.startMinute % 60))
+                    .atZone(now.zone)
+                if (!candidate.isAfter(now)) continue
+                val millis = candidate.toInstant().toEpochMilli()
+                if (best == null || millis < best) best = millis
+            }
+        }
+        return best
     }
 
     private fun endTime(now: ZonedDateTime, schedule: FocusSchedule): ZonedDateTime {
@@ -105,10 +131,14 @@ class FocusScheduler(
                         put("startMinute", schedule.startMinute)
                         put("endMinute", schedule.endMinute)
                         put("enabled", schedule.enabled)
+                        if (schedule.allowedPackages.isNotEmpty()) {
+                            put("allowedPackages", JSONArray(schedule.allowedPackages.sorted()))
+                        }
                     },
                 )
             }
         }.toString()
+        onScheduleUpdated?.invoke(nextTriggerMillis())
     }
 
     private fun load(): List<FocusSchedule> {
@@ -125,6 +155,9 @@ class FocusScheduler(
                     startMinute = obj.optInt("startMinute", 9 * 60).coerceIn(0, 1439),
                     endMinute = obj.optInt("endMinute", 18 * 60).coerceIn(0, 1439),
                     enabled = obj.optBoolean("enabled", true),
+                    allowedPackages = obj.optJSONArray("allowedPackages")
+                        ?.let { arr -> (0 until arr.length()).mapNotNull { arr.optString(it).takeIf(String::isNotBlank) }.toSet() }
+                        ?: emptySet(),
                 )
             }
         }.getOrDefault(emptyList())

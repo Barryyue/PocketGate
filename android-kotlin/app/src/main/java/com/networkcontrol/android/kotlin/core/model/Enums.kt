@@ -149,7 +149,8 @@ enum class AppRoutingReason(val code: Int) {
     Mode(3),
     Trusted(4),
     Focus(5),
-    LockScreen(6);
+    LockScreen(6),
+    BackgroundBlocked(7);
 
     companion object {
         fun fromCode(code: Int): AppRoutingReason = entries.firstOrNull { it.code == code } ?: Mode

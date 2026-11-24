@@ -93,26 +93,7 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
 
     BackHandler { onBack() }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) {
-                Text("‹ ${s[S.Back]}")
-            }
-            Text(
-                s[S.IslandConfig],
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-        }
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    SettingsSubScreenScaffold(title = s[S.IslandConfig], onBack = onBack) {
             item {
                 SectionCard(s[S.IslandPreview]) {
                     IslandPreview(
@@ -368,7 +349,6 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     }
                 }
             }
-        }
     }
 
     if (showTextColorDialog) {

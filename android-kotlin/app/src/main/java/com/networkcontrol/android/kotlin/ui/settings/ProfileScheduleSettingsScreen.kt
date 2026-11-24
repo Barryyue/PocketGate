@@ -67,25 +67,10 @@ fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
 
     BackHandler { onBack() }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("‹ ${s[S.Back]}") }
-            Text(
-                "${s[S.ProfileSettings]} · ${s[S.FocusSchedule]}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    SettingsSubScreenScaffold(
+        title = "${s[S.ProfileSettings]} · ${s[S.FocusSchedule]}",
+        onBack = onBack,
+    ) {
             item {
                 SectionCard(s[S.ProfileSettings]) {
                     profiles.forEach { profile ->
@@ -164,7 +149,6 @@ fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     ) { Text(s[S.AddSchedule]) }
                 }
             }
-        }
     }
 
     if (showProfileDialog) {
@@ -203,8 +187,17 @@ fun ProfileScheduleSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     }
 
     if (showScheduleDialog) {
+        val scheduleApps by androidx.compose.runtime.produceState<List<com.networkcontrol.android.kotlin.core.model.InstalledApp>>(
+            initialValue = emptyList(),
+            showScheduleDialog,
+        ) {
+            value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                backend.installedApps()
+            }
+        }
         ScheduleDialog(
             schedule = editingSchedule,
+            apps = scheduleApps,
             onDismiss = { showScheduleDialog = false },
             onSave = { schedule ->
                 backend.saveFocusSchedule(schedule)
