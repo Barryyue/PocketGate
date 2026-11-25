@@ -8,9 +8,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -73,6 +78,8 @@ import java.time.format.DateTimeFormatter
 private enum class ReasonFilter { All, Rule, Mode, Prompt, Dnd, Blocklist }
 private enum class LogsTab { Blocked, Allowed, Live }
 
+private enum class LogsTimeRange { All, Today, Last24h, Last7d }
+
 @Composable
 fun LogsScreen(
     backend: AppBackend,
@@ -84,6 +91,7 @@ fun LogsScreen(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf(ReasonFilter.All) }
+    var timeRange by remember { mutableStateOf(LogsTimeRange.All) }
     var activeTab by remember { mutableStateOf(LogsTab.Blocked) }
     var entries by remember { mutableStateOf<List<LogEntry>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
@@ -91,6 +99,7 @@ fun LogsScreen(
     var refreshKey by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<LogEntry?>(null) }
     var showExportDialog by remember { mutableStateOf(false) }
+    var showClearConfirm by remember { mutableStateOf(false) }
     var pendingExport by remember { mutableStateOf<List<LogEntry>?>(null) }
     val forwardingActive by backend.forwardingActive.collectAsStateWithLifecycle()
 
@@ -149,8 +158,21 @@ fun LogsScreen(
         }
     }
 
-    val filtered = remember(entries, query, filter) {
+    val filtered = remember(entries, query, filter, timeRange) {
+        val now = System.currentTimeMillis()
+        val cutoff = when (timeRange) {
+            LogsTimeRange.All -> 0L
+            LogsTimeRange.Today -> java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            LogsTimeRange.Last24h -> now - 24L * 60 * 60 * 1000
+            LogsTimeRange.Last7d -> now - 7L * 24 * 60 * 60 * 1000
+        }
         entries.asSequence()
+            .filter { entry -> cutoff == 0L || entry.lastTs >= cutoff }
             .filter { entry ->
                 query.isBlank() ||
                     entry.appName?.contains(query, ignoreCase = true) == true ||
@@ -187,12 +209,19 @@ fun LogsScreen(
                 title = s[S.Logs],
                 subtitle = s[S.LogsSubtitle],
                 trailing = {
-                    IconButton(onClick = { refreshKey++ }) {
-                        Icon(
-                            imageVector = Icons.Rounded.Refresh,
-                            contentDescription = s[S.Refresh],
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (activeTab != LogsTab.Live) {
+                            TextButton(onClick = { showClearConfirm = true }) {
+                                Text(s[S.LogsClear])
+                            }
+                        }
+                        IconButton(onClick = { refreshKey++ }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Refresh,
+                                contentDescription = s[S.Refresh],
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 },
             )
@@ -217,14 +246,33 @@ fun LogsScreen(
             )
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(activeTab == LogsTab.Blocked, { activeTab = LogsTab.Blocked }, { Text(s[S.LogsShowBlocked]) })
-                FilterChip(activeTab == LogsTab.Allowed, { activeTab = LogsTab.Allowed }, { Text(s[S.LogsShowAllowed]) })
-                FilterChip(
-                    activeTab == LogsTab.Live,
-                    { activeTab = LogsTab.Live },
-                    { Text(if (liveConnections.isNotEmpty() && activeTab == LogsTab.Live) "${s[S.LogsShowLive]} (${liveConnections.size})" else s[S.LogsShowLive]) },
-                )
+            val tabItems = listOf(
+                LogsTab.Blocked to s[S.LogsShowBlocked],
+                LogsTab.Allowed to s[S.LogsShowAllowed],
+                LogsTab.Live to (
+                    if (liveConnections.isNotEmpty() && activeTab == LogsTab.Live) {
+                        "${s[S.LogsShowLive]} (${liveConnections.size})"
+                    } else {
+                        s[S.LogsShowLive]
+                    }
+                    ),
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                tabItems.forEachIndexed { index, (tab, label) ->
+                    SegmentedButton(
+                        selected = activeTab == tab,
+                        onClick = { activeTab = tab },
+                        shape = SegmentedButtonDefaults.itemShape(index, tabItems.size),
+                    ) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
         if (activeTab == LogsTab.Live) {
@@ -265,10 +313,36 @@ fun LogsScreen(
                                 }
                             }
                         },
+                        onDenyTarget = conn.hostname?.let { host ->
+                            {
+                                guard.run {
+                                    scope.launch {
+                                        runCatching { backend.denyDomain(host, conn.packageName) }
+                                            .onSuccess {
+                                                backend.cutLiveConnection(conn.local, conn.remote)
+                                                Toast.makeText(context, s.format(S.DenyDomainDone, host), Toast.LENGTH_SHORT).show()
+                                            }
+                                    }
+                                }
+                            }
+                        },
                     )
                 }
             }
         } else {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(timeRange == LogsTimeRange.All, { timeRange = LogsTimeRange.All }, { Text(s[S.LogsRangeAll]) })
+                    FilterChip(timeRange == LogsTimeRange.Today, { timeRange = LogsTimeRange.Today }, { Text(s[S.LogsRangeToday]) })
+                    FilterChip(timeRange == LogsTimeRange.Last24h, { timeRange = LogsTimeRange.Last24h }, { Text(s[S.LogsRange24h]) })
+                    FilterChip(timeRange == LogsTimeRange.Last7d, { timeRange = LogsTimeRange.Last7d }, { Text(s[S.LogsRange7d]) })
+                }
+            }
             item {
                 Row(
                     modifier = Modifier
@@ -295,7 +369,8 @@ fun LogsScreen(
                 }
             } else if (filtered.isEmpty()) {
                 val emptyText = when {
-                    query.isNotBlank() || filter != ReasonFilter.All -> s[S.NoMatchingLogs]
+                    activeTab == LogsTab.Allowed && !forwardingActive -> s[S.AllowedNeedsForwarding]
+                    query.isNotBlank() || filter != ReasonFilter.All || timeRange != LogsTimeRange.All -> s[S.NoMatchingLogs]
                     activeTab == LogsTab.Allowed -> s[S.NoAllowedLogs]
                     else -> s[S.NoLogs]
                 }
@@ -324,20 +399,24 @@ fun LogsScreen(
             entry = entry,
             tracker = backend.trackerOf(entry.hostname),
             listName = { id -> backend.blocklistName(id) },
-            onAllowDomain = { host ->
+            onFilterApp = { appKey ->
+                query = appKey
+                selected = null
+            },
+            onAllowDomain = { host, pkg ->
                 guard.run {
                     scope.launch {
-                        runCatching { backend.allowDomain(host) }
+                        runCatching { backend.allowDomain(host, pkg) }
                             .onSuccess { Toast.makeText(context, s.format(S.AllowDomainDone, host), Toast.LENGTH_SHORT).show() }
                             .onFailure { Toast.makeText(context, it.message.orEmpty(), Toast.LENGTH_SHORT).show() }
                     }
                 }
                 selected = null
             },
-            onDenyDomain = { host ->
+            onDenyDomain = { host, pkg ->
                 guard.run {
                     scope.launch {
-                        runCatching { backend.denyDomain(host) }
+                        runCatching { backend.denyDomain(host, pkg) }
                             .onSuccess { Toast.makeText(context, s.format(S.DenyDomainDone, host), Toast.LENGTH_SHORT).show() }
                             .onFailure { Toast.makeText(context, it.message.orEmpty(), Toast.LENGTH_SHORT).show() }
                     }
@@ -345,6 +424,33 @@ fun LogsScreen(
                 selected = null
             },
             onDismiss = { selected = null },
+        )
+    }
+
+    if (showClearConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirm = false },
+            title = { Text(s[S.LogsClear]) },
+            text = { Text(s[S.LogsClearConfirm]) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearConfirm = false
+                        guard.run {
+                            scope.launch {
+                                runCatching { backend.clearConnectionLogs() }
+                                    .onSuccess {
+                                        Toast.makeText(context, s[S.LogsCleared], Toast.LENGTH_SHORT).show()
+                                        refreshKey++
+                                    }
+                            }
+                        }
+                    },
+                ) { Text(s[S.LogsClear], color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirm = false }) { Text(s[S.Cancel]) }
+            },
         )
     }
 
@@ -401,6 +507,7 @@ private fun formatAge(millis: Long): String {
 private fun LiveConnectionRow(
     conn: AppBackend.LiveConnection,
     onCut: () -> Unit,
+    onDenyTarget: (() -> Unit)? = null,
 ) {
     val s = rememberUiStrings()
     val tokens = LocalAppVisualTokens.current
@@ -426,14 +533,18 @@ private fun LiveConnectionRow(
         border = border,
     ) {
         Row(
-            Modifier.padding(14.dp),
+            Modifier
+                .fillMaxWidth()
+                .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
+                .padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
                     .width(3.dp)
-                    .height(40.dp)
+                    .fillMaxHeight()
+                    .padding(vertical = 2.dp)
                     .clip(RoundedCornerShape(99.dp))
                     .background(scheme.primary),
             )
@@ -456,14 +567,37 @@ private fun LiveConnectionRow(
                     "TCP · :${conn.local.port} · ${formatAge(conn.ageMillis)}",
                     style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
                     color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            TextButton(onClick = onCut) {
-                Text(
-                    s[S.CutConnection],
-                    color = scheme.error,
-                    fontWeight = FontWeight.SemiBold,
-                )
+            Column(horizontalAlignment = Alignment.End) {
+                TextButton(
+                    onClick = onCut,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        s[S.CutConnection],
+                        color = scheme.error,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
+                if (onDenyTarget != null) {
+                    TextButton(
+                        onClick = onDenyTarget,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            s[S.DenyDomain],
+                            color = scheme.error,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                    }
+                }
             }
         }
     }
@@ -505,14 +639,18 @@ private fun LogRow(
         border = border,
     ) {
         Row(
-            Modifier.padding(14.dp),
+            Modifier
+                .fillMaxWidth()
+                .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
+                .padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
                     .width(3.dp)
-                    .height(44.dp)
+                    .fillMaxHeight()
+                    .padding(vertical = 2.dp)
                     .clip(RoundedCornerShape(99.dp))
                     .background(accent),
             )
@@ -535,12 +673,16 @@ private fun LogRow(
                     "${reasonLabel(s, entry.verdict.reason)} · ${formatDateTime(entry.lastTs)}",
                     style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
                     color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (tracker != null) {
                     Text(
                         "${s[S.TrackerLabel]}：${tracker.company} · ${com.networkcontrol.android.kotlin.ui.common.trackerCategoryLabel(s, tracker.category)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = scheme.tertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -573,11 +715,16 @@ private fun LogDetailDialog(
     entry: LogEntry,
     tracker: com.networkcontrol.android.kotlin.engine.blocklist.TrackerInfo?,
     listName: (String) -> String?,
-    onAllowDomain: (String) -> Unit,
-    onDenyDomain: (String) -> Unit,
+    onFilterApp: (String) -> Unit,
+    onAllowDomain: (String, String?) -> Unit,
+    onDenyDomain: (String, String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val s = rememberUiStrings()
+    val pkgName = entry.appPath?.removePrefix("android-app://")
+        ?.takeIf { it != entry.appPath && !it.startsWith("uid:") && it.isNotBlank() }
+    var onlyThisApp by remember(entry.id) { mutableStateOf(pkgName != null) }
+    val appFilterKey = entry.appName?.takeIf { it.isNotBlank() } ?: pkgName
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(s[S.LogDetail]) },
@@ -615,6 +762,29 @@ private fun LogDetailDialog(
                         DetailRow(s[S.Rule], id)
                     }
                 }
+                if (entry.hostname != null && pkgName != null) {
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(top = 6.dp),
+                    ) {
+                        FilterChip(
+                            selected = onlyThisApp,
+                            onClick = { onlyThisApp = true },
+                            label = { Text(s[S.ScopeOnlyApp], maxLines = 1, softWrap = false) },
+                        )
+                        FilterChip(
+                            selected = !onlyThisApp,
+                            onClick = { onlyThisApp = false },
+                            label = { Text(s[S.ScopeGlobal], maxLines = 1, softWrap = false) },
+                        )
+                    }
+                }
+                if (appFilterKey != null) {
+                    TextButton(onClick = { onFilterApp(appFilterKey) }) {
+                        Text(s[S.FilterThisApp])
+                    }
+                }
             }
         },
         confirmButton = {
@@ -622,11 +792,12 @@ private fun LogDetailDialog(
         },
         dismissButton = {
             val host = entry.hostname
+            val targetPkg = if (onlyThisApp) pkgName else null
             if (host != null) {
-                if (entry.verdict.reason == VerdictReason.Blocklist) {
-                    TextButton(onClick = { onAllowDomain(host) }) { Text(s[S.AllowDomain]) }
+                if (entry.verdict.action == com.networkcontrol.android.kotlin.core.model.VerdictAction.Deny) {
+                    TextButton(onClick = { onAllowDomain(host, targetPkg) }) { Text(s[S.AllowDomain]) }
                 } else if (entry.verdict.action == com.networkcontrol.android.kotlin.core.model.VerdictAction.Allow) {
-                    TextButton(onClick = { onDenyDomain(host) }) {
+                    TextButton(onClick = { onDenyDomain(host, targetPkg) }) {
                         Text(s[S.DenyDomain], color = MaterialTheme.colorScheme.error)
                     }
                 }
@@ -637,14 +808,14 @@ private fun LogDetailDialog(
 
 @Composable
 private fun DetailRow(label: String, value: String) {
-    Row {
+    Row(modifier = Modifier.fillMaxWidth()) {
         Text(
             "$label：",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(96.dp),
+            modifier = Modifier.width(82.dp).padding(end = 6.dp),
         )
-        SelectionContainer {
+        SelectionContainer(modifier = Modifier.weight(1f)) {
             Text(value, style = MaterialTheme.typography.bodySmall)
         }
     }

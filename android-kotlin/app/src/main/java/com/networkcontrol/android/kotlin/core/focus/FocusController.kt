@@ -21,6 +21,9 @@ class FocusController(
     private val _session = MutableStateFlow(load())
     val session: StateFlow<FocusSession?> = _session.asStateFlow()
 
+    /** 專注會話自然到期或手動結束時的回呼（傳入已結束的會話與持續分鐘數）。 */
+    var onSessionEnded: ((FocusSession, Int) -> Unit)? = null
+
     init {
         if (_session.value?.isActive(Time.now()) == false) {
             clear()
@@ -69,12 +72,23 @@ class FocusController(
     }
 
     fun stop() {
+        val ended = _session.value
         clear()
+        if (ended != null) {
+            val mins = ((Time.now() - ended.startedAt) / 60_000L).toInt().coerceAtLeast(1)
+            onSessionEnded?.invoke(ended, mins)
+        }
     }
 
     private fun clear() {
+        val previous = _session.value
+        val expired = previous != null && !previous.isActive(Time.now())
         _session.value = null
         preferences.focusSessionJson = null
+        if (expired) {
+            val mins = ((previous.endsAt - previous.startedAt) / 60_000L).toInt().coerceAtLeast(1)
+            onSessionEnded?.invoke(previous, mins)
+        }
     }
 
     private fun load(): FocusSession? {

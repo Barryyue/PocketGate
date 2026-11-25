@@ -207,10 +207,6 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_PROMPT_SHOW_DETAILS, true)
         set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_DETAILS, value).apply()
 
-    var promptShowExplanation: Boolean
-        get() = prefs.getBoolean(KEY_PROMPT_SHOW_EXPLANATION, true)
-        set(value) = prefs.edit().putBoolean(KEY_PROMPT_SHOW_EXPLANATION, value).apply()
-
     var promptHideDetailsOnLockScreen: Boolean
         get() = prefs.getBoolean(KEY_PROMPT_HIDE_DETAILS_LOCK, true)
         set(value) = prefs.edit().putBoolean(KEY_PROMPT_HIDE_DETAILS_LOCK, value).apply()
@@ -269,12 +265,33 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_SOCKS5_USERNAME, value).apply()
 
     var socks5Password: String?
-        get() = prefs.getString(KEY_SOCKS5_PASSWORD, null)?.takeIf { it.isNotEmpty() }
-        set(value) = prefs.edit().putString(KEY_SOCKS5_PASSWORD, value).apply()
+        get() = com.networkcontrol.android.kotlin.platform.SecretPrefsCipher
+            .decrypt(prefs.getString(KEY_SOCKS5_PASSWORD, null))
+            ?.takeIf { it.isNotEmpty() }
+        set(value) {
+            val stored = value?.takeIf { it.isNotEmpty() }
+                ?.let(com.networkcontrol.android.kotlin.platform.SecretPrefsCipher::encrypt)
+            prefs.edit().putString(KEY_SOCKS5_PASSWORD, stored).apply()
+        }
 
     var socks5Udp: Boolean
         get() = prefs.getBoolean(KEY_SOCKS5_UDP, true)
         set(value) = prefs.edit().putBoolean(KEY_SOCKS5_UDP, value).apply()
+
+    /** 逐連線模式：獨立阻擋 QUIC (UDP 443)，強制瀏覽器與應用回退 TCP/HTTP2，不影響其他 UDP 服務。 */
+    var blockQuic: Boolean
+        get() = prefs.getBoolean(KEY_BLOCK_QUIC, false)
+        set(value) = prefs.edit().putBoolean(KEY_BLOCK_QUIC, value).apply()
+
+    /** 允許局域網 (LAN)：排除私有網段不經 VPN，讓投屏、NAS、印表機不受攔截。 */
+    var allowLan: Boolean
+        get() = prefs.getBoolean(KEY_ALLOW_LAN, false)
+        set(value) = prefs.edit().putBoolean(KEY_ALLOW_LAN, value).apply()
+
+    /** 行動網路漫遊時自動進入全部阻止模式，防止高額漫遊流量費。 */
+    var blockOnRoaming: Boolean
+        get() = prefs.getBoolean(KEY_BLOCK_ON_ROAMING, false)
+        set(value) = prefs.edit().putBoolean(KEY_BLOCK_ON_ROAMING, value).apply()
 
     /** v0.2 共享應用規則遷移是否已經完成；完成後不再每次啟動都執行。 */
     var legacyRulesMigrated: Boolean
@@ -321,26 +338,6 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_SOCKS5_BYPASS_PACKAGE, null)?.takeIf { it.isNotBlank() }
         set(value) = prefs.edit().putString(KEY_SOCKS5_BYPASS_PACKAGE, value).apply()
 
-    /** 更新來源：GitHub / GitLab / Gitee / Custom。 */
-    var updateSource: com.networkcontrol.android.kotlin.core.update.UpdateSource
-        get() = runCatching {
-            enumValueOf<com.networkcontrol.android.kotlin.core.update.UpdateSource>(
-                prefs.getString(KEY_UPDATE_SOURCE, "GitHub").orEmpty(),
-            )
-        }.getOrDefault(com.networkcontrol.android.kotlin.core.update.UpdateSource.GitHub)
-        set(value) = prefs.edit().putString(KEY_UPDATE_SOURCE, value.name).apply()
-
-    /** GitHub / Gitee 為 owner/repo；GitLab 為 group/project。 */
-    var updateRepo: String
-        get() = prefs.getString(KEY_UPDATE_REPO, "Barryyue/PocketGate")
-            ?: "Barryyue/PocketGate"
-        set(value) = prefs.edit().putString(KEY_UPDATE_REPO, value.trim()).apply()
-
-    /** Custom 來源使用的 JSON URL。 */
-    var updateCustomUrl: String
-        get() = prefs.getString(KEY_UPDATE_CUSTOM_URL, "").orEmpty()
-        set(value) = prefs.edit().putString(KEY_UPDATE_CUSTOM_URL, value.trim()).apply()
-
     /** 首次啟動的權限引導彈窗是否已經展示或略過。 */
     var permissionGuideShown: Boolean
         get() = prefs.getBoolean(KEY_PERMISSION_GUIDE_SHOWN, false)
@@ -370,16 +367,65 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_WEBDAV_USERNAME, value.trim()).apply()
 
     var webdavPassword: String
-        get() = prefs.getString(KEY_WEBDAV_PASSWORD, "").orEmpty()
-        set(value) = prefs.edit().putString(KEY_WEBDAV_PASSWORD, value).apply()
+        get() = com.networkcontrol.android.kotlin.platform.SecretPrefsCipher
+            .decrypt(prefs.getString(KEY_WEBDAV_PASSWORD, ""))
+            .orEmpty()
+        set(value) {
+            val stored = if (value.isEmpty()) "" else com.networkcontrol.android.kotlin.platform.SecretPrefsCipher.encrypt(value)
+            prefs.edit().putString(KEY_WEBDAV_PASSWORD, stored).apply()
+        }
 
     var webdavPassphrase: String
-        get() = prefs.getString(KEY_WEBDAV_PASSPHRASE, "").orEmpty()
-        set(value) = prefs.edit().putString(KEY_WEBDAV_PASSPHRASE, value).apply()
+        get() = com.networkcontrol.android.kotlin.platform.SecretPrefsCipher
+            .decrypt(prefs.getString(KEY_WEBDAV_PASSPHRASE, ""))
+            .orEmpty()
+        set(value) {
+            val stored = if (value.isEmpty()) "" else com.networkcontrol.android.kotlin.platform.SecretPrefsCipher.encrypt(value)
+            prefs.edit().putString(KEY_WEBDAV_PASSPHRASE, stored).apply()
+        }
 
     var webdavLastSyncAt: Long
         get() = prefs.getLong(KEY_WEBDAV_LAST_SYNC, 0L)
         set(value) = prefs.edit().putLong(KEY_WEBDAV_LAST_SYNC, value).apply()
+
+    var webdavLastEtag: String?
+        get() = prefs.getString(KEY_WEBDAV_LAST_ETAG, null)?.takeIf { it.isNotBlank() }
+        set(value) = prefs.edit().putString(KEY_WEBDAV_LAST_ETAG, value).apply()
+
+    /** 僅前台聯網（切到背景或息屏自動阻斷）的應用包名集合。 */
+    var foregroundOnlyPackages: Set<String>
+        get() = prefs.getStringSet(KEY_FOREGROUND_ONLY_PACKAGES, emptySet())?.toSet().orEmpty()
+        set(value) = prefs.edit().putStringSet(KEY_FOREGROUND_ONLY_PACKAGES, value.toSet()).apply()
+
+    /** 是否允許第三方自動化工具（Tasker / MacroDroid）透過廣播 Intent 控制。預設關閉。 */
+    var externalAutomationEnabled: Boolean
+        get() = prefs.getBoolean(KEY_EXTERNAL_AUTOMATION_ENABLED, false)
+        set(value) = prefs.edit().putBoolean(KEY_EXTERNAL_AUTOMATION_ENABLED, value).apply()
+
+    /** 第三方自動化廣播驗證 Token（選填；非空時呼叫方必須帶相同 token）。 */
+    var externalAutomationToken: String
+        get() = com.networkcontrol.android.kotlin.platform.SecretPrefsCipher
+            .decrypt(prefs.getString(KEY_EXTERNAL_AUTOMATION_TOKEN, ""))
+            .orEmpty()
+        set(value) {
+            val stored = if (value.isEmpty()) "" else com.networkcontrol.android.kotlin.platform.SecretPrefsCipher.encrypt(value)
+            prefs.edit().putString(KEY_EXTERNAL_AUTOMATION_TOKEN, stored).apply()
+        }
+
+    /** 逐連線模式是否啟用按應用分流出口（部分應用走外部 SOCKS5、其餘走內建直連）。 */
+    var forwardingSplitExitEnabled: Boolean
+        get() = prefs.getBoolean(KEY_FORWARDING_SPLIT_EXIT, false)
+        set(value) = prefs.edit().putBoolean(KEY_FORWARDING_SPLIT_EXIT, value).apply()
+
+    /** 分流出口啟用時，指定改走外部 SOCKS5 代理的應用包名集合。 */
+    var forwardingProxyPackages: Set<String>
+        get() = prefs.getStringSet(KEY_FORWARDING_PROXY_PACKAGES, emptySet())?.toSet().orEmpty()
+        set(value) = prefs.edit().putStringSet(KEY_FORWARDING_PROXY_PACKAGES, value.toSet()).apply()
+
+    /** 總覽即時網速圖表配色："emerald_sky"（下行翠綠/上行天藍）或 "emerald_amber"（下行翠綠/上行暖琥珀橙）。 */
+    var speedChartColorScheme: String
+        get() = prefs.getString(KEY_SPEED_CHART_COLOR_SCHEME, "emerald_sky") ?: "emerald_sky"
+        set(value) = prefs.edit().putString(KEY_SPEED_CHART_COLOR_SCHEME, value).apply()
 
     private companion object {
         const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
@@ -441,6 +487,16 @@ class AppPreferences(context: Context) {
         const val KEY_WEBDAV_PASSWORD = "webdav_password"
         const val KEY_WEBDAV_PASSPHRASE = "webdav_passphrase"
         const val KEY_WEBDAV_LAST_SYNC = "webdav_last_sync"
+        const val KEY_WEBDAV_LAST_ETAG = "webdav_last_etag"
+        const val KEY_FOREGROUND_ONLY_PACKAGES = "foreground_only_packages"
+        const val KEY_EXTERNAL_AUTOMATION_ENABLED = "external_automation_enabled"
+        const val KEY_EXTERNAL_AUTOMATION_TOKEN = "external_automation_token"
+        const val KEY_FORWARDING_SPLIT_EXIT = "forwarding_split_exit"
+        const val KEY_FORWARDING_PROXY_PACKAGES = "forwarding_proxy_packages"
+        const val KEY_SPEED_CHART_COLOR_SCHEME = "speed_chart_color_scheme"
+        const val KEY_BLOCK_QUIC = "block_quic"
+        const val KEY_ALLOW_LAN = "allow_lan"
+        const val KEY_BLOCK_ON_ROAMING = "block_on_roaming"
         const val KEY_FORWARDING_ENABLED = "forwarding_enabled"
         const val KEY_SOCKS5_HOST = "socks5_host"
         const val KEY_SOCKS5_PORT = "socks5_port"

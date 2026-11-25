@@ -229,6 +229,18 @@
             android:name=".platform.NotificationActionReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".platform.focus.FocusAlarmReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".platform.automation.ExternalAutomationReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.networkcontrol.android.kotlin.action.AUTOMATION" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

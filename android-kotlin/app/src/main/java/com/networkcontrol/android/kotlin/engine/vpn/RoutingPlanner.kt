@@ -34,6 +34,8 @@ object VpnRoutingPlanner {
         focusAllowedPackages: Set<String> = emptySet(),
         lockScreenAllowedPackages: Set<String> = emptySet(),
         cloneAppsInheritPrimary: Boolean = true,
+        foregroundOnlyPackages: Set<String> = emptySet(),
+        foregroundPackage: String? = null,
     ): VpnRoutingPlan {
         val skipped = rules.rules.mapNotNull { rule ->
             getSkipReason(rule)?.let { SkippedRule(rule.id, it) }
@@ -50,6 +52,7 @@ object VpnRoutingPlanner {
                 mode,
                 uid,
                 primary,
+                sorted,
                 packages,
                 selfPackage,
                 network,
@@ -57,6 +60,8 @@ object VpnRoutingPlanner {
                 trustedSigners,
                 focusAllowedPackages,
                 lockScreenAllowedPackages,
+                foregroundOnlyPackages,
+                foregroundPackage,
             )
             byUid[uid] = routing
             if (routing.decision == AppRoutingDecision.Bypass) bypass.addAll(packages)
@@ -164,6 +169,7 @@ object VpnRoutingPlanner {
         signature = CodeSignature(
             signerId = app.signerSha256.orEmpty(),
             isPlatformBinary = app.isSystem,
+            signerHistoryIds = app.signerHistorySha256,
         ),
     )
 
@@ -172,6 +178,7 @@ object VpnRoutingPlanner {
         mode: FilterMode,
         uid: Int,
         primary: InstalledApp,
+        group: List<InstalledApp>,
         packages: List<String>,
         selfPackage: String,
         network: NetworkContext,
@@ -179,6 +186,8 @@ object VpnRoutingPlanner {
         trustedSigners: Set<String>,
         focusAllowedPackages: Set<String>,
         lockScreenAllowedPackages: Set<String>,
+        foregroundOnlyPackages: Set<String>,
+        foregroundPackage: String?,
     ): AppRouting {
         if (packages.contains(selfPackage)) {
             return AppRouting(uid, primary.packageName, packages, AppRoutingDecision.Bypass, AppRoutingReason.Self)
@@ -213,9 +222,34 @@ object VpnRoutingPlanner {
             )
             else -> Unit
         }
+        if (foregroundOnlyPackages.isNotEmpty() &&
+            packages.any { it in foregroundOnlyPackages } &&
+            (foregroundPackage == null || foregroundPackage !in packages)
+        ) {
+            return AppRouting(
+                uid,
+                primary.packageName,
+                packages,
+                AppRoutingDecision.Block,
+                AppRoutingReason.BackgroundBlocked,
+            )
+        }
 
-        val match = rules.findAppRule(toIdentity(primary), network) { isEnforceable(it) }
-        match.rule?.let { rule ->
+        // 共享 UID：遍歷組內所有套件，按規則優先級（拒絕優先）選出勝出規則，避免非首個套件的規則被靜默忽略。
+        var winningCompiled: com.networkcontrol.android.kotlin.core.rules.CompiledRule? = null
+        var firstTampered: Rule? = null
+        for (app in group) {
+            val m = rules.findAppRule(toIdentity(app), network) { isEnforceable(it) }
+            if (firstTampered == null && m.tamperedRule != null) firstTampered = m.tamperedRule
+            val r = m.rule ?: continue
+            val compiled = com.networkcontrol.android.kotlin.core.rules.CompiledRule(r)
+            if (winningCompiled == null ||
+                com.networkcontrol.android.kotlin.core.rules.RulePriority.compare(compiled, winningCompiled) < 0
+            ) {
+                winningCompiled = compiled
+            }
+        }
+        winningCompiled?.rule?.let { rule ->
             val decision = if (rule.action == VerdictAction.Allow) {
                 AppRoutingDecision.Bypass
             } else {
@@ -228,15 +262,16 @@ object VpnRoutingPlanner {
                 decision = decision,
                 reason = AppRoutingReason.Rule,
                 ruleId = rule.id,
-                tamperedRuleId = match.tamperedRule?.id,
+                tamperedRuleId = firstTampered?.id,
             )
         }
 
-        val tampered = match.tamperedRule != null
-        val signer = primary.signerSha256
-        val trusted = !tampered &&
-            ((allowSystemAppsByDefault && primary.isSystem) ||
-                (signer != null && trustedSigners.contains(signer)))
+        val tampered = firstTampered != null
+        val trusted = !tampered && group.all { app ->
+            val signer = app.signerSha256
+            (allowSystemAppsByDefault && app.isSystem) ||
+                (signer != null && trustedSigners.contains(signer))
+        }
         if (trusted) {
             return AppRouting(
                 uid = uid,
@@ -258,7 +293,7 @@ object VpnRoutingPlanner {
             packages = packages,
             decision = fallback,
             reason = AppRoutingReason.Mode,
-            tamperedRuleId = match.tamperedRule?.id,
+            tamperedRuleId = firstTampered?.id,
         )
     }
 }

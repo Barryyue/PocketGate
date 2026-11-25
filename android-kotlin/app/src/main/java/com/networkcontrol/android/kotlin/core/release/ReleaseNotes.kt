@@ -40,7 +40,201 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
-            version = "0.16.12",
+            version = "0.17.14",
+            date = "2026-11-25",
+            features = listOf(
+                t(
+                    "Completed per-app split exit for UDP traffic: apps routed through an upstream SOCKS5 proxy now forward UDP datagrams via RFC 1928 UDP ASSOCIATE (with optional username/password auth) alongside TCP",
+                    "补全按应用分流出口的 UDP 支持：指定走上游 SOCKS5 代理的应用，除 TCP 外其 UDP 数据报也会通过 RFC 1928 UDP ASSOCIATE（支持账密鉴权）转发至上游代理",
+                    "補全依應用程式分流出口的 UDP 支援：指定走上游 SOCKS5 代理的應用程式，除 TCP 外其 UDP 資料報也會透過 RFC 1928 UDP ASSOCIATE（支援帳密驗證）轉送至上游代理",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Regenerated Release Baseline Profile against the redesigned Settings hub, Liquid Glass bottom bar, and dual-color speed chart to keep cold starts and scrolling smooth",
+                    "针对新版分组设置页、液态玻璃底栏与双色网速图表重新生成了发布版 Baseline Profile，优化冷启动与页面滑动流畅度",
+                    "針對新版分組設定頁、液態玻璃底欄與雙色網速圖表重新產生了發布版 Baseline Profile，最佳化冷啟動與頁面滑動流暢度",
+                ),
+                t(
+                    "Updated the PocketGate for Android website landing page (site/android.html) with 0.17 highlights across all three languages",
+                    "同步更新了官网 PocketGate for Android 介绍页（site/android.html）的三语文案与 0.17 版本亮点",
+                    "同步更新了官網 PocketGate for Android 介紹頁（site/android.html）的三語文案與 0.17 版本亮點",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.13",
+            date = "2026-11-25",
+            features = listOf(
+                t(
+                    "Added switchable live speed chart color schemes in Appearance settings: Emerald · Sky (download green / upload sky blue) and Emerald · Amber (download green / upload warm amber-orange)",
+                    "在「外观与主题」中新增实时网速图表配色切换：支持「翠绿 · 天蓝」与「翠绿 · 琥珀橙」两套高对比度双色方案，切换后总览页即时生效",
+                    "在「外觀與主題」中新增即時網速圖表配色切換：支援「翠綠 · 天藍」與「翠綠 · 琥珀橙」兩套高對比度雙色方案，切換後總覽頁即時生效",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.12",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Added an explicit Peak label to the Overview speed chart and separated actual peak display (0 B/s when idle) from the internal chart scale",
+                    "总览页实时网速卡右上角补充「峰值」语义前缀，并将真实显示峰值（无流量时显示 0 B/s）与内部绘图比例解耦",
+                    "總覽頁即時網速卡右上角補充「峰值」語義前綴，並將真實顯示峰值（無流量時顯示 0 B/s）與內部繪圖比例解耦",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.11",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Distinguished download (emerald green) and upload (sky blue) colors on the Overview live speed card with tinted directional badges so labels and curves match at a glance across all themes",
+                    "优化总览页实时网速卡上下行视觉区分：下行采用翠绿色、上行采用天蓝色，并升级为带柔和底色的方向徽章，在全部主题与自定义主题色下均可一眼对应曲线",
+                    "優化總覽頁即時網速卡上下行視覺區分：下行採用翠綠色、上行採用天藍色，並升級為帶柔和底色的方向徽章，在全部主題與自訂主題色下皆可一眼對應曲線",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.10",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Full narrow-screen & visual polish pass across Overview, Apps, Rules, Logs and PromptOverlay: unified 20dp tab margins, adaptive accent bars, segmented Logs tabs, decluttered Rule & Profile rows, non-wrapping dialog chips, and localized rule validation messages",
+                    "全页面窄屏与视觉细节打磨：统一总览/应用/规则/设置页 20dp 边距、记录页顶部升级为分段胶囊标签、规则与配置文件行释放文本空间、悬浮询问框防挤压并齐平复选框、弹窗选项防换行，以及规则校验提示三语本地化",
+                    "全頁面窄螢幕與視覺細節打磨：統一總覽/應用/規則/設定頁 20dp 邊距、記錄頁頂部升級為分段膠囊分頁、規則與配置檔案列釋放文本空間、懸浮詢問框防擠壓並齊平核取方塊、彈窗選項防換行，以及規則校驗提示三語本地化",
+                ),
+                t(
+                    "Polished Settings sub-pages: fixed duplicate upstream header & inset in Forwarding, stacked SOCKS5 credentials full-width, upgraded Blocklist update intervals to a segmented control, added borders on Speed Island color swatches, and refined segmented pill padding",
+                    "打磨设置二级页细节：修复逐连接上游卡片重复标题与双层缩进、SOCKS5 账号密码改为全宽上下排列、拦截列表更新周期升级为分段胶囊、灵动岛色块补充描边，并优化通用分段控件内边距与省略保护",
+                    "打磨設定二級頁細節：修復逐連線出口卡片重複標題與雙層縮排、SOCKS5 帳密改為全寬上下排列、攔截列表更新週期升級為分段膠囊、靈動島色塊補充描邊，並優化通用分段控制項內邊距與省略保護",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.9",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Enhanced Android 13+ Liquid Glass refraction: density-scaled bezel curvature (18dp bezel, 24dp dome refraction, 2.8dp chromatic rim dispersion), subtle center magnification, dual Fresnel highlights, and clearer 8dp optical blur so scrolling content visibly bends around the glass capsule",
+                    "增强 Android 13+ 液态玻璃折射质感：全部光学参数按屏幕密度（dp）缩放（18dp 曲面倒角、24dp 半球折射、2.8dp 边缘棱镜色散），加入中央轻度凸透镜放大、双向菲涅尔高光与 8dp 高透光学模糊，滚动时玻璃折射观感更接近 iOS Liquid Glass",
+                    "增強 Android 13+ 液態玻璃折射質感：全部光學參數按螢幕密度（dp）縮放（18dp 曲面倒角、24dp 半球折射、2.8dp 邊緣棱鏡色散），加入中央輕度凸透鏡放大、雙向菲涅爾高光與 8dp 高透光學模糊，滾動時玻璃折射觀感更接近 iOS Liquid Glass",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.8",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Upgraded the Floating Glass bottom bar to a Liquid Glass effect: 24dp blur + balanced milky/dark glass body for crisp legibility, plus an Android 13+ AGSL RuntimeShader adding real capsule-edge refraction, subtle chromatic dispersion and Fresnel specular rim",
+                    "升级「悬浮玻璃」底部导航栏为液态玻璃材质：提高至 24dp 模糊与更扎实的乳白/深色玻璃主体提升文字可读性，Android 13+ 新增 AGSL RuntimeShader 实现真实胶囊边缘折射、轻微色散与菲涅尔高光（旧系统自动平滑降级）",
+                    "升級「懸浮玻璃」底部導覽列為液態玻璃材質：提高至 24dp 模糊與更紮實的乳白/深色玻璃主體提升文字可讀性，Android 13+ 新增 AGSL RuntimeShader 實現真實膠囊邊緣折射、輕微色散與菲涅爾高光（舊系統自動平滑降級）",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.7",
+            date = "2026-11-25",
+            features = listOf(
+                t(
+                    "Foreground-only networking: restrict selected apps to connect only while in the foreground and auto-block them in the background or when the screen turns off",
+                    "新增「仅前台联网」：按应用设置仅在前台时放行，切到后台或息屏后自动禁网，未启用或息屏时零轮询省电",
+                    "新增「僅前台聯網」：按應用設定僅在前台時放行，切到背景或息屏後自動禁網，未啟用或息屏時零輪詢省電",
+                ),
+                t(
+                    "Per-app split exit in forwarding mode: route selected apps through an external SOCKS5 proxy while other apps use built-in direct exit, keeping firewall, domain rules and logs active for all",
+                    "新增逐连接「按应用分流出口」：选中的应用走外部 SOCKS5 代理，其余应用走内置直连，全部流量仍保留完整防火墙、域名规则与日志",
+                    "新增逐連線「按應用分流出口」：選中的應用走外部 SOCKS5 代理，其餘應用走內建直連，全部流量仍保留完整防火牆、網域規則與日誌",
+                ),
+                t(
+                    "Third-party automation broadcast API (Tasker / MacroDroid) with opt-in toggle and optional auth token, plus AlarmManager focus wakeups, per-schedule allowed apps and focus session summary notifications",
+                    "新增第三方自动化广播接口（Tasker / MacroDroid，默认关闭并支持 Token 鉴权），并增强专注模式（AlarmManager 精准唤醒、排程独立允许列表与专注结束拦截小结）",
+                    "新增第三方自動化廣播介面（Tasker / MacroDroid，預設關閉並支援 Token 驗證），並增強專注模式（AlarmManager 精準喚醒、排程獨立允許清單與專注結束攔截小結）",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Unified all remaining Settings sub-pages (Prompts, Forwarding, Speed Island, Blocklists, Profiles & Automation) with the new Material 3 back-header and segmented controls",
+                    "将所有旧设置二级页（询问、逐连接、灵动岛、拦截列表、配置与自动跳过）统一升级为新版视觉顶栏与分段胶囊控件",
+                    "將所有舊設定二級頁（詢問、逐連線、靈動島、攔截列表、配置與自動跳過）統一升級為新版視覺頂欄與分段膠囊控制項",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.6",
+            date = "2026-11-24",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Redesigned Settings into a clean 5-group hub with tinted icon badges, status pills, hairline dividers and dedicated sub-pages (Appearance, Protection Policies, Permissions, Backup & Data)",
+                    "重构设置页信息架构与视觉层次：主页面收敛为 5 组清爽入口（配圆角图标徽章、状态胶囊与细分隔线），并将外观、防护策略、权限体检与备份存储拆分至独立二级页",
+                    "重構設定頁資訊架構與視覺層次：主頁面收斂為 5 組清爽入口（配圓角圖示徽章、狀態膠囊與細分隔線），並將外觀、防護策略、權限體檢與備份儲存拆分至獨立二級頁",
+                ),
+                t(
+                    "Replaced the cramped log-retention chip row with a full-width segmented pill control so 90-day and all retention options align cleanly without wrapping or distortion",
+                    "将「记录保留天数」与主题模式改为全宽等分分段胶囊控件，修复 90 天选项在窄屏下换行变形与标题未居中对齐的问题",
+                    "將「記錄保留天數」與主題模式改為全寬等分分段膠囊控制項，修復 90 天選項在窄螢幕下換行變形與標題未置中對齊的問題",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.5",
+            date = "2026-11-24",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Unified cross-tab forwarding and offline mode state via reactive flows so switching modes from Overview immediately stays in sync across Settings, Apps and Rules",
+                    "将跨页面共享的逐连接模式与离线模式状态收敛为响应式流，在总览页切换后设置、应用与规则页即时同步",
+                    "將跨頁面共享的逐連線模式與離線模式狀態收斂為響應式流，在總覽頁切換後設定、應用與規則頁即時同步",
+                ),
+                t(
+                    "Moved Allow ICMP out of Prompt settings into Firewall & Network settings and cleaned up unused preferences and components",
+                    "将「允许 ICMP」从询问设置移至防护与网络卡片，移除权限卡重复按钮并清理废弃偏好项与死代码",
+                    "將「允許 ICMP」從詢問設定移至防護與網路卡片，移除權限卡重複按鈕並清理廢棄偏好項與死代碼",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.4",
+            date = "2026-11-24",
+            features = listOf(
+                t(
+                    "Full snapshot backup v2 (rules, profiles, settings, portable preferences and automation subscriptions) with WebDAV ETag conflict protection and backward compatibility for v1 rule files",
+                    "升级完整快照备份 v2（涵盖规则、配置文件、设置、可移植偏好与自动化订阅），新增 WebDAV ETag 冲突检测并向后兼容 v1 规则文件",
+                    "升級完整快照備份 v2（涵蓋規則、配置檔案、設定、可移植偏好與自動化訂閱），新增 WebDAV ETag 衝突偵測並向後相容 v1 規則檔",
+                ),
+                t(
+                    "Added Allow LAN, Block on Roaming, standalone Block QUIC (UDP 443), log retention & database compaction, and new-app notification Allow/Deny actions",
+                    "新增允许局域网 (LAN)、漫游时全部阻止、独立阻断 QUIC (UDP 443)、记录保留天数与数据库压缩，以及新应用安装通知快捷允许/禁止按钮",
+                    "新增允許區域網路 (LAN)、漫遊時全部阻止、獨立阻擋 QUIC (UDP 443)、記錄保留天數與資料庫壓縮，以及新應用安裝通知快捷允許/禁止按鈕",
+                ),
+                t(
+                    "Upgraded Apps, Rules, Logs and Prompt workflows: sorting, batch selection, shared UID badge, manual rule creation/editing, log time range & scoped domain actions, and GKD group search",
+                    "补齐核心页工作流：应用页支持排序/隐藏系统应用/批量操作/共享 UID 标注，规则页支持手动新建与编辑，记录页支持时间范围/清空/作用域选择，屏幕跳过支持规则组搜索与本地时区统计",
+                    "補齊核心頁工作流：應用頁支援排序/隱藏系統應用/批次操作/共享 UID 標註，規則頁支援手動新增與編輯，記錄頁支援時間範圍/清空/作用域選擇，螢幕跳過支援規則組搜尋與本地時區統計",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Fixed global domain deny rules being shadowed by app-level allow rules, IPv4-mapped IPv6 matching, shared UID/clone inheritance edge cases, and WindowFocus permission refresh",
+                    "修复全局域名拒绝规则被应用级允许规则遮蔽、IPv4 映射 IPv6 判断、共享 UID 与分身继承边界，以及小窗授权切回权限状态不刷新的问题",
+                    "修復全域網域拒絕規則被應用級允許規則遮蔽、IPv4 映射 IPv6 判斷、共享 UID 與分身繼承邊界，以及小窗授權切回權限狀態不刷新的問題",
+                ),
+                t(
+                    "Hardened security & privacy: redacted diagnostics export, APK SHA-256 verification, Keystore-encrypted credentials, APK v3 signing key rotation support, and VPN revocation alerts",
+                    "强化安全与隐私：诊断包全面脱敏（不再打包原始数据库）、更新下载校验 SHA-256、敏感凭据接入 Keystore 加密、支持 APK v3 签名轮换防误报，以及 VPN 被撤销主动通知",
+                    "強化安全與隱私：診斷包全面脫敏（不再打包原始資料庫）、更新下載校驗 SHA-256、敏感憑證接入 Keystore 加密、支援 APK v3 簽名輪換防誤報，以及 VPN 被撤銷主動通知",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.3",
             date = "2026-11-23",
             features = emptyList(),
             improvements = listOf(
@@ -52,13 +246,24 @@ object ReleaseNotes {
             ),
         ),
         ReleaseNote(
-            version = "0.16.11",
+            version = "0.17.2",
             date = "2026-11-23",
             features = listOf(
                 t(
                     "Renamed Direct apps to Excluded apps (consistent across blackhole and forwarding modes); added an Apply firewall rules switch in app details, dimmed paused rules with one-tap resume on Apps and Rules screens, and added deny-rule conflict tags and confirmation",
                     "将「直连应用」更名为「排除的应用」（黑洞与逐连接模式统一生效）；应用详情页新增「应用防火墙规则」开关，应用页与规则页对已排除或设为代理的应用显示徽章、规则置灰提示与一键恢复，并在新增含禁止规则的排除应用时二次确认",
                     "將「直連應用」更名為「排除的應用」（黑洞與逐連線模式統一生效）；應用詳情頁新增「套用防火牆規則」開關，應用頁與規則頁對已排除或設為代理的應用顯示徽章、規則置灰提示與一鍵恢復，並在新增含禁止規則的排除應用時二次確認",
+                ),
+            ),
+        ),
+        ReleaseNote(
+            version = "0.17.0",
+            date = "2026-11-23",
+            features = listOf(
+                t(
+                    "Experimental Screen Auto-Skip (GKD-compatible): runs in an isolated Accessibility process (:automation) with independent storage, JSON5 community subscription import/update, per-group toggles, trigger logs, and optional one-tap Shizuku activation (disabled by default)",
+                    "实验功能「屏幕自动跳过」（兼容 GKD 社区订阅）：运行于独立无障碍进程与独立数据库，不影响 VPN 稳定性；支持社区 JSON5 订阅导入与增量更新、规则组开关、触发记录及 Shizuku 一键开启无障碍（默认关闭）",
+                    "實驗功能「螢幕自動跳過」（相容 GKD 社群訂閱）：運行於獨立無障礙進程與獨立資料庫，不影響 VPN 穩定性；支援社群 JSON5 訂閱匯入與增量更新、規則組開關、觸發記錄及 Shizuku 一鍵開啟無障礙（預設關閉）",
                 ),
             ),
         ),

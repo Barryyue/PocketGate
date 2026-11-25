@@ -44,11 +44,14 @@ data class VpnTunnelConfig(
     /** 上游 SOCKS5 的帳號密碼；內建直連出口一律使用，外部代理不使用。 */
     val upstreamUsername: String? = null,
     val upstreamPassword: String? = null,
+    /** 允許局域網 (LAN)：排除私有網段不經 VPN。 */
+    val allowLan: Boolean = false,
 ) {
     fun equivalentTo(other: VpnTunnelConfig?): Boolean =
         other != null &&
             mtu == other.mtu &&
             forwarding == other.forwarding &&
+            allowLan == other.allowLan &&
             upstreamHost == other.upstreamHost &&
             upstreamPort == other.upstreamPort &&
             upstreamUsername == other.upstreamUsername &&
@@ -222,6 +225,32 @@ class VpnForegroundNotifier(
             index++
         }
         return "%.1f %s".format(value, units[index])
+    }
+
+    /** VPN 被其他應用取代或系統撤銷時，發送主動提醒通知讓使用者可一鍵回到應用恢復保護。 */
+    fun notifyRevoked() {
+        val intent = PendingIntent.getActivity(
+            context,
+            2002,
+            Intent(context, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val strings = com.networkcontrol.android.kotlin.ui.UiStrings.forContext(context)
+        val notification = NotificationCompat.Builder(context, NotificationChannels.PROMPT)
+            .setSmallIcon(R.drawable.ic_shield)
+            .setContentTitle(strings[com.networkcontrol.android.kotlin.ui.S.ProtectionRevoked])
+            .setContentText(strings[com.networkcontrol.android.kotlin.ui.S.ProtectionRevokedNotifyBody])
+            .setContentIntent(intent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        runCatching {
+            context.getSystemService(android.app.NotificationManager::class.java)?.notify(REVOKED_NOTIFICATION_ID, notification)
+        }
+    }
+
+    companion object {
+        private const val REVOKED_NOTIFICATION_ID = 1009
     }
 }
 
@@ -481,15 +510,22 @@ class NcVpnService : VpnService() {
 
     override fun onCreate() {
         super.onCreate()
+        refreshSystemVpnFlags()
         controller.attach(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        refreshSystemVpnFlags()
         ensureForeground(notifier.notificationId, notifier.build(starting = true))
         if (intent?.action != ACTION_START) {
             App.container(this).vpnEngine.onSystemStart()
         }
         return START_NOT_STICKY
+    }
+
+    private fun refreshSystemVpnFlags() {
+        alwaysOnActive = runCatching { isAlwaysOn }.getOrDefault(false)
+        lockdownActive = runCatching { isLockdownEnabled }.getOrDefault(false)
     }
 
     override fun onRevoke() {
@@ -515,8 +551,12 @@ class NcVpnService : VpnService() {
         } else {
             builder.addDnsServer(FakeDnsPool.DnsServer.hostAddress!!)
         }
-        builder.addRoute("0.0.0.0", 0)
-        builder.addRoute("::", 0)
+        LanRouteCalculator.ipv4Routes(config.allowLan).forEach { (addr, prefix) ->
+            builder.addRoute(addr, prefix)
+        }
+        LanRouteCalculator.ipv6Routes(config.allowLan).forEach { (addr, prefix) ->
+            builder.addRoute(addr, prefix)
+        }
         builder.setMetered(false)
         builder.setBlocking(true)
         builder.setConfigureIntent(
@@ -570,5 +610,13 @@ class NcVpnService : VpnService() {
     companion object {
         const val ACTION_START = "com.networkcontrol.android.kotlin.action.START_VPN"
         const val SESSION_NAME = "PocketGate"
+
+        @Volatile
+        var alwaysOnActive: Boolean = false
+            internal set
+
+        @Volatile
+        var lockdownActive: Boolean = false
+            internal set
     }
 }

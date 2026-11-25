@@ -41,9 +41,9 @@ android {
         applicationId = "com.networkcontrol.android.kotlin"
         minSdk = 29
         targetSdk = 36
-        versionCode = 83
+        versionCode = 101
         val versionSuffix = System.getenv("NC_VERSION_NAME_SUFFIX").orEmpty()
-        versionName = "0.16.12$versionSuffix"
+        versionName = "0.17.14$versionSuffix"
         vectorDrawables.useSupportLibrary = true
     }
 
@@ -111,6 +111,7 @@ baselineProfile {
 }
 
 dependencies {
+    implementation(project(":automation"))
     implementation(platform("androidx.compose:compose-bom:2025.06.01"))
     // 安裝後依 Baseline Profile 預先編譯啟動路徑（側載安裝也有效）
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")

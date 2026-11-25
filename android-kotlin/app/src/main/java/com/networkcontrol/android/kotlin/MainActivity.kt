@@ -17,11 +17,31 @@ import com.networkcontrol.android.kotlin.ui.security.AppLockGate
 import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import com.networkcontrol.android.kotlin.ui.theme.NetworkControlTheme
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+/**
+ * 追蹤視窗重獲焦點的事件（包含從系統透明彈窗、分屏或小窗模式切回，此時不一定觸發 ON_RESUME）。
+ * 權限體檢與引導頁訂閱此計數即可即時刷新授權狀態。
+ */
+object WindowFocusBus {
+    private val _ticks = MutableStateFlow(0)
+    val ticks: StateFlow<Int> = _ticks.asStateFlow()
+
+    fun notifyFocusGained() {
+        _ticks.value = _ticks.value + 1
+    }
+}
+
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        requestNotificationPermissionIfNeeded()
+        // 若已完成首次引導再補請求通知權限，避免首次啟動時與 Onboarding 彈窗重疊。
+        if (App.container(this).preferences.permissionGuideShown) {
+            requestNotificationPermissionIfNeeded()
+        }
         setContent {
             val container = App.container(this)
             val themeColor by container.theme.color.collectAsStateWithLifecycle()
@@ -42,7 +62,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        WindowFocusBus.notifyFocusGained()
         App.container(this).vpnEngine.requestReplan()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            WindowFocusBus.notifyFocusGained()
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {

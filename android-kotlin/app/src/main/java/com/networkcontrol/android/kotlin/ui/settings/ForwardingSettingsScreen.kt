@@ -79,6 +79,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var socks5Host by remember { mutableStateOf(backend.socks5Host()) }
     var socks5Port by remember { mutableStateOf(backend.socks5Port().toString()) }
     var socks5Udp by remember { mutableStateOf(backend.socks5Udp()) }
+    var blockQuic by remember { mutableStateOf(backend.blockQuic()) }
     var socks5User by remember { mutableStateOf(backend.socks5Username()) }
     var socks5Pass by remember { mutableStateOf(backend.socks5Password()) }
     var proxyTesting by remember { mutableStateOf(false) }
@@ -87,6 +88,9 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var showProxyAppDialog by remember { mutableStateOf(false) }
     var directPackages by remember { mutableStateOf(backend.forwardingDirectPackages()) }
     var showDirectAppsDialog by remember { mutableStateOf(false) }
+    var splitExitEnabled by remember { mutableStateOf(backend.forwardingSplitExitEnabled()) }
+    var proxyPackages by remember { mutableStateOf(backend.forwardingProxyPackages()) }
+    var showSplitProxyAppsDialog by remember { mutableStateOf(false) }
     var privateDnsStrict by remember { mutableStateOf(backend.privateDnsMode() == "hostname") }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         privateDnsStrict = backend.privateDnsMode() == "hostname"
@@ -96,8 +100,9 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
         initialValue = null,
         showProxyAppDialog,
         showDirectAppsDialog,
+        showSplitProxyAppsDialog,
     ) {
-        if (showProxyAppDialog || showDirectAppsDialog) {
+        if (showProxyAppDialog || showDirectAppsDialog || showSplitProxyAppsDialog) {
             value = withContext(Dispatchers.IO) { backend.installedApps() }
         }
     }
@@ -106,25 +111,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
 
     BackHandler { onBack() }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("‹ ${s[S.Back]}") }
-            Text(
-                s[S.ForwardingMode],
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    SettingsSubScreenScaffold(title = s[S.ForwardingMode], onBack = onBack) {
             item {
                 SectionCard {
                     Text(
@@ -166,6 +153,17 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             },
                         )
                     }
+                    SwitchRow(
+                        title = s[S.BlockQuic],
+                        subtitle = s[S.BlockQuicHint],
+                        checked = blockQuic,
+                        onCheckedChange = { enabled ->
+                            guard.run {
+                                blockQuic = enabled
+                                backend.setBlockQuic(enabled)
+                            }
+                        },
+                    )
                     Text(
                         s[S.ForwardingAbiHint],
                         style = MaterialTheme.typography.bodySmall,
@@ -175,25 +173,49 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
             }
 
             item {
-                SectionCard(s[S.ForwardingUpstream]) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = !viaProxy,
-                            onClick = {
-                                forwardingUpstream = ForwardingUpstream.DIRECT
-                                backend.setForwardingUpstream(forwardingUpstream)
+                SettingsGroup(s[S.ForwardingUpstream]) {
+                    SettingsSegmentedRow(
+                        title = s[S.ForwardingUpstream],
+                        options = listOf(
+                            ForwardingUpstream.DIRECT to s[S.UpstreamDirect],
+                            ForwardingUpstream.SOCKS5 to s[S.UpstreamSocks5],
+                        ),
+                        selected = forwardingUpstream,
+                        onSelect = { selected ->
+                            forwardingUpstream = selected
+                            backend.setForwardingUpstream(selected)
+                        },
+                    )
+                    SettingsDivider(insetWithIcon = false)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        SwitchRow(
+                            title = s[S.SplitExitTitle],
+                            subtitle = s[S.SplitExitHint],
+                            checked = splitExitEnabled,
+                            onCheckedChange = { enabled ->
+                                guard.run {
+                                    splitExitEnabled = enabled
+                                    backend.setForwardingSplitExitEnabled(enabled)
+                                }
                             },
-                            label = { Text(s[S.UpstreamDirect]) },
                         )
-                        FilterChip(
-                            selected = viaProxy,
-                            onClick = {
-                                forwardingUpstream = ForwardingUpstream.SOCKS5
-                                backend.setForwardingUpstream(forwardingUpstream)
-                            },
-                            label = { Text(s[S.UpstreamSocks5]) },
-                        )
-                    }
+                        if (splitExitEnabled) {
+                            OutlinedButton(
+                                onClick = { showSplitProxyAppsDialog = true },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    "${s[S.SplitExitProxyApps]} (${s.format(S.SplitExitProxyAppsCount, proxyPackages.size)})",
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
                     if (!viaProxy) {
                         Text(
                             s[S.UpstreamDirectHint],
@@ -291,32 +313,33 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = socks5User,
-                                onValueChange = { socks5User = it },
-                                label = { Text(s[S.Socks5Username]) },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                            )
-                            OutlinedTextField(
-                                value = socks5Pass,
-                                onValueChange = { socks5Pass = it },
-                                label = { Text(s[S.Socks5Password]) },
-                                singleLine = true,
-                                visualTransformation = PasswordVisualTransformation(),
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
+                        OutlinedTextField(
+                            value = socks5User,
+                            onValueChange = { socks5User = it },
+                            label = { Text(s[S.Socks5Username]) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = socks5Pass,
+                            onValueChange = { socks5Pass = it },
+                            label = { Text(s[S.Socks5Password]) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            androidx.compose.material3.Button(
                                 enabled = socks5HostValid && socks5PortValid,
                                 onClick = {
                                     val host = socks5Host.trim()
                                     val port = socks5Port.toIntOrNull()
                                     if (host.isEmpty() || port == null || port !in 1..65535) {
                                         toast(s[S.InvalidHostOrPort])
-                                        return@OutlinedButton
+                                        return@Button
                                     }
                                     socks5Host = host
                                     backend.setSocks5Config(
@@ -327,7 +350,8 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                     )
                                     toast(s[S.Done])
                                 },
-                            ) { Text(s[S.Save]) }
+                                modifier = Modifier.weight(1f),
+                            ) { Text(s[S.Save], maxLines = 1, softWrap = false) }
                             OutlinedButton(
                                 onClick = {
                                     val host = socks5Host.trim()
@@ -363,8 +387,13 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                                     }
                                 },
                                 enabled = !proxyTesting && socks5HostValid && socks5PortValid,
+                                modifier = Modifier.weight(1f),
                             ) {
-                                Text(if (proxyTesting) s[S.Loading] else s[S.ProxyTest])
+                                Text(
+                                    if (proxyTesting) s[S.Loading] else s[S.ProxyTest],
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
                             }
                         }
                         probeReport?.let { report ->
@@ -418,6 +447,7 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
+                    }
                     }
                 }
             }
@@ -477,10 +507,24 @@ fun ForwardingSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     )
                 }
             }
-        }
     }
 
     val apps = pickerApps
+    if (showSplitProxyAppsDialog && apps != null) {
+        DirectAppsDialog(
+            title = s[S.SplitExitProxyApps],
+            apps = apps,
+            initial = proxyPackages,
+            onDismiss = { showSplitProxyAppsDialog = false },
+            onSave = { selected ->
+                guard.run {
+                    proxyPackages = selected
+                    backend.setForwardingProxyPackages(selected)
+                }
+                showSplitProxyAppsDialog = false
+            },
+        )
+    }
     if (showProxyAppDialog && apps != null) {
         ProxyAppDialog(
             apps = apps,

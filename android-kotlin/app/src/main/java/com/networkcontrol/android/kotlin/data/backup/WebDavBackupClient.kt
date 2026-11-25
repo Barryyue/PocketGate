@@ -17,29 +17,39 @@ import javax.crypto.spec.SecretKeySpec
 /**
  * WebDAV 加密備份與跨機還原用戶端（K-164）：
  * - 以 PBKDF2WithHmacSHA256 + AES-256-GCM 端到端加密，伺服器只儲存密文。
- * - 檔頭格式：`PGWB1`（5 bytes）+ salt（16 bytes）+ iv（12 bytes）+ GCM 密文（含 128-bit 認證標籤）。
+ * - 檔頭格式：`PGWB2`（5 bytes，210,000 次迭代，向後相容舊版 `PGWB1` 65,536 次）+ salt（16 bytes）+ iv（12 bytes）+ GCM 密文。
  */
 object WebDavBackupClient {
-    private val MAGIC = byteArrayOf('P'.code.toByte(), 'G'.code.toByte(), 'W'.code.toByte(), 'B'.code.toByte(), '1'.code.toByte())
+    private val MAGIC_V1 = byteArrayOf('P'.code.toByte(), 'G'.code.toByte(), 'W'.code.toByte(), 'B'.code.toByte(), '1'.code.toByte())
+    private val MAGIC_V2 = byteArrayOf('P'.code.toByte(), 'G'.code.toByte(), 'W'.code.toByte(), 'B'.code.toByte(), '2'.code.toByte())
     private const val SALT_BYTES = 16
     private const val IV_BYTES = 12
     private const val KEY_BITS = 256
-    private const val PBKDF2_ITERATIONS = 65_536
+    private const val PBKDF2_ITERATIONS_V1 = 65_536
+    private const val PBKDF2_ITERATIONS_V2 = 210_000
     private const val GCM_TAG_BITS = 128
     private const val DEFAULT_FILENAME = "pocketgate-backup.pgb"
+
+    data class SyncResult(
+        val targetUrl: String,
+        val etag: String?,
+        val content: String = "",
+    )
+
+    class ConflictException(message: String) : IOException(message)
 
     fun encrypt(plainText: String, passphrase: String): ByteArray {
         require(passphrase.isNotEmpty()) { "Passphrase must not be empty" }
         val random = SecureRandom()
         val salt = ByteArray(SALT_BYTES).also(random::nextBytes)
         val iv = ByteArray(IV_BYTES).also(random::nextBytes)
-        val key = deriveKey(passphrase, salt)
+        val key = deriveKey(passphrase, salt, PBKDF2_ITERATIONS_V2)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
         val cipherBytes = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
 
-        val out = ByteArrayOutputStream(MAGIC.size + SALT_BYTES + IV_BYTES + cipherBytes.size)
-        out.write(MAGIC)
+        val out = ByteArrayOutputStream(MAGIC_V2.size + SALT_BYTES + IV_BYTES + cipherBytes.size)
+        out.write(MAGIC_V2)
         out.write(salt)
         out.write(iv)
         out.write(cipherBytes)
@@ -48,18 +58,20 @@ object WebDavBackupClient {
 
     fun decrypt(payload: ByteArray, passphrase: String): String {
         require(passphrase.isNotEmpty()) { "Passphrase must not be empty" }
-        val minSize = MAGIC.size + SALT_BYTES + IV_BYTES + 16
+        val minSize = MAGIC_V2.size + SALT_BYTES + IV_BYTES + 16
         require(payload.size >= minSize) { "Invalid backup payload" }
-        for (i in MAGIC.indices) {
-            require(payload[i] == MAGIC[i]) { "Unsupported backup format" }
+        val iterations = when {
+            MAGIC_V2.indices.all { payload[it] == MAGIC_V2[it] } -> PBKDF2_ITERATIONS_V2
+            MAGIC_V1.indices.all { payload[it] == MAGIC_V1[it] } -> PBKDF2_ITERATIONS_V1
+            else -> throw IllegalArgumentException("Unsupported backup format")
         }
-        val saltStart = MAGIC.size
+        val saltStart = MAGIC_V2.size
         val ivStart = saltStart + SALT_BYTES
         val cipherStart = ivStart + IV_BYTES
         val salt = payload.copyOfRange(saltStart, ivStart)
         val iv = payload.copyOfRange(ivStart, cipherStart)
         val cipherBytes = payload.copyOfRange(cipherStart, payload.size)
-        val key = deriveKey(passphrase, salt)
+        val key = deriveKey(passphrase, salt, iterations)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
         val plainBytes = cipher.doFinal(cipherBytes)
@@ -68,8 +80,10 @@ object WebDavBackupClient {
 
     internal fun resolveTargetUrl(baseUrl: String): String {
         val trimmed = baseUrl.trim()
-        require(trimmed.startsWith("https://", ignoreCase = true) || trimmed.startsWith("http://", ignoreCase = true)) {
-            "Invalid WebDAV URL"
+        val lower = trimmed.lowercase()
+        val isLocalHttp = lower.startsWith("http://127.0.0.1") || lower.startsWith("http://localhost")
+        require(lower.startsWith("https://") || isLocalHttp) {
+            "WebDAV requires HTTPS URL"
         }
         return if (trimmed.endsWith(".pgb", ignoreCase = true)) {
             trimmed
@@ -84,24 +98,45 @@ object WebDavBackupClient {
         password: String,
         passphrase: String,
         jsonContent: String,
-    ): Result<String> = withContext(Dispatchers.IO) {
+        expectedEtag: String? = null,
+    ): Result<String> = uploadWithMeta(baseUrl, username, password, passphrase, jsonContent, expectedEtag)
+        .map { it.targetUrl }
+
+    suspend fun uploadWithMeta(
+        baseUrl: String,
+        username: String,
+        password: String,
+        passphrase: String,
+        jsonContent: String,
+        expectedEtag: String? = null,
+    ): Result<SyncResult> = withContext(Dispatchers.IO) {
         runCatching {
             val targetUrl = resolveTargetUrl(baseUrl)
             val encrypted = encrypt(jsonContent, passphrase)
             val auth = basicAuthHeader(username, password)
-            var code = putBytes(targetUrl, auth, encrypted)
-            if (code == 404 || code == 409) {
-                // 若遠端目錄尚未建立，嘗試 MKCOL 建立父目錄後重試 PUT。
+            // 若已知上次同步的 ETag，先透過 HEAD 確認遠端是否已被其他裝置修改，避免靜默覆蓋。
+            if (!expectedEtag.isNullOrBlank()) {
+                val remoteEtag = headEtag(targetUrl, auth)
+                if (!remoteEtag.isNullOrBlank() && remoteEtag != expectedEtag) {
+                    throw ConflictException("Remote backup changed by another device (ETag mismatch)")
+                }
+            }
+            var putResult = putBytes(targetUrl, auth, encrypted, expectedEtag)
+            if (putResult.first == 412) {
+                throw ConflictException("Remote backup changed by another device (HTTP 412)")
+            }
+            if (putResult.first == 404 || putResult.first == 409) {
                 val parent = targetUrl.substringBeforeLast('/', "")
                 if (parent.startsWith("http", ignoreCase = true)) {
                     mkcol(parent, auth)
-                    code = putBytes(targetUrl, auth, encrypted)
+                    putResult = putBytes(targetUrl, auth, encrypted, expectedEtag = null)
                 }
             }
-            if (code !in 200..299) {
-                throw IOException("WebDAV PUT failed (HTTP $code)")
+            if (putResult.first !in 200..299) {
+                throw IOException("WebDAV PUT failed (HTTP ${putResult.first})")
             }
-            targetUrl
+            val latestEtag = putResult.second ?: headEtag(targetUrl, auth)
+            SyncResult(targetUrl = targetUrl, etag = latestEtag)
         }
     }
 
@@ -110,7 +145,14 @@ object WebDavBackupClient {
         username: String,
         password: String,
         passphrase: String,
-    ): Result<String> = withContext(Dispatchers.IO) {
+    ): Result<String> = downloadWithMeta(baseUrl, username, password, passphrase).map { it.content }
+
+    suspend fun downloadWithMeta(
+        baseUrl: String,
+        username: String,
+        password: String,
+        passphrase: String,
+    ): Result<SyncResult> = withContext(Dispatchers.IO) {
         runCatching {
             val targetUrl = resolveTargetUrl(baseUrl)
             val auth = basicAuthHeader(username, password)
@@ -125,15 +167,34 @@ object WebDavBackupClient {
                 if (code !in 200..299) {
                     throw IOException("WebDAV GET failed (HTTP $code)")
                 }
+                val etag = connection.getHeaderField("ETag")?.trim()?.takeIf { it.isNotEmpty() }
                 val bytes = connection.inputStream.use { it.readBytes() }
-                decrypt(bytes, passphrase)
+                SyncResult(targetUrl = targetUrl, etag = etag, content = decrypt(bytes, passphrase))
             } finally {
                 connection.disconnect()
             }
         }
     }
 
-    private fun putBytes(targetUrl: String, auth: String?, bytes: ByteArray): Int {
+    private fun headEtag(targetUrl: String, auth: String?): String? = runCatching {
+        val connection = (URL(targetUrl).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 8_000
+            readTimeout = 8_000
+            requestMethod = "HEAD"
+            if (auth != null) setRequestProperty("Authorization", auth)
+        }
+        try {
+            if (connection.responseCode in 200..299) {
+                connection.getHeaderField("ETag")?.trim()?.takeIf { it.isNotEmpty() }
+            } else {
+                null
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrNull()
+
+    private fun putBytes(targetUrl: String, auth: String?, bytes: ByteArray, expectedEtag: String?): Pair<Int, String?> {
         val connection = (URL(targetUrl).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
             readTimeout = 20_000
@@ -141,11 +202,14 @@ object WebDavBackupClient {
             doOutput = true
             setRequestProperty("Content-Type", "application/octet-stream")
             if (auth != null) setRequestProperty("Authorization", auth)
+            if (!expectedEtag.isNullOrBlank()) setRequestProperty("If-Match", expectedEtag)
             setFixedLengthStreamingMode(bytes.size)
         }
         return try {
             connection.outputStream.use { it.write(bytes) }
-            connection.responseCode
+            val code = connection.responseCode
+            val etag = connection.getHeaderField("ETag")?.trim()?.takeIf { it.isNotEmpty() }
+            code to etag
         } finally {
             connection.disconnect()
         }
@@ -173,9 +237,9 @@ object WebDavBackupClient {
         return "Basic $token"
     }
 
-    private fun deriveKey(passphrase: String, salt: ByteArray): SecretKeySpec {
+    private fun deriveKey(passphrase: String, salt: ByteArray, iterations: Int): SecretKeySpec {
         val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
-        val spec = PBEKeySpec(passphrase.toCharArray(), salt, PBKDF2_ITERATIONS, KEY_BITS)
+        val spec = PBEKeySpec(passphrase.toCharArray(), salt, iterations, KEY_BITS)
         val raw = factory.generateSecret(spec).encoded
         return SecretKeySpec(raw, "AES")
     }

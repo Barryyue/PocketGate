@@ -41,9 +41,12 @@ object RuleTransferService {
             throw IllegalArgumentException("規則文件不是有效的 JSON：${it.message}")
         }
         val format = root.optString("format")
-        if (format != FORMAT) throw IllegalArgumentException("不是 netcontrol-rules 格式。")
         val version = root.optInt("version", -1)
-        if (version != VERSION) throw IllegalArgumentException("不支援的規則格式版本：$version。")
+        val isV1Rules = format == FORMAT && version == VERSION
+        val isV2Snapshot = format == "pocketgate-backup" && version == 2
+        if (!isV1Rules && !isV2Snapshot) {
+            throw IllegalArgumentException("不支援的規則或備份格式：$format v$version。")
+        }
         val rules = root.optJSONArray("rules") ?: throw IllegalArgumentException("缺少 rules。")
         val knownProfiles = profiles.map { it.id }.toSet()
         val now = Time.now()

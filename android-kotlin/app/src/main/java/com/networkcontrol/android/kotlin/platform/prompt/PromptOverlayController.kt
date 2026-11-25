@@ -20,9 +20,9 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.view.WindowManager
+import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.RadioButton
 import android.widget.TextView
 import com.networkcontrol.android.kotlin.AppPreferences
 import com.networkcontrol.android.kotlin.R
@@ -306,6 +306,22 @@ class PromptOverlayController(
             }
         }
         header.addView(netBadge)
+        val laterBtn = textView(strings[S.PromptLater], 12f, onSurfaceVariant, bold = true).apply {
+            maxLines = 1
+            setPadding(dp(8), dp(4), dp(4), dp(4))
+            setOnClickListener {
+                dismissedId = prompt.id
+                onDismiss?.invoke(prompt.id)
+                hide()
+            }
+        }
+        header.addView(
+            laterBtn,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            ).apply { marginStart = dp(4) },
+        )
         root.addView(header)
 
         // 主詢問文案：將應用名稱加粗並以主題色高亮
@@ -384,8 +400,8 @@ class PromptOverlayController(
             }
         }
         if (!denyPermanent) {
-            // 勾選後「禁止」改為永久禁止，並停用其餘允許按鈕（與紅魔互動一致）；不勾只禁止到應用關閉。
-            val dontAsk = RadioButton(context).apply {
+            // 勾選後「禁止」改為永久禁止，並停用其餘允許按鈕；改用 CheckBox 與應用內卡片一致，可明確取消勾選。
+            val dontAsk = CheckBox(context).apply {
                 text = strings[S.PromptDontAskAgain]
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
                 setTextColor(onSurface)
@@ -393,9 +409,8 @@ class PromptOverlayController(
                     arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
                     intArrayOf(accent, onSurfaceVariant),
                 )
-                setOnClickListener {
-                    dontAskAgain = !dontAskAgain
-                    isChecked = dontAskAgain
+                setOnCheckedChangeListener { _, isChecked ->
+                    dontAskAgain = isChecked
                     updateAllowButtonsEnabled(!dontAskAgain)
                 }
             }

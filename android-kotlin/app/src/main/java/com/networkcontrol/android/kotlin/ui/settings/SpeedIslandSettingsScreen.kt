@@ -93,26 +93,7 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
 
     BackHandler { onBack() }
 
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) {
-                Text("‹ ${s[S.Back]}")
-            }
-            Text(
-                s[S.IslandConfig],
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-        }
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+    SettingsSubScreenScaffold(title = s[S.IslandConfig], onBack = onBack) {
             item {
                 SectionCard(s[S.IslandPreview]) {
                     IslandPreview(
@@ -272,7 +253,11 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     if (textMode == "custom") {
                         OutlinedButton(onClick = { showTextColorDialog = true }) {
                             Box(
-                                Modifier.size(16.dp).clip(CircleShape).background(Color(textColor)),
+                                Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(textColor))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(s[S.CustomColor])
@@ -289,7 +274,11 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     if (showDot) {
                         OutlinedButton(onClick = { showDotColorDialog = true }) {
                             Box(
-                                Modifier.size(16.dp).clip(CircleShape).background(Color(dotColor)),
+                                Modifier
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(dotColor))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(s[S.IslandDotColor])
@@ -368,7 +357,6 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     }
                 }
             }
-        }
     }
 
     if (showTextColorDialog) {

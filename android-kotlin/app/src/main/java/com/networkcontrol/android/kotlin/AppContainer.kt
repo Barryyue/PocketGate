@@ -78,8 +78,22 @@ class AppContainer(context: Context) {
         scope = scope,
     )
     val protection = ProtectionController(preferences)
-    val focus = com.networkcontrol.android.kotlin.core.focus.FocusController(preferences, scope)
-    val focusScheduler = com.networkcontrol.android.kotlin.core.focus.FocusScheduler(preferences, focus, scope)
+    val focusAlarmScheduler = com.networkcontrol.android.kotlin.platform.focus.FocusAlarmScheduler(appContext)
+    val focusSummaryNotifier = com.networkcontrol.android.kotlin.platform.focus.FocusSummaryNotifier(
+        context = appContext,
+        activityStore = activityStore,
+        scope = scope,
+        notificationsEnabled = { preferences.notificationsEnabled },
+    )
+    val focus = com.networkcontrol.android.kotlin.core.focus.FocusController(preferences, scope).also { fc ->
+        fc.onSessionEnded = { session, mins ->
+            focusSummaryNotifier.notifyEnded(session, mins)
+        }
+    }
+    val focusScheduler = com.networkcontrol.android.kotlin.core.focus.FocusScheduler(preferences, focus, scope).also { fs ->
+        fs.onScheduleUpdated = { nextAt -> focusAlarmScheduler.schedule(nextAt) }
+        focusAlarmScheduler.schedule(fs.nextTriggerMillis())
+    }
     val vpnNotifier = VpnForegroundNotifier(appContext, preferences)
     val vpnTunnel = VpnTunnelController(appContext, vpnNotifier)
     val quietPeriods = com.networkcontrol.android.kotlin.core.prompts.QuietPeriodTracker(runtime, scope)
@@ -114,6 +128,19 @@ class AppContainer(context: Context) {
         offlineMode = { preferences.offlineMode },
     )
 
+    /** 實驗功能：螢幕自動跳過（相容 GKD 訂閱）；延遲初始化，未啟用時零開銷。 */
+    val automationStore by lazy {
+        com.networkcontrol.android.automation.storage.AutomationStore(appContext)
+    }
+
+    val automationFetcher by lazy {
+        com.networkcontrol.android.automation.network.SubscriptionFetcher { url ->
+            underlyingNetwork.openConnection(java.net.URL(url)) as java.net.HttpURLConnection
+        }
+    }
+
+    val foregroundTracker = com.networkcontrol.android.kotlin.platform.prompt.PromptForegroundTracker(appContext)
+
     val vpnEngine: VpnEngine = VpnEngine(
         context = appContext,
         scope = scope,
@@ -134,6 +161,7 @@ class AppContainer(context: Context) {
         notifier = vpnNotifier,
         selfPackage = appContext.packageName,
         blocklist = { blocklists.matcher.value },
+        foregroundPackageProvider = { foregroundTracker.foregroundPackage() },
     )
 
     val trafficCollector = TrafficCollector(appContext, appCatalog, appStore, trafficStore)
@@ -154,7 +182,6 @@ class AppContainer(context: Context) {
     val ruleLifetime = RuleLifetimeManager(rules, scope)
     val promptNotifier = com.networkcontrol.android.kotlin.platform.PromptNotifier(appContext, preferences)
     val appUiVisibility = com.networkcontrol.android.kotlin.platform.prompt.AppUiVisibility(appContext)
-    val foregroundTracker = com.networkcontrol.android.kotlin.platform.prompt.PromptForegroundTracker(appContext)
     val promptOverlay = com.networkcontrol.android.kotlin.platform.prompt.PromptOverlayController(
         context = appContext,
         preferences = preferences,
@@ -240,8 +267,11 @@ class AppContainer(context: Context) {
     suspend fun awaitStarted() = started.await()
 
     private suspend fun startTrafficLoop() {
+        var firstRun = true
         while (scope.isActive) {
-            delay(10 * 60 * 1000L)
+            // 首次延遲 60 秒即先執行一次保留清理，避免短生命週期進程從未觸發清理。
+            delay(if (firstRun) 60_000L else 10 * 60 * 1000L)
+            firstRun = false
             runCatching { trafficCollector.collectNow() }
             runCatching { rules.flushHits() }
             runCatching { configBackup.backupIfNeeded() }

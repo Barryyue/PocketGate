@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -49,6 +50,8 @@ fun SpeedChartCard(
     downloadHistory: List<Long>,
     uploadHistory: List<Long>,
     modifier: Modifier = Modifier,
+    peakPrefix: String = "Peak",
+    amberUpload: Boolean = false,
 ) {
     val tokens = LocalAppVisualTokens.current
     val scheme = MaterialTheme.colorScheme
@@ -62,15 +65,23 @@ fun SpeedChartCard(
     } else {
         null
     }
-    val downColor = scheme.primary
-    val upColor = scheme.tertiary
+    // 語義雙色：下行翠綠、上行可切換天藍或暖琥珀橙，全主題下皆維持高區分度。
+    val downColor = if (tokens.isDarkCanvas) Color(0xFF34D399) else Color(0xFF059669)
+    val upColor = if (amberUpload) {
+        if (tokens.isDarkCanvas) Color(0xFFFBBF24) else Color(0xFFD97706)
+    } else {
+        if (tokens.isDarkCanvas) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    }
     val gridColor = scheme.onSurfaceVariant.copy(alpha = if (tokens.isDarkCanvas) 0.14f else 0.16f)
 
-    val peakBytes = maxOf(
+    // 區分「真實顯示峰值」（無流量為 0 B/s）與「繪圖比例峰值」（保底 1 KB/s 防除零）。
+    val actualPeakBytes = maxOf(
         downloadHistory.maxOrNull() ?: 0L,
         uploadHistory.maxOrNull() ?: 0L,
-        1024L,
+        downloadBytesPerSec,
+        uploadBytesPerSec,
     )
+    val peakBytes = actualPeakBytes.coerceAtLeast(1024L)
 
     val dashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f) }
     val upStrokePath = remember { Path() }
@@ -94,40 +105,50 @@ fun SpeedChartCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
                     title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
                 Text(
-                    "${formatBytes(peakBytes)}/s",
+                    "$peakPrefix ${formatBytes(actualPeakBytes)}/s",
                     style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
-                    color = scheme.onSurfaceVariant.copy(alpha = 0.72f),
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SpeedLegendValue(
-                    dotColor = downColor,
+                    accent = downColor,
+                    isDarkCanvas = tokens.isDarkCanvas,
                     prefix = "↓",
                     value = "${formatBytes(downloadBytesPerSec)}/s",
+                    modifier = Modifier.weight(1f),
                 )
                 SpeedLegendValue(
-                    dotColor = upColor,
+                    accent = upColor,
+                    isDarkCanvas = tokens.isDarkCanvas,
                     prefix = "↑",
                     value = "${formatBytes(uploadBytesPerSec)}/s",
+                    modifier = Modifier.weight(1f),
                 )
             }
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(82.dp),
+                    .height(82.dp)
+                    .clipToBounds(),
             ) {
                 val width = size.width
                 val height = size.height
@@ -211,22 +232,36 @@ fun SpeedChartCard(
 
 @Composable
 private fun SpeedLegendValue(
-    dotColor: Color,
+    accent: Color,
+    isDarkCanvas: Boolean,
     prefix: String,
     value: String,
+    modifier: Modifier = Modifier,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .size(7.dp)
-                .clip(CircleShape)
-                .background(dotColor),
-        )
-        Spacer(Modifier.width(6.dp))
+                .size(22.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(accent.copy(alpha = if (isDarkCanvas) 0.20f else 0.13f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = prefix,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = accent,
+                maxLines = 1,
+                softWrap = false,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
         Text(
-            "$prefix $value",
+            value,
             style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
             fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 }

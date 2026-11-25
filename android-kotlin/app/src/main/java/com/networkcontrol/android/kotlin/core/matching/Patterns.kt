@@ -157,7 +157,8 @@ class IpNetwork private constructor(
             var bytes = address.address
             if (size == 4 && address is Inet6Address && bytes.size == 16) {
                 val mapped = bytes.copyOfRange(0, 10).all { it.toInt() == 0 } &&
-                    bytes[10].toInt() == 0xFF && bytes[11].toInt() == 0xFF
+                    (bytes[10].toInt() and 0xFF) == 0xFF &&
+                    (bytes[11].toInt() and 0xFF) == 0xFF
                 if (mapped) {
                     bytes = bytes.copyOfRange(12, 16)
                 }
@@ -200,7 +201,8 @@ object NetworkZones {
         val bytes = address
         return bytes.size == 16 &&
             bytes.copyOfRange(0, 10).all { it.toInt() == 0 } &&
-            bytes[10].toInt() == 0xFF && bytes[11].toInt() == 0xFF
+            (bytes[10].toInt() and 0xFF) == 0xFF &&
+            (bytes[11].toInt() and 0xFF) == 0xFF
     }
 }
 

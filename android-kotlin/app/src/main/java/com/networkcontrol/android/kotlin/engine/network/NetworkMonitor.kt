@@ -79,6 +79,7 @@ class NetworkMonitor(private val context: Context) {
             simSlotIndex = sim?.slotIndex,
             carrierName = sim?.carrierName,
             isMetered = !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
+            isRoaming = kind == NetworkKind.Cellular && !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING),
             displayName = when (kind) {
                 NetworkKind.Wifi -> ssid ?: "Wi-Fi"
                 NetworkKind.Cellular -> sim?.label ?: "行動網路"

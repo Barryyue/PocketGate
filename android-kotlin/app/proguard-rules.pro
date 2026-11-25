@@ -1,5 +1,6 @@
 # Keep rules are added as the implementation grows.
 -keep class com.networkcontrol.android.kotlin.engine.vpn.NcVpnService { *; }
+-keep class com.networkcontrol.android.automation.service.GkdAccessibilityService { *; }
 -keep class hev.htproxy.TProxyService { *; }
 -keepclasseswithmembernames class * { native <methods>; }
 

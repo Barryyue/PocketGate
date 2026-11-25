@@ -94,14 +94,20 @@ import com.networkcontrol.android.kotlin.BuildConfig
 import com.networkcontrol.android.kotlin.platform.ApkInstaller
 import com.networkcontrol.android.kotlin.core.model.ToolbarStyle
 import com.networkcontrol.android.kotlin.ui.apps.AppsScreen
+import com.networkcontrol.android.kotlin.ui.common.liquidGlassBackdrop
 import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
 import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
 import com.networkcontrol.android.kotlin.ui.rules.RulesScreen
+import com.networkcontrol.android.kotlin.ui.settings.AppearanceSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.AutomationSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.BlocklistSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.DataBackupSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.ForwardingSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.PermissionsSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.ProfileScheduleSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.PromptSettingsScreen
+import com.networkcontrol.android.kotlin.ui.settings.ProtectionSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.SettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.SpeedIslandSettingsScreen
 import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
@@ -294,6 +300,26 @@ fun AppRoot(container: AppContainer) {
                             backend = backend,
                             onBack = { settingsSubScreen = null },
                         )
+                        "automation" -> AutomationSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "appearance" -> AppearanceSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "protection" -> ProtectionSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "permissions" -> PermissionsSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
+                        "data" -> DataBackupSettingsScreen(
+                            backend = backend,
+                            onBack = { settingsSubScreen = null },
+                        )
                         else -> LaunchedEffect(Unit) { settingsSubScreen = null }
                     }
                 }
@@ -364,6 +390,9 @@ fun AppRoot(container: AppContainer) {
                                         listState = overviewListState,
                                         onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
                                         onOpenBlocklists = { settingsSubScreen = "blocklists" },
+                                        onOpenAutomation = { settingsSubScreen = "automation" },
+                                        onOpenRules = { selected = 2 },
+                                        onOpenLogs = { selected = 3 },
                                     )
                                     1 -> AppsScreen(backend, listState = appsListState)
                                     2 -> RulesScreen(backend, listState = rulesListState)
@@ -376,6 +405,11 @@ fun AppRoot(container: AppContainer) {
                                         onOpenPromptSettings = { settingsSubScreen = "prompts" },
                                         onOpenForwardingSettings = { settingsSubScreen = "forwarding" },
                                         onOpenProfileSettings = { settingsSubScreen = "profiles" },
+                                        onOpenAutomation = { settingsSubScreen = "automation" },
+                                        onOpenAppearanceSettings = { settingsSubScreen = "appearance" },
+                                        onOpenProtectionSettings = { settingsSubScreen = "protection" },
+                                        onOpenPermissionsSettings = { settingsSubScreen = "permissions" },
+                                        onOpenDataBackupSettings = { settingsSubScreen = "data" },
                                     )
                                 }
                             }
@@ -564,25 +598,39 @@ private fun AppBottomBar(
             fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.96f)),
         )
 
-        // 玻璃：底色壓低到 0.08 / 0.18，讓模糊後的光影和顏色真的透上來；
-        // backgroundColor 設為透明，避免未模糊底色在圓角處露邊。
-        glass -> HazeStyle(
-            blurRadius = 18.dp,
-            backgroundColor = Color.Transparent,
-            noiseFactor = 0.04f,
-            tints = listOf(
-                HazeTint(scheme.surface.copy(alpha = if (dark) 0.20f else 0.10f)),
-                HazeTint(
-                    Brush.verticalGradient(
-                        0f to Color.White.copy(alpha = if (dark) 0.10f else 0.16f),
-                        0.28f to Color.Transparent,
-                        0.76f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = if (dark) 0.14f else 0.06f),
+        // 液態玻璃：
+        // - Android 13+（支援 AGSL 折射）：降低模糊至 8dp、通透度 22%/26%，讓背後內容在滾動時呈現明顯的
+        //   凸透鏡放大與邊緣液態折射、棱鏡色散及菲涅爾高光；
+        // - Android 10–12（無 AGSL）：自動維持 24dp 模糊 + 42%/46% 乳白/深色毛玻璃以確保文字清晰。
+        glass -> {
+            val liquidSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+            HazeStyle(
+                blurRadius = if (liquidSupported) 8.dp else 24.dp,
+                backgroundColor = Color.Transparent,
+                noiseFactor = if (liquidSupported) 0.015f else 0.03f,
+                tints = listOf(
+                    HazeTint(
+                        scheme.surface.copy(
+                            alpha = when {
+                                liquidSupported && dark -> 0.26f
+                                liquidSupported -> 0.22f
+                                dark -> 0.46f
+                                else -> 0.42f
+                            },
+                        ),
+                    ),
+                    HazeTint(
+                        Brush.verticalGradient(
+                            0f to Color.White.copy(alpha = if (dark) 0.16f else 0.34f),
+                            0.26f to Color.Transparent,
+                            0.74f to Color.Transparent,
+                            1f to Color.Black.copy(alpha = if (dark) 0.20f else 0.08f),
+                        ),
                     ),
                 ),
-            ),
-            fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.92f)),
-        )
+                fallbackTint = HazeTint(scheme.surface.copy(alpha = 0.92f)),
+            )
+        }
 
         // 透明：只做很淺的模糊，後方內容還在但不會和標籤打架；比玻璃更「實」、比磨砂更清楚。
         transparent -> HazeStyle(
@@ -639,10 +687,11 @@ private fun AppBottomBar(
                 .then(if (floating) Modifier.clip(shape) else Modifier)
                 .then(
                     when {
-                        hazeStyle != null -> Modifier.hazeEffect(state = hazeState, style = hazeStyle) {
+                        hazeStyle != null && !glass -> Modifier.hazeEffect(state = hazeState, style = hazeStyle) {
                             blurredEdgeTreatment = hazeEdgeTreatment
                         }
-                        else -> Modifier.background(scheme.surface, shape)
+                        hazeStyle == null -> Modifier.background(scheme.surface, shape)
+                        else -> Modifier
                     },
                 )
                 .then(
@@ -653,6 +702,17 @@ private fun AppBottomBar(
                     },
                 ),
         ) {
+            if (glass && hazeStyle != null) {
+                // 獨立玻璃背景層：Haze 模糊 + Android 13+ AGSL 液態玻璃折射，不影響前景圖示與文字銳利度。
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .liquidGlassBackdrop(enabled = true, cornerRadius = 30.dp, dark = dark)
+                        .hazeEffect(state = hazeState, style = hazeStyle) {
+                            blurredEdgeTreatment = hazeEdgeTreatment
+                        },
+                )
+            }
             if (glass) {
                 // 內圈高光：玻璃邊緣的厚度感，比外框亮一級。
                 Box(

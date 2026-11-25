@@ -121,6 +121,9 @@ fun OverviewScreen(
     listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
     onOpenForwardingSettings: () -> Unit = {},
     onOpenBlocklists: () -> Unit = {},
+    onOpenAutomation: () -> Unit = {},
+    onOpenRules: () -> Unit = {},
+    onOpenLogs: () -> Unit = {},
 ) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
@@ -156,6 +159,7 @@ fun OverviewScreen(
     var privateDnsMode by remember { mutableStateOf("off") }
     var permResumeKey by remember { mutableIntStateOf(0) }
     var showPermissionGuide by remember { mutableStateOf(false) }
+    var permissionGuideIntro by remember { mutableStateOf(false) }
     var bannerDismissed by remember { mutableStateOf(backend.permissionBannerDismissed()) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -168,8 +172,9 @@ fun OverviewScreen(
     }
     val permHealth = rememberPermissionHealth(backend, permResumeKey)
     LaunchedEffect(permHealth.loaded) {
-        if (permHealth.loaded && !backend.permissionGuideShown() && permHealth.missingCount > 0) {
+        if (permHealth.loaded && !backend.permissionGuideShown()) {
             backend.setPermissionGuideShown(true)
+            permissionGuideIntro = true
             showPermissionGuide = true
         }
     }
@@ -247,24 +252,25 @@ fun OverviewScreen(
         forwardingActive -> "${s[S.ForwardingMode]} · ${s[S.UpstreamDirect]}"
         else -> activeProfile?.name ?: s[S.ProtectionOn]
     }
+    val autoEnabledOverview = remember(permResumeKey) { backend.automationFeatureEnabled() }
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                start = 18.dp,
-                top = 18.dp,
-                end = 18.dp,
+                start = 20.dp,
+                top = 20.dp,
+                end = 20.dp,
                 bottom = 20.dp + bottomPadding,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // 1. 簡潔頂欄：標題 + 配置文件名 + 輕量刷新圖示
+            // 1. 簡潔頂欄：標題 + 副標題 + 輕量刷新圖示
             item {
                 ScreenHeader(
                     title = s[S.Overview],
-                    subtitle = activeProfile?.let { "${s[S.Profile]} · ${it.name}" } ?: s[S.OverviewSubtitle],
+                    subtitle = s[S.OverviewSubtitle],
                     trailing = {
                         IconButton(onClick = { refreshKey++ }) {
                             Icon(
@@ -318,6 +324,7 @@ fun OverviewScreen(
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 ) {
                                     Text(
                                         s.format(S.UpdateReadyTitle, latest),
@@ -410,6 +417,9 @@ fun OverviewScreen(
                                         statusText,
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
                                     )
                                     Box(
                                         modifier = Modifier
@@ -478,7 +488,7 @@ fun OverviewScreen(
 
             // 3. 即時網速平滑波形圖（獨立子組件隔離每秒重組）
             item {
-                LiveSpeedSection(backend = backend, title = s[S.CurrentSpeed])
+                LiveSpeedSection(backend = backend, title = s[S.CurrentSpeed], peakPrefix = s[S.SpeedPeak])
             }
 
             // 4. 緊湊模式與配置文件控制條
@@ -494,7 +504,13 @@ fun OverviewScreen(
                                 onClick = { guard.run { backend.setMode(mode) } },
                                 shape = SegmentedButtonDefaults.itemShape(index, options.size),
                             ) {
-                                Text(labels[index], maxLines = 1)
+                                Text(
+                                    labels[index],
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
                             }
                         }
                     }
@@ -545,6 +561,7 @@ fun OverviewScreen(
                         icon = Icons.Rounded.Warning,
                         accent = if (blockedToday > 0) scheme.error else scheme.primary,
                         subtitle = if (isActive) s[S.ProtectionOn] else s[S.ProtectionOff],
+                        onClick = onOpenLogs,
                         modifier = Modifier.weight(1f),
                     )
                     BentoTile(
@@ -587,6 +604,7 @@ fun OverviewScreen(
                         icon = Icons.Rounded.Lock,
                         accent = scheme.primary,
                         subtitle = activeProfile?.name ?: "—",
+                        onClick = onOpenRules,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -693,6 +711,29 @@ fun OverviewScreen(
                 }
             }
 
+            // 實驗功能：螢幕自動跳過快捷入口（僅在已啟用時於首頁顯示，未啟用時留在設定頁入口保持首頁清爽）
+            if (autoEnabledOverview) {
+                item {
+                    val autoServiceOn = remember(permResumeKey) { backend.automationServiceActive() }
+                    val autoToday = remember(permResumeKey, refreshKey) { backend.automationTodayTriggers() }
+                    val autoActive = autoServiceOn
+                    BentoTile(
+                        label = "${s[S.AutomationShortcut]} (${s[S.AutomationExperimentalBadge]})",
+                        value = if (autoActive) s[S.QuickOn] else s[S.AutomationNeedsA11y],
+                        icon = Icons.Rounded.Star,
+                        accent = if (autoActive) scheme.primary else scheme.onSurfaceVariant,
+                        highlighted = autoActive,
+                        subtitle = if (autoActive) {
+                            s.format(S.AutomationTodayCount, autoToday)
+                        } else {
+                            s[S.AutomationNeedsA11y]
+                        },
+                        onClick = onOpenAutomation,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
             // 專注進行中時展開快捷操作條（延長 15 分鐘 / 停止 / 存為配置）
             focus?.let { active ->
                 item {
@@ -765,7 +806,7 @@ fun OverviewScreen(
                     }
                 }
             }
-            if (!backend.notificationsAvailable()) {
+            if (!permHealth.notificationsOk) {
                 item {
                     SectionCard(s[S.Notifications]) {
                         Text(
@@ -887,7 +928,11 @@ fun OverviewScreen(
             backend = backend,
             health = permHealth,
             s = s,
-            onDismiss = { showPermissionGuide = false },
+            showIntroStep = permissionGuideIntro,
+            onDismiss = {
+                showPermissionGuide = false
+                permissionGuideIntro = false
+            },
         )
     }
 
@@ -1025,7 +1070,7 @@ fun OverviewScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ForwardingModeOption(
                         title = s[S.BlackholeMode],
-                        subtitle = null,
+                        subtitle = s[S.BlackholeModeDesc],
                         selected = !forwardingEnabled,
                         onSelect = {
                             guard.run {
@@ -1037,7 +1082,7 @@ fun OverviewScreen(
                     )
                     ForwardingModeOption(
                         title = "${s[S.ForwardingMode]} · ${s[S.UpstreamDirect]}",
-                        subtitle = null,
+                        subtitle = s[S.DirectForwardingDesc],
                         selected = forwardingEnabled && forwardingUpstream != ForwardingUpstream.SOCKS5,
                         onSelect = {
                             if (!forwardingAvailable) {
@@ -1170,8 +1215,9 @@ private fun ForwardingModeOption(
 }
 
 @Composable
-private fun LiveSpeedSection(backend: AppBackend, title: String) {
+private fun LiveSpeedSection(backend: AppBackend, title: String, peakPrefix: String) {
     val speed by backend.speed.collectAsStateWithLifecycle()
+    val chartColors by backend.speedChartColorSchemeFlow.collectAsStateWithLifecycle()
     val downHistory = remember {
         mutableStateListOf<Long>().apply { repeat(SPEED_HISTORY_POINTS) { add(0L) } }
     }
@@ -1194,6 +1240,8 @@ private fun LiveSpeedSection(backend: AppBackend, title: String) {
         uploadBytesPerSec = speed.uploadBytesPerSecond,
         downloadHistory = downHistory,
         uploadHistory = upHistory,
+        peakPrefix = peakPrefix,
+        amberUpload = chartColors == "emerald_amber",
     )
 }
 
@@ -1400,38 +1448,45 @@ private fun BatchPromptDialog(
                     }
                 }
                 Text(s[S.BatchPromptsHint], style = MaterialTheme.typography.bodySmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
                     FilterChip(
                         lifetime == RuleLifetime.UntilAppExit,
                         { lifetime = RuleLifetime.UntilAppExit },
-                        { Text(s[S.PromptOnce]) },
+                        { Text(s[S.PromptOnce], maxLines = 1, softWrap = false) },
                     )
                     FilterChip(
                         lifetime == RuleLifetime.Permanent,
                         { lifetime = RuleLifetime.Permanent },
-                        { Text(s[S.PromptPermanent]) },
+                        { Text(s[S.PromptPermanent], maxLines = 1, softWrap = false) },
                     )
                     FilterChip(
                         lifetime == RuleLifetime.Timed,
                         { lifetime = RuleLifetime.Timed },
-                        { Text(s.format(S.PromptTimed, timedMinutes)) },
+                        { Text(s.format(S.PromptTimed, timedMinutes), maxLines = 1, softWrap = false) },
                     )
+                }
+                TextButton(
+                    onClick = { onLater(selected) },
+                    enabled = selected.isNotEmpty(),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                ) {
+                    Text(s[S.PromptLater], maxLines = 1, softWrap = false)
                 }
             }
         },
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TextButton(onClick = { onLater(selected) }, enabled = selected.isNotEmpty()) {
-                    Text(s[S.PromptLater])
-                }
                 OutlinedButton(
                     onClick = { onAnswer(selected, VerdictAction.Deny, lifetime) },
                     enabled = selected.isNotEmpty(),
-                ) { Text(s[S.Deny]) }
+                ) { Text(s[S.Deny], maxLines = 1, softWrap = false) }
                 Button(
                     onClick = { onAnswer(selected, VerdictAction.Allow, lifetime) },
                     enabled = selected.isNotEmpty(),
-                ) { Text(s[S.Allow]) }
+                ) { Text(s[S.Allow], maxLines = 1, softWrap = false) }
             }
         },
         dismissButton = {

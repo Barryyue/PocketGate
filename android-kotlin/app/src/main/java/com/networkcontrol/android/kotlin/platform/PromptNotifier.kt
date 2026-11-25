@@ -65,8 +65,8 @@ class PromptNotifier(
                 if (isNotEmpty()) append(" · ")
                 append("共 $count 個連線")
             }
-            if (isNotEmpty() && preferences.promptShowExplanation) append(" · ")
-            if (preferences.promptShowExplanation) append(context.getString(R.string.prompt_blocked_hint))
+            if (isNotEmpty()) append(" · ")
+            append(context.getString(R.string.prompt_blocked_hint))
         }
         val contentIntent = PendingIntent.getActivity(
             context,
