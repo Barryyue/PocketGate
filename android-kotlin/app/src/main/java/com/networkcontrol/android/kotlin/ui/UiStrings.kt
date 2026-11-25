@@ -740,6 +740,7 @@ enum class S {
     RuleInvalidPort,
     RuleSelectAppRequired,
     RuleGlobalNeedsTarget,
+    SpeedPeak,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1509,6 +1510,7 @@ private val EN = mapOf(
     S.RuleInvalidPort to "Invalid port (1–65535)",
     S.RuleSelectAppRequired to "Please select an app",
     S.RuleGlobalNeedsTarget to "Global rule requires a domain or port",
+    S.SpeedPeak to "Peak",
 )
 
 private val CN = mapOf(
@@ -2247,6 +2249,7 @@ private val CN = mapOf(
     S.RuleInvalidPort to "端口无效（范围 1–65535）",
     S.RuleSelectAppRequired to "请选择一个应用",
     S.RuleGlobalNeedsTarget to "全局规则需填写域名或端口",
+    S.SpeedPeak to "峰值",
 )
 
 private val TW = mapOf(
@@ -2985,4 +2988,5 @@ private val TW = mapOf(
     S.RuleInvalidPort to "連接埠無效（範圍 1–65535）",
     S.RuleSelectAppRequired to "請選擇一個應用",
     S.RuleGlobalNeedsTarget to "全域規則需填寫網域或連接埠",
+    S.SpeedPeak to "峰值",
 )

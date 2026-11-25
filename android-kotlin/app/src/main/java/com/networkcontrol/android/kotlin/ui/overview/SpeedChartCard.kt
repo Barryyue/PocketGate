@@ -50,6 +50,7 @@ fun SpeedChartCard(
     downloadHistory: List<Long>,
     uploadHistory: List<Long>,
     modifier: Modifier = Modifier,
+    peakPrefix: String = "Peak",
 ) {
     val tokens = LocalAppVisualTokens.current
     val scheme = MaterialTheme.colorScheme
@@ -68,11 +69,14 @@ fun SpeedChartCard(
     val upColor = if (tokens.isDarkCanvas) Color(0xFF38BDF8) else Color(0xFF0284C7)
     val gridColor = scheme.onSurfaceVariant.copy(alpha = if (tokens.isDarkCanvas) 0.14f else 0.16f)
 
-    val peakBytes = maxOf(
+    // 區分「真實顯示峰值」（無流量為 0 B/s）與「繪圖比例峰值」（保底 1 KB/s 防除零）。
+    val actualPeakBytes = maxOf(
         downloadHistory.maxOrNull() ?: 0L,
         uploadHistory.maxOrNull() ?: 0L,
-        1024L,
+        downloadBytesPerSec,
+        uploadBytesPerSec,
     )
+    val peakBytes = actualPeakBytes.coerceAtLeast(1024L)
 
     val dashEffect = remember { PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f) }
     val upStrokePath = remember { Path() }
@@ -108,7 +112,7 @@ fun SpeedChartCard(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    "${formatBytes(peakBytes)}/s",
+                    "$peakPrefix ${formatBytes(actualPeakBytes)}/s",
                     style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
                     color = scheme.onSurfaceVariant,
                     maxLines = 1,

@@ -488,7 +488,7 @@ fun OverviewScreen(
 
             // 3. 即時網速平滑波形圖（獨立子組件隔離每秒重組）
             item {
-                LiveSpeedSection(backend = backend, title = s[S.CurrentSpeed])
+                LiveSpeedSection(backend = backend, title = s[S.CurrentSpeed], peakPrefix = s[S.SpeedPeak])
             }
 
             // 4. 緊湊模式與配置文件控制條
@@ -1215,7 +1215,7 @@ private fun ForwardingModeOption(
 }
 
 @Composable
-private fun LiveSpeedSection(backend: AppBackend, title: String) {
+private fun LiveSpeedSection(backend: AppBackend, title: String, peakPrefix: String) {
     val speed by backend.speed.collectAsStateWithLifecycle()
     val downHistory = remember {
         mutableStateListOf<Long>().apply { repeat(SPEED_HISTORY_POINTS) { add(0L) } }
@@ -1239,6 +1239,7 @@ private fun LiveSpeedSection(backend: AppBackend, title: String) {
         uploadBytesPerSec = speed.uploadBytesPerSecond,
         downloadHistory = downHistory,
         uploadHistory = upHistory,
+        peakPrefix = peakPrefix,
     )
 }
 

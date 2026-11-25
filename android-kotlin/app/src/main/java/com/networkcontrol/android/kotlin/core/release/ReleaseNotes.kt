@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.12",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Added an explicit Peak label to the Overview speed chart and separated actual peak display (0 B/s when idle) from the internal chart scale",
+                    "总览页实时网速卡右上角补充「峰值」语义前缀，并将真实显示峰值（无流量时显示 0 B/s）与内部绘图比例解耦",
+                    "總覽頁即時網速卡右上角補充「峰值」語義前綴，並將真實顯示峰值（無流量時顯示 0 B/s）與內部繪圖比例解耦",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.11",
             date = "2026-11-25",
             features = emptyList(),
