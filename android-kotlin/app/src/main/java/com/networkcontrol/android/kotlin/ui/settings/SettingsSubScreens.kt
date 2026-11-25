@@ -79,6 +79,7 @@ fun AppearanceSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var toolbarStyle by remember { mutableStateOf(backend.toolbarStyle()) }
     var appIconStyle by remember { mutableStateOf(backend.appIconStyle()) }
     var autoHideBottomBar by remember { mutableStateOf(backend.autoHideBottomBar()) }
+    var speedChartColors by remember { mutableStateOf(backend.speedChartColorScheme()) }
     var showThemeColorDialog by remember { mutableStateOf(false) }
     var showLanguageMenu by remember { mutableStateOf(false) }
     var showToolbarMenu by remember { mutableStateOf(false) }
@@ -225,6 +226,19 @@ fun AppearanceSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                     onCheckedChange = { enabled ->
                         autoHideBottomBar = enabled
                         backend.setAutoHideBottomBar(enabled)
+                    },
+                )
+                SettingsDivider(insetWithIcon = false)
+                SettingsSegmentedRow(
+                    title = s[S.SpeedChartColors],
+                    options = listOf(
+                        "emerald_sky" to s[S.SpeedChartEmeraldSky],
+                        "emerald_amber" to s[S.SpeedChartEmeraldAmber],
+                    ),
+                    selected = speedChartColors,
+                    onSelect = { scheme ->
+                        speedChartColors = scheme
+                        backend.setSpeedChartColorScheme(scheme)
                     },
                 )
             }

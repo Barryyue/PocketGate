@@ -40,6 +40,17 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.13",
+            date = "2026-11-25",
+            features = listOf(
+                t(
+                    "Added switchable live speed chart color schemes in Appearance settings: Emerald · Sky (download green / upload sky blue) and Emerald · Amber (download green / upload warm amber-orange)",
+                    "在「外观与主题」中新增实时网速图表配色切换：支持「翠绿 · 天蓝」与「翠绿 · 琥珀橙」两套高对比度双色方案，切换后总览页即时生效",
+                    "在「外觀與主題」中新增即時網速圖表配色切換：支援「翠綠 · 天藍」與「翠綠 · 琥珀橙」兩套高對比度雙色方案，切換後總覽頁即時生效",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.12",
             date = "2026-11-25",
             features = emptyList(),

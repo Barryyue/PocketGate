@@ -1217,6 +1217,7 @@ private fun ForwardingModeOption(
 @Composable
 private fun LiveSpeedSection(backend: AppBackend, title: String, peakPrefix: String) {
     val speed by backend.speed.collectAsStateWithLifecycle()
+    val chartColors by backend.speedChartColorSchemeFlow.collectAsStateWithLifecycle()
     val downHistory = remember {
         mutableStateListOf<Long>().apply { repeat(SPEED_HISTORY_POINTS) { add(0L) } }
     }
@@ -1240,6 +1241,7 @@ private fun LiveSpeedSection(backend: AppBackend, title: String, peakPrefix: Str
         downloadHistory = downHistory,
         uploadHistory = upHistory,
         peakPrefix = peakPrefix,
+        amberUpload = chartColors == "emerald_amber",
     )
 }
 

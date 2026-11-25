@@ -51,6 +51,7 @@ fun SpeedChartCard(
     uploadHistory: List<Long>,
     modifier: Modifier = Modifier,
     peakPrefix: String = "Peak",
+    amberUpload: Boolean = false,
 ) {
     val tokens = LocalAppVisualTokens.current
     val scheme = MaterialTheme.colorScheme
@@ -64,9 +65,13 @@ fun SpeedChartCard(
     } else {
         null
     }
-    // 語義雙色：下行翠綠、上行天藍，在全部 6 套主題與任意自訂主題色下皆維持高區分度。
+    // 語義雙色：下行翠綠、上行可切換天藍或暖琥珀橙，全主題下皆維持高區分度。
     val downColor = if (tokens.isDarkCanvas) Color(0xFF34D399) else Color(0xFF059669)
-    val upColor = if (tokens.isDarkCanvas) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val upColor = if (amberUpload) {
+        if (tokens.isDarkCanvas) Color(0xFFFBBF24) else Color(0xFFD97706)
+    } else {
+        if (tokens.isDarkCanvas) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    }
     val gridColor = scheme.onSurfaceVariant.copy(alpha = if (tokens.isDarkCanvas) 0.14f else 0.16f)
 
     // 區分「真實顯示峰值」（無流量為 0 B/s）與「繪圖比例峰值」（保底 1 KB/s 防除零）。

@@ -62,6 +62,16 @@ class AppBackend(val container: AppContainer) {
     val focusSchedules = container.focusScheduler.schedules
     val updateState = container.updateManager.state
 
+    private val _speedChartColorScheme = kotlinx.coroutines.flow.MutableStateFlow(container.preferences.speedChartColorScheme)
+    val speedChartColorSchemeFlow: kotlinx.coroutines.flow.StateFlow<String> = _speedChartColorScheme
+
+    fun speedChartColorScheme(): String = container.preferences.speedChartColorScheme
+
+    fun setSpeedChartColorScheme(scheme: String) {
+        container.preferences.speedChartColorScheme = scheme
+        _speedChartColorScheme.value = scheme
+    }
+
     fun protectionStatus(): ProtectionStatus = container.vpnEngine.status()
 
     fun setProtection(enabled: Boolean) = container.vpnEngine.setProtection(enabled)

@@ -422,6 +422,11 @@ class AppPreferences(context: Context) {
         get() = prefs.getStringSet(KEY_FORWARDING_PROXY_PACKAGES, emptySet())?.toSet().orEmpty()
         set(value) = prefs.edit().putStringSet(KEY_FORWARDING_PROXY_PACKAGES, value.toSet()).apply()
 
+    /** 總覽即時網速圖表配色："emerald_sky"（下行翠綠/上行天藍）或 "emerald_amber"（下行翠綠/上行暖琥珀橙）。 */
+    var speedChartColorScheme: String
+        get() = prefs.getString(KEY_SPEED_CHART_COLOR_SCHEME, "emerald_sky") ?: "emerald_sky"
+        set(value) = prefs.edit().putString(KEY_SPEED_CHART_COLOR_SCHEME, value).apply()
+
     private companion object {
         const val UPSTREAM_DIRECT = ForwardingUpstream.DIRECT
         const val UPSTREAM_SOCKS5 = ForwardingUpstream.SOCKS5
@@ -488,6 +493,7 @@ class AppPreferences(context: Context) {
         const val KEY_EXTERNAL_AUTOMATION_TOKEN = "external_automation_token"
         const val KEY_FORWARDING_SPLIT_EXIT = "forwarding_split_exit"
         const val KEY_FORWARDING_PROXY_PACKAGES = "forwarding_proxy_packages"
+        const val KEY_SPEED_CHART_COLOR_SCHEME = "speed_chart_color_scheme"
         const val KEY_BLOCK_QUIC = "block_quic"
         const val KEY_ALLOW_LAN = "allow_lan"
         const val KEY_BLOCK_ON_ROAMING = "block_on_roaming"

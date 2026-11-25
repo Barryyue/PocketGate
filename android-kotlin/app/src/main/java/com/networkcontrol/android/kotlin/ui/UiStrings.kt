@@ -741,6 +741,9 @@ enum class S {
     RuleSelectAppRequired,
     RuleGlobalNeedsTarget,
     SpeedPeak,
+    SpeedChartColors,
+    SpeedChartEmeraldSky,
+    SpeedChartEmeraldAmber,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1511,6 +1514,9 @@ private val EN = mapOf(
     S.RuleSelectAppRequired to "Please select an app",
     S.RuleGlobalNeedsTarget to "Global rule requires a domain or port",
     S.SpeedPeak to "Peak",
+    S.SpeedChartColors to "Speed chart colors",
+    S.SpeedChartEmeraldSky to "Emerald · Sky",
+    S.SpeedChartEmeraldAmber to "Emerald · Amber",
 )
 
 private val CN = mapOf(
@@ -2250,6 +2256,9 @@ private val CN = mapOf(
     S.RuleSelectAppRequired to "请选择一个应用",
     S.RuleGlobalNeedsTarget to "全局规则需填写域名或端口",
     S.SpeedPeak to "峰值",
+    S.SpeedChartColors to "网速图表配色",
+    S.SpeedChartEmeraldSky to "翠绿 · 天蓝",
+    S.SpeedChartEmeraldAmber to "翠绿 · 琥珀橙",
 )
 
 private val TW = mapOf(
@@ -2989,4 +2998,7 @@ private val TW = mapOf(
     S.RuleSelectAppRequired to "請選擇一個應用",
     S.RuleGlobalNeedsTarget to "全域規則需填寫網域或連接埠",
     S.SpeedPeak to "峰值",
+    S.SpeedChartColors to "網速圖表配色",
+    S.SpeedChartEmeraldSky to "翠綠 · 天藍",
+    S.SpeedChartEmeraldAmber to "翠綠 · 琥珀橙",
 )
