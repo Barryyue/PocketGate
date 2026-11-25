@@ -32,6 +32,7 @@ class DirectSocksCounters {
     val udpAssociations = AtomicLong()
     val rejected = AtomicLong()
     val upstreamProxied = AtomicLong()
+    val upstreamUdpProxied = AtomicLong()
 }
 
 /** 外部上游 SOCKS5 代理連線參數（供按應用分流出口使用）。 */
@@ -433,6 +434,9 @@ class DirectSocksServer(
     ) {
         @Volatile
         private var clientAddress: InetSocketAddress? = null
+        @Volatile
+        private var upstreamRelay: UpstreamUdpRelay? = null
+        private val upstreamLock = Any()
         private val resolved = object : LinkedHashMap<String, InetAddress>(16, 0.75f, true) {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, InetAddress>?) = size > 256
         }
@@ -448,6 +452,13 @@ class DirectSocksServer(
                     if (!packet.address.isLoopbackAddress) continue
                     clientAddress = InetSocketAddress(packet.address, packet.port)
                     val datagram = Socks5Wire.parseUdp(buffer, packet.length) ?: continue
+                    val route = routeFor(Socks5Request(Socks5Wire.CMD_UDP_ASSOCIATE, datagram.address, datagram.host, datagram.port))
+                    if (route is ExitRoute.Socks5) {
+                        val relay = ensureUpstreamRelay(route.upstream) ?: continue
+                        relay.sendRaw(buffer, packet.length)
+                        counters.upstreamUdpProxied.incrementAndGet()
+                        continue
+                    }
                     val target = datagram.address ?: resolveCached(datagram.host!!) ?: continue
                     outbound.send(
                         DatagramPacket(buffer, datagram.payloadOffset, packet.length - datagram.payloadOffset, target, datagram.port),
@@ -478,6 +489,131 @@ class DirectSocksServer(
             }
         }
 
+        private fun ensureUpstreamRelay(upstream: UpstreamSocks5Config): UpstreamUdpRelay? {
+            upstreamRelay?.takeIf { !it.isClosed }?.let { return it }
+            synchronized(upstreamLock) {
+                upstreamRelay?.takeIf { !it.isClosed }?.let { return it }
+                val created = runCatching { openUpstreamUdpRelay(upstream) }.getOrElse { err ->
+                    AppLog.d("direct", "upstream SOCKS5 UDP associate failed: ${err.message}")
+                    null
+                } ?: return null
+                upstreamRelay = created
+                submit { created.pumpToClient() }
+                return created
+            }
+        }
+
+        private fun openUpstreamUdpRelay(upstream: UpstreamSocks5Config): UpstreamUdpRelay {
+            val control = Socket()
+            val isLoopback = upstream.host == "127.0.0.1" || upstream.host.equals("localhost", ignoreCase = true) || upstream.host == "::1"
+            if (!isLoopback) {
+                runCatching { bindSocket(control) }
+            }
+            try {
+                control.tcpNoDelay = true
+                control.soTimeout = HANDSHAKE_TIMEOUT_MS
+                control.connect(InetSocketAddress(upstream.host, upstream.port), connectTimeoutMs)
+                val upIn = DataInputStream(control.getInputStream())
+                val upOut = control.getOutputStream()
+
+                val hasAuth = upstream.username.isNotEmpty() || upstream.password.isNotEmpty()
+                if (hasAuth) {
+                    upOut.write(byteArrayOf(Socks5Wire.VERSION.toByte(), 2, 0x00, Socks5Wire.METHOD_USER_PASS.toByte()))
+                } else {
+                    upOut.write(byteArrayOf(Socks5Wire.VERSION.toByte(), 1, 0x00))
+                }
+                upOut.flush()
+                val ver = upIn.readUnsignedByte()
+                val chosenMethod = upIn.readUnsignedByte()
+                if (ver != Socks5Wire.VERSION || chosenMethod == 0xFF) {
+                    throw IOException("upstream UDP auth rejected ($chosenMethod)")
+                }
+                if (chosenMethod == Socks5Wire.METHOD_USER_PASS) {
+                    val uBytes = upstream.username.toByteArray(Charsets.UTF_8)
+                    val pBytes = upstream.password.toByteArray(Charsets.UTF_8)
+                    val authBuf = ByteArray(3 + uBytes.size + pBytes.size)
+                    authBuf[0] = 1
+                    authBuf[1] = uBytes.size.toByte()
+                    System.arraycopy(uBytes, 0, authBuf, 2, uBytes.size)
+                    authBuf[2 + uBytes.size] = pBytes.size.toByte()
+                    System.arraycopy(pBytes, 0, authBuf, 3 + uBytes.size, pBytes.size)
+                    upOut.write(authBuf)
+                    upOut.flush()
+                    if (upIn.readUnsignedByte() != 1 || upIn.readUnsignedByte() != 0) {
+                        throw IOException("upstream UDP user/pass auth failed")
+                    }
+                }
+                // 發送 UDP ASSOCIATE 0.0.0.0:0
+                upOut.write(byteArrayOf(Socks5Wire.VERSION.toByte(), Socks5Wire.CMD_UDP_ASSOCIATE.toByte(), 0, Socks5Wire.ATYP_IPV4.toByte(), 0, 0, 0, 0, 0, 0))
+                upOut.flush()
+                val repVer = upIn.readUnsignedByte()
+                val repCode = upIn.readUnsignedByte()
+                upIn.readUnsignedByte()
+                val atyp = upIn.readUnsignedByte()
+                val rawAddr: InetAddress = when (atyp) {
+                    Socks5Wire.ATYP_IPV4 -> InetAddress.getByAddress(ByteArray(4).also { upIn.readFully(it) })
+                    Socks5Wire.ATYP_IPV6 -> InetAddress.getByAddress(ByteArray(16).also { upIn.readFully(it) })
+                    Socks5Wire.ATYP_DOMAIN -> {
+                        val host = String(ByteArray(upIn.readUnsignedByte()).also { upIn.readFully(it) }, Charsets.US_ASCII)
+                        InetAddress.getByName(host)
+                    }
+                    else -> throw IOException("upstream UDP unknown atyp $atyp")
+                }
+                val bndPort = upIn.readUnsignedShort()
+                if (repVer != Socks5Wire.VERSION || repCode != Socks5Wire.REP_SUCCEEDED || bndPort <= 0) {
+                    throw IOException("upstream UDP associate failed (rep=$repCode port=$bndPort)")
+                }
+                val relayHost = if (rawAddr.isAnyLocalAddress) InetAddress.getByName(upstream.host) else rawAddr
+                val udpSocket = DatagramSocket()
+                if (!isLoopback) {
+                    runCatching { bindDatagram(udpSocket) }
+                }
+                track(control)
+                track(udpSocket)
+                return UpstreamUdpRelay(control, udpSocket, InetSocketAddress(relayHost, bndPort))
+            } catch (ex: IOException) {
+                closeQuietly(control)
+                throw ex
+            }
+        }
+
+        private inner class UpstreamUdpRelay(
+            private val control: Socket,
+            private val udpSocket: DatagramSocket,
+            private val relayAddress: InetSocketAddress,
+        ) {
+            @Volatile
+            var isClosed = false
+                private set
+
+            fun sendRaw(buffer: ByteArray, length: Int) {
+                udpSocket.send(DatagramPacket(buffer, 0, length, relayAddress))
+            }
+
+            fun pumpToClient() {
+                val buf = ByteArray(UDP_BUFFER)
+                val pkt = DatagramPacket(buf, buf.size)
+                try {
+                    while (!isClosed && !udpSocket.isClosed && !local.isClosed) {
+                        pkt.setData(buf, 0, buf.size)
+                        udpSocket.receive(pkt)
+                        val client = clientAddress ?: continue
+                        // 上游 SOCKS5 回傳的資料已帶 RFC 1928 UDP 標頭，直接轉回給本機 hev。
+                        local.send(DatagramPacket(buf, 0, pkt.length, client))
+                    }
+                } catch (_: IOException) {
+                } finally {
+                    close()
+                }
+            }
+
+            fun close() {
+                isClosed = true
+                closeQuietly(udpSocket)
+                closeQuietly(control)
+            }
+        }
+
         private fun resolveCached(host: String): InetAddress? {
             synchronized(resolved) { resolved[host] }?.let { return it }
             val address = runCatching { resolve(host).firstOrNull() }.getOrNull() ?: return null
@@ -486,6 +622,8 @@ class DirectSocksServer(
         }
 
         fun close() {
+            upstreamRelay?.close()
+            upstreamRelay = null
             closeQuietly(local)
             closeQuietly(outbound)
         }

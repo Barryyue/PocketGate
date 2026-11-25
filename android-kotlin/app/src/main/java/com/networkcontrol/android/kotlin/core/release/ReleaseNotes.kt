@@ -40,6 +40,29 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.14",
+            date = "2026-11-25",
+            features = listOf(
+                t(
+                    "Completed per-app split exit for UDP traffic: apps routed through an upstream SOCKS5 proxy now forward UDP datagrams via RFC 1928 UDP ASSOCIATE (with optional username/password auth) alongside TCP",
+                    "补全按应用分流出口的 UDP 支持：指定走上游 SOCKS5 代理的应用，除 TCP 外其 UDP 数据报也会通过 RFC 1928 UDP ASSOCIATE（支持账密鉴权）转发至上游代理",
+                    "補全依應用程式分流出口的 UDP 支援：指定走上游 SOCKS5 代理的應用程式，除 TCP 外其 UDP 資料報也會透過 RFC 1928 UDP ASSOCIATE（支援帳密驗證）轉送至上游代理",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Regenerated Release Baseline Profile against the redesigned Settings hub, Liquid Glass bottom bar, and dual-color speed chart to keep cold starts and scrolling smooth",
+                    "针对新版分组设置页、液态玻璃底栏与双色网速图表重新生成了发布版 Baseline Profile，优化冷启动与页面滑动流畅度",
+                    "針對新版分組設定頁、液態玻璃底欄與雙色網速圖表重新產生了發布版 Baseline Profile，最佳化冷啟動與頁面滑動流暢度",
+                ),
+                t(
+                    "Updated the PocketGate for Android website landing page (site/android.html) with 0.17 highlights across all three languages",
+                    "同步更新了官网 PocketGate for Android 介绍页（site/android.html）的三语文案与 0.17 版本亮点",
+                    "同步更新了官網 PocketGate for Android 介紹頁（site/android.html）的三語文案與 0.17 版本亮點",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.13",
             date = "2026-11-25",
             features = listOf(

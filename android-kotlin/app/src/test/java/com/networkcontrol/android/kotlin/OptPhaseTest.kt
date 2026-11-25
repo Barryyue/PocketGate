@@ -200,4 +200,79 @@ class OptPhaseTest {
         assertEquals(setOf("com.proxy.target"), parsed.portablePrefs?.forwardingProxyPackages)
         assertEquals(setOf("com.a"), FocusSchedule(allowedPackages = setOf("com.a")).allowedPackages)
     }
+
+    @Test
+    fun splitExitUdpChainsThroughUpstreamSocks5() {
+        val echoUdp = java.net.DatagramSocket(0, InetAddress.getByName("127.0.0.1"))
+        val echoThread = Thread {
+            runCatching {
+                val buf = ByteArray(64)
+                val pkt = java.net.DatagramPacket(buf, buf.size)
+                echoUdp.receive(pkt)
+                echoUdp.send(java.net.DatagramPacket(pkt.data, pkt.offset, pkt.length, pkt.address, pkt.port))
+            }
+        }.apply { start() }
+
+        val upstreamServer = DirectSocksServer().apply { start() }
+        val routerServer = DirectSocksServer(
+            routeFor = {
+                ExitRoute.Socks5(
+                    UpstreamSocks5Config(
+                        host = "127.0.0.1",
+                        port = upstreamServer.port,
+                        username = upstreamServer.username,
+                        password = upstreamServer.password,
+                    ),
+                )
+            },
+        ).apply { start() }
+
+        try {
+            Socket("127.0.0.1", routerServer.port).use { ctrl ->
+                ctrl.soTimeout = 5_000
+                val out = ctrl.getOutputStream()
+                val inp = DataInputStream(ctrl.getInputStream())
+                out.write(byteArrayOf(5, 1, Socks5Wire.METHOD_USER_PASS.toByte()))
+                assertEquals(5, inp.readUnsignedByte())
+                assertEquals(Socks5Wire.METHOD_USER_PASS, inp.readUnsignedByte())
+                val u = routerServer.username.toByteArray()
+                val p = routerServer.password.toByteArray()
+                out.write(byteArrayOf(1, u.size.toByte()) + u + byteArrayOf(p.size.toByte()) + p)
+                assertEquals(1, inp.readUnsignedByte())
+                assertEquals(0, inp.readUnsignedByte())
+
+                // UDP ASSOCIATE 0.0.0.0:0
+                out.write(byteArrayOf(5, Socks5Wire.CMD_UDP_ASSOCIATE.toByte(), 0, 1, 0, 0, 0, 0, 0, 0))
+                assertEquals(5, inp.readUnsignedByte())
+                assertEquals(0, inp.readUnsignedByte())
+                inp.readUnsignedByte()
+                val atyp = inp.readUnsignedByte()
+                val bndAddr = if (atyp == 1) ByteArray(4).also { inp.readFully(it) } else ByteArray(16).also { inp.readFully(it) }
+                val bndPort = inp.readUnsignedShort()
+                val relayTarget = java.net.InetSocketAddress(InetAddress.getByAddress(bndAddr), bndPort)
+
+                java.net.DatagramSocket(0, InetAddress.getByName("127.0.0.1")).use { clientUdp ->
+                    clientUdp.soTimeout = 5_000
+                    val header = Socks5Wire.udpHeader(InetAddress.getByName("127.0.0.1"), echoUdp.localPort)
+                    val payload = "UDP-OK".toByteArray()
+                    val full = header + payload
+                    clientUdp.send(java.net.DatagramPacket(full, full.size, relayTarget))
+
+                    val recvBuf = ByteArray(128)
+                    val recvPkt = java.net.DatagramPacket(recvBuf, recvBuf.size)
+                    clientUdp.receive(recvPkt)
+                    val parsed = Socks5Wire.parseUdp(recvBuf, recvPkt.length)
+                    assertNotNull(parsed)
+                    val body = String(recvBuf, parsed!!.payloadOffset, recvPkt.length - parsed.payloadOffset)
+                    assertEquals("UDP-OK", body)
+                }
+            }
+            assertEquals(1L, routerServer.counters.upstreamUdpProxied.get())
+        } finally {
+            routerServer.close()
+            upstreamServer.close()
+            runCatching { echoUdp.close() }
+            echoThread.join(1_000)
+        }
+    }
 }
