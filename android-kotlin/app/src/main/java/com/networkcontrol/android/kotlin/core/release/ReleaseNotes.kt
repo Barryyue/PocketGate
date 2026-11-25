@@ -40,6 +40,24 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.15",
+            date = "2026-11-25",
+            features = listOf(
+                t(
+                    "Added configurable Speed Island cycle interval (1s / 2s / 3s / 5s, default 3s) in Speed Island settings when Cycle mode is active, synced with full backup v2",
+                    "灵动岛循环显示模式新增可调节的切换间隔（1 秒 / 2 秒 / 3 秒 / 5 秒，默认 3 秒），仅在支持上下行循环时按需展示，并纳入完整快照备份",
+                    "靈動島循環顯示模式新增可調整的切換間隔（1 秒 / 2 秒 / 3 秒 / 5 秒，預設 3 秒），僅在支援上下行循環時按需顯示，並納入完整快照備份",
+                ),
+            ),
+            improvements = listOf(
+                t(
+                    "Fixed Speed Island Cycle mode flipping prematurely on non-timer refreshes by gating switches on monotonic elapsed time",
+                    "修复灵动岛循环模式在网络变化、统计刷新等非定时事件下提前翻转的问题，改为按单调时钟间隔稳定切换",
+                    "修復靈動島循環模式在網路變化、統計刷新等非定時事件下提前翻轉的問題，改為依單調時鐘間隔穩定切換",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.14",
             date = "2026-11-25",
             features = listOf(

@@ -90,6 +90,7 @@ class SpeedIslandController(
     private var currentMode: SpeedIslandMode? = null
     private var currentShowDot: Boolean? = null
     private var cycleDownload = true
+    private var lastCycleSwitchMs = 0L
     private var typefaceWeight: SpeedIslandFontWeight? = null
     private var typefaceCache: Typeface = Typeface.create("sans-serif", Typeface.NORMAL)
 
@@ -242,10 +243,24 @@ class SpeedIslandController(
             lastText = null
             currentMode = null
             currentShowDot = null
+            cycleDownload = true
+            lastCycleSwitchMs = 0L
         }
     }
 
     private fun updateText(speed: SpeedSnapshot, mode: SpeedIslandMode) {
+        if (mode == SpeedIslandMode.Cycle) {
+            val now = android.os.SystemClock.elapsedRealtime()
+            val intervalMs = preferences.speedIslandCycleSeconds.coerceIn(1, 10) * 1_000L
+            if (lastCycleSwitchMs == 0L) {
+                lastCycleSwitchMs = now
+            } else if (SpeedIslandFormatter.shouldFlipCycle(lastCycleSwitchMs, now, intervalMs)) {
+                cycleDownload = !cycleDownload
+                lastCycleSwitchMs = now
+            }
+        } else {
+            lastCycleSwitchMs = 0L
+        }
         val stats = SpeedIslandStats(
             downloadBytesPerSecond = speed.downloadBytesPerSecond,
             uploadBytesPerSecond = speed.uploadBytesPerSecond,
@@ -263,7 +278,6 @@ class SpeedIslandController(
             showDownload = cycleDownload,
             labels = labels,
         )
-        if (mode == SpeedIslandMode.Cycle) cycleDownload = !cycleDownload
         if (text == lastText) return
         lastText = text
         speedText?.text = text

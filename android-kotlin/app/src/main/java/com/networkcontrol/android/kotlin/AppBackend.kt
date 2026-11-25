@@ -555,6 +555,13 @@ class AppBackend(val container: AppContainer) {
         container.speedIsland.refresh()
     }
 
+    fun speedIslandCycleSeconds(): Int = container.preferences.speedIslandCycleSeconds
+
+    fun setSpeedIslandCycleSeconds(seconds: Int) {
+        container.preferences.speedIslandCycleSeconds = seconds
+        container.speedIsland.refresh()
+    }
+
     fun speedIslandContent(): com.networkcontrol.android.kotlin.core.model.SpeedIslandContent =
         container.preferences.speedIslandContent
 
@@ -1332,6 +1339,7 @@ class AppBackend(val container: AppContainer) {
                 foregroundOnlyPackages = prefs.foregroundOnlyPackages,
                 forwardingSplitExitEnabled = prefs.forwardingSplitExitEnabled,
                 forwardingProxyPackages = prefs.forwardingProxyPackages,
+                speedIslandCycleSeconds = prefs.speedIslandCycleSeconds,
             ),
             automationSubscriptionUrls = autoUrls,
         )
@@ -1458,6 +1466,7 @@ class AppBackend(val container: AppContainer) {
                 p.foregroundOnlyPackages?.let { prefs.foregroundOnlyPackages = it }
                 p.forwardingSplitExitEnabled?.let { prefs.forwardingSplitExitEnabled = it }
                 p.forwardingProxyPackages?.let { prefs.forwardingProxyPackages = it }
+                p.speedIslandCycleSeconds?.let { prefs.speedIslandCycleSeconds = it }
             }
         }
         val imported = RuleTransferService.importForPlan(snapshot.rulesJson, container.profiles.all)

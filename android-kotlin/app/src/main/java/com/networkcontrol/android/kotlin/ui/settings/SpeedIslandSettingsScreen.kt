@@ -75,6 +75,7 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
     var enabled by remember { mutableStateOf(backend.speedIslandEnabled()) }
     var nativeSpeedIcon by remember { mutableStateOf(backend.statusBarSpeedIcon()) }
     var mode by remember { mutableStateOf(backend.speedIslandMode()) }
+    var cycleSeconds by remember { mutableIntStateOf(backend.speedIslandCycleSeconds()) }
     var content by remember { mutableStateOf(backend.speedIslandContent()) }
     var statusBarMode by remember { mutableStateOf(backend.speedIslandStatusBarMode()) }
     var vivoCompatible by remember { mutableStateOf(backend.vivoIslandCompatible()) }
@@ -194,6 +195,29 @@ fun SpeedIslandSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                             },
                             { Text(s[S.IslandModeMini]) },
                         )
+                    }
+                    val supportsCycle = content == SpeedIslandContent.Speed || content == SpeedIslandContent.Traffic
+                    if (mode == SpeedIslandMode.Cycle && supportsCycle) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(s[S.IslandCycleInterval], style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                s[S.IslandCycleIntervalHint],
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(1, 2, 3, 5).forEach { sec ->
+                                    FilterChip(
+                                        selected = cycleSeconds == sec,
+                                        onClick = {
+                                            cycleSeconds = sec
+                                            backend.setSpeedIslandCycleSeconds(sec)
+                                        },
+                                        label = { Text(s.format(S.IslandCycleSeconds, sec)) },
+                                    )
+                                }
+                            }
+                        }
                     }
                     PrecisionPercentSlider(
                         label = s.format(S.IslandOpacity, (opacity * 100).roundToInt()),

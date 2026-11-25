@@ -36,6 +36,7 @@ data class PortablePrefsSnapshot(
     val foregroundOnlyPackages: Set<String>? = null,
     val forwardingSplitExitEnabled: Boolean? = null,
     val forwardingProxyPackages: Set<String>? = null,
+    val speedIslandCycleSeconds: Int? = null,
 )
 
 data class FullBackupSnapshot(
@@ -97,6 +98,7 @@ object FullBackupCodec {
             portablePrefs.foregroundOnlyPackages?.let { put("foregroundOnlyPackages", JSONArray(it.sorted())) }
             portablePrefs.forwardingSplitExitEnabled?.let { put("forwardingSplitExitEnabled", it) }
             portablePrefs.forwardingProxyPackages?.let { put("forwardingProxyPackages", JSONArray(it.sorted())) }
+            portablePrefs.speedIslandCycleSeconds?.let { put("speedIslandCycleSeconds", it) }
         }
         return JSONObject().apply {
             put("format", FORMAT)
@@ -169,6 +171,7 @@ object FullBackupCodec {
                 foregroundOnlyPackages = p.optJSONArray("foregroundOnlyPackages")?.toStringList()?.toSet(),
                 forwardingSplitExitEnabled = if (p.has("forwardingSplitExitEnabled")) p.optBoolean("forwardingSplitExitEnabled") else null,
                 forwardingProxyPackages = p.optJSONArray("forwardingProxyPackages")?.toStringList()?.toSet(),
+                speedIslandCycleSeconds = if (p.has("speedIslandCycleSeconds")) p.optInt("speedIslandCycleSeconds") else null,
             )
         }
         val autoUrls = root.optJSONArray("automationSubscriptionUrls")?.toStringList().orEmpty()

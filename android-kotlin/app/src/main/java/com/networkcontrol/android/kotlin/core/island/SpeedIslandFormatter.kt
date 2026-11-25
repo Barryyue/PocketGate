@@ -95,4 +95,11 @@ object SpeedIslandFormatter {
         }
         return "%.1f %s".format(value, units[index])
     }
+
+    /** 判斷循環模式是否已到達切換間隔，避免非定時刷新（如統計更新、網路變更）導致提前翻轉。 */
+    fun shouldFlipCycle(lastSwitchMs: Long, nowMs: Long, intervalMs: Long): Boolean {
+        if (lastSwitchMs <= 0L) return false
+        val safeInterval = intervalMs.coerceAtLeast(1_000L)
+        return nowMs - lastSwitchMs >= safeInterval
+    }
 }

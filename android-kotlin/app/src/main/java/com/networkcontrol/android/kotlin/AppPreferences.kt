@@ -164,6 +164,11 @@ class AppPreferences(context: Context) {
         }.getOrDefault(com.networkcontrol.android.kotlin.core.model.SpeedIslandMode.Full)
         set(value) = prefs.edit().putString(KEY_SPEED_ISLAND_MODE, value.name).apply()
 
+    /** 靈動島循環顯示模式下的上下行切換間隔（秒），預設 3 秒，範圍 1–10 秒。 */
+    var speedIslandCycleSeconds: Int
+        get() = prefs.getInt(KEY_SPEED_ISLAND_CYCLE_SECONDS, 3).coerceIn(1, 10)
+        set(value) = prefs.edit().putInt(KEY_SPEED_ISLAND_CYCLE_SECONDS, value.coerceIn(1, 10)).apply()
+
     /** 靈動島顯示內容。 */
     var speedIslandContent: com.networkcontrol.android.kotlin.core.model.SpeedIslandContent
         get() = runCatching {
@@ -464,6 +469,7 @@ class AppPreferences(context: Context) {
         const val KEY_ONCE_BACKGROUND_MINUTES = "once_background_minutes"
         const val KEY_FOCUS_LAST_ALLOWED = "focus_last_allowed"
         const val KEY_SPEED_ISLAND_MODE = "speed_island_mode"
+        const val KEY_SPEED_ISLAND_CYCLE_SECONDS = "speed_island_cycle_seconds"
         const val KEY_SPEED_ISLAND_CONTENT = "speed_island_content"
         const val KEY_SPEED_ISLAND_FONT_SCALE = "speed_island_font_scale"
         const val KEY_SPEED_ISLAND_FONT_WEIGHT = "speed_island_font_weight"
