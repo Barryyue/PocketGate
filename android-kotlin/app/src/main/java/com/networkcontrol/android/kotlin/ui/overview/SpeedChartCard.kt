@@ -63,8 +63,9 @@ fun SpeedChartCard(
     } else {
         null
     }
-    val downColor = scheme.primary
-    val upColor = scheme.tertiary
+    // 語義雙色：下行翠綠、上行天藍，在全部 6 套主題與任意自訂主題色下皆維持高區分度。
+    val downColor = if (tokens.isDarkCanvas) Color(0xFF34D399) else Color(0xFF059669)
+    val upColor = if (tokens.isDarkCanvas) Color(0xFF38BDF8) else Color(0xFF0284C7)
     val gridColor = scheme.onSurfaceVariant.copy(alpha = if (tokens.isDarkCanvas) 0.14f else 0.16f)
 
     val peakBytes = maxOf(
@@ -116,17 +117,19 @@ fun SpeedChartCard(
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SpeedLegendValue(
-                    dotColor = downColor,
+                    accent = downColor,
+                    isDarkCanvas = tokens.isDarkCanvas,
                     prefix = "↓",
                     value = "${formatBytes(downloadBytesPerSec)}/s",
                     modifier = Modifier.weight(1f),
                 )
                 SpeedLegendValue(
-                    dotColor = upColor,
+                    accent = upColor,
+                    isDarkCanvas = tokens.isDarkCanvas,
                     prefix = "↑",
                     value = "${formatBytes(uploadBytesPerSec)}/s",
                     modifier = Modifier.weight(1f),
@@ -220,7 +223,8 @@ fun SpeedChartCard(
 
 @Composable
 private fun SpeedLegendValue(
-    dotColor: Color,
+    accent: Color,
+    isDarkCanvas: Boolean,
     prefix: String,
     value: String,
     modifier: Modifier = Modifier,
@@ -228,13 +232,23 @@ private fun SpeedLegendValue(
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .size(7.dp)
-                .clip(CircleShape)
-                .background(dotColor),
-        )
-        Spacer(Modifier.width(6.dp))
+                .size(22.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(accent.copy(alpha = if (isDarkCanvas) 0.20f else 0.13f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = prefix,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = accent,
+                maxLines = 1,
+                softWrap = false,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
         Text(
-            "$prefix $value",
+            value,
             style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,

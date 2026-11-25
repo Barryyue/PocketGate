@@ -40,6 +40,18 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.11",
+            date = "2026-11-25",
+            features = emptyList(),
+            improvements = listOf(
+                t(
+                    "Distinguished download (emerald green) and upload (sky blue) colors on the Overview live speed card with tinted directional badges so labels and curves match at a glance across all themes",
+                    "优化总览页实时网速卡上下行视觉区分：下行采用翠绿色、上行采用天蓝色，并升级为带柔和底色的方向徽章，在全部主题与自定义主题色下均可一眼对应曲线",
+                    "優化總覽頁即時網速卡上下行視覺區分：下行採用翠綠色、上行採用天藍色，並升級為帶柔和底色的方向徽章，在全部主題與自訂主題色下皆可一眼對應曲線",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.10",
             date = "2026-11-25",
             features = emptyList(),
