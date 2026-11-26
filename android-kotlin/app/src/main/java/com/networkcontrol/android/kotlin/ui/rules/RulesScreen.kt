@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -69,10 +70,58 @@ import com.networkcontrol.android.kotlin.ui.rememberUiStrings
 import com.networkcontrol.android.kotlin.ui.theme.LocalAppVisualTokens
 import kotlinx.coroutines.launch
 
+enum class RuleFilter {
+    All,
+    Domain,
+    Global,
+    Allowed,
+    Denied,
+}
+
+/** 依分類條件與搜尋關鍵字篩選規則分組（純函式，便於單元測試）。 */
+internal fun filterRuleGroups(
+    groups: List<RuleGroup>,
+    filter: RuleFilter,
+    query: String,
+): List<RuleGroup> {
+    val byFilter = when (filter) {
+        RuleFilter.All -> groups
+        RuleFilter.Global -> groups.filter { it.packageName == null }
+        RuleFilter.Domain -> groups.mapNotNull { group ->
+            val matched = group.rules.filter { it.conditions.remote is RemoteTarget.Domain }
+            if (matched.isNotEmpty()) group.copy(rules = matched) else null
+        }
+        RuleFilter.Allowed -> groups.mapNotNull { group ->
+            val matched = group.rules.filter { it.action == VerdictAction.Allow }
+            if (matched.isNotEmpty()) group.copy(rules = matched) else null
+        }
+        RuleFilter.Denied -> groups.mapNotNull { group ->
+            val matched = group.rules.filter { it.action == VerdictAction.Deny }
+            if (matched.isNotEmpty()) group.copy(rules = matched) else null
+        }
+    }
+    if (query.isBlank()) return byFilter
+    return byFilter.mapNotNull { group ->
+        val groupMatches = group.label.contains(query, ignoreCase = true) ||
+            group.packageName?.contains(query, ignoreCase = true) == true
+        if (groupMatches) {
+            group
+        } else {
+            val matchedRules = group.rules.filter { rule ->
+                remoteTargetLabel(rule.conditions)?.contains(query, ignoreCase = true) == true ||
+                    rule.note?.contains(query, ignoreCase = true) == true
+            }
+            if (matchedRules.isNotEmpty()) group.copy(rules = matchedRules) else null
+        }
+    }
+}
+
 @Composable
 fun RulesScreen(
     backend: AppBackend,
     listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
+    filter: RuleFilter = RuleFilter.All,
+    onFilterChange: (RuleFilter) -> Unit = {},
 ) {
     val s = rememberUiStrings()
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
@@ -91,24 +140,11 @@ fun RulesScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var editingRule by remember { mutableStateOf<Rule?>(null) }
     val groups = remember(ruleSet.version, activeProfileId) { backend.ruleGroups() }
-    val filteredGroups = remember(groups, query) {
-        if (query.isBlank()) {
-            groups
-        } else {
-            groups.mapNotNull { group ->
-                val groupMatches = group.label.contains(query, ignoreCase = true) ||
-                    group.packageName?.contains(query, ignoreCase = true) == true
-                if (groupMatches) {
-                    group
-                } else {
-                    val matchedRules = group.rules.filter { rule ->
-                        remoteTargetLabel(rule.conditions)?.contains(query, ignoreCase = true) == true ||
-                            rule.note?.contains(query, ignoreCase = true) == true
-                    }
-                    if (matchedRules.isNotEmpty()) group.copy(rules = matchedRules) else null
-                }
-            }
-        }
+    val domainCount = remember(groups) {
+        groups.sumOf { g -> g.rules.count { it.conditions.remote is RemoteTarget.Domain } }
+    }
+    val filteredGroups = remember(groups, filter, query) {
+        filterRuleGroups(groups, filter, query)
     }
 
     LazyColumn(
@@ -154,10 +190,47 @@ fun RulesScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = filter == RuleFilter.All,
+                    onClick = { onFilterChange(RuleFilter.All) },
+                    label = { Text(s[S.FilterAll], maxLines = 1, softWrap = false) },
+                )
+                FilterChip(
+                    selected = filter == RuleFilter.Domain,
+                    onClick = { onFilterChange(RuleFilter.Domain) },
+                    label = {
+                        val label = if (domainCount > 0) "${s[S.FilterDomain]} · $domainCount" else s[S.FilterDomain]
+                        Text(label, maxLines = 1, softWrap = false)
+                    },
+                )
+                FilterChip(
+                    selected = filter == RuleFilter.Global,
+                    onClick = { onFilterChange(RuleFilter.Global) },
+                    label = { Text(s[S.FilterGlobal], maxLines = 1, softWrap = false) },
+                )
+                FilterChip(
+                    selected = filter == RuleFilter.Allowed,
+                    onClick = { onFilterChange(RuleFilter.Allowed) },
+                    label = { Text(s[S.FilterAllowed], maxLines = 1, softWrap = false) },
+                )
+                FilterChip(
+                    selected = filter == RuleFilter.Denied,
+                    onClick = { onFilterChange(RuleFilter.Denied) },
+                    label = { Text(s[S.FilterDenied], maxLines = 1, softWrap = false) },
+                )
+            }
+        }
         if (filteredGroups.isEmpty()) {
             item {
                 Text(
-                    if (query.isNotBlank()) s[S.NoMatchingRules] else s[S.NoRules],
+                    if (query.isNotBlank() || filter != RuleFilter.All) s[S.NoMatchingRules] else s[S.NoRules],
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 24.dp),

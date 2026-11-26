@@ -40,6 +40,22 @@ private fun t(en: String, zhHans: String, zhHant: String) = NoteText(en, zhHans,
 object ReleaseNotes {
     val all: List<ReleaseNote> = listOf(
         ReleaseNote(
+            version = "0.17.16",
+            date = "2026-11-26",
+            features = listOf(
+                t(
+                    "Added filter chips on the Rules screen (All / Domains / Global / Allowed / Denied) with domain rule count badge, making domain exceptions easy to find and revoke",
+                    "规则页新增筛选标签（全部 / 域名 / 全局 / 已允许 / 已拒绝）并显示域名规则数量，方便快速查找、关闭或删除已放行/禁止的域名规则",
+                    "規則頁新增篩選標籤（全部 / 網域 / 全域 / 已允許 / 已拒絕）並顯示網域規則數量，方便快速查找、關閉或刪除已放行/禁止的網域規則",
+                ),
+                t(
+                    "Added a direct \"Manage domain rules\" button on the Blocklists settings screen that jumps straight to the Rules screen with the Domains filter selected",
+                    "拦截列表设置页新增「管理域名规则」快捷按钮（显示已放行条数），点击直接跳转到规则页并自动筛选域名规则",
+                    "攔截列表設定頁新增「管理網域規則」快捷按鈕（顯示已放行條數），點擊直接跳轉至規則頁並自動篩選網域規則",
+                ),
+            ),
+        ),
+        ReleaseNote(
             version = "0.17.15",
             date = "2026-11-25",
             features = listOf(

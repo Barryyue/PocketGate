@@ -37,6 +37,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.networkcontrol.android.kotlin.AppBackend
+import com.networkcontrol.android.kotlin.core.model.RemoteTarget
+import com.networkcontrol.android.kotlin.core.model.VerdictAction
 import com.networkcontrol.android.kotlin.engine.blocklist.BlocklistCatalog
 import com.networkcontrol.android.kotlin.engine.blocklist.BlocklistSourceState
 import com.networkcontrol.android.kotlin.ui.S
@@ -48,13 +50,27 @@ import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
 @Composable
-fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
+fun BlocklistSettingsScreen(
+    backend: AppBackend,
+    onBack: () -> Unit,
+    onOpenDomainRules: () -> Unit = {},
+) {
     val guard = com.networkcontrol.android.kotlin.ui.security.LocalSensitiveAction.current
     val s = rememberUiStrings()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by backend.blocklistState.collectAsStateWithLifecycle()
     val matcher by backend.blocklistMatcher.collectAsStateWithLifecycle()
+    val ruleSet by backend.container.rules.ruleSet.collectAsStateWithLifecycle()
+    val runtime by backend.runtime.collectAsStateWithLifecycle()
+    val allowedDomainCount = remember(ruleSet.version, runtime.activeProfileId) {
+        backend.ruleGroups().sumOf { group ->
+            group.rules.count {
+                it.conditions.remote is RemoteTarget.Domain &&
+                    it.action == VerdictAction.Allow
+            }
+        }
+    }
     val perConnection = backend.forwardingEnabled()
     var showAddDialog by remember { mutableStateOf(false) }
     var removingSource by remember { mutableStateOf<BlocklistSourceState?>(null) }
@@ -110,6 +126,18 @@ fun BlocklistSettingsScreen(backend: AppBackend, onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    OutlinedButton(
+                        onClick = onOpenDomainRules,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            if (allowedDomainCount > 0) {
+                                s.format(S.BlocklistsManageDomainRulesCount, allowedDomainCount)
+                            } else {
+                                s[S.BlocklistsManageDomainRules]
+                            },
+                        )
+                    }
                 }
             }
 

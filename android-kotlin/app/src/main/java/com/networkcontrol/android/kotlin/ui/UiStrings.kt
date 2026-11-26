@@ -747,6 +747,10 @@ enum class S {
     SpeedChartColors,
     SpeedChartEmeraldSky,
     SpeedChartEmeraldAmber,
+    FilterDomain,
+    FilterGlobal,
+    BlocklistsManageDomainRules,
+    BlocklistsManageDomainRulesCount,
 }
 
 class UiStrings internal constructor(languageTag: String) {
@@ -1523,6 +1527,10 @@ private val EN = mapOf(
     S.SpeedChartColors to "Speed chart colors",
     S.SpeedChartEmeraldSky to "Emerald · Sky",
     S.SpeedChartEmeraldAmber to "Emerald · Amber",
+    S.FilterDomain to "Domains",
+    S.FilterGlobal to "Global",
+    S.BlocklistsManageDomainRules to "Manage domain rules",
+    S.BlocklistsManageDomainRulesCount to "Manage domain rules (%d allowed)",
 )
 
 private val CN = mapOf(
@@ -2268,6 +2276,10 @@ private val CN = mapOf(
     S.SpeedChartColors to "网速图表配色",
     S.SpeedChartEmeraldSky to "翠绿 · 天蓝",
     S.SpeedChartEmeraldAmber to "翠绿 · 琥珀橙",
+    S.FilterDomain to "域名",
+    S.FilterGlobal to "全局",
+    S.BlocklistsManageDomainRules to "管理域名规则",
+    S.BlocklistsManageDomainRulesCount to "管理域名规则（已放行 %d 条）",
 )
 
 private val TW = mapOf(
@@ -3013,4 +3025,8 @@ private val TW = mapOf(
     S.SpeedChartColors to "網速圖表配色",
     S.SpeedChartEmeraldSky to "翠綠 · 天藍",
     S.SpeedChartEmeraldAmber to "翠綠 · 琥珀橙",
+    S.FilterDomain to "網域",
+    S.FilterGlobal to "全域",
+    S.BlocklistsManageDomainRules to "管理網域規則",
+    S.BlocklistsManageDomainRulesCount to "管理網域規則（已放行 %d 條）",
 )

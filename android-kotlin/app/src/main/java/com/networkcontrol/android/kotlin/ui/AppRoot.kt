@@ -98,6 +98,7 @@ import com.networkcontrol.android.kotlin.ui.common.liquidGlassBackdrop
 import com.networkcontrol.android.kotlin.ui.logs.LogsScreen
 import com.networkcontrol.android.kotlin.ui.overview.OverviewScreen
 import com.networkcontrol.android.kotlin.ui.prompt.PromptOverlay
+import com.networkcontrol.android.kotlin.ui.rules.RuleFilter
 import com.networkcontrol.android.kotlin.ui.rules.RulesScreen
 import com.networkcontrol.android.kotlin.ui.settings.AppearanceSettingsScreen
 import com.networkcontrol.android.kotlin.ui.settings.AutomationSettingsScreen
@@ -188,6 +189,7 @@ fun AppRoot(container: AppContainer) {
     val overviewListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val appsListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val rulesListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var rulesFilter by remember { mutableStateOf(RuleFilter.All) }
     val logsListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val settingsListState = androidx.compose.foundation.lazy.rememberLazyListState()
     val toolbarStyle by container.theme.toolbarStyle.collectAsStateWithLifecycle()
@@ -283,6 +285,11 @@ fun AppRoot(container: AppContainer) {
                         "blocklists" -> BlocklistSettingsScreen(
                             backend = backend,
                             onBack = { settingsSubScreen = null },
+                            onOpenDomainRules = {
+                                rulesFilter = RuleFilter.Domain
+                                settingsSubScreen = null
+                                selected = 2
+                            },
                         )
                         "island" -> SpeedIslandSettingsScreen(
                             backend = backend,
@@ -395,7 +402,12 @@ fun AppRoot(container: AppContainer) {
                                         onOpenLogs = { selected = 3 },
                                     )
                                     1 -> AppsScreen(backend, listState = appsListState)
-                                    2 -> RulesScreen(backend, listState = rulesListState)
+                                    2 -> RulesScreen(
+                                        backend = backend,
+                                        listState = rulesListState,
+                                        filter = rulesFilter,
+                                        onFilterChange = { rulesFilter = it },
+                                    )
                                     3 -> LogsScreen(backend, listState = logsListState)
                                     else -> SettingsScreen(
                                         backend = backend,
